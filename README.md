@@ -34,6 +34,9 @@
 ## Third-Party Dependencies
 - **OpenCL**: Used for GPU acceleration
 
+## MODEL STRUCTURE
+#MODEL METADATA#
+- FILE EXTENSION: .gen
 
 ```
                                ___
