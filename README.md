@@ -1,6 +1,6 @@
 
 # gLLM - AI/ML Library for creating LLMs
-
+![alt text]https://github.com/adityav31121999/gLLM/blob/main/gLLM%20icon.jpg
 ## INTRO
 - Library for LLM Models
 - **VERSION**: 0.0.0.1
