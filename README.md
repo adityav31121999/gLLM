@@ -1,7 +1,7 @@
 
 # gLLM - AI/ML Library for creating LLMs
 
-![alt text](gLLMicon.svg)
+![alt text](https://github.com/adityav31121999/gLLM/blob/main/gLLMicon.svg)
 
 ## INTRO
 - Library for mLM, SLM, LLM and LCM
