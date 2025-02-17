@@ -3,6 +3,7 @@
 #include "include/mlp.hpp"
 #include <iostream>
 #include <vector>
+#include <maths.hpp>
 
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)

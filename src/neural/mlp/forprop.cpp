@@ -1,6 +1,8 @@
+
 // forprop.cpp: forward propagation functions for mlp
 #include "include/mlp.hpp"
 #include <numeric>
+#include <maths.hpp>
 
 /**
  * @brief The forward propagation function. This function performs the

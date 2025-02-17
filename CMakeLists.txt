@@ -39,34 +39,8 @@ set(subProjects
 # Find OpenCL package and include directories
 set(OpenCL_CL_VERSION "300") 
 set(CL_TARGET_OPENCL_VERSION "300")
-add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=300)
 find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIRS})
-
-# add executable
-add_executable(gLLM "main.cpp" 
-                "gLLM.h"
-                "config.h"
-)
-
-# bind private libraries
-target_include_directories(gLLM
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/maths/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/neural/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/model/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/script/include
-)
-
-# link 3rd party libraries
-target_link_libraries(gLLM
-PRIVATE
-	${OpenCL_LIBRARIES}
-    maths
-    model
-    neural
-    script
-)
 
 # include each subdirectory
 foreach(projects IN LISTS subProjects)

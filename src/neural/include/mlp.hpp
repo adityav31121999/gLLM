@@ -16,7 +16,6 @@
 #define MLP_HPP 1
 
 #include <vector>
-#include "activations.hpp"
 
 /**
  * @brief Multi-layer Perceptron class (with No BIASES)

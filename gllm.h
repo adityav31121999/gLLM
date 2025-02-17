@@ -6,12 +6,11 @@
 // 3rd party headers
 #include <stdio.h>
 #include <stdlib.h>
+
 #ifdef __APPLE__
-// for MacOS
-#include <OpenCL/opencl.h>
+    #include <OpenCL/opencl.h>
 #else
-// for windows and linux
-#include <CL/cl.hpp>
+    #include <CL/cl.hpp>
 #endif
 
 // self defined headers
