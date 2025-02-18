@@ -24,11 +24,6 @@ add_library(maths STATIC
     mat/svd.cpp
     mat/submat.cpp
 
-    # poly files
-    poly/poly.cpp
-    poly/operator.cpp
-    poly/recurrence.cpp
-
     # stats files
     stats/basic.cpp
 )

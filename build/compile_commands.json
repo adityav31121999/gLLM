@@ -1,199 +1,181 @@
 [
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions1.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\functions1.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions1.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\functions1.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\basic\\functions1.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\functions1.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions2.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\functions2.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions2.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\functions2.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\basic\\functions2.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\functions2.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\vect.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\vect.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\vect.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\vect.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\basic\\vect.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\vect.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\weights.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\weights.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\weights.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\weights.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\basic\\weights.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\weights.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\activations.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\activations.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\activations.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\basic\\activations.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\basic\\activations.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\activations.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\det.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\det.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\det.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\det.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\det.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\det.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\eigenval.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\eigenval.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\eigenval.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\eigenval.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\eigenval.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\eigenval.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\inverse.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\inverse.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\inverse.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\inverse.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\inverse.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\inverse.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\jacobian.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\jacobian.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\jacobian.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\jacobian.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\jacobian.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\jacobian.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\operators.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\operators.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\operators.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\operators.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\operators.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\operators.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\prop.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\prop.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\prop.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\prop.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\prop.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\prop.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\qrdecom.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\qrdecom.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\qrdecom.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\svd.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\svd.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\svd.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\svd.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\svd.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\svd.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\submat.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\submat.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\submat.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\mat\\submat.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\mat\\submat.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\submat.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\poly\\poly.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\poly\\poly.cpp",
-  "file": "C:\\library\\gLLM\\src\\maths\\poly\\poly.cpp",
-  "output": "src\\maths\\CMakeFiles\\maths.dir\\poly\\poly.cpp.obj"
-},
-{
-  "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\poly\\operator.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\poly\\operator.cpp",
-  "file": "C:\\library\\gLLM\\src\\maths\\poly\\operator.cpp",
-  "output": "src\\maths\\CMakeFiles\\maths.dir\\poly\\operator.cpp.obj"
-},
-{
-  "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\poly\\recurrence.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\poly\\recurrence.cpp",
-  "file": "C:\\library\\gLLM\\src\\maths\\poly\\recurrence.cpp",
-  "output": "src\\maths\\CMakeFiles\\maths.dir\\poly\\recurrence.cpp.obj"
-},
-{
-  "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\stats\\basic.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\stats\\basic.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\stats\\basic.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\library\\gLLM\\src\\maths\\stats\\basic.cpp",
   "file": "C:\\library\\gLLM\\src\\maths\\stats\\basic.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\stats\\basic.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\mlp.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\mlp.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\mlp.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\mlp.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\mlp\\mlp.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\mlp.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\forprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\forprop.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\forprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\forprop.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\mlp\\forprop.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\forprop.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\backprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\backprop.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\backprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\backprop.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\mlp\\backprop.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\backprop.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\loss.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\loss.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\loss.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\loss.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\mlp\\loss.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\loss.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\weights.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\weights.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\weights.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\weights.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\mlp\\weights.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\weights.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\train.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\mlp\\train.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\mlp\\train.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\train.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\attention.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\attention.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\attention.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\attention.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\attention\\attention.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\attention.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\forward.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\forward.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\attention\\forward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\forward.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\backward.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\backward.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\attention\\backward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\backward.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\train.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\library\\gLLM\\src\\neural\\attention\\train.cpp",
   "file": "C:\\library\\gLLM\\src\\neural\\attention\\train.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\train.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\model.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\model.cpp",
   "file": "C:\\library\\gLLM\\src\\model\\src\\model.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\create.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\create.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\create.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\create.cpp",
   "file": "C:\\library\\gLLM\\src\\model\\src\\create.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\create.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\load.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\load.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\load.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\load.cpp",
   "file": "C:\\library\\gLLM\\src\\model\\src\\load.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\load.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\run.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\run.cpp",
   "file": "C:\\library\\gLLM\\src\\model\\src\\run.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj"
 },
 {
   "directory": "C:/library/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\save.cpp",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -I\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\" -IC:\\library\\gLLM\\src\\maths -IC:\\library\\gLLM\\src\\neural -IC:\\library\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\library\\gLLM\\src\\model\\src\\save.cpp",
   "file": "C:\\library\\gLLM\\src\\model\\src\\save.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj"
 }

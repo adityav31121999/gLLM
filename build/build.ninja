@@ -80,7 +80,7 @@ build cmake_object_order_depends_target_maths: phony || .
 
 build src\maths\CMakeFiles\maths.dir\basic\functions1.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\basic\functions1.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\basic
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -88,7 +88,7 @@ build src\maths\CMakeFiles\maths.dir\basic\functions1.cpp.obj: CXX_COMPILER__mat
 
 build src\maths\CMakeFiles\maths.dir\basic\functions2.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\basic\functions2.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\basic
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -96,7 +96,7 @@ build src\maths\CMakeFiles\maths.dir\basic\functions2.cpp.obj: CXX_COMPILER__mat
 
 build src\maths\CMakeFiles\maths.dir\basic\vect.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\basic\vect.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\basic
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -104,7 +104,7 @@ build src\maths\CMakeFiles\maths.dir\basic\vect.cpp.obj: CXX_COMPILER__maths_uns
 
 build src\maths\CMakeFiles\maths.dir\basic\weights.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\basic\weights.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\basic
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -112,7 +112,7 @@ build src\maths\CMakeFiles\maths.dir\basic\weights.cpp.obj: CXX_COMPILER__maths_
 
 build src\maths\CMakeFiles\maths.dir\basic\activations.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\basic\activations.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\basic
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -120,7 +120,7 @@ build src\maths\CMakeFiles\maths.dir\basic\activations.cpp.obj: CXX_COMPILER__ma
 
 build src\maths\CMakeFiles\maths.dir\mat\det.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\det.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -128,7 +128,7 @@ build src\maths\CMakeFiles\maths.dir\mat\det.cpp.obj: CXX_COMPILER__maths_unscan
 
 build src\maths\CMakeFiles\maths.dir\mat\eigenval.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\eigenval.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -136,7 +136,7 @@ build src\maths\CMakeFiles\maths.dir\mat\eigenval.cpp.obj: CXX_COMPILER__maths_u
 
 build src\maths\CMakeFiles\maths.dir\mat\inverse.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\inverse.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -144,7 +144,7 @@ build src\maths\CMakeFiles\maths.dir\mat\inverse.cpp.obj: CXX_COMPILER__maths_un
 
 build src\maths\CMakeFiles\maths.dir\mat\jacobian.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\jacobian.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -152,7 +152,7 @@ build src\maths\CMakeFiles\maths.dir\mat\jacobian.cpp.obj: CXX_COMPILER__maths_u
 
 build src\maths\CMakeFiles\maths.dir\mat\operators.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\operators.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -160,7 +160,7 @@ build src\maths\CMakeFiles\maths.dir\mat\operators.cpp.obj: CXX_COMPILER__maths_
 
 build src\maths\CMakeFiles\maths.dir\mat\prop.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\prop.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -168,7 +168,7 @@ build src\maths\CMakeFiles\maths.dir\mat\prop.cpp.obj: CXX_COMPILER__maths_unsca
 
 build src\maths\CMakeFiles\maths.dir\mat\qrdecom.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\qrdecom.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -176,7 +176,7 @@ build src\maths\CMakeFiles\maths.dir\mat\qrdecom.cpp.obj: CXX_COMPILER__maths_un
 
 build src\maths\CMakeFiles\maths.dir\mat\svd.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\svd.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -184,39 +184,15 @@ build src\maths\CMakeFiles\maths.dir\mat\svd.cpp.obj: CXX_COMPILER__maths_unscan
 
 build src\maths\CMakeFiles\maths.dir\mat\submat.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\mat\submat.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\mat
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
   TARGET_PDB = C:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.pdb
 
-build src\maths\CMakeFiles\maths.dir\poly\poly.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\poly\poly.cpp || cmake_object_order_depends_target_maths
-  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
-  OBJECT_DIR = src\maths\CMakeFiles\maths.dir
-  OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\poly
-  TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
-  TARGET_PDB = C:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.pdb
-
-build src\maths\CMakeFiles\maths.dir\poly\operator.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\poly\operator.cpp || cmake_object_order_depends_target_maths
-  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
-  OBJECT_DIR = src\maths\CMakeFiles\maths.dir
-  OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\poly
-  TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
-  TARGET_PDB = C:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.pdb
-
-build src\maths\CMakeFiles\maths.dir\poly\recurrence.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\poly\recurrence.cpp || cmake_object_order_depends_target_maths
-  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
-  OBJECT_DIR = src\maths\CMakeFiles\maths.dir
-  OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\poly
-  TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
-  TARGET_PDB = C:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.pdb
-
 build src\maths\CMakeFiles\maths.dir\stats\basic.cpp.obj: CXX_COMPILER__maths_unscanned_Debug C$:\library\gLLM\src\maths\stats\basic.cpp || cmake_object_order_depends_target_maths
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\maths\include
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
   OBJECT_FILE_DIR = src\maths\CMakeFiles\maths.dir\stats
   TARGET_COMPILE_PDB = src\maths\CMakeFiles\maths.dir\maths.pdb
@@ -230,7 +206,7 @@ build src\maths\CMakeFiles\maths.dir\stats\basic.cpp.obj: CXX_COMPILER__maths_un
 #############################################
 # Link the static library C:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib
 
-build C$:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib: CXX_STATIC_LIBRARY_LINKER__maths_Debug src\maths\CMakeFiles\maths.dir\basic\functions1.cpp.obj src\maths\CMakeFiles\maths.dir\basic\functions2.cpp.obj src\maths\CMakeFiles\maths.dir\basic\vect.cpp.obj src\maths\CMakeFiles\maths.dir\basic\weights.cpp.obj src\maths\CMakeFiles\maths.dir\basic\activations.cpp.obj src\maths\CMakeFiles\maths.dir\mat\det.cpp.obj src\maths\CMakeFiles\maths.dir\mat\eigenval.cpp.obj src\maths\CMakeFiles\maths.dir\mat\inverse.cpp.obj src\maths\CMakeFiles\maths.dir\mat\jacobian.cpp.obj src\maths\CMakeFiles\maths.dir\mat\operators.cpp.obj src\maths\CMakeFiles\maths.dir\mat\prop.cpp.obj src\maths\CMakeFiles\maths.dir\mat\qrdecom.cpp.obj src\maths\CMakeFiles\maths.dir\mat\svd.cpp.obj src\maths\CMakeFiles\maths.dir\mat\submat.cpp.obj src\maths\CMakeFiles\maths.dir\poly\poly.cpp.obj src\maths\CMakeFiles\maths.dir\poly\operator.cpp.obj src\maths\CMakeFiles\maths.dir\poly\recurrence.cpp.obj src\maths\CMakeFiles\maths.dir\stats\basic.cpp.obj
+build C$:\library\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib: CXX_STATIC_LIBRARY_LINKER__maths_Debug src\maths\CMakeFiles\maths.dir\basic\functions1.cpp.obj src\maths\CMakeFiles\maths.dir\basic\functions2.cpp.obj src\maths\CMakeFiles\maths.dir\basic\vect.cpp.obj src\maths\CMakeFiles\maths.dir\basic\weights.cpp.obj src\maths\CMakeFiles\maths.dir\basic\activations.cpp.obj src\maths\CMakeFiles\maths.dir\mat\det.cpp.obj src\maths\CMakeFiles\maths.dir\mat\eigenval.cpp.obj src\maths\CMakeFiles\maths.dir\mat\inverse.cpp.obj src\maths\CMakeFiles\maths.dir\mat\jacobian.cpp.obj src\maths\CMakeFiles\maths.dir\mat\operators.cpp.obj src\maths\CMakeFiles\maths.dir\mat\prop.cpp.obj src\maths\CMakeFiles\maths.dir\mat\qrdecom.cpp.obj src\maths\CMakeFiles\maths.dir\mat\svd.cpp.obj src\maths\CMakeFiles\maths.dir\mat\submat.cpp.obj src\maths\CMakeFiles\maths.dir\stats\basic.cpp.obj
   LANGUAGE_COMPILE_FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -MDd -Zi
   LINK_FLAGS = /machine:x64
   OBJECT_DIR = src\maths\CMakeFiles\maths.dir
@@ -280,7 +256,7 @@ build cmake_object_order_depends_target_neural: phony || cmake_object_order_depe
 
 build src\neural\CMakeFiles\neural.dir\mlp\mlp.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\mlp\mlp.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\mlp
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -288,7 +264,7 @@ build src\neural\CMakeFiles\neural.dir\mlp\mlp.cpp.obj: CXX_COMPILER__neural_uns
 
 build src\neural\CMakeFiles\neural.dir\mlp\forprop.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\mlp\forprop.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\mlp
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -296,7 +272,7 @@ build src\neural\CMakeFiles\neural.dir\mlp\forprop.cpp.obj: CXX_COMPILER__neural
 
 build src\neural\CMakeFiles\neural.dir\mlp\backprop.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\mlp\backprop.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\mlp
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -304,7 +280,7 @@ build src\neural\CMakeFiles\neural.dir\mlp\backprop.cpp.obj: CXX_COMPILER__neura
 
 build src\neural\CMakeFiles\neural.dir\mlp\loss.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\mlp\loss.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\mlp
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -312,7 +288,7 @@ build src\neural\CMakeFiles\neural.dir\mlp\loss.cpp.obj: CXX_COMPILER__neural_un
 
 build src\neural\CMakeFiles\neural.dir\mlp\weights.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\mlp\weights.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\mlp
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -320,7 +296,7 @@ build src\neural\CMakeFiles\neural.dir\mlp\weights.cpp.obj: CXX_COMPILER__neural
 
 build src\neural\CMakeFiles\neural.dir\mlp\train.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\mlp\train.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\mlp
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -328,7 +304,7 @@ build src\neural\CMakeFiles\neural.dir\mlp\train.cpp.obj: CXX_COMPILER__neural_u
 
 build src\neural\CMakeFiles\neural.dir\attention\attention.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\attention\attention.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\attention
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -336,7 +312,7 @@ build src\neural\CMakeFiles\neural.dir\attention\attention.cpp.obj: CXX_COMPILER
 
 build src\neural\CMakeFiles\neural.dir\attention\forward.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\attention\forward.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\attention
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -344,7 +320,7 @@ build src\neural\CMakeFiles\neural.dir\attention\forward.cpp.obj: CXX_COMPILER__
 
 build src\neural\CMakeFiles\neural.dir\attention\backward.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\attention\backward.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\attention
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -352,7 +328,7 @@ build src\neural\CMakeFiles\neural.dir\attention\backward.cpp.obj: CXX_COMPILER_
 
 build src\neural\CMakeFiles\neural.dir\attention\train.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\library\gLLM\src\neural\attention\train.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
   OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\attention
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
@@ -416,7 +392,7 @@ build cmake_object_order_depends_target_model: phony || cmake_object_order_depen
 
 build src\model\CMakeFiles\model.dir\src\model.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\library\gLLM\src\model\src\model.cpp || cmake_object_order_depends_target_model
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
   OBJECT_DIR = src\model\CMakeFiles\model.dir
   OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
@@ -424,7 +400,7 @@ build src\model\CMakeFiles\model.dir\src\model.cpp.obj: CXX_COMPILER__model_unsc
 
 build src\model\CMakeFiles\model.dir\src\create.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\library\gLLM\src\model\src\create.cpp || cmake_object_order_depends_target_model
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
   OBJECT_DIR = src\model\CMakeFiles\model.dir
   OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
@@ -432,7 +408,7 @@ build src\model\CMakeFiles\model.dir\src\create.cpp.obj: CXX_COMPILER__model_uns
 
 build src\model\CMakeFiles\model.dir\src\load.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\library\gLLM\src\model\src\load.cpp || cmake_object_order_depends_target_model
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
   OBJECT_DIR = src\model\CMakeFiles\model.dir
   OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
@@ -440,7 +416,7 @@ build src\model\CMakeFiles\model.dir\src\load.cpp.obj: CXX_COMPILER__model_unsca
 
 build src\model\CMakeFiles\model.dir\src\run.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\library\gLLM\src\model\src\run.cpp || cmake_object_order_depends_target_model
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
   OBJECT_DIR = src\model\CMakeFiles\model.dir
   OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
@@ -448,7 +424,7 @@ build src\model\CMakeFiles\model.dir\src\run.cpp.obj: CXX_COMPILER__model_unscan
 
 build src\model\CMakeFiles\model.dir\src\save.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\library\gLLM\src\model\src\save.cpp || cmake_object_order_depends_target_model
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
+  INCLUDES = -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\include" -IC:\library\gLLM\src\maths -IC:\library\gLLM\src\neural -IC:\library\gLLM\src\model
   OBJECT_DIR = src\model\CMakeFiles\model.dir
   OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
@@ -585,14 +561,14 @@ build src\script\all: phony
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakePushCheckState.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CheckSymbolExists.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindOpenCL.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\GNU.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake C$:\library\gLLM\CMakeLists.txt C$:\library\gLLM\src\maths\CMakeLists.txt C$:\library\gLLM\src\model\CMakeLists.txt C$:\library\gLLM\src\neural\CMakeLists.txt C$:\library\gLLM\src\script\CMakeLists.txt CMakeCache.txt CMakeFiles\3.31.3\CMakeCCompiler.cmake CMakeFiles\3.31.3\CMakeCXXCompiler.cmake CMakeFiles\3.31.3\CMakeRCCompiler.cmake CMakeFiles\3.31.3\CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCCompiler.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCCompilerABI.c C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompiler.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompilerABI.cpp C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCompilerIdDetection.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCXXCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerABI.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerId.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerSupport.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineRCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeFindBinUtils.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeNinjaFindMake.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitIncludeInfo.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitLinkInfo.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeParseLibraryArchitecture.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakePushCheckState.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeRCCompiler.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestCXXCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestCompilerCommon.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestRCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CheckSymbolExists.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\ADSP-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\ARMCC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\ARMClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\AppleClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Borland-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Bruce-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX-CXXImportStd.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX-FeatureTests.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX-TestableFeatures.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompilerInternal.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-FindBinUtils.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Cray-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\CrayClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Embarcadero-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Fujitsu-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\GHS-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\HP-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\HP-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IAR-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Intel-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\NVHPC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\NVIDIA-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\OrangeC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\PGI-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\PathScale-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SCO-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SDCC-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\TI-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\TIClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Tasking-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Watcom-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XL-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XL-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindCUDAToolkit.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindOpenCL.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeDetermineLinkerId.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\FeatureTesting.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\GNU.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Determine-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake C$:\library\gLLM\CMakeLists.txt C$:\library\gLLM\src\maths\CMakeLists.txt C$:\library\gLLM\src\model\CMakeLists.txt C$:\library\gLLM\src\neural\CMakeLists.txt C$:\library\gLLM\src\script\CMakeLists.txt CMakeCache.txt CMakeFiles\3.31.3\CMakeCCompiler.cmake CMakeFiles\3.31.3\CMakeCXXCompiler.cmake CMakeFiles\3.31.3\CMakeRCCompiler.cmake CMakeFiles\3.31.3\CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakePushCheckState.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CheckSymbolExists.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindOpenCL.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\GNU.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake C$:\library\gLLM\CMakeLists.txt C$:\library\gLLM\src\maths\CMakeLists.txt C$:\library\gLLM\src\model\CMakeLists.txt C$:\library\gLLM\src\neural\CMakeLists.txt C$:\library\gLLM\src\script\CMakeLists.txt CMakeCache.txt CMakeFiles\3.31.3\CMakeCCompiler.cmake CMakeFiles\3.31.3\CMakeCXXCompiler.cmake CMakeFiles\3.31.3\CMakeRCCompiler.cmake CMakeFiles\3.31.3\CMakeSystem.cmake: phony
+build C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCCompiler.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCCompilerABI.c C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompiler.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompilerABI.cpp C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeCompilerIdDetection.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCXXCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerABI.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerId.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerSupport.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineRCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeFindBinUtils.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeNinjaFindMake.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitIncludeInfo.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitLinkInfo.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeParseLibraryArchitecture.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakePushCheckState.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeRCCompiler.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestCXXCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestCompilerCommon.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CMakeTestRCCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\CheckSymbolExists.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\ADSP-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\ARMCC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\ARMClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\AppleClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Borland-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Bruce-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX-CXXImportStd.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX-FeatureTests.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX-TestableFeatures.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompilerInternal.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-FindBinUtils.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Cray-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\CrayClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Embarcadero-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Fujitsu-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\GHS-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\HP-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\HP-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IAR-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Intel-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\NVHPC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\NVIDIA-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\OrangeC-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\PGI-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\PathScale-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SCO-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SDCC-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\TI-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\TIClang-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Tasking-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\Watcom-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XL-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XL-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-C-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindCUDAToolkit.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindOpenCL.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\CMakeDetermineLinkerId.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Internal\FeatureTesting.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\GNU.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Linker\LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-LLD.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-C.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Clang.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Determine-CXX.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake C$:\Program$ Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake C$:\library\gLLM\CMakeLists.txt C$:\library\gLLM\src\maths\CMakeLists.txt C$:\library\gLLM\src\model\CMakeLists.txt C$:\library\gLLM\src\neural\CMakeLists.txt C$:\library\gLLM\src\script\CMakeLists.txt CMakeCache.txt CMakeFiles\3.31.3\CMakeCCompiler.cmake CMakeFiles\3.31.3\CMakeCXXCompiler.cmake CMakeFiles\3.31.3\CMakeRCCompiler.cmake CMakeFiles\3.31.3\CMakeSystem.cmake: phony
 
 
 #############################################

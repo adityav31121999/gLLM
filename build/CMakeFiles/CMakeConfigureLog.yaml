@@ -5,7 +5,7 @@ events:
     kind: "message-v1"
     backtrace:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:205 (message)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       The system is: Windows - 10.0.26100 - AMD64
   -
@@ -14,7 +14,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
       Compiler: C:/Program Files/LLVM/bin/clang-cl.exe 
@@ -36,7 +36,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:1288 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:250 (CMAKE_DETERMINE_MSVC_SHOWINCLUDES_PREFIX)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Detecting C compiler /showIncludes prefix:
         Note: including file: .\\foo.h
@@ -48,7 +48,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
       Compiler: C:/Program Files/LLVM/bin/clang-cl.exe 
@@ -70,7 +70,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:1288 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:250 (CMAKE_DETERMINE_MSVC_SHOWINCLUDES_PREFIX)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Detecting CXX compiler /showIncludes prefix:
         Note: including file: .\\foo.h
@@ -81,12 +81,12 @@ events:
     backtrace:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-khdrmk"
-      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-khdrmk"
+      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-vpgll8"
+      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-vpgll8"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
@@ -96,11 +96,11 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-khdrmk'
+        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-vpgll8'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_426c2
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo   /DWIN32 /D_WINDOWS  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_426c2.dir\\CMakeCCompilerABI.c.obj /FdCMakeFiles\\cmTC_426c2.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_426c2.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_426c2.dir\\CMakeCCompilerABI.c.obj  /out:cmTC_426c2.exe /implib:cmTC_426c2.lib /pdb:cmTC_426c2.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_7815c
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo   /DWIN32 /D_WINDOWS  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_7815c.dir\\CMakeCCompilerABI.c.obj /FdCMakeFiles\\cmTC_7815c.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_7815c.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_7815c.dir\\CMakeCCompilerABI.c.obj  /out:cmTC_7815c.exe /implib:cmTC_7815c.lib /pdb:cmTC_7815c.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
         
       exitCode: 0
   -
@@ -108,7 +108,7 @@ events:
     backtrace:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Parsed C implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
@@ -126,7 +126,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Running the C compiler's linker: "C:/PROGRA~1/LLVM/bin/lld-link.exe" "-v"
       lld-link: warning: ignoring unknown argument '-v'
@@ -137,7 +137,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Running the C compiler's linker: "C:/PROGRA~1/LLVM/bin/lld-link.exe" "-V"
       lld-link: warning: ignoring unknown argument '-V'
@@ -148,7 +148,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Running the C compiler's linker: "C:/PROGRA~1/LLVM/bin/lld-link.exe" "--version"
       LLD 19.1.3
@@ -157,12 +157,12 @@ events:
     backtrace:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-zpeaff"
-      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-zpeaff"
+      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-0g5ql6"
+      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-0g5ql6"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
@@ -173,11 +173,11 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-zpeaff'
+        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-0g5ql6'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_f1b6f
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_f1b6f.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_f1b6f.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_f1b6f.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_f1b6f.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_f1b6f.exe /implib:cmTC_f1b6f.lib /pdb:cmTC_f1b6f.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_ff2b3
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_ff2b3.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_ff2b3.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_ff2b3.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_ff2b3.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_ff2b3.exe /implib:cmTC_ff2b3.lib /pdb:cmTC_ff2b3.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
         
       exitCode: 0
   -
@@ -185,7 +185,7 @@ events:
     backtrace:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Parsed CXX implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
@@ -203,7 +203,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Running the CXX compiler's linker: "C:/PROGRA~1/LLVM/bin/lld-link.exe" "-v"
       lld-link: warning: ignoring unknown argument '-v'
@@ -214,7 +214,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Running the CXX compiler's linker: "C:/PROGRA~1/LLVM/bin/lld-link.exe" "-V"
       lld-link: warning: ignoring unknown argument '-V'
@@ -225,7 +225,7 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     message: |
       Running the CXX compiler's linker: "C:/PROGRA~1/LLVM/bin/lld-link.exe" "--version"
       LLD 19.1.3
@@ -237,12 +237,12 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Compiler/CMakeCommonCompilerMacros.cmake:124 (_record_compiler_features_cxx)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerSupport.cmake:70 (cmake_record_cxx_compile_features)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:83 (CMAKE_DETERMINE_COMPILER_SUPPORT)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     checks:
       - "Detecting CXX compile features"
     directories:
-      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-ytzjr2"
-      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-ytzjr2"
+      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-gtn2pm"
+      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-gtn2pm"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
@@ -252,11 +252,11 @@ events:
       variable: "CMAKE_CXX_FEATURE_TEST"
       cached: true
       stdout: |
-        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-ytzjr2'
+        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-gtn2pm'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_b54cc
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi   -std:c++14 /showIncludes /FoCMakeFiles\\cmTC_b54cc.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_b54cc.dir\\ -c -- C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ytzjr2\\feature_tests.cxx
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_b54cc.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_b54cc.dir\\feature_tests.cxx.obj  /out:cmTC_b54cc.exe /implib:cmTC_b54cc.lib /pdb:cmTC_b54cc.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_d7691
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi   -std:c++14 /showIncludes /FoCMakeFiles\\cmTC_d7691.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_d7691.dir\\ -c -- C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-gtn2pm\\feature_tests.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_d7691.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_d7691.dir\\feature_tests.cxx.obj  /out:cmTC_d7691.exe /implib:cmTC_d7691.lib /pdb:cmTC_d7691.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
   -
@@ -267,12 +267,12 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/Compiler/CMakeCommonCompilerMacros.cmake:132 (_record_compiler_features_cxx)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerSupport.cmake:70 (cmake_record_cxx_compile_features)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:83 (CMAKE_DETERMINE_COMPILER_SUPPORT)"
-      - "CMakeLists.txt:6 (project)"
+      - "CMakeLists.txt:5 (project)"
     checks:
       - "Detecting CXX compile features"
     directories:
-      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-7q44xo"
-      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-7q44xo"
+      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-c1fkfk"
+      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-c1fkfk"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
@@ -282,13 +282,25 @@ events:
       variable: "CMAKE_CXX_FEATURE_TEST"
       cached: true
       stdout: |
-        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-7q44xo'
+        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-c1fkfk'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_f8cf1
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_f8cf1.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_f8cf1.dir\\ -c -- C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7q44xo\\feature_tests.cxx
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_f8cf1.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_f8cf1.dir\\feature_tests.cxx.obj  /out:cmTC_f8cf1.exe /implib:cmTC_f8cf1.lib /pdb:cmTC_f8cf1.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_21885
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_21885.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_21885.dir\\ -c -- C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-c1fkfk\\feature_tests.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_21885.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_21885.dir\\feature_tests.cxx.obj  /out:cmTC_21885.exe /implib:cmTC_21885.lib /pdb:cmTC_21885.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindCUDAToolkit.cmake:681 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindCUDAToolkit.cmake:802 (_CUDAToolkit_find_root_dir)"
+      - "CMakeLists.txt:31 (find_package)"
+    message: |
+      Executed nvcc to extract CUDAToolkit information:
+      nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+      nvcc fatal   : Cannot find compiler 'cl.exe' in PATH
+      
+      
   -
     kind: "try_compile-v1"
     backtrace:
@@ -296,12 +308,12 @@ events:
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindOpenCL.cmake:59 (CHECK_SYMBOL_EXISTS)"
       - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindOpenCL.cmake:100 (_FIND_OPENCL_VERSION)"
-      - "CMakeLists.txt:42 (find_package)"
+      - "CMakeLists.txt:44 (find_package)"
     checks:
       - "Looking for CL_VERSION_3_0"
     directories:
-      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-f1bzty"
-      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-f1bzty"
+      source: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-xqmxbl"
+      binary: "C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-xqmxbl"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
@@ -311,17 +323,17 @@ events:
       variable: "OPENCL_VERSION_3_0"
       cached: true
       stdout: |
-        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-f1bzty'
+        Change Dir: 'C:/library/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-xqmxbl'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_429ae
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo  -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include" /DWIN32 /D_WINDOWS  /Ob0 /Od /RTC1 /std:c17 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_429ae.dir\\CheckSymbolExists.c.obj /FdCMakeFiles\\cmTC_429ae.dir\\ -c -- C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-f1bzty\\CheckSymbolExists.c
-        In file included from C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-f1bzty\\CheckSymbolExists.c:2:
-        In file included from C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include/CL/cl.h:20:
-        C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\include\\CL/cl_version.h(22,9): warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_96636
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo  -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include" /DWIN32 /D_WINDOWS  /Ob0 /Od /RTC1 /std:c17 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_96636.dir\\CheckSymbolExists.c.obj /FdCMakeFiles\\cmTC_96636.dir\\ -c -- C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xqmxbl\\CheckSymbolExists.c
+        In file included from C:\\library\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xqmxbl\\CheckSymbolExists.c:2:
+        In file included from C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include/CL/cl.h:20:
+        C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include\\CL/cl_version.h(22,9): warning: cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0) [-W#pragma-messages]
            22 | #pragma message("cl_version.h: CL_TARGET_OPENCL_VERSION is not defined. Defaulting to 300 (OpenCL 3.0)")
               |         ^
         1 warning generated.
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_429ae.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_429ae.dir\\CheckSymbolExists.c.obj  /out:cmTC_429ae.exe /implib:cmTC_429ae.lib /pdb:cmTC_429ae.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1942 --intdir=CMakeFiles\\cmTC_96636.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_96636.dir\\CheckSymbolExists.c.obj  /out:cmTC_96636.exe /implib:cmTC_96636.lib /pdb:cmTC_96636.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
 ...

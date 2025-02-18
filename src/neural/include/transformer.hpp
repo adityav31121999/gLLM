@@ -30,7 +30,6 @@ public:
     void fineTune();        // fine-tune transformer
     void feedBack();        // feed back from user
     void instruct();        // instruct the transformer
-    void editData();        // edit the data in the snn and polynn as per feedbacks and instructions
 
     ~transformer();         // default destructor
 };

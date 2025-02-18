@@ -7,7 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef __APPLE__
+#ifdef HAVE_CUDA
+    #include <cuda_runtime.h>
+#elif defined(__APPLE__)
     #include <OpenCL/opencl.h>
 #else
     #include <CL/cl.hpp>
@@ -17,6 +19,7 @@
 #include <maths.hpp>
 #include <neural.hpp>
 #include <model.hpp>
+#include <script.hpp>
 #include <script.hpp>
 
 #endif

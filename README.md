@@ -94,8 +94,6 @@
     "data_type": "can be any of following:
         int2, int4, int8, int16, int32, int64,
         float32, float64, double,
-        complexint2, complexint4, complexint8, complexint16, complexint32, complexint64,
-        complexfloat32, complexfloat64, complexdouble",
   }
 }
 ```

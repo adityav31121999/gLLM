@@ -1,4 +1,3 @@
-
 /**
  * (Attention - Attention - ----- - Attention -> E') <-- Partial attention 
  * (Attention - Attention - ----- - Attention -> E') <-- Partial attention 
@@ -13,9 +12,9 @@
 #ifndef ATTENTION_HPP
 #define ATTENTION_HPP 1
 
+#include <vector>
 #include <maths.hpp>
 #include "include/mlp.hpp"
-#include <vector>
 
 /**
  * @brief ATTENTION CLASS for calculating incomplete attention.
@@ -37,6 +36,7 @@ public:
     mlp v, h;       // vertical and horizontal operation
 
     attention();
+    attention(int tokenEmbed);
     void forward();
     void backward();
     void train();
@@ -50,7 +50,11 @@ class block {
 public:
     int n;          // number of incomplete attentions in each partial attention
     std::vector<std::vector<attention>> b;  // block for complete attention
-    block();
+    block(int n) {
+        this->n = n;
+        b = std::vector<std::vector<attention>>(n, std::vector<attention>(n));
+        
+    }
     void forward();
     void backward();
     void train();

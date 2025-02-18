@@ -47,7 +47,7 @@ public:
 // member functions
     // default constructor
     mlp() = default;
-    mlp(unsigned int in, unsigned int out, unsigned int epochs, double learning);
+    mlp(unsigned int in, unsigned int out, unsigned int epochs = 10, double learning = 0.01);
     mlp(std::vector<double> input, std::vector<double> expected, std::vector<double> output,
         unsigned int epochs, double learning);
 

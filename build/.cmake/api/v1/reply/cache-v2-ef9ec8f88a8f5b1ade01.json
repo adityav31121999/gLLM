@@ -123,10 +123,10 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
+					"value" : "CXX compiler"
 				}
 			],
-			"type" : "FILEPATH",
+			"type" : "STRING",
 			"value" : "C:/Program Files/LLVM/bin/clang-cl.exe"
 		},
 		{
@@ -283,10 +283,10 @@
 				},
 				{
 					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
+					"value" : "C compiler"
 				}
 			],
-			"type" : "FILEPATH",
+			"type" : "STRING",
 			"value" : "C:/Program Files/LLVM/bin/clang-cl.exe"
 		},
 		{
@@ -1206,6 +1206,1250 @@
 			"value" : "FALSE"
 		},
 		{
+			"name" : "CUDAToolkit_BIN_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : ""
+				}
+			],
+			"type" : "PATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin"
+		},
+		{
+			"name" : "CUDAToolkit_CUPTI_INCLUDE_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a file."
+				}
+			],
+			"type" : "PATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include/../extras/CUPTI/include"
+		},
+		{
+			"name" : "CUDAToolkit_NVCC_EXECUTABLE",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a program."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin/nvcc.exe"
+		},
+		{
+			"name" : "CUDA_CUDART",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cudart.lib"
+		},
+		{
+			"name" : "CUDA_OpenCL_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/OpenCL.lib"
+		},
+		{
+			"name" : "CUDA_cuFile_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cuFile_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cuFile_rdma_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cuFile_rdma_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cuFile_rdma_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cuFile_rdma_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cuFile_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cuFile_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cublasLt_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cublasLt.lib"
+		},
+		{
+			"name" : "CUDA_cublasLt_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cublasLt_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cublas_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cublas.lib"
+		},
+		{
+			"name" : "CUDA_cublas_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cublas_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cuda_driver_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cuda.lib"
+		},
+		{
+			"name" : "CUDA_cudart_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cudart.lib"
+		},
+		{
+			"name" : "CUDA_cudart_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cudart_static.lib"
+		},
+		{
+			"name" : "CUDA_cudla_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cudla_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cufft_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cufft.lib"
+		},
+		{
+			"name" : "CUDA_cufft_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cufft_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cufft_static_nocallback_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cufft_static_nocallback_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cufftw_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cufftw.lib"
+		},
+		{
+			"name" : "CUDA_cufftw_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cufftw_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_culibos_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_culibos_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cupti_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/extras/CUPTI/lib64/cupti.lib"
+		},
+		{
+			"name" : "CUDA_cupti_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cupti_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_curand_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/curand.lib"
+		},
+		{
+			"name" : "CUDA_curand_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_curand_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cusolver_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cusolver.lib"
+		},
+		{
+			"name" : "CUDA_cusolver_lapack_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cusolver_lapack_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cusolver_metis_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cusolver_metis_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cusolver_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cusolver_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_cusparse_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cusparse.lib"
+		},
+		{
+			"name" : "CUDA_cusparse_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_cusparse_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppc_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppc.lib"
+		},
+		{
+			"name" : "CUDA_nppc_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppc_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppial_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppial.lib"
+		},
+		{
+			"name" : "CUDA_nppial_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppial_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppicc_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppicc.lib"
+		},
+		{
+			"name" : "CUDA_nppicc_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppicc_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppicom_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppicom_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppicom_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppicom_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppidei_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppidei.lib"
+		},
+		{
+			"name" : "CUDA_nppidei_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppidei_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppif_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppif.lib"
+		},
+		{
+			"name" : "CUDA_nppif_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppif_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppig_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppig.lib"
+		},
+		{
+			"name" : "CUDA_nppig_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppig_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppim_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppim.lib"
+		},
+		{
+			"name" : "CUDA_nppim_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppim_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppist_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppist.lib"
+		},
+		{
+			"name" : "CUDA_nppist_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppist_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppisu_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppisu.lib"
+		},
+		{
+			"name" : "CUDA_nppisu_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppisu_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nppitc_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nppitc.lib"
+		},
+		{
+			"name" : "CUDA_nppitc_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nppitc_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_npps_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/npps.lib"
+		},
+		{
+			"name" : "CUDA_npps_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_npps_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvJitLink_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvJitLink.lib"
+		},
+		{
+			"name" : "CUDA_nvJitLink_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvJitLink_static.lib"
+		},
+		{
+			"name" : "CUDA_nvToolsExt_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvToolsExt_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvfatbin_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvfatbin.lib"
+		},
+		{
+			"name" : "CUDA_nvfatbin_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvfatbin_static.lib"
+		},
+		{
+			"name" : "CUDA_nvgraph_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvgraph_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvgraph_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvgraph_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvjpeg_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvjpeg.lib"
+		},
+		{
+			"name" : "CUDA_nvjpeg_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvjpeg_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvml_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvml.lib"
+		},
+		{
+			"name" : "CUDA_nvml_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvml_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvperf_host_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/extras/CUPTI/lib64/nvperf_host.lib"
+		},
+		{
+			"name" : "CUDA_nvperf_host_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvperf_host_static_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvperf_target_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/extras/CUPTI/lib64/nvperf_target.lib"
+		},
+		{
+			"name" : "CUDA_nvptxcompiler_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvptxcompiler_static.lib"
+		},
+		{
+			"name" : "CUDA_nvrtc_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvrtc.lib"
+		},
+		{
+			"name" : "CUDA_nvrtc_builtins_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "CUDA_nvrtc_builtins_LIBRARY-NOTFOUND"
+		},
+		{
+			"name" : "CUDA_nvrtc_builtins_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvrtc-builtins_static.lib"
+		},
+		{
+			"name" : "CUDA_nvrtc_static_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/nvrtc_static.lib"
+		},
+		{
+			"name" : "CUDA_pcsamplingutil_LIBRARY",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : "Path to a library."
+				}
+			],
+			"type" : "FILEPATH",
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/extras/CUPTI/lib64/pcsamplingutil.lib"
+		},
+		{
+			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_CUDAToolkit",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "Details about finding CUDAToolkit"
+				}
+			],
+			"type" : "INTERNAL",
+			"value" : "[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include][C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cudart.lib][C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin][v12.8.61()]"
+		},
+		{
 			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenCL",
 			"properties" : 
 			[
@@ -1215,7 +2459,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/OpenCL.lib][C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include][v3.0()]"
+			"value" : "[C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/OpenCL.lib][C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include][v3.0()]"
 		},
 		{
 			"name" : "OPENCL_VERSION_3_0",
@@ -1243,7 +2487,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include"
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include"
 		},
 		{
 			"name" : "OpenCL_LIBRARY",
@@ -1259,7 +2503,7 @@
 				}
 			],
 			"type" : "FILEPATH",
-			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/lib/x64/OpenCL.lib"
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/OpenCL.lib"
 		},
 		{
 			"name" : "gLLM_BINARY_DIR",
