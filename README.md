@@ -6,14 +6,15 @@
 ## INTRO
 - Library for mLM, SLM, LLM and LCM
   - SLM: small language model (**<2B** Parameters)
-  - LLM: large language model (**3B-450B** Parameters)
+  - LLM: large language model (**>3B** Parameters)
   - LCM: large concept model (**>40B** Parameters)
 - **VERSION**: 0.0.0.1
 - **LICENSE**: MIT
-- **PROGRAMMING LANGUAGES**: C, C++, OpenCL
+- **PROGRAMMING LANGUAGES**: C, C++, OpenCL, Cuda
   - *C VERSION*: C17
   - *C++ VERSION*: C++20
   - *OpenCL VERSION*: OpenCL 3
+  - *Cuda Version*:- 12.8
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**: Dual Pseudo-Attention Mechanism
 
