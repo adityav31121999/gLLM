@@ -1,7 +1,6 @@
 
 // mlp.cpp: constructor for mlp class
 #include "include/mlp.hpp"
-#include <iostream>
 #include <stdexcept>
 
 /**
@@ -65,6 +64,49 @@ mlp::mlp(std::vector<double> input, std::vector<double> expected, std::vector<do
     this->neurons = in * out;
     this->epochs = epochs;
     this->learning = learning;
+    iweights.resize(neurons, std::vector<double>(in, 0.0));
+    oweights.resize(out, std::vector<double>(neurons, 0.0));
+    weights.resize(layers - 1, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
+    hlayers.resize(layers, std::vector<double>(neurons, 0.0));
+    activations.resize(layers, std::vector<double>(neurons, 0.0));
+    giweights.resize(neurons, std::vector<double>(in, 0.0));
+    goweights.resize(out, std::vector<double>(neurons, 0.0));
+    gweights.resize(layers - 1, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
+    initializeWeights();
+}
+
+
+
+mlp::mlp(unsigned int in, unsigned int layers) {
+    this->in = in;
+    this->layers = layers;
+    neurons = in;
+    out = in;
+    epochs = 10;
+    learning = 0.01;
+    input.resize(in, 0.0);
+    output.resize(out, 0.0);
+    expected.resize(out, 0.0);
+    weights.resize(layers - 1, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
+    hlayers.resize(layers, std::vector<double>(neurons, 0.0));
+    activations.resize(layers, std::vector<double>(neurons, 0.0));
+    giweights.resize(neurons, std::vector<double>(in, 0.0));
+    goweights.resize(out, std::vector<double>(neurons, 0.0));
+    gweights.resize(layers - 1, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
+    initializeWeights();
+}
+
+mlp::mlp(unsigned int in, unsigned int layers, unsigned int neurons, unsigned int epochs, double learning) {
+    // all variables and containers
+    this->in = in;
+    out = in;
+    this->layers = layers;
+    this->neurons = neurons;
+    this->epochs = epochs;
+    this->learning = learning;
+    input.resize(in, 0.0);
+    output.resize(out, 0.0);
+    expected.resize(out, 0.0);
     iweights.resize(neurons, std::vector<double>(in, 0.0));
     oweights.resize(out, std::vector<double>(neurons, 0.0));
     weights.resize(layers - 1, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));

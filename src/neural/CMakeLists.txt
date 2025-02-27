@@ -1,5 +1,5 @@
 
-# src/maths/CMakeLists.txt
+# src/neural/CMakeLists.txt
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(neural C CXX)
 
@@ -22,7 +22,8 @@ add_library(neural STATIC
 )
 
 target_link_libraries(neural
-    PUBLIC # Important: Make OpenCL linking public
+    PUBLIC # Important: Make OpenCL and CUDA linking public
         ${OpenCL_LIBRARIES}
+        ${CUDAToolkit_LIBRARIES}
     maths
 )

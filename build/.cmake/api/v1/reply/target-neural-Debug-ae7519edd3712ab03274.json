@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "C:/library/gLLM/bin/Windows-AMD64-64/Debug/static_libs/model.lib"
+			"path" : "C:/code/gLLM/bin/Windows-AMD64-64/Debug/static_libs/neural.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -26,7 +26,7 @@
 		],
 		"files" : 
 		[
-			"src/model/CMakeLists.txt",
+			"src/neural/CMakeLists.txt",
 			"CMakeLists.txt"
 		],
 		"nodes" : 
@@ -37,13 +37,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 6,
+				"line" : 8,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 14,
+				"line" : 24,
 				"parent" : 0
 			},
 			{
@@ -52,26 +52,20 @@
 			{
 				"command" : 2,
 				"file" : 1,
-				"line" : 47,
+				"line" : 41,
 				"parent" : 3
 			},
 			{
 				"command" : 2,
 				"file" : 1,
-				"line" : 59,
+				"line" : 41,
 				"parent" : 3
 			},
 			{
 				"command" : 2,
-				"file" : 1,
-				"line" : 59,
-				"parent" : 3
-			},
-			{
-				"command" : 2,
-				"file" : 1,
-				"line" : 59,
-				"parent" : 3
+				"file" : 0,
+				"line" : 6,
+				"parent" : 0
 			}
 		]
 	},
@@ -88,19 +82,15 @@
 			[
 				{
 					"backtrace" : 4,
-					"path" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include"
+					"path" : "C:/code/gLLM/src/maths"
 				},
 				{
 					"backtrace" : 5,
-					"path" : "C:/library/gLLM/src/maths"
+					"path" : "C:/code/gLLM/src/neural"
 				},
 				{
 					"backtrace" : 6,
-					"path" : "C:/library/gLLM/src/neural"
-				},
-				{
-					"backtrace" : 7,
-					"path" : "C:/library/gLLM/src/model"
+					"path" : "C:/code/gLLM/src/neural/include"
 				}
 			],
 			"language" : "CXX",
@@ -118,7 +108,12 @@
 				1,
 				2,
 				3,
-				4
+				4,
+				5,
+				6,
+				7,
+				8,
+				9
 			]
 		}
 	],
@@ -127,19 +122,15 @@
 		{
 			"backtrace" : 2,
 			"id" : "maths::@82281960fef5161a47a1"
-		},
-		{
-			"backtrace" : 2,
-			"id" : "neural::@aa3d0067ab9058994e35"
 		}
 	],
-	"id" : "model::@dd52281f56f5d51f359a",
-	"name" : "model",
-	"nameOnDisk" : "model.lib",
+	"id" : "neural::@aa3d0067ab9058994e35",
+	"name" : "neural",
+	"nameOnDisk" : "neural.lib",
 	"paths" : 
 	{
-		"build" : "src/model",
-		"source" : "src/model"
+		"build" : "src/neural",
+		"source" : "src/neural"
 	},
 	"sourceGroups" : 
 	[
@@ -151,7 +142,12 @@
 				1,
 				2,
 				3,
-				4
+				4,
+				5,
+				6,
+				7,
+				8,
+				9
 			]
 		}
 	],
@@ -160,31 +156,61 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/model/src/model.cpp",
+			"path" : "src/neural/mlp/mlp.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/model/src/create.cpp",
+			"path" : "src/neural/mlp/forprop.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/model/src/load.cpp",
+			"path" : "src/neural/mlp/backprop.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/model/src/run.cpp",
+			"path" : "src/neural/mlp/loss.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/model/src/save.cpp",
+			"path" : "src/neural/mlp/weights.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/mlp/train.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/attention/attention.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/attention/forward.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/attention/backward.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/attention/train.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

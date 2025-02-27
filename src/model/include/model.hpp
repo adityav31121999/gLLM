@@ -6,7 +6,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <neural.hpp>
+#include "neural.h"
 #include "model_fs.hpp"
 
 class model {

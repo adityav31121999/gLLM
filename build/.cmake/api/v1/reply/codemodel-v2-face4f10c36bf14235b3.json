@@ -10,8 +10,7 @@
 					[
 						1,
 						2,
-						3,
-						4
+						3
 					],
 					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
 					"minimumCMakeVersion" : 
@@ -65,17 +64,6 @@
 					[
 						1
 					]
-				},
-				{
-					"build" : "src/script",
-					"jsonFile" : "directory-src.script-Debug-2232dc512a8142e37990.json",
-					"minimumCMakeVersion" : 
-					{
-						"string" : "3.30.0"
-					},
-					"parentIndex" : 0,
-					"projectIndex" : 0,
-					"source" : "src/script"
 				}
 			],
 			"name" : "Debug",
@@ -90,8 +78,7 @@
 					],
 					"directoryIndexes" : 
 					[
-						0,
-						4
+						0
 					],
 					"name" : "gLLM"
 				},
@@ -137,21 +124,21 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "maths::@82281960fef5161a47a1",
-					"jsonFile" : "target-maths-Debug-47e6ecf25e4734d96edf.json",
+					"jsonFile" : "target-maths-Debug-f805734839cf8f0fd90e.json",
 					"name" : "maths",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 3,
 					"id" : "model::@dd52281f56f5d51f359a",
-					"jsonFile" : "target-model-Debug-59a565f1a88de54054e9.json",
+					"jsonFile" : "target-model-Debug-e1b81201f8a9add92eee.json",
 					"name" : "model",
 					"projectIndex" : 3
 				},
 				{
 					"directoryIndex" : 2,
 					"id" : "neural::@aa3d0067ab9058994e35",
-					"jsonFile" : "target-neural-Debug-a015ae3fe94519a59833.json",
+					"jsonFile" : "target-neural-Debug-ae7519edd3712ab03274.json",
 					"name" : "neural",
 					"projectIndex" : 2
 				}
@@ -161,8 +148,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/library/gLLM/build",
-		"source" : "C:/library/gLLM"
+		"build" : "C:/code/gLLM/build",
+		"source" : "C:/code/gLLM"
 	},
 	"version" : 
 	{

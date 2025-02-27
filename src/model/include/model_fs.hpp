@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <maths.hpp>
-#include <neural.hpp>
+#include <maths.h>
+#include <neural.h>
 
 
 

@@ -12,6 +12,7 @@ add_library(maths STATIC
     basic/vect.cpp
     basic/weights.cpp
     basic/activations.cpp
+    basic/nnacci.cpp
 
     # mat files
     mat/det.cpp

@@ -1,9 +1,8 @@
 
 // backprop.cpp: backward propagation functions for mlp
 #include "include/mlp.hpp"
-#include <numeric>
 #include <iostream>
-#include <maths.hpp>
+#include <maths.h>
 
 /**
  * @brief The backward propagation function. This function performs the

@@ -5,6 +5,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <filesystem>
-#include <neural.hpp>
+#include <neural.h>
 
 

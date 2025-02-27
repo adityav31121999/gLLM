@@ -7,6 +7,7 @@
 #include <algorithm> // For std::generate
 #include <random> // For random number generation
 #include <stdexcept> // For std::out_of_range
+#include <functional>
 #include "nnacci.hpp"
 
 /**
@@ -28,7 +29,7 @@ template <typename t> nnacci<t> &nnacci<t>::operator=(const nnacci<t> &other) {
  * @param[in] other the object to be moved into this
  * @return a reference to this
  */
-template <typename t> nnacci<t> &nnacci<t>::operator=(nnacci<t> &&other) noexcept {
+template <typename t> nnacci<t> &nnacci<t>::operator=(nnacci<t> &&other) {
     if (this != &other) {
         nvalue = other.nvalue;
         values = std::move(other.values);
@@ -161,32 +162,6 @@ template <typename t> nnacci<t> nnacci<t>::operator%=(const nnacci other) {
     return *this;
 }
 
-/**
- * @brief Access the element at index in the nnacci object
- * @param[in] index the index of the element to access
- * @return the element at index
- * @throws std::out_of_range if index is out of range
- */
-template <typename t> t nnacci<t>::operator[](int index) const {
-    if (index < 0 || index >= new_values.size()) {
-        throw std::out_of_range("Index out of range");
-    }
-    return new_values[index];
-}
-
-/**
- * @brief Access the element at index in the nnacci object
- * @param[in] index the index of the element to access
- * @return the element at index
- * @throws std::out_of_range if index is out of range
- */
-template <typename t> t nnacci<t>::operator[](int index) {
-    if (index < 0 || index >= new_values.size()) {
-        throw std::out_of_range("Index out of range");
-    }
-    return new_values[index];
-}
-
 template <typename t> t nnacci<t>::operator()(int index) const {
     return (*this)[index];
 }
@@ -217,30 +192,6 @@ template <typename t> bool nnacci<t>::operator>=(const nnacci other) const {
 
 template <typename t> bool nnacci<t>::operator<=(const nnacci other) const {
     return !(*this > other);
-}
-
-template <typename t> bool nnacci<t>::operator==(const t other) const {
-    return std::all_of(new_values.begin(), new_values.end(), [other](const t &val) { return val == other; });
-}
-
-template <typename t> bool nnacci<t>::operator!=(const t other) const {
-    return !(*this == other);
-}
-
-template <typename t> bool nnacci<t>::operator>(const t other) const {
-    return std::all_of(new_values.begin(), new_values.end(), [other](const t &val) { return val > other; });
-}
-
-template <typename t> bool nnacci<t>::operator<(const t other) const {
-    return std::all_of(new_values.begin(), new_values.end(), [other](const t &val) { return val < other; });
-}
-
-template <typename t> bool nnacci<t>::operator>=(const t other) const {
-    return std::all_of(new_values.begin(), new_values.end(), [other](const t &val) { return val >= other; });
-}
-
-template <typename t> bool nnacci<t>::operator<=(const t other) const {
-    return std::all_of(new_values.begin(), new_values.end(), [other](const t &val) { return val <= other; });
 }
 
 template <typename t> void nnacci<t>::createval() {

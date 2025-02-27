@@ -1,20 +1,22 @@
+
 /**
- * (Attention - Attention - ----- - Attention -> E') <-- Partial attention 
- * (Attention - Attention - ----- - Attention -> E') <-- Partial attention 
- * (Attention - Attention - ----- - Attention -> E') <-- Partial attention 
- *      |           |                   |                       |
- *      |           |                   |                       |
- *      |           |                   |                       |
- * (Attention - Attention - ----- - Attention -> E') <-- Partial attention 
- * --------------------------------------------------------------------------
- *                                         Total Sum:-> Complete Attention
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
+ *      |           |                   |           |                       |
+ *      |           |                   |           |                       |
+ *      |           |                   |           |                       |
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
+ * ---------------------------------------------------------------------------------
+ *                                                   Total Sum:-> Complete Attention
+ * vector of complete attention -> full attention
  */
 #ifndef ATTENTION_HPP
 #define ATTENTION_HPP 1
 
 #include <vector>
-#include <maths.hpp>
-#include "include/mlp.hpp"
+#include <maths.h>
+#include "mlp.hpp"
 
 /**
  * @brief ATTENTION CLASS for calculating incomplete attention.
@@ -23,25 +25,34 @@
  */
 class attention {
 public:
-    // total embedding to be calculated using attention mechanism
-    int tokenEmbed;
-    // attention head matrix
-    std::vector<std::vector<double>> head;
-    // matrix for query, key, value vertical and value horizontal
-    mat MQ, MK, MV, MH;
-    // delta of each embedding for weighted sums in vertical and horizontal direction
-    std::vector<std::vector<double>> dH, dV;
-    std::vector<double> E1, E2, d1, d2;
-    // mlp for incomplete attention
-    mlp v, h;       // vertical and horizontal operation
+    int n;              // total tokens for each attention head
+    int d;              // token dimension
+    std::vector<std::vector<double>> head;      // attention head matrix
+    std::vector<std::vector<double>> tokens;    // tokens for attention head
+    std::vector<std::vector<double>> next;      // tokens for attention head
+    mat MQ;             // query
+    mat MK;             // key
+    mat MV;             // vertical
+    mat MH;             // horizontal
+    std::vector<std::vector<double>> dH;        // Weighted Sums Horizontally
+    std::vector<std::vector<double>> dV;        // Weighted Sums Vertically
+    std::vector<double> EH;         // Next Embedding in same block
+    std::vector<double> EV;         // Next Embedding in next Block
+    std::vector<double> dh;         // dH sum
+    std::vector<double> dv;         // dV sum
+    mlp v;              // next block transfer for cross attention
+    mlp h;              // horizontal transfer
+    std::vector<double> changeH;    // change in Horizontal process
+    std::vector<double> changeV;    // change in Vertical process
 
     attention();
-    attention(int tokenEmbed);
+    attention(int n, int d);
     void forward();
     void backward();
     void train();
     ~attention() = default;
 };
+
 
 /**
  * @brief block for complete attention
@@ -50,10 +61,11 @@ class block {
 public:
     int n;          // number of incomplete attentions in each partial attention
     std::vector<std::vector<attention>> b;  // block for complete attention
+    std::vector<std::vector<std::vector<double>>> inbetween;        // inbetween tokens transfer
     block(int n) {
         this->n = n;
         b = std::vector<std::vector<attention>>(n, std::vector<attention>(n));
-        
+        // 
     }
     void forward();
     void backward();

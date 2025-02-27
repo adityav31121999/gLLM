@@ -1,3 +1,4 @@
+
 # root CMakeLists.txt
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 
@@ -28,30 +29,11 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${FullOutputDir}/static_libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
-find_package(CUDAToolkit REQUIRED)
-if(CUDA_FOUND)
-    message(STATUS "Found CUDA version: ${CUDA_VERSION}")
-    set(CMAKE_CUDA_ARCHITECTURES 75)
-    enable_language(CUDA)
-    set(CMAKE_CUDA_STANDARD 20)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-    set(CMAKE_CUDA_EXTENSIONS OFF)
-    set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
-endif()
-
-set(OpenCL_CL_VERSION "300") 
-set(CL_TARGET_OPENCL_VERSION "300")
-find_package(OpenCL REQUIRED)
-if(OpenCL_FOUND)
-    message(STATUS "Found OpenCL version: 300")
-    include_directories(${OpenCL_INCLUDE_DIRS})
-endif()
-
 set(subProjects
     src/maths
     src/neural
     src/model
-    src/script
+    # src/script
 )
 
 # include each subdirectory

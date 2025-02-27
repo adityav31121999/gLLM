@@ -1,4 +1,4 @@
-# Install script for directory: C:/library/gLLM
+# Install script for directory: C:/code/gLLM
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,28 +34,23 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/library/gLLM/build/src/maths/cmake_install.cmake")
+  include("C:/code/gLLM/build/src/maths/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/library/gLLM/build/src/neural/cmake_install.cmake")
+  include("C:/code/gLLM/build/src/neural/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/library/gLLM/build/src/model/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("C:/library/gLLM/build/src/script/cmake_install.cmake")
+  include("C:/code/gLLM/build/src/model/cmake_install.cmake")
 endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "C:/library/gLLM/build/install_local_manifest.txt"
+  file(WRITE "C:/code/gLLM/build/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
 if(CMAKE_INSTALL_COMPONENT)
@@ -71,6 +66,6 @@ else()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "C:/library/gLLM/build/${CMAKE_INSTALL_MANIFEST}"
+  file(WRITE "C:/code/gLLM/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()

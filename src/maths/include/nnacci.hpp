@@ -48,7 +48,6 @@ public:
 
     nnacci &operator=(const nnacci &other);
     nnacci &operator=(nnacci &&other);
-
     nnacci operator+(const nnacci other);
     nnacci operator-(const nnacci other);
     nnacci operator*(const nnacci other);
@@ -60,8 +59,6 @@ public:
     nnacci operator/=(const nnacci other);
     nnacci operator%=(const nnacci other);
 
-    t operator[](int index) const;
-    t operator[](int index);
     t operator()(int index) const;
     t operator()(int index);
 
@@ -71,12 +68,6 @@ public:
     bool operator<(const nnacci other) const;
     bool operator>=(const nnacci other) const;
     bool operator<=(const nnacci other) const;
-    bool operator==(const t other) const;
-    bool operator!=(const t other) const;
-    bool operator>(const t other) const;
-    bool operator<(const t other) const;
-    bool operator>=(const t other) const;
-    bool operator<=(const t other) const;
 
     void createval();               // create nnacci sequence from values vector
     void randomval();               // create random values as seed for nnacci sequence

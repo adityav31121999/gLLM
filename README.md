@@ -1,20 +1,19 @@
 
 # gLLM - AI/ML Library for creating LLMs
 
-![alt text](https://github.com/adityav31121999/gLLM/blob/main/gLLMicon.svg)
+![alt text](gLLMicon.svg)
 
 ## INTRO
 - Library for mLM, SLM, LLM and LCM
   - SLM: small language model (**<2B** Parameters)
-  - LLM: large language model (**>3B** Parameters)
+  - LLM: large language model (**3B-450B** Parameters)
   - LCM: large concept model (**>40B** Parameters)
 - **VERSION**: 0.0.0.1
 - **LICENSE**: MIT
-- **PROGRAMMING LANGUAGES**: C, C++, OpenCL, Cuda
+- **PROGRAMMING LANGUAGES**: C, C++, OpenCL
   - *C VERSION*: C17
   - *C++ VERSION*: C++20
   - *OpenCL VERSION*: OpenCL 3
-  - *Cuda Version*:- 12.8
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**: Dual Pseudo-Attention Mechanism
 
@@ -39,16 +38,12 @@
 ### src/maths
 - *basic*: Basic Mathematical Functions
 - *mat*: Mathematical Functions for Matrix Operations
-- *poly*: Mathematical Functions for Polynomials
 - *stats*: Mathematical Functions for Statistics
 - *maths.hpp*: Main Header
 
 ### src/neural
-- *grammer*: Grammer Library
 - *attention*: Attention Mechanism
 - *mlp*: Multi-Layer Perceptron
-- *snn*: String Neural Network
-- *polynn*: Polynomial Neural Network
 - *transformer*: Transformer
 - *neural.hpp*: Main Header
 

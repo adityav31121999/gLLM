@@ -30,7 +30,7 @@ public:
     unsigned int epochs;        // number of epochs
     double mse;                 // mean square error
     double learning;            // learning rate
-    bool status;                // 1 if completely trained
+    bool status;                // 1 if completely trained, 0 otherwise
 // member containers
     std::vector<double> input;      // input vector
     std::vector<double> output;     // output vector
@@ -40,6 +40,8 @@ public:
     std::vector<std::vector<double>> oweights;      // input to hidden weights
     std::vector<std::vector<double>> hlayers;       // hidden layers
     std::vector<std::vector<double>> activations;   // activations for each layer
+
+    // for backpropagation
     std::vector<std::vector<std::vector<double>>> gweights;     // gradient of weights for matrix layer
     std::vector<std::vector<double>> giweights;     // gradient of input to hidden weights
     std::vector<std::vector<double>> goweights;     // gradient of input to hidden weights
@@ -48,8 +50,9 @@ public:
     // default constructor
     mlp() = default;
     mlp(unsigned int in, unsigned int out, unsigned int epochs = 10, double learning = 0.01);
-    mlp(std::vector<double> input, std::vector<double> expected, std::vector<double> output,
-        unsigned int epochs, double learning);
+    mlp(unsigned int in, unsigned int layers, unsigned int neurons, unsigned int epochs = 10, double learning = 0.01);
+    mlp(std::vector<double> input, std::vector<double> expected, std::vector<double> output, unsigned int epochs, double learning);
+    mlp(unsigned int in, unsigned int layers);
 
     double getL1Penalty();
     double getL2Penalty();
