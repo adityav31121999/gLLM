@@ -76,7 +76,9 @@ mlp::mlp(std::vector<double> input, std::vector<double> expected, std::vector<do
 }
 
 
-
+/**
+ * @brief Constructor for Same input-output dimension with random initialisation
+ */
 mlp::mlp(unsigned int in, unsigned int layers) {
     this->in = in;
     this->layers = layers;
@@ -96,6 +98,15 @@ mlp::mlp(unsigned int in, unsigned int layers) {
     initializeWeights();
 }
 
+
+/**
+ * @brief Constructor used in specifically for FFN in LLM
+ * @param in input dimension, same for output dimension
+ * @param layers number of layers
+ * @param neurons number of neurons in each layer
+ * @param epochs number of epochs for training
+ * @param learning learning rate for the network
+ */
 mlp::mlp(unsigned int in, unsigned int layers, unsigned int neurons, unsigned int epochs, double learning) {
     // all variables and containers
     this->in = in;
