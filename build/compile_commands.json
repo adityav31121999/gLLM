@@ -157,6 +157,18 @@
 },
 {
   "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\block.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\attention\\block.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\attention\\block.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\block.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\transformer.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\transformer.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
   "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\model.cpp",
   "file": "C:\\code\\gLLM\\src\\model\\src\\model.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj"

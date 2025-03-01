@@ -9,10 +9,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <maths.h>
-#include <neural.h>
-
-
-
+#include <maths.hpp>
+#include <neural.hpp>
 
 #endif

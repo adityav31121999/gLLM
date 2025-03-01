@@ -18,13 +18,13 @@
 #include <vector>
 
 /**
- * @brief Multi-layer Perceptron class (with No BIASES)
+ * @brief Multi-layer Perceptron class (with No BIASES) 
+ * specifically designed for LLMs
  */
 class mlp {
 public:
 // member variables
-    unsigned int in;            // number of inputs
-    unsigned int out;           // number of outputs
+    unsigned int dim;           // dimension of embedding
     unsigned int layers;        // number of layers
     unsigned int neurons;       // number of neurons in each layer
     unsigned int epochs;        // number of epochs
@@ -35,24 +35,15 @@ public:
     std::vector<double> input;      // input vector
     std::vector<double> output;     // output vector
     std::vector<double> expected;   // expected output vectors
-    std::vector<std::vector<std::vector<double>>> weights;      // weights for matrix layer
-    std::vector<std::vector<double>> iweights;      // input to hidden weights
-    std::vector<std::vector<double>> oweights;      // input to hidden weights
+    std::vector<std::vector<std::vector<double>>> weights;      // weights for matrix layer (i + h + o)
     std::vector<std::vector<double>> hlayers;       // hidden layers
     std::vector<std::vector<double>> activations;   // activations for each layer
-
-    // for backpropagation
-    std::vector<std::vector<std::vector<double>>> gweights;     // gradient of weights for matrix layer
-    std::vector<std::vector<double>> giweights;     // gradient of input to hidden weights
-    std::vector<std::vector<double>> goweights;     // gradient of input to hidden weights
+    std::vector<std::vector<std::vector<double>>> gweights;     // gradient of weights for matrix layer gradient(i + h + o)
 
 // member functions
     // default constructor
     mlp() = default;
-    mlp(unsigned int in, unsigned int out, unsigned int epochs = 10, double learning = 0.01);
-    mlp(unsigned int in, unsigned int layers, unsigned int neurons, unsigned int epochs = 10, double learning = 0.01);
-    mlp(std::vector<double> input, std::vector<double> expected, std::vector<double> output, unsigned int epochs, double learning);
-    mlp(unsigned int in, unsigned int layers);
+    mlp(unsigned int in, unsigned int layers, unsigned int epochs = 10, double learning = 0.01);
 
     double getL1Penalty();
     double getL2Penalty();

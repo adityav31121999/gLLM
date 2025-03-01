@@ -85,8 +85,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-dacw30"
-      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-dacw30"
+      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-jtiyug"
+      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-jtiyug"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
@@ -96,11 +96,11 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-dacw30'
+        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-jtiyug'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_70212
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo   /DWIN32 /D_WINDOWS  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_70212.dir\\CMakeCCompilerABI.c.obj /FdCMakeFiles\\cmTC_70212.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_70212.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_70212.dir\\CMakeCCompilerABI.c.obj  /out:cmTC_70212.exe /implib:cmTC_70212.lib /pdb:cmTC_70212.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_d0d27
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo   /DWIN32 /D_WINDOWS  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_d0d27.dir\\CMakeCCompilerABI.c.obj /FdCMakeFiles\\cmTC_d0d27.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_d0d27.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_d0d27.dir\\CMakeCCompilerABI.c.obj  /out:cmTC_d0d27.exe /implib:cmTC_d0d27.lib /pdb:cmTC_d0d27.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
         
       exitCode: 0
   -
@@ -161,8 +161,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-q8pr38"
-      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-q8pr38"
+      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-vbcevz"
+      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-vbcevz"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
@@ -173,11 +173,11 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-q8pr38'
+        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-vbcevz'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_620cf
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_620cf.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_620cf.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_620cf.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_620cf.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_620cf.exe /implib:cmTC_620cf.lib /pdb:cmTC_620cf.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_4d70b
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_4d70b.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_4d70b.dir\\ -c -- "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_4d70b.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_4d70b.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_4d70b.exe /implib:cmTC_4d70b.lib /pdb:cmTC_4d70b.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console   && cd ."
         
       exitCode: 0
   -
@@ -241,8 +241,8 @@ events:
     checks:
       - "Detecting CXX compile features"
     directories:
-      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-6l7mqg"
-      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-6l7mqg"
+      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-qn0xrt"
+      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-qn0xrt"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
@@ -252,11 +252,11 @@ events:
       variable: "CMAKE_CXX_FEATURE_TEST"
       cached: true
       stdout: |
-        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-6l7mqg'
+        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-qn0xrt'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_4b0ea
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi   -std:c++14 /showIncludes /FoCMakeFiles\\cmTC_4b0ea.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_4b0ea.dir\\ -c -- C:\\code\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6l7mqg\\feature_tests.cxx
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_4b0ea.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_4b0ea.dir\\feature_tests.cxx.obj  /out:cmTC_4b0ea.exe /implib:cmTC_4b0ea.lib /pdb:cmTC_4b0ea.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_4756a
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi   -std:c++14 /showIncludes /FoCMakeFiles\\cmTC_4756a.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_4756a.dir\\ -c -- C:\\code\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-qn0xrt\\feature_tests.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_4756a.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_4756a.dir\\feature_tests.cxx.obj  /out:cmTC_4756a.exe /implib:cmTC_4756a.lib /pdb:cmTC_4756a.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
   -
@@ -271,8 +271,8 @@ events:
     checks:
       - "Detecting CXX compile features"
     directories:
-      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-xlp94t"
-      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-xlp94t"
+      source: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-x9b1rv"
+      binary: "C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-x9b1rv"
     cmakeVariables:
       CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
@@ -282,11 +282,11 @@ events:
       variable: "CMAKE_CXX_FEATURE_TEST"
       cached: true
       stdout: |
-        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-xlp94t'
+        Change Dir: 'C:/code/gLLM/build/CMakeFiles/CMakeScratch/TryCompile-x9b1rv'
         
-        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_2ed0b
-        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_2ed0b.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_2ed0b.dir\\ -c -- C:\\code\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xlp94t\\feature_tests.cxx
-        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_2ed0b.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_2ed0b.dir\\feature_tests.cxx.obj  /out:cmTC_2ed0b.exe /implib:cmTC_2ed0b.lib /pdb:cmTC_2ed0b.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        Run Build Command(s): C:/PROGRA~1/CMake/bin/ninja.exe -v cmTC_c7817
+        [1/2] C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP   /DWIN32 /D_WINDOWS /EHsc  /Ob0 /Od /RTC1 -MDd -Zi /showIncludes /FoCMakeFiles\\cmTC_c7817.dir\\feature_tests.cxx.obj /FdCMakeFiles\\cmTC_c7817.dir\\ -c -- C:\\code\\gLLM\\build\\CMakeFiles\\CMakeScratch\\TryCompile-x9b1rv\\feature_tests.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && "C:\\Program Files\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1943 --intdir=CMakeFiles\\cmTC_c7817.dir --rc=C:\\PROGRA~1\\LLVM\\bin\\llvm-rc.exe --mt=C:\\PROGRA~1\\LLVM\\bin\\llvm-mt.exe --manifests  -- C:\\PROGRA~1\\LLVM\\bin\\lld-link.exe /nologo CMakeFiles\\cmTC_c7817.dir\\feature_tests.cxx.obj  /out:cmTC_c7817.exe /implib:cmTC_c7817.lib /pdb:cmTC_c7817.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
         
       exitCode: 0
 ...

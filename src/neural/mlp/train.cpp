@@ -3,7 +3,7 @@
 #include "include/mlp.hpp"
 #include <iostream>
 #include <vector>
-#include <maths.h>
+#include <maths.hpp>
 
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)
@@ -62,8 +62,8 @@ void mlp::train(std::vector<std::vector<double>> inputs) {
  */
 void mlp::validate() {
     // Assuming validation data is available in some form
-    std::vector<double> validation_input(in, 0.0);      // Replace with actual validation input
-    std::vector<double> validation_expected(out, 0.0);  // Replace with actual expected output
+    std::vector<double> validation_input(dim, 0.0);      // Replace with actual validation input
+    std::vector<double> validation_expected(dim, 0.0);  // Replace with actual expected output
     // Set the input and expected output for validation
     input = validation_input;
     expected = validation_expected;
@@ -83,8 +83,8 @@ void mlp::validate() {
  */
 void mlp::test() {
     // Assuming test data is available in some form
-    std::vector<double> test_input(in, 0.0);        // Replace with actual test input
-    std::vector<double> test_expected(out, 0.0);    // Replace with actual expected output
+    std::vector<double> test_input(dim, 0.0);        // Replace with actual test input
+    std::vector<double> test_expected(dim, 0.0);    // Replace with actual expected output
     // Set the input and expected output for testing
     input = test_input;
     expected = test_expected;

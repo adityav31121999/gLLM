@@ -19,6 +19,12 @@ add_library(neural STATIC
     attention/forward.cpp
     attention/backward.cpp
     attention/train.cpp
+
+    # block
+    attention/block.cpp
+
+    # transformer
+    transformer/transformer.cpp
 )
 
 target_link_libraries(neural
