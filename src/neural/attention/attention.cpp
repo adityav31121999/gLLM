@@ -33,6 +33,9 @@ attention::attention(int n, int d, int h) : n(n), d(d), h(h) {
     countParams();
 }
 
+/**
+ * @brief Count parameters in attention class
+ */
 void attention::countParams() {
     totalParams = (4 * h * d) + (2 * d * d * hor.layers);
 }

@@ -15,9 +15,9 @@
  */
 
 // self defined headers
-#include <maths.h>
-#include <neural.h>
-#include <model.h>
+#include <maths.hpp>
+#include <neural.hpp>
+#include <model.hpp>
 
 #endif
 

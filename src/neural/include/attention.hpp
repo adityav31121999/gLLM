@@ -50,6 +50,7 @@ public:
     std::vector<double> changeH;    // change in Horizontal process
     std::vector<double> changeV;    // change in Vertical process
 
+    // default constructor
     attention() = default;
     attention(int n, int d, int h);
 

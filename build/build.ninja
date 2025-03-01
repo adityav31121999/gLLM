@@ -350,7 +350,55 @@ build src\neural\CMakeFiles\neural.dir\block\block.cpp.obj: CXX_COMPILER__neural
   TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
   TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
 
+build src\neural\CMakeFiles\neural.dir\block\forward.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\block\forward.cpp || cmake_object_order_depends_target_neural
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
+  OBJECT_DIR = src\neural\CMakeFiles\neural.dir
+  OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\block
+  TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
+
+build src\neural\CMakeFiles\neural.dir\block\backward.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\block\backward.cpp || cmake_object_order_depends_target_neural
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
+  OBJECT_DIR = src\neural\CMakeFiles\neural.dir
+  OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\block
+  TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
+
+build src\neural\CMakeFiles\neural.dir\block\train.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\block\train.cpp || cmake_object_order_depends_target_neural
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
+  OBJECT_DIR = src\neural\CMakeFiles\neural.dir
+  OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\block
+  TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
+
 build src\neural\CMakeFiles\neural.dir\transformer\transformer.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\transformer\transformer.cpp || cmake_object_order_depends_target_neural
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
+  OBJECT_DIR = src\neural\CMakeFiles\neural.dir
+  OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\transformer
+  TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
+
+build src\neural\CMakeFiles\neural.dir\transformer\forward.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\transformer\forward.cpp || cmake_object_order_depends_target_neural
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
+  OBJECT_DIR = src\neural\CMakeFiles\neural.dir
+  OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\transformer
+  TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
+
+build src\neural\CMakeFiles\neural.dir\transformer\backward.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\transformer\backward.cpp || cmake_object_order_depends_target_neural
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
+  OBJECT_DIR = src\neural\CMakeFiles\neural.dir
+  OBJECT_FILE_DIR = src\neural\CMakeFiles\neural.dir\transformer
+  TARGET_COMPILE_PDB = src\neural\CMakeFiles\neural.dir\neural.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.pdb
+
+build src\neural\CMakeFiles\neural.dir\transformer\train.cpp.obj: CXX_COMPILER__neural_unscanned_Debug C$:\code\gLLM\src\neural\transformer\train.cpp || cmake_object_order_depends_target_neural
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
   INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\neural\include
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir
@@ -366,7 +414,7 @@ build src\neural\CMakeFiles\neural.dir\transformer\transformer.cpp.obj: CXX_COMP
 #############################################
 # Link the static library C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.lib
 
-build C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.lib: CXX_STATIC_LIBRARY_LINKER__neural_Debug src\neural\CMakeFiles\neural.dir\mlp\mlp.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\forprop.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\backprop.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\loss.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\weights.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\train.cpp.obj src\neural\CMakeFiles\neural.dir\attention\attention.cpp.obj src\neural\CMakeFiles\neural.dir\attention\forward.cpp.obj src\neural\CMakeFiles\neural.dir\attention\backward.cpp.obj src\neural\CMakeFiles\neural.dir\attention\train.cpp.obj src\neural\CMakeFiles\neural.dir\block\block.cpp.obj src\neural\CMakeFiles\neural.dir\transformer\transformer.cpp.obj || C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib
+build C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.lib: CXX_STATIC_LIBRARY_LINKER__neural_Debug src\neural\CMakeFiles\neural.dir\mlp\mlp.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\forprop.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\backprop.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\loss.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\weights.cpp.obj src\neural\CMakeFiles\neural.dir\mlp\train.cpp.obj src\neural\CMakeFiles\neural.dir\attention\attention.cpp.obj src\neural\CMakeFiles\neural.dir\attention\forward.cpp.obj src\neural\CMakeFiles\neural.dir\attention\backward.cpp.obj src\neural\CMakeFiles\neural.dir\attention\train.cpp.obj src\neural\CMakeFiles\neural.dir\block\block.cpp.obj src\neural\CMakeFiles\neural.dir\block\forward.cpp.obj src\neural\CMakeFiles\neural.dir\block\backward.cpp.obj src\neural\CMakeFiles\neural.dir\block\train.cpp.obj src\neural\CMakeFiles\neural.dir\transformer\transformer.cpp.obj src\neural\CMakeFiles\neural.dir\transformer\forward.cpp.obj src\neural\CMakeFiles\neural.dir\transformer\backward.cpp.obj src\neural\CMakeFiles\neural.dir\transformer\train.cpp.obj || C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib
   LANGUAGE_COMPILE_FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -MDd -Zi
   LINK_FLAGS = /machine:x64
   OBJECT_DIR = src\neural\CMakeFiles\neural.dir

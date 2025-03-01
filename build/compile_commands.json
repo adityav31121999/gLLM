@@ -163,9 +163,45 @@
 },
 {
   "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\forward.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\block\\forward.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\forward.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\backward.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\block\\backward.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\backward.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\train.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\block\\train.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\train.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
   "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\transformer.cpp",
   "file": "C:\\code\\gLLM\\src\\neural\\transformer\\transformer.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\forward.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\forward.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\forward.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\backward.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\backward.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\backward.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\train.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\train.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\train.cpp.obj"
 },
 {
   "directory": "C:/code/gLLM/build",

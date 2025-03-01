@@ -4,24 +4,25 @@
 ![alt text](gLLMicon.svg)
 
 ## INTRO
-- Library for mLM, SLM, LLM and LCM
+- Library for SLM, LLM and LCM
   - SLM: small language model (**<2B** Parameters)
   - LLM: large language model (**3B-450B** Parameters)
   - LCM: large concept model (**>40B** Parameters)
 - **VERSION**: 0.0.0.1
 - **LICENSE**: MIT
-- **PROGRAMMING LANGUAGES**: C, C++, OpenCL
+- **PROGRAMMING LANGUAGES**: C, C++, OpenCL, CUDA
   - *C VERSION*: C17
   - *C++ VERSION*: C++20
   - *OpenCL VERSION*: OpenCL 3
+  - *CUDA*: 12.8
 - **PROJECT BUILD SYSTEM**: CMake
-- **Model Architecture**: Dual Pseudo-Attention Mechanism
+- **Model Architecture**: Shady Attention Mechanism
 
 ### Main Functionalities
 - Data preprocessing and tokenization
 - Neural network training and evaluation
 - Model creation and operations
-- GPU-accelerated computation (via OpenCL)
+- GPU-accelerated computation (via OpenCL for AMD and CUDA for NVidia)
 - Grammer and Context Based Training
 
 ### Build System
@@ -43,8 +44,9 @@
 
 ### src/neural
 - *attention*: Attention Mechanism
+- *block*: Attention Block
 - *mlp*: Multi-Layer Perceptron
-- *transformer*: Transformer
+- *transformer*: Transformer Structure
 - *neural.hpp*: Main Header
 
 ### src/model
@@ -89,7 +91,7 @@
   "data": {
     "data_type": "can be any of following:
         int2, int4, int8, int16, int32, int64,
-        float32, float64, double,
+        float16, float32, float64, double
   }
 }
 ```

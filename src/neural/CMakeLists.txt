@@ -22,14 +22,20 @@ add_library(neural STATIC
 
     # block
     block/block.cpp
+    block/forward.cpp
+    block/backward.cpp
+    block/train.cpp
 
     # transformer
     transformer/transformer.cpp
+    transformer/forward.cpp
+    transformer/backward.cpp
+    transformer/train.cpp
 )
 
 target_link_libraries(neural
     PUBLIC # Important: Make OpenCL and CUDA linking public
         ${OpenCL_LIBRARIES}
-        ${CUDAToolkit_LIBRARIES}
+        # ${CUDAToolkit_LIBRARIES}
     maths
 )

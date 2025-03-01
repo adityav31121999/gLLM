@@ -1,11 +1,23 @@
 
 #include "include/attention.hpp"
 
+/**
+ * @brief Constructor for complete attention block
+ * @param x number of partial attentions in block
+ * @param y number of attention in each partial attention
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ */
 block::block(int x, int y, int n, int d, int h) : n(n), d(d), h(h) {
     b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h)));
     countParams();
 }
 
+
+/**
+ * @brief Count Parameters for complete attention
+ */
 void block::countParams() {
     totalParams = b[0][0].totalParams * x * y;
 }
