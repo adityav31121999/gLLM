@@ -13,27 +13,37 @@
  
 /**
  * @brief Common Transformer class for token/chunk prediction and context 
- * retention and grammatical restriction
+ * retention and grammatical restriction. This can be single block or multi-block
+ * architecture.
  */
 class transformer {
 public:
+    int total;      // total tokenLimit
+    int m;          // number of blocks
+    int x;          // number of incomplete attentions in each partial attention
+    int y;          // number of layers of partial attention for complete attention block
+    int n;          // total tokens for each attention head
+    int d;          // token dimension
+    int h;          // height of MQ, MK and columns of MV, MH
+    int totalParams;        // total parameters of transformer
     std::string tinput;     // token input
     std::string toutput;    // token output
-    int total;              // total tokenLimit
-    std::vector<std::vector<double>> sinput;         // sentence property input
-    std::vector<std::vector<double>> soutput;        // sentence property output
+    std::vector<std::vector<double>> sinput;    // sentence property input
+    std::vector<std::vector<double>> soutput;   // sentence property output
+    std::vector<block> attblock;    // attention block (1 or many)
 
-    block attblock;         // attention block
-
-    transformer();          // default constructor
+    transformer() = default;        // default constructor
+    transformer(int m, int x, int y, int n, int d, int h);
 
     void runTransformer();  // run transformer
     void fineTune();        // fine-tune transformer
     void feedBack();        // feed back from user
     void instruct();        // instruct the transformer
+    void spoonfeed();       // spoonfeeding
+    void backfeed();        // backfeeding
+    void countParams();     // count parameters
 
     ~transformer();         // default destructor
 };
-
 
 #endif

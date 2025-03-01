@@ -21,7 +21,7 @@ add_library(neural STATIC
     attention/train.cpp
 
     # block
-    attention/block.cpp
+    block/block.cpp
 
     # transformer
     transformer/transformer.cpp

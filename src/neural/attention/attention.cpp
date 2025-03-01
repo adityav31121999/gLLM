@@ -30,6 +30,7 @@ attention::attention(int n, int d, int h) : n(n), d(d), h(h) {
     ver = mlp(d, 16, 10, 0.01);         // MLP for New Block Attention
     changeH = std::vector<double>(d, 0);    // change obtained from final step
     changeV = std::vector<double>(d, 0);    // change obtained from final block
+    countParams();
 }
 
 void attention::countParams() {
