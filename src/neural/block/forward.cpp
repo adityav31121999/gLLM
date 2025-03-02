@@ -20,6 +20,6 @@ void block::paForward(int k) {
  * in parallel for all partial attentions in a block.
  */
 void block::forward() {
-    //
+    // run paForward in parallel with CUDA and OpenCL
     tokenCount = tokenCount + 1;
 }

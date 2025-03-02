@@ -27,6 +27,7 @@ public:
     int n;          // total tokens for each attention head
     int d;          // token dimension
     int h;          // height of MQ, MK and columns of MV, MH
+    int l;          // layers of mlp
     int totalParams;        // total parameters of transformer
     std::string tinput;     // token input
     std::string toutput;    // token output
@@ -35,7 +36,7 @@ public:
 
     // default constructor
     transformer() = default;
-    transformer(int m, int x, int y, int n, int d, int h);
+    transformer(int m, int x, int y, int n, int d, int h, int l);
 
     void runTransformer();  // run transformer
     void fineTune();        // fine-tune transformer

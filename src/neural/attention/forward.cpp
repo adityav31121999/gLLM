@@ -12,12 +12,13 @@ void attention::forward() {
         KEYS[i] = dot(tokens[i], MK);
         QUERYS[i] = dot(tokens[i], MQ);
     }
-    // head calculation
     for(int i = 0; i < tokenCount; i++) {
         for(int j = 0; j < tokenCount; j++) {
+            // head calculation
             head[i][j] = std::inner_product(KEYS[i].begin(), KEYS[i].end(), QUERYS[i].begin(), 0.0);
         }
     }
+
     // Ki.MV, dh = weighted sums horizontal
     for(int i = 0; i < tokenCount; i++) {
         for(int j = 0; j < tokenCount; j++) {
@@ -26,18 +27,19 @@ void attention::forward() {
         }
         EH = EH + dh;
     }
+
     // Qi.MH, dv = weighted sums vertically
     for(int i = 0; i < tokenCount; i++) {
         for(int j = 0; j < tokenCount; j++) {
             dV[j][i] = dot(QUERYS[j], MV);
-            dv = dh + (head[j][i] * dV[j][i]);
+            dv = dv + (head[j][i] * dV[j][i]);
         }
         EV = EV + dv;
     }
-    // mlp horizontal
+
+    // mlp horizontal and vertical
     hor.input = EH;
     hor.forward();
-    // mlp vertical
     ver.input = EV;
     ver.forward();
 }

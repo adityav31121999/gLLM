@@ -8,7 +8,7 @@
  * @param d dimension of each token
  * @param h height of MQ, MK and columns of MV, MH
  */
-attention::attention(int n, int d, int h) : n(n), d(d), h(h) {
+attention::attention(int n, int d, int h, int l) : n(n), d(d), h(h), l(l) {
     // nxn matrix to hold temporary scalar values
     tokens = std::vector<std::vector<double>>(n, std::vector<double>(d, 0.0));
     head = std::vector<std::vector<double>>(n, std::vector<double>(n, 0));
@@ -26,8 +26,8 @@ attention::attention(int n, int d, int h) : n(n), d(d), h(h) {
     dv = std::vector<double>(d, 0);     // dv = sum(dV)
     EH = std::vector<double>(d, 0);     // EH = EH + dH
     EV = std::vector<double>(d, 0);     // EV = EV + dV
-    hor = mlp(d, 16, 10, 0.01);         // MLP for FFN
-    ver = mlp(d, 16, 10, 0.01);         // MLP for New Block Attention
+    hor = mlp(d, l, 10, 0.01);         // MLP for FFN
+    ver = mlp(d, l, 10, 0.01);         // MLP for New Block Attention
     changeH = std::vector<double>(d, 0);    // change obtained from final step
     changeV = std::vector<double>(d, 0);    // change obtained from final block
     countParams();
@@ -37,5 +37,5 @@ attention::attention(int n, int d, int h) : n(n), d(d), h(h) {
  * @brief Count parameters in attention class
  */
 void attention::countParams() {
-    totalParams = (4 * h * d) + (2 * d * d * hor.layers);
+    totalParams = (4 * h * d) + (2 * d * d * l);
 }

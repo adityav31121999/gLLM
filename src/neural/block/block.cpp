@@ -9,8 +9,8 @@
  * @param d dimension of each token
  * @param h height of MQ, MK and columns of MV, MH
  */
-block::block(int x, int y, int n, int d, int h) : n(n), d(d), h(h) {
-    b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h)));
+block::block(int x, int y, int n, int d, int h, int l) : n(n), d(d), h(h), l(l) {
+    b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l)));
     holdEVs = std::vector<std::vector<std::vector<double>>>(x, std::vector<std::vector<double>>(y, std::vector<double>(d, 0)));
     countParams();
 }

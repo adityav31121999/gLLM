@@ -28,6 +28,7 @@ public:
     int n;              // total tokens for each attention head
     int d;              // token dimension
     int h;              // height of MQ, MK and columns of MV, MH
+    int l;              // layers of mlp
     int tokenCount;     // token count
     int totalParams;    // total parameters in one incomplete attention
     mlp ver;            // next block transfer for cross attention
@@ -53,7 +54,7 @@ public:
 
     // default constructor
     attention() = default;
-    attention(int n, int d, int h);
+    attention(int n, int d, int h, int l);
 
     void forward();
     void backward();
@@ -71,14 +72,14 @@ class block {
 public:
     int x;          // number of incomplete attentions in each partial attention
     int y;          // number of layers of partial attention for complete attention block
-    int n, d, h;    // inputs for attention class constructot
+    int n, d, h, l;     // inputs for attention class constructor
     int tokenCount;     // token count
     int totalParams;    // total parameters of complete attention
     std::vector<std::vector<attention>> b;      // block for complete attention
     std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
 
     block() = default;
-    block(int x, int y, int n, int d, int h);
+    block(int x, int y, int n, int d, int h, int l);
 
     void paForward(int k);
     void forward();
