@@ -16,6 +16,7 @@ transformer::transformer(int m, int x, int y, int n, int d, int h) {
     countParams();
 }
 
+
 /**
  * @brief count parameters in transformer
  */

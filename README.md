@@ -11,9 +11,9 @@
 - **VERSION**: 0.0.0.1
 - **LICENSE**: MIT
 - **PROGRAMMING LANGUAGES**: C, C++, OpenCL, CUDA
-  - *C VERSION*: C17
-  - *C++ VERSION*: C++20
-  - *OpenCL VERSION*: OpenCL 3
+  - *C VERSION*: 17
+  - *C++ VERSION*: 20
+  - *OpenCL VERSION*: 300
   - *CUDA*: 12.8
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**: Shady Attention Mechanism

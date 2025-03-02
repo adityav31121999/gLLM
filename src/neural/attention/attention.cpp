@@ -20,8 +20,8 @@ attention::attention(int n, int d, int h) : n(n), d(d), h(h) {
     MH = mat(d, h);     // dxh
     KEYS = std::vector<std::vector<double>>(n, std::vector<double>(h, 0));      // Ei.MK
     QUERYS = std::vector<std::vector<double>>(n, std::vector<double>(h, 0));    // Ei.MQ
-    dH = std::vector<std::vector<double>>(n, std::vector<double>(d, 0));        // Ki.MH
-    dV = std::vector<std::vector<double>>(n, std::vector<double>(d, 0));        // Qi.MV
+    dH = std::vector<std::vector<std::vector<double>>>(n, std::vector<std::vector<double>>(n, std::vector<double>(d, 0)));        // Ki.MH
+    dV = std::vector<std::vector<std::vector<double>>>(n, std::vector<std::vector<double>>(n, std::vector<double>(d, 0)));        // Qi.MV
     dh = std::vector<double>(d, 0);     // dh = sum(dH)
     dv = std::vector<double>(d, 0);     // dv = sum(dV)
     EH = std::vector<double>(d, 0);     // EH = EH + dH

@@ -156,5 +156,8 @@ std::pair<mat*, mat*> makeOrthogonalMatrix(mat*);
 mat jacobian(mat *a);
 double jacobianval(mat *a);
 
+std::vector<double> dot(mat a, std::vector<double> b);
+std::vector<double> dot(std::vector<double> a, mat b);
+
 
 #endif

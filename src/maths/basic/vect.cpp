@@ -1,6 +1,7 @@
 
 // vect.cpp: all vector related functions
 #include "include/basic.hpp"
+#include "basic.hpp"
 
 
 /**
@@ -82,6 +83,23 @@ std::vector<double> operator*(std::vector<double> x, double y) {
     std::vector<double> result(x.size());
     std::transform(x.begin(), x.end(), result.begin(), [&y](const auto& i) { return i*y; });
     return result;
+}
+
+/**
+ * @brief Overloaded multiplication operator for vectors. This function takes a vector and a number
+ * as an input and returns a vector where each element is the product of the corresponding
+ * elements of the input vector and number.
+ * @param a number
+ * @param b vector
+ * @return a vector where each element is the product of the corresponding elements of the
+ * input vector and number
+ */
+std::vector<double> operator*(double a, std::vector<double> b) {
+    std::vector<double> c(b.size(), 0.0);
+    for(int i = 0; i < b.size(); i++) {
+        c[i] = b[i] * a;
+    }
+    return c;
 }
 
 /**
@@ -274,8 +292,57 @@ double product(std::vector<double> a) {
  * @param a 2D vector of doubles
  * @return the product of all elements in the 2D vector
  */
-double product(std::vector<std::vector<double>> a) {
-    return product(sumofrow(a));
+double product(std::vector<std::vector<double>> b) {
+    double a = 1;
+    for(int i = 0; i < b.size(); i++) {
+        a *= std::accumulate(b[i].begin(), b[i].end(), 1.0, std::multiplies<double>());
+    }
+    return a;
+}
+
+/**
+ * @brief Calculate the inner product of a vector of vector with itself 
+ * and form a square matrix of its dot products.
+ * @param a The input matrix
+ * @return The product of the matrix with itself
+ * @throws std::runtime_error if the input matrix is empty
+ */
+std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>> a) {
+    if(a.empty()) 
+        throw std::runtime_error("embeddings must not be empty");
+
+    std::vector<std::vector<double>> c(a.size(), std::vector<double>(a.size(), 0.0));
+    
+    for(size_t i = 0; i < a.size(); i++) {
+        for(size_t j = 0; j < a.size(); j++) {
+            c[i][j] = std::inner_product(a[i].begin(), a[i].end(), a[j].begin(), 0.0);
+        }
+    }
+    
+    return c;
+}
+
+/**
+ * @brief Calculate the product of two vector of vectors and form a square 
+ * matrix of dot products of each combination of two vectors.
+ * @param a The first matrix
+ * @param b The second matrix
+ * @return The product of the two matrices
+ * @throws std::runtime_error if the rows of the matrices are not of equal sizes
+ */
+std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>> a, std::vector<std::vector<double>> b) {
+    if(a.empty() || b.empty() || a[0].size() != b[0].size()) 
+        throw std::runtime_error("Rows must be of equal sizes");
+
+    std::vector<std::vector<double>> c(a.size(), std::vector<double>(b[0].size(), 0.0));
+    
+    for(size_t i = 0; i < a.size(); i++) {
+        for(size_t j = 0; j < b.size(); j++) {
+            c[i][j] = std::inner_product(a[i].begin(), a[i].end(), b[j].begin(), 0.0);
+        }
+    }
+    
+    return c;
 }
 
 /**
@@ -307,7 +374,6 @@ std::vector<std::vector<double>> power(std::vector<std::vector<double>> x, doubl
                    [y](const auto& row) { return power(row, y); });
     return result;
 }
-
 
 /**
  * @brief Sum of each row in a 2D vector. This function takes a 2D vector as an input and returns 
@@ -345,7 +411,6 @@ std::vector<double> sumofcol(std::vector<std::vector<double>> a) {
     return b;
 }
 
-
 /**
  * @brief Calculate the error between two vectors
  * This function takes two vectors as an input and returns a new vector
@@ -368,7 +433,6 @@ std::vector<double> error(std::vector<double> x, std::vector<double> y) {
     // Return the vector of errors
     return b;
 }
-
 
 /**
  * @brief Calculate the mean error between two vectors.
@@ -427,7 +491,6 @@ std::vector<double> percenterrorofvec(std::vector<double> v1, std::vector<double
     return error;
 }
 
-
 /**
  * @brief Gradient descent for a given output vector and expected value vector
  * @param y_true Output vector
@@ -445,7 +508,6 @@ std::vector<double> gradient_descent(std::vector<double> y_true, std::vector<dou
     }
     return dw;
 }
-
 
 /**
  * @brief Calculate the error between two vectors and return the sum of the errors
@@ -469,7 +531,6 @@ double gradientdesc1(std::vector<double> x, std::vector<double> y) {
     // Return the vector of errors
     return (std::accumulate(b.begin(), b.end(), 0.0)/b.size());
 }
-
 
 /**
  * @brief Create a matrix from two vectors
@@ -497,7 +558,6 @@ std::vector<std::vector<double>> vxv2mat(std::vector<double> x, std::vector<doub
     return a;
 }
 
-
 /**
  * @brief Calculate the cross product of two vectors and return the resulting vector.
  * This function takes two vectors as an input and returns a new vector where each
@@ -516,7 +576,6 @@ std::vector<double> vxv2v(std::vector<double> x, std::vector<double> y) {
     // Return the resulting matrix
     return sumofrow(a);
 }
-
 
 /**
  * @brief Calculate the inner/dot product of two vectors and return the resulting vector.
@@ -542,7 +601,6 @@ std::vector<double> vdotv2v(std::vector<double> x, std::vector<double> y) {
     return a;
 }
 
-
 /**
  * @brief Calculate the dot product of two vectors and return the sum of the products.
  * This function takes two vectors as an input and returns the sum of the products
@@ -564,7 +622,6 @@ double vdotv2val(std::vector<double> x, std::vector<double> y) {
     return a;
 }
 
-
 /**
  * @brief Vector dot product of two vectors and a scalar value
  * @details This function takes two vectors and returns the dot product of the two vectors. The dot product is the sum of the
@@ -580,7 +637,6 @@ double vdotv2scal(std::vector<double> v1, std::vector<double> v2) {
     }
     return sum;
 }
-
 
 /**
  * @brief Create a matrix from two vectors
@@ -606,7 +662,6 @@ std::vector<std::vector<double>> vdotmat2mat(std::vector<double> x, std::vector<
     return a;
 }
 
-
 /**
  * @brief Calculate the product of a vector and a matrix. This function takes a vector 
  * and a matrix as input and returns a new vector where each element is the sum of the 
@@ -631,7 +686,6 @@ std::vector<double> vxmat2vec(std::vector<double> x, std::vector<std::vector<dou
     // Return the resulting matrix
     return a;
 }
-
 
 /**
  * @brief Computes the Kronecker product of two matrices.
@@ -661,7 +715,6 @@ std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>> a, s
     return c;
 }
 
-
 /**
  * @brief Computes the Kronecker product of a matrix and a vector.
  * This function takes a matrix and a vector as input and returns their Kronecker product.
@@ -688,7 +741,6 @@ std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>> a, s
     // Return the resulting Kronecker product matrix
     return c;
 }
-
 
 /**
  * @brief Computes the Hadamard product of two matrices.

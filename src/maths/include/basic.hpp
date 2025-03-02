@@ -18,6 +18,7 @@
 std::vector<double> operator+(std::vector<double>, std::vector<double>);
 std::vector<double> operator-(std::vector<double>, std::vector<double>);
 std::vector<double> operator*(std::vector<double>, double);
+std::vector<double> operator*(double, std::vector<double>);
 std::vector<double> operator/(std::vector<double>, double);
 std::vector<std::vector<double>> operator+(std::vector<std::vector<double>>, std::vector<std::vector<double>>);
 std::vector<std::vector<double>> operator-(std::vector<std::vector<double>>, std::vector<std::vector<double>>);
@@ -36,6 +37,7 @@ double sum(std::vector<double>);
 double sum(std::vector<std::vector<double>>);
 double product(std::vector<double>);
 double product(std::vector<std::vector<double>>);
+std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>>);
 std::vector<double> power(std::vector<double>, double);
 std::vector<std::vector<double>> power(std::vector<std::vector<double>>, double);
 std::vector<double> sumofrow(std::vector<std::vector<double>>);
@@ -85,31 +87,6 @@ void randomweights(std::vector<std::vector<double>>);
 void jumbledwbs(std::vector<std::vector<double>>);
 void ijbasedwbs(std::vector<std::vector<double>>);
 void Random(std::vector<std::vector<double>>);
-
-// activ.cpp
-
-double sigmoid(double);
-double sigmoidder(double);
-std::vector<double> sigmoidv(std::vector<double>);
-std::vector<double> sigmoidvder(std::vector<double>);
-std::vector<std::vector<double>> sigmoid(std::vector<std::vector<double>>);
-std::vector<std::vector<double>> sigmoidder(std::vector<std::vector<double>>);
-std::vector<double> softmax(std::vector<double>, double);
-std::vector<double> softmaxder(std::vector<double>, double);
-std::vector<std::vector<double>> softmax(std::vector<std::vector<double>>, double);
-std::vector<std::vector<double>> softmaxder(std::vector<std::vector<double>>, double);
-double ReLU(double);
-double ReLUder(double);
-std::vector<double> ReLUv(std::vector<double>);
-std::vector<double> ReLUvder(std::vector<double>);
-double SeLU(double);
-double SeLUder(double);
-std::vector<double> SeLUv(std::vector<double>);
-std::vector<double> SeLUvder(std::vector<double>);
-std::vector<double> LOTA(std::vector<double> y);
-std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>>);
-std::vector<double> LOTAder(std::vector<double> y);
-std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>>);
 
 // functions1.cpp
 

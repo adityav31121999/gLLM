@@ -28,6 +28,7 @@ public:
     int n;              // total tokens for each attention head
     int d;              // token dimension
     int h;              // height of MQ, MK and columns of MV, MH
+    int tokenCount;     // token count
     int totalParams;    // total parameters in one incomplete attention
     mlp ver;            // next block transfer for cross attention
     mlp hor;            // horizontal transfer for self+cross attention
@@ -41,8 +42,8 @@ public:
     std::vector<std::vector<double>> head;      // attention head matrix -> KEYs x QUERYS -> [K(i).Q(j)] <- scalar
     std::vector<std::vector<double>> next;      // Vertical tokens for attention head to be transferred to next block
     std::vector<std::vector<double>> tokB;      // Shady tokens obtained from next and previous blocks
-    std::vector<std::vector<double>> dH;        // Weighted Sums Horizontally
-    std::vector<std::vector<double>> dV;        // Weighted Sums Vertically
+    std::vector<std::vector<std::vector<double>>> dH;        // Weighted Sums Horizontally
+    std::vector<std::vector<std::vector<double>>> dV;        // Weighted Sums Vertically
     std::vector<double> EH;         // Next Embedding in same block
     std::vector<double> EV;         // Next Embedding for next Block
     std::vector<double> dh;         // dH sum
@@ -71,13 +72,15 @@ public:
     int x;          // number of incomplete attentions in each partial attention
     int y;          // number of layers of partial attention for complete attention block
     int n, d, h;    // inputs for attention class constructot
+    int tokenCount;     // token count
     int totalParams;    // total parameters of complete attention
     std::vector<std::vector<attention>> b;      // block for complete attention
-    std::vector<std::vector<std::vector<double>>> inbetween;    // inbetween tokens transfer
+    std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
 
     block() = default;
     block(int x, int y, int n, int d, int h);
 
+    void paForward(int k);
     void forward();
     void backward();
     void train();

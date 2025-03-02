@@ -733,3 +733,43 @@ mat mat::Random(int row, int col) {
     }
     return result;
 }
+
+/**
+* Calculate the dot product of a matrix and a vector.
+* @param a The matrix
+* @param b The vector
+* @return The dot product of the matrix and the vector
+* @throws std::runtime_error if the row vectors of the matrix have different sizes than the vector
+*/
+std::vector<double> dot(mat a, std::vector<double> b) {
+    if(a.a.empty() || a.a[0].size() != b.size())
+        throw std::runtime_error("Row vectors of matrix should have the same size as the vector");
+    
+    std::vector<double> c(a.a.size());
+    
+    for(size_t i = 0; i < a.a.size(); i++) {
+        c[i] = std::inner_product(a.a[i].begin(), a.a[i].end(), b.begin(), 0.0);
+    }
+    
+    return c;
+}
+
+/**
+* Calculate the dot product of a vector and a matrix.
+* @param a The vector
+* @param b The matrix
+* @return The dot product of the vector and the matrix
+* @throws std::runtime_error if the row vectors of the matrix have different sizes than the vector
+*/
+std::vector<double> dot(std::vector<double> a, mat b) {
+    if(b.a.empty() || b.a[0].size() != a.size())
+        throw std::runtime_error("Row vectors of matrix should have the same size as the vector");
+    
+    std::vector<double> c(b.a.size());
+    
+    for(size_t i = 0; i < b.a.size(); i++) {
+        c[i] = std::inner_product(b.a[i].begin(), b.a[i].end(), a.begin(), 0.0);
+    }
+    
+    return c;
+}
