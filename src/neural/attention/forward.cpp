@@ -18,6 +18,15 @@ void attention::forward() {
             head[i][j] = std::inner_product(KEYS[i].begin(), KEYS[i].end(), QUERYS[i].begin(), 0.0);
         }
     }
+    head = LOTA(head, tokenCount);
+
+#ifdef MLING        // for multilingual translation and data manipulation
+
+#else
+#ifdef QNA          // for answers and data generation
+
+#endif      // QNA end
+#endif      // MLING end
 
     // Ki.MV, dh = weighted sums horizontal
     for(int i = 0; i < tokenCount; i++) {
@@ -40,6 +49,8 @@ void attention::forward() {
     // mlp horizontal and vertical
     hor.input = EH;
     hor.forward();
+    mh = ReLUv(hor.output);
     ver.input = EV;
     ver.forward();
+    mv = ReLUv(ver.output);
 }

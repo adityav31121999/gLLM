@@ -31,6 +31,7 @@ public:
     int l;              // layers of mlp
     int tokenCount;     // token count
     int totalParams;    // total parameters in one incomplete attention
+    double error;       // error for attention
     mlp ver;            // next block transfer for cross attention
     mlp hor;            // horizontal transfer for self+cross attention
     mat MQ;             // query matrix
@@ -49,8 +50,10 @@ public:
     std::vector<double> EV;         // Next Embedding for next Block
     std::vector<double> dh;         // dH sum
     std::vector<double> dv;         // dV sum
-    std::vector<double> changeH;    // change in Horizontal process
-    std::vector<double> changeV;    // change in Vertical process
+    std::vector<double> mh;         // ReLU of hor output
+    std::vector<double> mv;         // ReLU of ver output
+    std::vector<double> changeH;    // change in Horizontal process as expected vector for backpropagation in hor mlp
+    std::vector<double> changeV;    // change in Vertical process as expected vector for backpropagation in ver mlp
 
     // default constructor
     attention() = default;
@@ -64,6 +67,30 @@ public:
     ~attention() = default;
 };
 
+/**
+ * @brief partial attention class
+ */
+class pattention {
+public:
+    int x;          // number of incomplete attentions in partial attention
+    int n, d, h, l;     // inputs for attention class constructor
+    int tokenCount;     // token count
+    int totalParams;    // total parameters of complete attention
+    double error;       // error for block, mean of all incomplete attentions
+    std::vector<std::vector<attention>> b;      // block for complete attention
+    std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
+
+    pattention() = default;
+    pattention(int x, int n, int d, int h, int l);
+
+    void forward();
+    void backward();
+    void train();
+    void countParams();
+
+    ~pattention() = default;
+};
+
 
 /**
  * @brief block for complete attention
@@ -75,6 +102,7 @@ public:
     int n, d, h, l;     // inputs for attention class constructor
     int tokenCount;     // token count
     int totalParams;    // total parameters of complete attention
+    double error;       // error for block, mean of all incomplete attentions
     std::vector<std::vector<attention>> b;      // block for complete attention
     std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
 

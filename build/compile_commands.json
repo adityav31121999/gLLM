@@ -193,9 +193,21 @@
 },
 {
   "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\backward.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\backward.cpp",
-  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\backward.cpp.obj"
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\backfeed.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\backfeed.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\backfeed.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\backfeed.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\feedback.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\feedback.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\feedback.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\feedback.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\spoonfeed.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\spoonfeed.cpp",
+  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\spoonfeed.cpp",
+  "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\spoonfeed.cpp.obj"
 },
 {
   "directory": "C:/code/gLLM/build",

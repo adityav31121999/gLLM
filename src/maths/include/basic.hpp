@@ -78,6 +78,7 @@ std::vector<double> SeLUv(std::vector<double>);
 std::vector<double> SeLUvder(std::vector<double>);
 std::vector<double> LOTA(std::vector<double> y);
 std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>>);
+std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>>, int);
 std::vector<double> LOTAder(std::vector<double> y);
 std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>>);
 

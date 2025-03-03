@@ -31,6 +31,7 @@ public:
     double mse;                 // mean square error
     double learning;            // learning rate
     bool status;                // 1 if completely trained, 0 otherwise
+    int totalParams;            // total parameters in MLP
 // member containers
     std::vector<double> input;      // input vector
     std::vector<double> output;     // output vector
@@ -59,6 +60,7 @@ public:
     void validate();
     void test();
     void initializeWeights();
+    void countParams();
 
     // default destructor
     ~mlp() = default;

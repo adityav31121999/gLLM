@@ -39,6 +39,7 @@ public:
     transformer(int m, int x, int y, int n, int d, int h, int l);
 
     void runTransformer();  // run transformer
+    void forward();         // forward propagation
     void fineTune();        // fine-tune transformer
     void feedBack();        // feed back from user
     void instruct();        // instruct the transformer

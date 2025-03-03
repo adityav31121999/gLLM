@@ -12,6 +12,14 @@ void block::paForward(int k) {
         b[k][i].forward();
         holdEVs[k][i] = b[k][i].EV;
     }
+
+#ifdef MLING        // for multilingual translation
+
+#endif
+
+#ifdef QnA          // for QNA and Enquiry
+
+#endif
 }
 
 
@@ -22,4 +30,11 @@ void block::paForward(int k) {
 void block::forward() {
     // run paForward in parallel with CUDA and OpenCL
     tokenCount = tokenCount + 1;
+#ifdef MLING        // for multilingual translation
+
+#endif
+
+#ifdef QnA          // for QNA and Enquiry
+
+#endif
 }

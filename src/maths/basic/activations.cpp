@@ -392,6 +392,47 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
 }
 
 /**
+ * @brief Applies the LOTA (Least Of Them All) activation function to a 2D vector.
+ *        The LOTA function is defined as:
+ *        f(x) = x - min(x) for each element, and
+ *        f(x) = f(x) / sum(f(x)) for normalization
+ * @param y Input 2D vector
+ * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
+ */
+std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t) {
+    if(y.size() == t) {
+        std::vector<std::vector<double>> x(y);
+        x = LOTA(x);
+        return x;
+    }
+    // Create a copy of the input 2D vector
+    std::vector<std::vector<double>> x(y);
+    // Find the minimum value in the entire 2D vector
+    double min_val = 0.0;
+    for (int i = 0; i < t; i++) {
+        for(int j = 0; j < t; j++) {
+            if (x[i][j] < min_val)
+                min_val = x[i][j];
+        }
+    }
+    min_val = std::abs(min_val);
+    // Subtract the minimum value from each element in the 2D vector
+    for (int i = 0; i < t; i++) {
+        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](double& i){ return (i + min_val); });
+    }
+    double sum = 0.0; // Variable to store the sum of all elements
+    // Calculate the sum of all elements in the 2D vector
+    for (int i = 0; i < t; i++) {
+        sum += std::accumulate(x[i].begin(), x[i].begin() + t, 0.0);
+    }
+    // Normalize each element by dividing it by the total sum
+    for (int i = 0; i < t; i++) {
+        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](double& i){ return i / sum; });
+    }
+    return x; // Return the normalized 2D vector
+}
+
+/**
  * @brief Calculates the derivative of the LOTA (Least Of Them All) activation function for a vector.
  *        This function calculates the derivative of the LOTA function for each element in a vector.
  *        The LOTA derivative is defined as:

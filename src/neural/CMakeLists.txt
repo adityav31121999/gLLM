@@ -29,7 +29,9 @@ add_library(neural STATIC
     # transformer
     transformer/transformer.cpp
     transformer/forward.cpp
-    transformer/backward.cpp
+    transformer/backfeed.cpp
+    transformer/feedback.cpp
+    transformer/spoonfeed.cpp
     transformer/train.cpp
 )
 

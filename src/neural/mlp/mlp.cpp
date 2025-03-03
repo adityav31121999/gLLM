@@ -28,4 +28,12 @@ mlp::mlp(unsigned int in, unsigned int layers, unsigned int epochs, double learn
     activations.resize(layers, std::vector<double>(neurons, 0.0));
     gweights.resize(layers - 1, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
     initializeWeights();
+    countParams();
+}
+
+/**
+ * @brief count total parameters in the MLP
+ */
+void mlp::countParams() {
+    totalParams = neurons * neurons * layers;
 }
