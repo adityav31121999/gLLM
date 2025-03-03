@@ -203,7 +203,6 @@ std::vector<std::vector<double>> operator/(std::vector<std::vector<double>> x, d
     return a;
 }
 
-
 /**
  * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of doubles 
  * and two unsigned integers as input and returns a 2D vector of doubles. The two unsigned 
@@ -261,7 +260,6 @@ std::vector<double> mat2vec(std::vector<std::vector<double>> m) {
 double sum(std::vector<double> a) {
     return std::accumulate(a.begin(), a.end(), 0.0);
 }
-
 
 /**
  * @brief Calculates the sum of all elements in a 2D vector.

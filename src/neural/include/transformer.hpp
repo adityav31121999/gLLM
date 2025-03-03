@@ -51,3 +51,12 @@ public:
 };
 
 #endif
+
+/**
+ * to make and train model, initiate memory for the model first which is not
+ * RAM or VRAM, use secondary memory in different drive so that a good amount
+ * memory is available. This helps in two-way process where all FFN data can
+ * be stored and then backprop can be done to alter as per changes needed. All
+ * the process will run on RAM and VRAM parallely alongwith operations and as 
+ * one incomplete attention is completed shift data directly to the model file.
+ */

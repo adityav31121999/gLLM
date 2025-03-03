@@ -100,27 +100,28 @@
 
 ```
 # add executable
-add_executable(gLLM "main.cpp" 
+add_executable(project_name "main.cpp" 
                 "gLLM.h"
-                "src/model/include/maths.hpp"
-                "src/neural/include/neural.hpp"
-                "src/model/include/model.hpp"
-                "src/script/include/script.hpp"
+                "gLLM/src/model/include/maths.hpp"
+                "gLLM/src/neural/include/neural.hpp"
+                "gLLM/src/model/include/model.hpp"
+                "gLLM/src/script/include/script.hpp"
 )
 
 # bind private libraries
 target_include_directories(gLLM
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/maths/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/neural/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/model/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/script/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/maths/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/neural/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/model/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/script/include
 )
 
 # link 3rd party libraries
 target_link_libraries(gLLM
 PRIVATE
 	${OpenCL_LIBRARIES}
+  ${CUDAToolkit LIBS}
     maths
     model
     neural
