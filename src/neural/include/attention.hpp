@@ -1,5 +1,8 @@
 
 /**
+ * @file Attention class for calculating attention in neural networks.
+ * Attention is a mechanism that allows a neural network to focus on a 
+ * specific part of the input sequence.
  * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
  * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
  * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
@@ -25,6 +28,7 @@
  */
 class attention {
 public:
+// variables
     int n;              // total tokens for each attention head
     int d;              // token dimension
     int h;              // height of MQ, MK and columns of MV, MH
@@ -32,12 +36,14 @@ public:
     int tokenCount;     // token count
     int totalParams;    // total parameters in one incomplete attention
     double error;       // error for attention
+// operands
     mlp ver;            // next block transfer for cross attention
     mlp hor;            // horizontal transfer for self+cross attention
     mat MQ;             // query matrix
     mat MK;             // key matrix
     mat MV;             // vertical value for deltas
     mat MH;             // horizontal value for deltas
+// containers
     std::vector<std::vector<double>> tokens;    // tokens for attention head
     std::vector<std::vector<double>> KEYS;      // KEY vectors -> tokens * MK
     std::vector<std::vector<double>> QUERYS;    // QUERY vectors -> tokens * MQ
@@ -55,6 +61,8 @@ public:
     std::vector<double> changeH;    // change in Horizontal process as expected vector for backpropagation in hor mlp
     std::vector<double> changeV;    // change in Vertical process as expected vector for backpropagation in ver mlp
 
+// functions
+
     // default constructor
     attention() = default;
     attention(int n, int d, int h, int l);
@@ -62,10 +70,11 @@ public:
     void forward();
     void backward();
     void train();
-    void countParams();
 
+    // default destructor
     ~attention() = default;
 };
+
 
 /**
  * @brief partial attention class
@@ -77,17 +86,18 @@ public:
     int tokenCount;     // token count
     int totalParams;    // total parameters of complete attention
     double error;       // error for block, mean of all incomplete attentions
-    std::vector<std::vector<attention>> b;      // block for complete attention
-    std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
+    std::vector<attention> b;      // partial attention
+    std::vector<std::vector<double>> holdEVs;    // inbetween tokens transfer
 
+    // default constructor
     pattention() = default;
     pattention(int x, int n, int d, int h, int l);
 
     void forward();
     void backward();
     void train();
-    void countParams();
 
+    // default destructor
     ~pattention() = default;
 };
 
@@ -106,6 +116,7 @@ public:
     std::vector<std::vector<attention>> b;      // block for complete attention
     std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
 
+    // default constructor
     block() = default;
     block(int x, int y, int n, int d, int h, int l);
 
@@ -113,8 +124,8 @@ public:
     void forward();
     void backward();
     void train();
-    void countParams();
-    
+
+    // default destructor
     ~block() = default;
 };
 

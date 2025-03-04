@@ -10,15 +10,13 @@
  * @param h height of MQ, MK and columns of MV, MH
  */
 block::block(int x, int y, int n, int d, int h, int l) : n(n), d(d), h(h), l(l) {
+    this->x = x;
+    this->y = y;
+    this->n = n;
+    this->d = d;
+    this->h = h;
+    this->l = l;
     b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l)));
     holdEVs = std::vector<std::vector<std::vector<double>>>(x, std::vector<std::vector<double>>(y, std::vector<double>(d, 0)));
-    countParams();
-}
-
-
-/**
- * @brief Count Parameters for complete attention
- */
-void block::countParams() {
-    totalParams = b[0][0].totalParams * x * y;
+    totalParams = ((4 * h * d) + (2 * d * d * l)) * x * y;
 }

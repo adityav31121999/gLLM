@@ -7,11 +7,11 @@
 #include <string>
 
 #define TOKEN_IMIN 1            // token input
-#define TOKEN_IMAX 8192         // 2^13
+#define TOKEN_IMAX 16384        // 2^14
 #define TOKEN_OMIN 1            // token output
-#define TOKEN_OMAX 1048576      // 2^20
+#define TOKEN_OMAX 2097152      // 2^20 => 2093
 #define BLOCK_MIN 1             // number of blocks in transformer
-#define BLOCK_MAX 128           // 2^7
+#define BLOCK_MAX 256           // 2^7
 
 /**
  * @brief Common Transformer class for token/chunk prediction and context 
@@ -45,7 +45,7 @@ public:
     void instruct();        // instruct the transformer
     void spoonfeed();       // spoonfeeding
     void backfeed();        // backfeeding
-    void countParams();     // count parameters
+    void train();           // train the transformer
 
     ~transformer();         // default destructor
 };

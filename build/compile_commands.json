@@ -229,12 +229,6 @@
 },
 {
   "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\load.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\load.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\load.cpp",
-  "output": "src\\model\\CMakeFiles\\model.dir\\src\\load.cpp.obj"
-},
-{
-  "directory": "C:/code/gLLM/build",
   "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\run.cpp",
   "file": "C:\\code\\gLLM\\src\\model\\src\\run.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj"
@@ -244,5 +238,41 @@
   "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\save.cpp",
   "file": "C:\\code\\gLLM\\src\\model\\src\\save.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\serialise.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\serialise.cpp",
+  "file": "C:\\code\\gLLM\\src\\model\\src\\serialise.cpp",
+  "output": "src\\model\\CMakeFiles\\model.dir\\src\\serialise.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\deserialise.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\deserialise.cpp",
+  "file": "C:\\code\\gLLM\\src\\model\\src\\deserialise.cpp",
+  "output": "src\\model\\CMakeFiles\\model.dir\\src\\deserialise.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\train\\train.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\train\\train.cpp",
+  "file": "C:\\code\\gLLM\\src\\model\\src\\train\\train.cpp",
+  "output": "src\\model\\CMakeFiles\\model.dir\\src\\train\\train.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\train\\fine.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\train\\fine.cpp",
+  "file": "C:\\code\\gLLM\\src\\model\\src\\train\\fine.cpp",
+  "output": "src\\model\\CMakeFiles\\model.dir\\src\\train\\fine.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\use\\load.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\use\\load.cpp",
+  "file": "C:\\code\\gLLM\\src\\model\\src\\use\\load.cpp",
+  "output": "src\\model\\CMakeFiles\\model.dir\\src\\use\\load.cpp.obj"
+},
+{
+  "directory": "C:/code/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\use\\act.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\use\\act.cpp",
+  "file": "C:\\code\\gLLM\\src\\model\\src\\use\\act.cpp",
+  "output": "src\\model\\CMakeFiles\\model.dir\\src\\use\\act.cpp.obj"
 }
 ]

@@ -494,14 +494,6 @@ build src\model\CMakeFiles\model.dir\src\create.cpp.obj: CXX_COMPILER__model_uns
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
   TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
 
-build src\model\CMakeFiles\model.dir\src\load.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\load.cpp || cmake_object_order_depends_target_model
-  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
-  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
-  OBJECT_DIR = src\model\CMakeFiles\model.dir
-  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
-  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
-  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
-
 build src\model\CMakeFiles\model.dir\src\run.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\run.cpp || cmake_object_order_depends_target_model
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
   INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
@@ -518,6 +510,54 @@ build src\model\CMakeFiles\model.dir\src\save.cpp.obj: CXX_COMPILER__model_unsca
   TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
   TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
 
+build src\model\CMakeFiles\model.dir\src\serialise.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\serialise.cpp || cmake_object_order_depends_target_model
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
+  OBJECT_DIR = src\model\CMakeFiles\model.dir
+  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
+  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
+
+build src\model\CMakeFiles\model.dir\src\deserialise.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\deserialise.cpp || cmake_object_order_depends_target_model
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
+  OBJECT_DIR = src\model\CMakeFiles\model.dir
+  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src
+  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
+
+build src\model\CMakeFiles\model.dir\src\train\train.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\train\train.cpp || cmake_object_order_depends_target_model
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
+  OBJECT_DIR = src\model\CMakeFiles\model.dir
+  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src\train
+  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
+
+build src\model\CMakeFiles\model.dir\src\train\fine.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\train\fine.cpp || cmake_object_order_depends_target_model
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
+  OBJECT_DIR = src\model\CMakeFiles\model.dir
+  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src\train
+  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
+
+build src\model\CMakeFiles\model.dir\src\use\load.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\use\load.cpp || cmake_object_order_depends_target_model
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
+  OBJECT_DIR = src\model\CMakeFiles\model.dir
+  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src\use
+  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
+
+build src\model\CMakeFiles\model.dir\src\use\act.cpp.obj: CXX_COMPILER__model_unscanned_Debug C$:\code\gLLM\src\model\src\use\act.cpp || cmake_object_order_depends_target_model
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi
+  INCLUDES = -IC:\code\gLLM\src\maths -IC:\code\gLLM\src\neural -IC:\code\gLLM\src\model
+  OBJECT_DIR = src\model\CMakeFiles\model.dir
+  OBJECT_FILE_DIR = src\model\CMakeFiles\model.dir\src\use
+  TARGET_COMPILE_PDB = src\model\CMakeFiles\model.dir\model.pdb
+  TARGET_PDB = C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.pdb
+
 
 # =============================================================================
 # Link build statements for STATIC_LIBRARY target model
@@ -526,7 +566,7 @@ build src\model\CMakeFiles\model.dir\src\save.cpp.obj: CXX_COMPILER__model_unsca
 #############################################
 # Link the static library C:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.lib
 
-build C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.lib: CXX_STATIC_LIBRARY_LINKER__model_Debug src\model\CMakeFiles\model.dir\src\model.cpp.obj src\model\CMakeFiles\model.dir\src\create.cpp.obj src\model\CMakeFiles\model.dir\src\load.cpp.obj src\model\CMakeFiles\model.dir\src\run.cpp.obj src\model\CMakeFiles\model.dir\src\save.cpp.obj || C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.lib
+build C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\model.lib: CXX_STATIC_LIBRARY_LINKER__model_Debug src\model\CMakeFiles\model.dir\src\model.cpp.obj src\model\CMakeFiles\model.dir\src\create.cpp.obj src\model\CMakeFiles\model.dir\src\run.cpp.obj src\model\CMakeFiles\model.dir\src\save.cpp.obj src\model\CMakeFiles\model.dir\src\serialise.cpp.obj src\model\CMakeFiles\model.dir\src\deserialise.cpp.obj src\model\CMakeFiles\model.dir\src\train\train.cpp.obj src\model\CMakeFiles\model.dir\src\train\fine.cpp.obj src\model\CMakeFiles\model.dir\src\use\load.cpp.obj src\model\CMakeFiles\model.dir\src\use\act.cpp.obj || C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\maths.lib C$:\code\gLLM\bin\Windows-AMD64-64\Debug\static_libs\neural.lib
   LANGUAGE_COMPILE_FLAGS = /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -MDd -Zi
   LINK_FLAGS = /machine:x64
   OBJECT_DIR = src\model\CMakeFiles\model.dir
