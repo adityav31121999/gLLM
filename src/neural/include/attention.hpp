@@ -67,9 +67,14 @@ public:
     attention() = default;
     attention(int n, int d, int h, int l);
 
-    void forward();
+    void forward4conversation();
+    void forward4translation();
+    void forward4multilang();
+    void forward4reasoning();
+    void forward4thinking();
+    void forward(int);
     void backward();
-    void train();
+    void train(int);
 
     // default destructor
     ~attention() = default;
@@ -93,7 +98,12 @@ public:
     pattention() = default;
     pattention(int x, int n, int d, int h, int l);
 
-    void forward();
+    void forward4conversation();
+    void forward4translation();
+    void forward4multilang();
+    void forward4reasoning();
+    void forward4thinking();
+    void forward(int);
     void backward();
     void train();
 
@@ -107,8 +117,8 @@ public:
  */
 class block {
 public:
-    int x;          // number of incomplete attentions in each partial attention
-    int y;          // number of layers of partial attention for complete attention block
+    int x;          // number of partial attentions in complete attention
+    int y;          // number of incomplete attention for each partial attention
     int n, d, h, l;     // inputs for attention class constructor
     int tokenCount;     // token count
     int totalParams;    // total parameters of complete attention
@@ -120,8 +130,13 @@ public:
     block() = default;
     block(int x, int y, int n, int d, int h, int l);
 
-    void paForward(int k);
-    void forward();
+    void paForward(int, int);
+    void forward4conversation();
+    void forward4translation();
+    void forward4multilang();
+    void forward4reasoning();
+    void forward4thinking();
+    void forward(int);
     void backward();
     void train();
 

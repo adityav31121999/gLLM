@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "C:/code/gLLM/bin/Windows-AMD64-64/Debug/static_libs/maths.lib"
+			"path" : "D:/gLLM/bin/Windows-AMD64-64/Debug/static_libs/neural.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -21,11 +21,12 @@
 		"commands" : 
 		[
 			"add_library",
+			"target_link_libraries",
 			"include_directories"
 		],
 		"files" : 
 		[
-			"src/maths/CMakeLists.txt",
+			"src/neural/CMakeLists.txt",
 			"CMakeLists.txt"
 		],
 		"nodes" : 
@@ -40,16 +41,28 @@
 				"parent" : 0
 			},
 			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 38,
+				"parent" : 0
+			},
+			{
 				"file" : 1
 			},
 			{
-				"command" : 1,
+				"command" : 2,
 				"file" : 1,
 				"line" : 41,
-				"parent" : 2
+				"parent" : 3
 			},
 			{
-				"command" : 1,
+				"command" : 2,
+				"file" : 1,
+				"line" : 41,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
 				"file" : 0,
 				"line" : 6,
 				"parent" : 0
@@ -68,12 +81,16 @@
 			"includes" : 
 			[
 				{
-					"backtrace" : 3,
-					"path" : "C:/code/gLLM/src/maths"
+					"backtrace" : 4,
+					"path" : "D:/gLLM/src/maths"
 				},
 				{
-					"backtrace" : 4,
-					"path" : "C:/code/gLLM/src/maths/include"
+					"backtrace" : 5,
+					"path" : "D:/gLLM/src/neural"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "D:/gLLM/src/neural/include"
 				}
 			],
 			"language" : "CXX",
@@ -102,17 +119,28 @@
 				12,
 				13,
 				14,
-				15
+				15,
+				16,
+				17,
+				18,
+				19
 			]
 		}
 	],
-	"id" : "maths::@82281960fef5161a47a1",
-	"name" : "maths",
-	"nameOnDisk" : "maths.lib",
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 2,
+			"id" : "maths::@82281960fef5161a47a1"
+		}
+	],
+	"id" : "neural::@aa3d0067ab9058994e35",
+	"name" : "neural",
+	"nameOnDisk" : "neural.lib",
 	"paths" : 
 	{
-		"build" : "src/maths",
-		"source" : "src/maths"
+		"build" : "src/neural",
+		"source" : "src/neural"
 	},
 	"sourceGroups" : 
 	[
@@ -135,7 +163,11 @@
 				12,
 				13,
 				14,
-				15
+				15,
+				16,
+				17,
+				18,
+				19
 			]
 		}
 	],
@@ -144,97 +176,121 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/basic/functions1.cpp",
+			"path" : "src/neural/mlp/mlp.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/basic/functions2.cpp",
+			"path" : "src/neural/mlp/forprop.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/basic/vect.cpp",
+			"path" : "src/neural/mlp/backprop.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/basic/weights.cpp",
+			"path" : "src/neural/mlp/loss.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/basic/activations.cpp",
+			"path" : "src/neural/mlp/weights.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/basic/nnacci.cpp",
+			"path" : "src/neural/mlp/train.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/det.cpp",
+			"path" : "src/neural/attention/attention.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/eigenval.cpp",
+			"path" : "src/neural/attention/forward.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/inverse.cpp",
+			"path" : "src/neural/attention/backward.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/jacobian.cpp",
+			"path" : "src/neural/attention/train.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/operators.cpp",
+			"path" : "src/neural/block/block.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/prop.cpp",
+			"path" : "src/neural/block/forward.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/qrdecom.cpp",
+			"path" : "src/neural/block/backward.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/svd.cpp",
+			"path" : "src/neural/block/train.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/mat/submat.cpp",
+			"path" : "src/neural/transformer/transformer.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/maths/stats/basic.cpp",
+			"path" : "src/neural/transformer/forward.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/transformer/backfeed.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/transformer/feedback.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/transformer/spoonfeed.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/transformer/train.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

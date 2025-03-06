@@ -228,8 +228,8 @@
 	"kind" : "cmakeFiles",
 	"paths" : 
 	{
-		"build" : "C:/code/gLLM/build",
-		"source" : "C:/code/gLLM"
+		"build" : "D:/gLLM/build",
+		"source" : "D:/gLLM"
 	},
 	"version" : 
 	{

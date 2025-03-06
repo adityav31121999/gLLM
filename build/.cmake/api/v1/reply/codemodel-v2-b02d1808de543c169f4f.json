@@ -124,21 +124,21 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "maths::@82281960fef5161a47a1",
-					"jsonFile" : "target-maths-Debug-f805734839cf8f0fd90e.json",
+					"jsonFile" : "target-maths-Debug-49d25f4198a5a42a1260.json",
 					"name" : "maths",
 					"projectIndex" : 1
 				},
 				{
 					"directoryIndex" : 3,
 					"id" : "model::@dd52281f56f5d51f359a",
-					"jsonFile" : "target-model-Debug-603002973988c2991a30.json",
+					"jsonFile" : "target-model-Debug-d041bad458ae7c47b1f8.json",
 					"name" : "model",
 					"projectIndex" : 3
 				},
 				{
 					"directoryIndex" : 2,
 					"id" : "neural::@aa3d0067ab9058994e35",
-					"jsonFile" : "target-neural-Debug-5f2309df21b1135a84cd.json",
+					"jsonFile" : "target-neural-Debug-f10b70ff1e863563fb4e.json",
 					"name" : "neural",
 					"projectIndex" : 2
 				}
@@ -148,8 +148,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/code/gLLM/build",
-		"source" : "C:/code/gLLM"
+		"build" : "D:/gLLM/build",
+		"source" : "D:/gLLM"
 	},
 	"version" : 
 	{

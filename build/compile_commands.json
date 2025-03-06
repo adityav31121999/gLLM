@@ -1,278 +1,278 @@
 [
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions1.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\basic\\functions1.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\basic\\functions1.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions1.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\basic\\functions1.cpp",
+  "file": "D:\\gLLM\\src\\maths\\basic\\functions1.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\functions1.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions2.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\basic\\functions2.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\basic\\functions2.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\functions2.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\basic\\functions2.cpp",
+  "file": "D:\\gLLM\\src\\maths\\basic\\functions2.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\functions2.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\vect.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\basic\\vect.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\basic\\vect.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\vect.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\basic\\vect.cpp",
+  "file": "D:\\gLLM\\src\\maths\\basic\\vect.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\vect.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\weights.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\basic\\weights.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\basic\\weights.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\weights.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\basic\\weights.cpp",
+  "file": "D:\\gLLM\\src\\maths\\basic\\weights.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\weights.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\activations.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\basic\\activations.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\basic\\activations.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\activations.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\basic\\activations.cpp",
+  "file": "D:\\gLLM\\src\\maths\\basic\\activations.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\activations.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\nnacci.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\basic\\nnacci.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\basic\\nnacci.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\basic\\nnacci.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\basic\\nnacci.cpp",
+  "file": "D:\\gLLM\\src\\maths\\basic\\nnacci.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\basic\\nnacci.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\det.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\det.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\det.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\det.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\det.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\det.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\det.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\eigenval.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\eigenval.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\eigenval.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\eigenval.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\eigenval.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\eigenval.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\eigenval.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\inverse.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\inverse.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\inverse.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\inverse.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\inverse.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\inverse.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\inverse.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\jacobian.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\jacobian.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\jacobian.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\jacobian.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\jacobian.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\jacobian.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\jacobian.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\operators.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\operators.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\operators.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\operators.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\operators.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\operators.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\operators.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\prop.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\prop.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\prop.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\prop.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\prop.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\prop.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\prop.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\qrdecom.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\qrdecom.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\qrdecom.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\qrdecom.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\svd.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\svd.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\svd.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\svd.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\svd.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\svd.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\svd.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\submat.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\mat\\submat.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\mat\\submat.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\mat\\submat.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\mat\\submat.cpp",
+  "file": "D:\\gLLM\\src\\maths\\mat\\submat.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\mat\\submat.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\stats\\basic.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- C:\\code\\gLLM\\src\\maths\\stats\\basic.cpp",
-  "file": "C:\\code\\gLLM\\src\\maths\\stats\\basic.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\maths\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\maths\\CMakeFiles\\maths.dir\\stats\\basic.cpp.obj /Fdsrc\\maths\\CMakeFiles\\maths.dir\\maths.pdb -c -- D:\\gLLM\\src\\maths\\stats\\basic.cpp",
+  "file": "D:\\gLLM\\src\\maths\\stats\\basic.cpp",
   "output": "src\\maths\\CMakeFiles\\maths.dir\\stats\\basic.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\mlp.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\mlp\\mlp.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\mlp\\mlp.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\mlp.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\mlp\\mlp.cpp",
+  "file": "D:\\gLLM\\src\\neural\\mlp\\mlp.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\mlp.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\forprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\mlp\\forprop.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\mlp\\forprop.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\forprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\mlp\\forprop.cpp",
+  "file": "D:\\gLLM\\src\\neural\\mlp\\forprop.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\forprop.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\backprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\mlp\\backprop.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\mlp\\backprop.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\backprop.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\mlp\\backprop.cpp",
+  "file": "D:\\gLLM\\src\\neural\\mlp\\backprop.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\backprop.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\loss.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\mlp\\loss.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\mlp\\loss.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\loss.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\mlp\\loss.cpp",
+  "file": "D:\\gLLM\\src\\neural\\mlp\\loss.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\loss.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\weights.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\mlp\\weights.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\mlp\\weights.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\weights.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\mlp\\weights.cpp",
+  "file": "D:\\gLLM\\src\\neural\\mlp\\weights.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\weights.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\mlp\\train.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\mlp\\train.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\mlp\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\mlp\\train.cpp",
+  "file": "D:\\gLLM\\src\\neural\\mlp\\train.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\mlp\\train.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\attention.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\attention\\attention.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\attention\\attention.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\attention.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\attention\\attention.cpp",
+  "file": "D:\\gLLM\\src\\neural\\attention\\attention.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\attention.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\attention\\forward.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\attention\\forward.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\attention\\forward.cpp",
+  "file": "D:\\gLLM\\src\\neural\\attention\\forward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\forward.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\attention\\backward.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\attention\\backward.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\attention\\backward.cpp",
+  "file": "D:\\gLLM\\src\\neural\\attention\\backward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\backward.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\attention\\train.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\attention\\train.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\attention\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\attention\\train.cpp",
+  "file": "D:\\gLLM\\src\\neural\\attention\\train.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\attention\\train.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\block.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\block.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\block\\block.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\block.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\block\\block.cpp",
+  "file": "D:\\gLLM\\src\\neural\\block\\block.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\block.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\forward.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\block\\forward.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\block\\forward.cpp",
+  "file": "D:\\gLLM\\src\\neural\\block\\forward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\forward.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\backward.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\block\\backward.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\backward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\block\\backward.cpp",
+  "file": "D:\\gLLM\\src\\neural\\block\\backward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\backward.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\block\\train.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\block\\train.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\block\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\block\\train.cpp",
+  "file": "D:\\gLLM\\src\\neural\\block\\train.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\block\\train.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\transformer.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\transformer.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\transformer\\transformer.cpp",
+  "file": "D:\\gLLM\\src\\neural\\transformer\\transformer.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\transformer.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\forward.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\forward.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\forward.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\transformer\\forward.cpp",
+  "file": "D:\\gLLM\\src\\neural\\transformer\\forward.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\forward.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\backfeed.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\backfeed.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\backfeed.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\backfeed.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\transformer\\backfeed.cpp",
+  "file": "D:\\gLLM\\src\\neural\\transformer\\backfeed.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\backfeed.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\feedback.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\feedback.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\feedback.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\feedback.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\transformer\\feedback.cpp",
+  "file": "D:\\gLLM\\src\\neural\\transformer\\feedback.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\feedback.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\spoonfeed.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\spoonfeed.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\spoonfeed.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\spoonfeed.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\transformer\\spoonfeed.cpp",
+  "file": "D:\\gLLM\\src\\neural\\transformer\\spoonfeed.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\spoonfeed.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- C:\\code\\gLLM\\src\\neural\\transformer\\train.cpp",
-  "file": "C:\\code\\gLLM\\src\\neural\\transformer\\train.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\neural\\include /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\neural\\CMakeFiles\\neural.dir\\transformer\\train.cpp.obj /Fdsrc\\neural\\CMakeFiles\\neural.dir\\neural.pdb -c -- D:\\gLLM\\src\\neural\\transformer\\train.cpp",
+  "file": "D:\\gLLM\\src\\neural\\transformer\\train.cpp",
   "output": "src\\neural\\CMakeFiles\\neural.dir\\transformer\\train.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\model.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\model.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\model.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\model.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\model.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\create.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\create.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\create.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\create.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\create.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\create.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\create.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\run.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\run.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\run.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\run.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\run.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\save.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\save.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\save.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\save.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\save.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\serialise.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\serialise.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\serialise.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\serialise.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\serialise.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\serialise.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\serialise.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\deserialise.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\deserialise.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\deserialise.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\deserialise.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\deserialise.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\deserialise.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\deserialise.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\train\\train.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\train\\train.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\train\\train.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\train\\train.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\train\\train.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\train\\train.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\train\\train.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\train\\fine.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\train\\fine.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\train\\fine.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\train\\fine.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\train\\fine.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\train\\fine.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\train\\fine.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\use\\load.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\use\\load.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\use\\load.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\use\\load.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\use\\load.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\use\\load.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\use\\load.cpp.obj"
 },
 {
-  "directory": "C:/code/gLLM/build",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -IC:\\code\\gLLM\\src\\maths -IC:\\code\\gLLM\\src\\neural -IC:\\code\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\use\\act.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- C:\\code\\gLLM\\src\\model\\src\\use\\act.cpp",
-  "file": "C:\\code\\gLLM\\src\\model\\src\\use\\act.cpp",
+  "directory": "D:/gLLM/build",
+  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang-cl.exe  /nologo -TP -ID:\\gLLM\\src\\maths -ID:\\gLLM\\src\\neural -ID:\\gLLM\\src\\model /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi /Fosrc\\model\\CMakeFiles\\model.dir\\src\\use\\act.cpp.obj /Fdsrc\\model\\CMakeFiles\\model.dir\\model.pdb -c -- D:\\gLLM\\src\\model\\src\\use\\act.cpp",
+  "file": "D:\\gLLM\\src\\model\\src\\use\\act.cpp",
   "output": "src\\model\\CMakeFiles\\model.dir\\src\\use\\act.cpp.obj"
 }
 ]

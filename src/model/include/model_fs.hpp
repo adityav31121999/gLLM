@@ -16,12 +16,12 @@
 
 // serialisation and deserilisation of model parameters
 
-void serialiseMAT(mat&, int&);
-void serialiseMLP(mlp&, int&);
-void serialiseModel(model&);
+void serialiseMAT(const mat& a, FILE* file);
+void serialiseMLP(const mlp& a, FILE* file);
+void serialiseModel(const model& a);
 
-void deserialiseMAT(mat&, int&);
-void deserialiseMLP(mat&, int&);
-void deserialiseModel(model&);
+void deserialiseMAT(mat& a, FILE* file);
+void deserialiseMLP(mlp& a, FILE* file);
+void deserialiseModel(model& a);
 
 #endif

@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "C:/code/gLLM/bin/Windows-AMD64-64/Debug/static_libs/model.lib"
+			"path" : "D:/gLLM/bin/Windows-AMD64-64/Debug/static_libs/model.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -82,15 +82,15 @@
 			[
 				{
 					"backtrace" : 4,
-					"path" : "C:/code/gLLM/src/maths"
+					"path" : "D:/gLLM/src/maths"
 				},
 				{
 					"backtrace" : 5,
-					"path" : "C:/code/gLLM/src/neural"
+					"path" : "D:/gLLM/src/neural"
 				},
 				{
 					"backtrace" : 6,
-					"path" : "C:/code/gLLM/src/model"
+					"path" : "D:/gLLM/src/model"
 				}
 			],
 			"language" : "CXX",

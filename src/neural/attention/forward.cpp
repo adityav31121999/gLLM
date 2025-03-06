@@ -3,9 +3,9 @@
 #include <maths.hpp>
 
 /**
- * @brief Forward Propagation for FFN
+ * @brief Forward Propagation for incomplete attention
  */
-void attention::forward() {
+void attention::forward(int CASE) {
     // take total tokens available in the tokens embeddings and then make head
     // key and query calculation
     for(int i = 0; i < tokenCount; i++) {
@@ -19,14 +19,6 @@ void attention::forward() {
         }
     }
     head = LOTA(head, tokenCount);
-
-#ifdef MLING        // for multilingual translation and data manipulation
-
-#else
-#ifdef QNA          // for answers and data generation
-
-#endif      // QNA end
-#endif      // MLING end
 
     // Ki.MV, dh = weighted sums horizontal
     for(int i = 0; i < tokenCount; i++) {

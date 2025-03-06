@@ -83,7 +83,7 @@ rule CXX_STATIC_LIBRARY_LINKER__model_Debug
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = "C:\Program Files\CMake\bin\cmake.exe" --regenerate-during-build -SC:\code\gLLM -BC:\code\gLLM\build
+  command = "C:\Program Files\CMake\bin\cmake.exe" --regenerate-during-build -SD:\gLLM -BD:\gLLM\build
   description = Re-running CMake...
   generator = 1
 

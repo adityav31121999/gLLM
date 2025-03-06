@@ -8,8 +8,9 @@
 #include <vector>
 #include "neural.hpp"
 
-// metadata for model information
-typedef struct modelInfo {
+// metadata for model and data information
+typedef struct modelDataInfo {
+    // model information
     std::string modelName;          // model name
     std::string version;            // model version
     std::string author;             // author of model
@@ -19,11 +20,9 @@ typedef struct modelInfo {
     std::string capability;         // model capabilities
     std::string limitations;        // model limitations
     std::string license;            // license for model use
-    std::string trainingData;        // data used to train model
-} modelInfo;
+    std::string trainingData;       // data used to train model
 
-// metadata for data information and distributib
-typedef struct dataInfo {
+    // data information and distribution
     int d;              // dimension of embedding
     int qkrow;          // matrix MQ and MK rows
     int qkcol;          // matrix MQ and MK columns
@@ -35,7 +34,7 @@ typedef struct dataInfo {
     int nCAs;           // number of CA in transformer
     int paramsIA;       // total params in one attention
     int totalParams;    // total parameters in model
-} dataInfo;
+} modelDataInfo;
 
 /**
  * @brief Model Class
@@ -54,8 +53,14 @@ public:
     int totalParams;    // total parameters of transformer
     int total;      // total tokenLimit -> m * n
     transformer T;  // transformer
-    modelInfo info;     // model info
-    dataInfo dinfo;     // data info
+    modelDataInfo info;     // model info
+    FILE *file;     // file where all data is to be stored
+
+    /**
+     * each attention has 2 mlps with 3d vector of dimensions 'l' 2d vectors of size d x d
+     * and 2 matrices of qkrow x qkcol and 2 matrices of vhrow x vhcol, the matrices are need
+     * to be serialised first and then mlp: MQ, MK, MH, MV, hor, ver
+     */
 
     // default constructor
     model() = default;

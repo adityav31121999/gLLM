@@ -4,7 +4,7 @@
 /**
  * @brief Forward Propagation for FFN
  */
-void attention::train() {
-    forward();
+void attention::train(int x) {
+    forward(x);
     backward();
 }
