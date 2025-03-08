@@ -51,7 +51,6 @@ void serialiseModel(const model& a) {
 
     // Write model metadata
     fwrite(&a.tCount, sizeof(int), 1, file);       // transformer count
-    fwrite(&a.mCount, sizeof(int), 1, file);       // model count
     fwrite(&a.m, sizeof(int), 1, file);            // number of blocks
     fwrite(&a.x, sizeof(int), 1, file);            // incomplete attentions
     fwrite(&a.y, sizeof(int), 1, file);            // layers of partial attention
@@ -64,7 +63,7 @@ void serialiseModel(const model& a) {
 
     // Serialize transformer by serializing attention class
     const transformer& T = a.T;
-    for (const auto& block : T.attblock) {
+    for (const auto& block : T.b) {
         // For each block, serialize its attention layers
         for (const auto& alay : block.b) {
             // For each attention layer, serialise each attention's 4mat and 2mlp

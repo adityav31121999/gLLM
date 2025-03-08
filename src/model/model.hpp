@@ -3,9 +3,7 @@
 #ifndef MODEL_H
 #define MODEL_H 1
 
-#include <maths.hpp>
-#include <neural.hpp>
-#include "include/model_fs.hpp"
 #include "include/model.hpp"
+#include "include/model_fs.hpp"
 
 #endif

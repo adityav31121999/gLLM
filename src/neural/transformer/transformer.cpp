@@ -19,7 +19,8 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l) {
     this->d = d;
     this->h = h;
     this->l = l;
-    attblock = std::vector<block>(m, block(x, y, n, d, h, l));
+    b = std::vector<block>(m, block(x, y, n, d, h, l));
     stringToken = std::vector<std::vector<double>>(m, std::vector<double>(d, 0));
-    total = ((4 * h * d) + (2 * d * d * l)) * x * y * m * n;
+    totalParams = ((4 * h * d) + (2 * d * d * l)) * x * y * m * n;
+    total = m * n;
 }

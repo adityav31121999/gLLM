@@ -1,11 +1,12 @@
 
 #include "include/attention.hpp"
 #include <maths.hpp>
+#include "attention.hpp"
 
 /**
- * @brief Forward Propagation for incomplete attention
+ * @brief default forward propagation for attention class
  */
-void attention::forward(int CASE) {
+void attention::forprop(std::vector<std::vector<double>> tokens, int tokenCount) {
     // take total tokens available in the tokens embeddings and then make head
     // key and query calculation
     for(int i = 0; i < tokenCount; i++) {
@@ -26,7 +27,6 @@ void attention::forward(int CASE) {
             dH[i][j] = dot(KEYS[i], MH);
             dh = dh + (head[i][j] * dH[i][j]);
         }
-        EH = EH + dh;
     }
 
     // Qi.MH, dv = weighted sums vertically
@@ -35,14 +35,11 @@ void attention::forward(int CASE) {
             dV[j][i] = dot(QUERYS[j], MV);
             dv = dv + (head[j][i] * dV[j][i]);
         }
-        EV = EV + dv;
     }
 
-    // mlp horizontal and vertical
-    hor.input = EH;
+    hor.input = EH + dh, ver.input = EV + dv;
     hor.forward();
-    mh = ReLUv(hor.output);
-    ver.input = EV;
     ver.forward();
-    mv = ReLUv(ver.output);
+    mh = ReLUv(hor.output), mv = ReLUv(ver.output);
+    EH = EH + mh, EV = EV + mv;
 }

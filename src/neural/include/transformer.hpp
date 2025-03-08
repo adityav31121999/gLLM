@@ -32,7 +32,7 @@ public:
     std::string tinput;     // token input
     std::string toutput;    // token output
     std::vector<std::vector<double>> stringToken;   // sentence property input
-    std::vector<block> attblock;    // attention block (1 or many)
+    std::vector<block> b;   // attention block (1 or many)
 
     // default constructor
     transformer() = default;
@@ -40,14 +40,15 @@ public:
 
     void runTransformer();  // run transformer
     void forward();         // forward propagation
-    void fineTune();        // fine-tune transformer
-    void feedBack();        // feed back from user
-    void instruct();        // instruct the transformer
-    void spoonfeed();       // spoonfeeding
-    void backfeed();        // backfeeding
+    void fineTune();        // fine-tune transformer => altering certain properties while training
+    void feedBack();        // self-correcting feedback loop
+    void instruct();        // instruct the transformer to do something
+    void spoonfeed();       // spoonfeeding => first to last
+    void backfeed();        // backfeeding => last to first
     void train();           // train the transformer
 
-    ~transformer();         // default destructor
+    // default destructor
+    ~transformer() = default;
 };
 
 #endif

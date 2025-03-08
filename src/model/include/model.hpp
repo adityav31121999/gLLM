@@ -6,7 +6,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "neural.hpp"
+#include <neural.hpp>
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -36,13 +36,13 @@ typedef struct modelDataInfo {
     int totalParams;    // total parameters in model
 } modelDataInfo;
 
+
 /**
  * @brief Model Class
  */
 class model {
 public:
     int tCount;     // transformer count
-    int mCount;     // model count
     int m;          // number of blocks
     int x;          // number of incomplete attentions in each partial attention
     int y;          // number of layers of partial attention for complete attention block
@@ -52,7 +52,8 @@ public:
     int l;          // layers of mlp
     int totalParams;    // total parameters of transformer
     int total;      // total tokenLimit -> m * n
-    transformer T;  // transformer
+    transformer T;  // model with 1 transformer
+    // std::vector<transformer> Tg;  // model with tcount transformer
     modelDataInfo info;     // model info
     FILE *file;     // file where all data is to be stored
 
@@ -66,11 +67,11 @@ public:
     model() = default;
     model(int m, int x, int y, int n, int d, int h, int l);
     model(int tCount, int m, int x, int y, int n, int d, int h, int l);
-    model(int mCount, int tCount, int m, int x, int y, int n, int d, int h, int l);
 
     void train();
     void load();
     void save();
+    void allocateMemory();
 
     // default destructor
     ~model() = default;

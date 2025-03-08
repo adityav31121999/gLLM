@@ -81,7 +81,6 @@ void deserialiseModel(model& a) {
 
     // Assign metadata with validation
     a.tCount = metadata[0];
-    a.mCount = metadata[1];
     a.m = metadata[2];
     a.x = metadata[3];
     a.y = metadata[4];
@@ -102,12 +101,12 @@ void deserialiseModel(model& a) {
     transformer& T = a.T;
 
     // Verify transformer block structure
-    if (T.attblock.size() != static_cast<size_t>(a.m)) {
+    if (T.b.size() != static_cast<size_t>(a.m)) {
         throw std::runtime_error("Transformer block count mismatch");
     }
 
     // Deserialize attention blocks with validation
-    for (auto& block : T.attblock) {
+    for (auto& block : T.b) {
         if (block.b.size() != static_cast<size_t>(a.y)) {
             throw std::runtime_error("Attention layer count mismatch");
         }
@@ -134,8 +133,9 @@ void deserialiseModel(model& a) {
                     throw std::runtime_error("MLP dimensions mismatch");
                 }
 
+                /**
                 // Deserialize matrices
-                deserialiseMAT(att.MQ, file);
+                deserialiseMAT(att.MQ, file, int, int);
                 deserialiseMAT(att.MK, file);
                 deserialiseMAT(att.MV, file);
                 deserialiseMAT(att.MH, file);
@@ -143,6 +143,7 @@ void deserialiseModel(model& a) {
                 // Deserialize MLPs
                 deserialiseMLP(att.ver, file);
                 deserialiseMLP(att.hor, file);
+                 */
             }
         }
     }

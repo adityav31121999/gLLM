@@ -9,7 +9,6 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <map>
 #include <maths.hpp>
 #include <neural.hpp>
 #include "model.hpp"
@@ -20,8 +19,8 @@ void serialiseMAT(const mat& a, FILE* file);
 void serialiseMLP(const mlp& a, FILE* file);
 void serialiseModel(const model& a);
 
-void deserialiseMAT(mat& a, FILE* file);
-void deserialiseMLP(mlp& a, FILE* file);
+void deserialiseMAT(mat& a, FILE* file, int, int);
+void deserialiseMLP(mlp& a, FILE* file, int, int);
 void deserialiseModel(model& a);
 
 #endif

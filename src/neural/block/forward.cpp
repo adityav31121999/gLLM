@@ -1,40 +1,27 @@
 
+// block forward propagation
 #include "include/attention.hpp"
 
 /**
- * @brief forward propagation of the partial attention.
+ * @brief partial attention forward propagation
  */
-void block::paForward(int k, int l) {
-    // kth partial attention in the block
-    std::fill(b[k][0].EV.begin(), b[k][0].EV.end(), 0);
-    std::fill(b[k][0].EH.begin(), b[k][0].EH.end(), 0);
-    for(int i = 0; i < y; i++) {
-        b[k][i].forward(l);
-        holdEVs[k][i] = b[k][i].EV;
+void block::partialforprop(int i) {
+    // for one partial attention
+    for(int j = 0; j < y; j++) {
+        b[i][j].forprop(tokens, tokenCount);      // incomplete attention forprop
+        holdEVs[i][j] = b[i][j].EV;
+        b[i][j + 1].EH = b[i][j].EH;
     }
-
-#ifdef MLING        // for multilingual translation
-
-#endif
-
-#ifdef QnA          // for QNA and Enquiry
-
-#endif
 }
 
-
 /**
- * @brief forward propagation of the attention block. Use paForward
- * in parallel for all partial attentions in a block.
+ * @brief forward propagation
  */
-void block::forward(int x) {
-    // run paForward in parallel with CUDA and OpenCL
-    tokenCount = tokenCount + 1;
-#ifdef MLING        // for multilingual translation
-
-#endif
-
-#ifdef QnA          // for QNA and Enquiry
-
+void block::forprop() {
+    // y partial attention in x layers => x parallel processes
+#ifdef HAS_CL
+    // run partial forprop in parallel with OpenCL
+#elif HAS_CUDA
+    // run partial forprop in parallel with CUDA
 #endif
 }

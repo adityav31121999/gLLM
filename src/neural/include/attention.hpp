@@ -1,10 +1,13 @@
 
 /**
- * @file Attention class for calculating attention in neural networks.
- * Attention is a mechanism that allows a neural network to focus on a 
- * specific part of the input sequence.
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
+ * @file Attention class for calculating attention in neural networks. Attention is 
+ * a mechanism that allows a neural network to focus on a specific part of the input 
+ * sequence.
+ * incomplete attention block
+ *          \/
+ * ---------------------------------------------------------------------------------
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention
  * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
  *      |           |                   |           |                       |
  *      |           |                   |           |                       |
@@ -33,9 +36,8 @@ public:
     int d;              // token dimension
     int h;              // height of MQ, MK and columns of MV, MH
     int l;              // layers of mlp
-    int tokenCount;     // token count
-    int totalParams;    // total parameters in one incomplete attention
     double error;       // error for attention
+    double learning;    // learning rate
 // operands
     mlp ver;            // next block transfer for cross attention
     mlp hor;            // horizontal transfer for self+cross attention
@@ -44,12 +46,9 @@ public:
     mat MV;             // vertical value for deltas
     mat MH;             // horizontal value for deltas
 // containers
-    std::vector<std::vector<double>> tokens;    // tokens for attention head
+    std::vector<std::vector<double>> head;      // attention head matrix -> KEYs x QUERYs -> [K(i).Q(j)] <- scalar
     std::vector<std::vector<double>> KEYS;      // KEY vectors -> tokens * MK
     std::vector<std::vector<double>> QUERYS;    // QUERY vectors -> tokens * MQ
-    std::vector<std::vector<double>> head;      // attention head matrix -> KEYs x QUERYS -> [K(i).Q(j)] <- scalar
-    std::vector<std::vector<double>> next;      // Vertical tokens for attention head to be transferred to next block
-    std::vector<std::vector<double>> tokB;      // Shady tokens obtained from next and previous blocks
     std::vector<std::vector<std::vector<double>>> dH;        // Weighted Sums Horizontally
     std::vector<std::vector<std::vector<double>>> dV;        // Weighted Sums Vertically
     std::vector<double> EH;         // Next Embedding in same block
@@ -60,55 +59,19 @@ public:
     std::vector<double> mv;         // ReLU of ver output
     std::vector<double> changeH;    // change in Horizontal process as expected vector for backpropagation in hor mlp
     std::vector<double> changeV;    // change in Vertical process as expected vector for backpropagation in ver mlp
+    std::vector<double> tExp;       // expected token/change
 
 // functions
-
     // default constructor
     attention() = default;
     attention(int n, int d, int h, int l);
 
-    void forward4conversation();
-    void forward4translation();
-    void forward4multilang();
-    void forward4reasoning();
-    void forward4thinking();
-    void forward(int);
-    void backward();
-    void train(int);
+    void forprop(std::vector<std::vector<double>>, int);                 // CASE default
+    void backward(std::vector<double>);
+    void train(std::vector<std::vector<double>>, int);
 
     // default destructor
     ~attention() = default;
-};
-
-
-/**
- * @brief partial attention class
- */
-class pattention {
-public:
-    int x;          // number of incomplete attentions in partial attention
-    int n, d, h, l;     // inputs for attention class constructor
-    int tokenCount;     // token count
-    int totalParams;    // total parameters of complete attention
-    double error;       // error for block, mean of all incomplete attentions
-    std::vector<attention> b;      // partial attention
-    std::vector<std::vector<double>> holdEVs;    // inbetween tokens transfer
-
-    // default constructor
-    pattention() = default;
-    pattention(int x, int n, int d, int h, int l);
-
-    void forward4conversation();
-    void forward4translation();
-    void forward4multilang();
-    void forward4reasoning();
-    void forward4thinking();
-    void forward(int);
-    void backward();
-    void train();
-
-    // default destructor
-    ~pattention() = default;
 };
 
 
@@ -123,25 +86,31 @@ public:
     int tokenCount;     // token count
     int totalParams;    // total parameters of complete attention
     double error;       // error for block, mean of all incomplete attentions
-    std::vector<std::vector<attention>> b;      // block for complete attention
-    std::vector<std::vector<std::vector<double>>> holdEVs;    // inbetween tokens transfer
+    std::vector<std::vector<double>> tokens;    // tokens for attention head
+    std::vector<std::vector<attention>> b;      // block complete attention
+    std::vector<std::vector<std::vector<double>>> holdEVs;  // inbetween tokens transfer
+    std::vector<std::vector<double>> expected;  // tokens for attention head
 
     // default constructor
     block() = default;
     block(int x, int y, int n, int d, int h, int l);
 
-    void paForward(int, int);
-    void forward4conversation();
-    void forward4translation();
-    void forward4multilang();
-    void forward4reasoning();
-    void forward4thinking();
-    void forward(int);
-    void backward();
+    void partialforprop(int i);     // partial attention forprop
+    void forprop();                 // parallel partialforprop(i)
+    void partialbackward(int i);    // partial attention backward
+    void backward();                // parallel partialbackward(i)
     void train();
 
     // default destructor
     ~block() = default;
 };
+
+// ADD CUDA FUNCTIONS FOR RUNNING OPERATIONS IN PARALLEL
+
+
+
+// ADD OPENCL FUNCTIONS FOR RUNNING OPERATIONS IN PARALLEL
+
+
 
 #endif

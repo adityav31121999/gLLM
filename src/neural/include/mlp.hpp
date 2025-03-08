@@ -50,6 +50,7 @@ public:
     double getL2Penalty();
 
     void forward();
+    void backprop2in();
     void backward();
     void backprop();
     void backwithL1();
@@ -60,7 +61,6 @@ public:
     void validate();
     void test();
     void initializeWeights();
-    void countParams();
 
     // default destructor
     ~mlp() = default;
