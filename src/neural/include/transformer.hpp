@@ -1,17 +1,30 @@
 
-// transformer.hpp: transformer body and its functions
+/**
+ * @file Transformer class for token/chunk prediction and context retention
+ * and grammatical restriction. This can be single block or multi-block.
+ * For training purpose, the model will have many-block transformer, but 
+ * for prediction purpose, the model will have single-block transformer.
+ * This will help in making the model more efficient and effective and also
+ * reduce memory usage while prediction. Having multi-block transformer will
+ * help in increasing the context size and also help in making the model more
+ * responsive for large data.
+ */
+
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
 #include "attention.hpp"
+#include "block.hpp"
 #include <string>
 
-#define TOKEN_IMIN 1            // token input
+#define CONTEXT_SIZE 8192       // Attention head dimension: 2^13
+#define TOKEN_IMIN 1            // token input for one head
 #define TOKEN_IMAX 16384        // 2^14
 #define TOKEN_OMIN 1            // token output
-#define TOKEN_OMAX 2097152      // 2^20 => 2093
+#define TOKEN_OMAX 2097152      // 8192*256 = 2^21
 #define BLOCK_MIN 1             // number of blocks in transformer
 #define BLOCK_MAX 256           // 2^7
+
 
 /**
  * @brief Common Transformer class for token/chunk prediction and context 
@@ -22,23 +35,31 @@ class transformer {
 public:
     int m;          // number of blocks
     int total;      // total tokenLimit -> m * n
-    int x;          // number of incomplete attentions in each partial attention
-    int y;          // number of layers of partial attention for complete attention block
+    int y;          // number of incomplete attentions in each partial attention
+    int x;          // number of layers of partial attention for complete attention block
     int n;          // total tokens for each attention head
     int d;          // token dimension
     int h;          // height of MQ, MK and columns of MV, MH
     int l;          // layers of mlp
     int totalParams;        // total parameters of transformer
-    std::string tinput;     // token input
-    std::string toutput;    // token output
-    std::vector<std::vector<double>> stringToken;   // sentence property input
+    int blockCount;         // which block is working
+    int tokenCount;         // how many tokens have been generated
+    int totalTokens;        // total tokens generated
+    double learning;        // learning rate for MLPs
     std::vector<block> b;   // attention block (1 or many)
+    std::vector<std::string> tinput;    // token input
+    std::vector<std::string> expected;  // expected token output
+    std::vector<std::string> toutput;   // predicted token output
+    std::vector<std::string> token;     // Hold all input, generated or predicted tokens
+    std::vector<std::vector<double>> stringToken;   // token as embedding for input and generated tokens
 
     // default constructor
     transformer() = default;
+    transformer(int x, int y, int n, int d, int h, int l);
     transformer(int m, int x, int y, int n, int d, int h, int l);
 
     void runTransformer();  // run transformer
+    void takeInput();       // take required input
     void forward();         // forward propagation
     void fineTune();        // fine-tune transformer => altering certain properties while training
     void feedBack();        // self-correcting feedback loop
@@ -46,10 +67,17 @@ public:
     void spoonfeed();       // spoonfeeding => first to last
     void backfeed();        // backfeeding => last to first
     void train();           // train the transformer
+    void newChat();         // for new chat clear everythinh and set all to 0
 
     // default destructor
     ~transformer() = default;
 };
+
+// embedding and token related fucntions
+
+std::vector<std::string> tokenizer(std::string str);
+std::vector<std::string> detokenizer(std::vector<std::string> tokens);
+std::vector<double> embedder(std::string str);
 
 #endif
 

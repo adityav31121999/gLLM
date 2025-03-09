@@ -29,11 +29,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${FullOutputDir}/static_libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
+# set CUDA Libraries
+# set OpenCL Libraries
+
 set(subProjects
     src/maths
     src/neural
     src/model
-    # src/script
+    src/script
 )
 
 # include each subdirectory

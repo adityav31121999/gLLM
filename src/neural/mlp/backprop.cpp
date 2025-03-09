@@ -4,76 +4,69 @@
 #include <iostream>
 #include <maths.hpp>
 
+/**
+ * @brief Backpropagation till input vector
+ */
 void mlp::backprop2in() {
-    // Initialize error vector for output layer
+    // Compute output layer error
     std::vector<double> output_error(dim, 0.0);
     for (unsigned int i = 0; i < dim; ++i) {
         output_error[i] = output[i] - expected[i];
     }
-    
+
     // Initialize gradient weights if not already done
     if (gweights.size() != layers) {
         gweights.resize(layers, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
     }
-    
+
     // Compute gradients for the output layer
     for (unsigned int i = 0; i < dim; ++i) {
         for (unsigned int j = 0; j < neurons; ++j) {
-            gweights[layers-1][i][j] = output_error[i] * activations[layers-1][j];
+            gweights[layers - 1][i][j] = output_error[i] * activations[layers - 1][j];
         }
     }
 
     // Compute hidden layer errors and gradients
     std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(neurons, 0.0));
-    
+
     // Compute error for the last hidden layer
     for (unsigned int i = 0; i < neurons; ++i) {
         double error_sum = 0.0;
         for (unsigned int j = 0; j < dim; ++j) {
-            error_sum += weights[layers-1][j][i] * output_error[j];
+            error_sum += weights[layers - 1][j][i] * output_error[j];
         }
-        layer_errors[layers-1][i] = error_sum * activations[layers-1][i] * (1 - activations[layers-1][i]);
+        layer_errors[layers - 1][i] = error_sum * activations[layers - 1][i] * (1 - activations[layers - 1][i]);
     }
-    
+
     // Propagate error backward through the network
     for (int l = layers - 2; l >= 0; --l) {
         for (unsigned int i = 0; i < neurons; ++i) {
             double error_sum = 0.0;
             for (unsigned int j = 0; j < neurons; ++j) {
-                error_sum += weights[l+1][j][i] * layer_errors[l+1][j];
+                error_sum += weights[l + 1][j][i] * layer_errors[l + 1][j];
             }
             layer_errors[l][i] = error_sum * activations[l][i] * (1 - activations[l][i]);
         }
     }
-    
-    // Update weights for all layers
+
+    // Compute gradients for all layers and update weights
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
-            for (unsigned int j = 0; j < 2; ++j) { // Specifically for 2 inputs
+        for (unsigned int i = 0; i < (l == layers - 1 ? dim : neurons); ++i) {
+            for (unsigned int j = 0; j < (l == 0 ? dim : neurons); ++j) {
                 if (l == 0) {
-                    weights[l][i][j] -= learning * layer_errors[l][i] * input[j];
+                    gweights[l][i][j] = layer_errors[l][i] * input[j];
+                    // Update input vector using gradient
+                    input[j] -= learning * layer_errors[l][i] * weights[l][i][j];
                 } else {
-                    weights[l][i][j] -= learning * layer_errors[l][i] * activations[l-1][j];
+                    gweights[l][i][j] = layer_errors[l][i] * activations[l - 1][j];
                 }
+                // Update weights
+                weights[l][i][j] -= learning * gweights[l][i][j];
             }
         }
     }
-
-    // Update input layer weights
-    for (unsigned int i = 0; i < dim; ++i) {
-        for (unsigned int j = 0; j < neurons; ++j) {
-            weights[0][i][j] -= learning * output_error[i] * activations[1][j];
-        }
-    }
-    // Propagate changes to input vector
-    for (unsigned int j = 0; j < 2; ++j) { // For 2 inputs
-        double input_error = 0.0;
-        for (unsigned int i = 0; i < neurons; ++i) {
-            input_error += layer_errors[0][i] * weights[0][i][j];
-        }
-        input[j] -= learning * input_error;
-    }
 }
+
 
 /**
  * @brief The backward propagation function. This function performs the
@@ -87,106 +80,97 @@ void mlp::backward() {
     
     // Calculate output layer error
     for(unsigned int i = 0; i < dim; i++) {
-        error[i] = expected[i] - output[i];
+        error[i] = output[i] - expected[i];
     }
 
     // Calculate output layer deltas (gradient of error with respect to output)
-    for(unsigned int i = 0; i < neurons; i++) {
-        double sum = 0.0;
-        for(unsigned int j = 0; j < dim; j++) {
-            sum += error[j] * weights[layers-1][j][i];
-        }
-        layer_deltas[layers-1][i] = sum * sigmoidder(hlayers[layers-1][i]);
+    for (unsigned int i = 0; i < neurons; i++) {
+        layer_deltas[layers - 1][i] = error[i] * sigmoidder(output[i]);
     }
 
     // Backpropagate the error through hidden layers
-    for(int l = layers-2; l >= 0; l--) {
-        for(unsigned int i = 0; i < neurons; i++) {
-            double sum = 0.0;
-            for(unsigned int j = 0; j < neurons; j++) {
-                sum += layer_deltas[l+1][j] * weights[l][j][i];
+    for (int l = layers - 2; l >= 0; l--) {
+        for (unsigned int i = 0; i < neurons; i++) {
+            double error_sum = 0.0;
+            for (unsigned int j = 0; j < neurons; j++) {
+                error_sum += layer_deltas[l + 1][j] * weights[l + 1][j][i];
             }
-            layer_deltas[l][i] = sum * sigmoidder(hlayers[l][i]);
+            layer_deltas[l][i] = error_sum * sigmoidder(hlayers[l][i]);
         }
     }
 
     // Update weights for all layers
-    for(unsigned int l = 0; l < layers; l++) {
-        for(unsigned int i = 0; i < neurons; i++) {
-            for(unsigned int j = 0; j < neurons; j++) {
-                // For the first layer, use input values
-                if(l == 0) {
+    for (unsigned int l = 0; l < layers; l++) {
+        for (unsigned int i = 0; i < neurons; i++) {
+            for (unsigned int j = 0; j < (l == 0 ? dim : neurons); j++) {
+                if (l == 0) {
                     weights[l][i][j] += learning * layer_deltas[l][i] * input[j];
-                } else {
-                    weights[l][i][j] += learning * layer_deltas[l][i] * activations[l-1][j];
+                }
+                else {
+                    weights[l][i][j] += learning * layer_deltas[l][i] * hlayers[l - 1][j];
                 }
             }
         }
     }
 
     // Update output layer weights
-    for(unsigned int i = 0; i < dim; i++) {
-        for(unsigned int j = 0; j < neurons; j++) {
-            weights[layers-1][i][j] += learning * error[i] * activations[layers-1][j];
+    for (unsigned int i = 0; i < dim; i++) {
+        for (unsigned int j = 0; j < neurons; j++) {
+            weights[layers - 1][i][j] += learning * error[i] * hlayers[layers - 1][j];
         }
     }
 }
 
-/**
- * @brief Backpropagation with gradients
- */
 void mlp::backprop() {
     // Compute output layer error
     std::vector<double> output_error(dim, 0.0);
     for (unsigned int i = 0; i < dim; ++i) {
         output_error[i] = output[i] - expected[i];
     }
-    
+
     // Initialize gradient weights if not already done
     if (gweights.size() != layers) {
-        gweights.resize(layers, std::vector<std::vector<double>>(dim, std::vector<double>(dim, 0.0)));
+        gweights.resize(layers, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
     }
-    
+
     // Compute gradients for the output layer
     for (unsigned int i = 0; i < dim; ++i) {
-        for (unsigned int j = 0; j < dim; ++j) {
-            gweights[layers-1][i][j] = output_error[i] * activations[layers-1][j];
+        for (unsigned int j = 0; j < neurons; ++j) {
+            gweights[layers - 1][i][j] = output_error[i] * activations[layers - 1][j];
         }
     }
 
     // Compute hidden layer errors and gradients
-    std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(dim, 0.0));
-    
+    std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(neurons, 0.0));
+
     // Compute error for the last hidden layer
-    for (unsigned int i = 0; i < dim; ++i) {
+    for (unsigned int i = 0; i < neurons; ++i) {
         double error_sum = 0.0;
         for (unsigned int j = 0; j < dim; ++j) {
-            error_sum += weights[layers-1][j][i] * output_error[j];
+            error_sum += weights[layers - 1][j][i] * output_error[j];
         }
-        layer_errors[layers-1][i] = error_sum * activations[layers-1][i] * (1 - activations[layers-1][i]);
+        layer_errors[layers - 1][i] = error_sum * activations[layers - 1][i] * (1 - activations[layers - 1][i]);
     }
-    
+
     // Propagate error backward through the network
     for (int l = layers - 2; l >= 0; --l) {
-        for (unsigned int i = 0; i < dim; ++i) {
+        for (unsigned int i = 0; i < neurons; ++i) {
             double error_sum = 0.0;
-            for (unsigned int j = 0; j < dim; ++j) {
-                error_sum += weights[l+1][j][i] * layer_errors[l+1][j];
+            for (unsigned int j = 0; j < neurons; ++j) {
+                error_sum += weights[l + 1][j][i] * layer_errors[l + 1][j];
             }
             layer_errors[l][i] = error_sum * activations[l][i] * (1 - activations[l][i]);
         }
     }
-    
+
     // Compute gradients for all layers and update weights
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < dim; ++i) {
-            for (unsigned int j = 0; j < dim; ++j) {
+        for (unsigned int i = 0; i < (l == layers - 1 ? dim : neurons); ++i) {
+            for (unsigned int j = 0; j < (l == 0 ? dim : neurons); ++j) {
                 if (l == 0) {
                     gweights[l][i][j] = layer_errors[l][i] * input[j];
-                    // Update input vector using gradient
-                    input[j] -= learning * layer_errors[l][i] * weights[l][i][j];
                 } else {
-                    gweights[l][i][j] = layer_errors[l][i] * activations[l-1][j];
+                    gweights[l][i][j] = layer_errors[l][i] * activations[l - 1][j];
                 }
                 // Update weights
                 weights[l][i][j] -= learning * gweights[l][i][j];

@@ -3,20 +3,35 @@
  * @file Attention class for calculating attention in neural networks. Attention is 
  * a mechanism that allows a neural network to focus on a specific part of the input 
  * sequence.
- * incomplete attention block
- *          \/
- * ---------------------------------------------------------------------------------
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
- *      |           |                   |           |                       |
- *      |           |                   |           |                       |
- *      |           |                   |           |                       |
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
- * ---------------------------------------------------------------------------------
- *                                                   Total Sum:-> Complete Attention
- * vector of complete attention -> full attention
+ *                              DOT PRODUCT MATRIX
+ * ------------------------------------------------------------------------------------
+ *                       T1      T2      T3      T4  ..........................  Tn
+ *                       E1      E2      E3      E4  ..........................  En
+ *                        x       x       x       x                               x
+ *                       MQ      MQ      MQ      MQ            -------           MQ
+ *                       ->      ->      ->      ->                              ->
+ *                       Q1      Q2      Q3      Q4  ..........................  Qn
+ * ------------------------------------------------------------------------------------
+ * T1 E1 x MK -> K1  | K1.Q1   K1.Q2   K1.Q3   K1.Q4  ........................  K1.Qn |
+ * T2 E2 x MK -> K2  | K2.Q1   K2.Q2   K2.Q3   K2.Q4  ........................  K2.Qn |
+ * T3 E3 x MK -> K3  | K3.Q1   K3.Q2   K3.Q3   K3.Q4  ........................  K3.Qn |
+ * T4 E4 x MK -> K4  | K4.Q1   K4.Q2   K4.Q3   K4.Q4  ........................  K4.Qn |
+ * T5 E5 x MK -> K5  | K5.Q1   K5.Q2   K5.Q3   K5.Q4  ........................  K5.Qn |
+ * T6 E6 x MK -> K6  | K6.Q1   K6.Q2   K6.Q3   K6.Q4  ........................  K6.Qn | <--- HEAD
+ * T7 E7 x MK -> K7  | K7.Q1   K7.Q2   K7.Q3   K7.Q4  ........................  K7.Qn |    
+ * :  :              |  :      :       :       :                                :     |
+ * :  :              |  :      :       :       :                                :     |
+ * :  :              |  :      :       :       :                                :     |
+ * Tn En x MK -> Kn  | Kn.Q1   Kn.Q2   Kn.Q3   Kn.Q4  ........................  Kn.Qn |
+ * ------------------------------------------------------------------------------------
+ *   dh = sum(head[i][j] * Ki.MH)
+ *   dv = sum(head[i][j] * Qi.MV)
+ *   EH + dh -> MLP(hor) -> ReLU(output) -> mH -> EH = EH + mH
+ *   EV + dv -> MLP(ver) -> ReLU(output) -> mV -> EV = EV + mV
+ * ------------------------------------------------------------------------------------
+ * MQ and MK for each attention class is unique and different
  */
+
 #ifndef ATTENTION_HPP
 #define ATTENTION_HPP 1
 
@@ -32,15 +47,10 @@
 class attention {
 public:
 // variables
-    int n;              // total tokens for each attention head
-    int d;              // token dimension
-    int h;              // height of MQ, MK and columns of MV, MH
-    int l;              // layers of mlp
     double error;       // error for attention
-    double learning;    // learning rate
 // operands
-    mlp ver;            // next block transfer for cross attention
-    mlp hor;            // horizontal transfer for self+cross attention
+    mlp ver;            // next block transfer
+    mlp hor;            // horizontal transfer
     mat MQ;             // query matrix
     mat MK;             // key matrix
     mat MV;             // vertical value for deltas
@@ -49,8 +59,6 @@ public:
     std::vector<std::vector<double>> head;      // attention head matrix -> KEYs x QUERYs -> [K(i).Q(j)] <- scalar
     std::vector<std::vector<double>> KEYS;      // KEY vectors -> tokens * MK
     std::vector<std::vector<double>> QUERYS;    // QUERY vectors -> tokens * MQ
-    std::vector<std::vector<std::vector<double>>> dH;        // Weighted Sums Horizontally
-    std::vector<std::vector<std::vector<double>>> dV;        // Weighted Sums Vertically
     std::vector<double> EH;         // Next Embedding in same block
     std::vector<double> EV;         // Next Embedding for next Block
     std::vector<double> dh;         // dH sum
@@ -66,51 +74,13 @@ public:
     attention() = default;
     attention(int n, int d, int h, int l);
 
-    void forprop(std::vector<std::vector<double>>, int);                 // CASE default
-    void backward(std::vector<double>);
-    void train(std::vector<std::vector<double>>, int);
+    void forprop(std::vector<std::vector<double>>, int);
+    void backward(std::vector<double>, double);
+    void train(std::vector<std::vector<double>>, int, double);
 
     // default destructor
     ~attention() = default;
 };
-
-
-/**
- * @brief block for complete attention
- */
-class block {
-public:
-    int x;          // number of partial attentions in complete attention
-    int y;          // number of incomplete attention for each partial attention
-    int n, d, h, l;     // inputs for attention class constructor
-    int tokenCount;     // token count
-    int totalParams;    // total parameters of complete attention
-    double error;       // error for block, mean of all incomplete attentions
-    std::vector<std::vector<double>> tokens;    // tokens for attention head
-    std::vector<std::vector<attention>> b;      // block complete attention
-    std::vector<std::vector<std::vector<double>>> holdEVs;  // inbetween tokens transfer
-    std::vector<std::vector<double>> expected;  // tokens for attention head
-
-    // default constructor
-    block() = default;
-    block(int x, int y, int n, int d, int h, int l);
-
-    void partialforprop(int i);     // partial attention forprop
-    void forprop();                 // parallel partialforprop(i)
-    void partialbackward(int i);    // partial attention backward
-    void backward();                // parallel partialbackward(i)
-    void train();
-
-    // default destructor
-    ~block() = default;
-};
-
-// ADD CUDA FUNCTIONS FOR RUNNING OPERATIONS IN PARALLEL
-
-
-
-// ADD OPENCL FUNCTIONS FOR RUNNING OPERATIONS IN PARALLEL
-
 
 
 #endif

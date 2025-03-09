@@ -9,3 +9,5 @@ D:/gLLM/build/src/neural/CMakeFiles/rebuild_cache.dir
 D:/gLLM/build/src/model/CMakeFiles/model.dir
 D:/gLLM/build/src/model/CMakeFiles/edit_cache.dir
 D:/gLLM/build/src/model/CMakeFiles/rebuild_cache.dir
+D:/gLLM/build/src/script/CMakeFiles/edit_cache.dir
+D:/gLLM/build/src/script/CMakeFiles/rebuild_cache.dir

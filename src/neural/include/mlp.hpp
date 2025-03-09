@@ -5,21 +5,20 @@
  * This file contains the declaration of the MLP class, which is used to create
  * and manage a multi-layer perceptron neural network. The file also includes
  * necessary headers and dependencies required for the MLP class.
- *
  * Dependencies:
  * - <maths.hpp>: For activation functions used in the neural network.
- *
  * The MLP class provides methods to initialize the network, perform forward
  * propagation, and apply activation functions to the network layers.
  */
+
 #ifndef MLP_HPP
 #define MLP_HPP 1
 
 #include <vector>
+#include <maths.hpp>
 
 /**
- * @brief Multi-layer Perceptron class (with No BIASES) 
- * specifically designed for LLMs
+ * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
  */
 class mlp {
 public:
