@@ -13,12 +13,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# if(MSVC)
-#     add_compile_options(/std::c++latest)
-#     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-#     set(BUILD_SHARED_LIBS TRUE)
-# endif()
-
 # binaries for debug and release
 set(OSbit 32)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -29,9 +23,30 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${FullOutputDir}/static_libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
-# set CUDA Libraries
-# set OpenCL Libraries
+# OpenCL setup
+set(OpenCL_CL_VERSION "300")
+set(CL_TARGET_OPENCL_VERSION "300")
+find_package(OpenCL REQUIRED)
+if(OpenCL_FOUND)
+    message(STATUS "Found OpenCL version ${OpenCL_CL_VERSION}")
+    include_directories(${OpenCL_INCLUDE_DIRS})
+else()
+    message(WARNING "OpenCL not found, using CPU instead.")
+endif()
 
+# CUDA setup
+find_package(CUDAToolkit REQUIRED)
+if(CUDAToolkit_FOUND)
+    message(STATUS "Found CUDA version ${CUDAToolkit_VERSION}")
+    enable_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 20)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    set(CMAKE_CUDA_ARCHITECTURES 86)  # Ampere (RTX 30 series)
+else()
+    message(WARNING "CUDA Toolkit not found, using OpenCL instead.")
+endif()
+
+# Set all subdirectories as subProjects
 set(subProjects
     src/maths
     src/neural
@@ -39,7 +54,7 @@ set(subProjects
     src/script
 )
 
-# include each subdirectory
+# Include each subdirectory
 foreach(projects IN LISTS subProjects)
     include_directories(${projects})
     if(NOT TARGET ${projects})

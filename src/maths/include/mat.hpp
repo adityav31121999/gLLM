@@ -119,8 +119,9 @@ public:
     mat gaussjordan();                  // inverse of matrix using gauss jordan elimination method
     mat transpose();                    // new matrix as transpose of matrix
     mat cofac();                        // cofactor of matrix
-    mat Random(int, int);        // initialise values of matrices
+    mat Random(int, int);               // initialise values of matrices
     mat resize(int row, int col);       // resize the matrix by row and col
+    mat mult(mat, mat);                 // multiplication of two matrices
 
     double det2();                      // determinant of 2x2 matrix
     double det3();                      // determinant of 3x3 matrix
@@ -152,6 +153,7 @@ mat minor(std::vector<std::vector<double>>);
 double *householder(double*, int, int);
 double *householderTransform(double*, int, int);
 
+std::pair<mat*, mat*> eigen(mat *a);
 std::pair<mat*, mat*> makeOrthogonalMatrix(mat*);
 mat jacobian(mat *a);
 double jacobianval(mat *a);

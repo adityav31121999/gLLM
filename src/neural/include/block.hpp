@@ -30,18 +30,27 @@
 class block {
 public:
     double error;       // error for block, mean of all incomplete attentions
+    std::string str;    // to check whether new token is @#O or part of conversation
     std::vector<std::vector<attention>> b;      // block complete attention
-    std::vector<std::vector<std::vector<double>>> holdEVs;  // inbetween tokens transfer
-    std::string str;    // string for end of tokens
+    std::vector<std::vector<std::vector<double>>> holdEVs;      // inbetween tokens transfer
+    std::vector<std::vector<std::vector<double>>> changeVs;     // hold vertical change vectors
+    std::vector<std::vector<std::vector<double>>> holdmVs;      // hold mlp ver outputs
+    std::vector<std::vector<std::vector<double>>> holddvs;      // hold dvs of all the heads
+
     // default constructor
     block() = default;
     block(int x, int y, int n, int d, int h, int l);
 
-    void partialforprop(std::vector<std::vector<double>>, int tokenCount, int i);         // partial attention forprop
-    void forprop(std::vector<std::vector<double>>, int tokenCount);   // parallel partialforprop(i)
-    void partialbackward(std::vector<double> tExp, int tokenCount, int i, double);        // partial attention backward
-    void backward(std::vector<double> tExp, int tokenCount, double);                // parallel partialbackward(i)
-    void train(std::vector<std::vector<double>>, int, double);           // parallel forprop(i) and backward(i)
+    // partial attention forprop
+    void partialforprop(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>& , std::vector<std::vector<double>>&, int&, int&, int&, int&);
+    // parallel partialforprop(i)
+    void forprop(std::vector<std::vector<double>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, int&, int&, int&);
+    // partial attention backward
+    void partialbackward(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, int&);
+    // parallel partialbackward(i)
+    void backward(std::vector<double>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&);
+    // parallel forprop(i) and backward(i)
+    void train(std::vector<std::vector<double>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, int&, int&, int&);
 
     // default destructor
     ~block() = default;

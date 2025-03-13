@@ -49,7 +49,7 @@ public:
      */
     poly(unsigned int o, std::vector<t1> c) : order(o), coeffs(c) {
         for(auto i: c)
-            powersofx.push_back((i != 0) ? t(1) : t(0));
+            powersofx.push_back((i != 0) ? 1 : 0);
     }
 
     /**

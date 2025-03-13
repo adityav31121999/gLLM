@@ -39,6 +39,9 @@
 #include <maths.hpp>
 #include "mlp.hpp"
 
+#define TERMINATE "@#O"     // end of conversation (And Its Over)
+#define LEARNING 0.01       // learning rate for MLPs
+
 /**
  * @brief ATTENTION CLASS for calculating incomplete attention.
  * An array of incomplete attention is Partial Attention (LAYER) 
@@ -57,30 +60,24 @@ public:
     mat MH;             // horizontal value for deltas
 // containers
     std::vector<std::vector<double>> head;      // attention head matrix -> KEYs x QUERYs -> [K(i).Q(j)] <- scalar
-    std::vector<std::vector<double>> KEYS;      // KEY vectors -> tokens * MK
-    std::vector<std::vector<double>> QUERYS;    // QUERY vectors -> tokens * MQ
+    std::vector<std::vector<double>> KdotQ;     // = LOTA(head, CurrentTokenCount) -> probability distribution of relation between tokens
     std::vector<double> EH;         // Next Embedding in same block
-    std::vector<double> EV;         // Next Embedding for next Block
-    std::vector<double> dh;         // dH sum
-    std::vector<double> dv;         // dV sum
+    std::vector<double> dh;         // sum of (KdotQ[i][j] * Keys[i] * MH)
     std::vector<double> mh;         // ReLU of hor output
-    std::vector<double> mv;         // ReLU of ver output
     std::vector<double> changeH;    // change in Horizontal process as expected vector for backpropagation in hor mlp
-    std::vector<double> changeV;    // change in Vertical process as expected vector for backpropagation in ver mlp
-    std::vector<double> tExp;       // expected token/change
 
 // functions
     // default constructor
     attention() = default;
     attention(int n, int d, int h, int l);
 
-    void forprop(std::vector<std::vector<double>>, int);
-    void backward(std::vector<double>, double);
-    void train(std::vector<std::vector<double>>, int, double);
+    void forprop(std::vector<std::vector<double>>&, std::vector<double>&, std::vector<double>&, std::vector<double>&, int&, int&);
+    void forprop(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<double>&, std::vector<double>&, std::vector<double>&, int&, int&, int&, int&);
+    void backward(std::vector<double>&, std::vector<double>&, std::vector<double>&, std::vector<double>&);
+    void train(std::vector<std::vector<double>>&, std::vector<double>&, std::vector<double>&, std::vector<double>&, int, int);
 
     // default destructor
     ~attention() = default;
 };
-
 
 #endif

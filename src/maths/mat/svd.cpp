@@ -84,12 +84,14 @@ template <typename t> std::pair<mat*, mat*> SVdecom(mat *a) {
     mat *v = new mat(m, m);  // matrix to store right singular vectors
     mat *s = new mat(n, m);  // matrix to store singular values
     // Initialize u and v as identity matrices
-    u = imat(n);
-    v = imat(m);
+    u.imat(n);
+    v.imat(m);
     // Compute a^t * a
-    mat *at = trans(a);
-    mat *aTa = mult(a, at);  // a * a^t
-    mat *AtA = mult(at, a);  // a^t * a
+    mat *at = a.transpose();
+    mat *aTa = new mat(n, n);
+    aTa.mult(a, at);  // a * a^t
+    mat *AtA = new mat(m, m);
+    AtA.mult(at, a);  // a^t * a
     // Compute eigenvalues and eigenvectors of a^t * a
     std::pair<mat*, mat*> eigs = eigen(AtA);
     mat *eigVal = eigs.first;  // eigenvalues (diagonal elements of s)

@@ -483,11 +483,10 @@ mat mat::transpose() {
     if(ifsquare() == 0) {
         throw std::runtime_error("Transpose is for square matrix only!");
     }
-    mat b(*this);
-    // Iterate over the upper triangular part of the matrix
-    for(size_t i = 0; i < b.a.size(); ++i) {
-        for(size_t j = i + 1; j < b.a[i].size(); ++j) {
-            if(i != j) { std::swap(b.a[i][j], b.a[j][i]); }
+    mat b(this->col, this->row);
+    for(size_t i = 0; i < this->row; ++i) {
+        for(size_t j = 0; j < this->col; ++j) {
+            b.a[j][i] = this->a[i][j];
         }
     }
     return b;

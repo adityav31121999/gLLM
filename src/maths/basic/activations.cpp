@@ -342,6 +342,8 @@ std::vector<double> SeLUvder(std::vector<double> x) {
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
 std::vector<double> LOTA(std::vector<double>& y) {
+    if(y.size() == 1)
+        return {1};
     // Create a copy of the input vector
     std::vector<double> x(y);
     // Find the minimum value in the input vector
@@ -367,6 +369,8 @@ std::vector<double> LOTA(std::vector<double>& y) {
  */
 std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
     // Create a copy of the input 2D vector
+    if(y.size() == 1 && y[0].size() == 1)
+        return {{1}};
     std::vector<std::vector<double>> x(y);
     // Find the minimum value in the entire 2D vector
     double min_val = 0.0;
@@ -401,6 +405,10 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
 std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t) {
+    // Create a copy of the input 2D vector
+    if(y.size() == 1 && y[0].size() == 1)
+        return {{1}};
+    // Check if the input 2D vector has the required number of terms
     if(y.size() == t) {
         std::vector<std::vector<double>> x(y);
         x = LOTA(x);

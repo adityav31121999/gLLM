@@ -8,11 +8,12 @@
  * @param tokenCount number of tokens predicted/generated or provided as input
  * @param layer layer number
  */
-void block::partialbackward(std::vector<double> tExp, int tokenCount, int layer, double learning) {
-    std::vector<double> p(tExp);
+void block::partialbackward(std::vector<double>& expected, std::vector<std::vector<double>>& changeV, 
+    std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV, int& layer) 
+{
     for(int i = b[layer].size(); i >= 0; i++) {
-        b[layer][i].backward(p, learning);
-        p = b[layer][i].EH;
+        b[layer][i].backward(expected, changeV[i], dv[i], EV[i]);            
+        expected = b[layer][i].EH;
     }
 }
 
@@ -21,6 +22,10 @@ void block::partialbackward(std::vector<double> tExp, int tokenCount, int layer,
  * @param tExp expected token
  * @param tokenCount number of tokens predicted/generated or provided as input
  */
-void block::backward(std::vector<double> tExp, int tokenCount, double learning) {
-    //
+void block::backward(std::vector<double>& expected, std::vector<std::vector<std::vector<double>>>& changeV, 
+    std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV) 
+{
+    for(int i = b.size(); i >= 0; i++) {
+        partialbackward(expected, changeV[i], dv[i], EV[i], i);
+    }
 }

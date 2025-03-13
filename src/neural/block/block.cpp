@@ -9,6 +9,7 @@
  * @param n number of tokens for each attention head
  * @param d dimension of each token
  * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
  */
 block::block(int x, int y, int n, int d, int h, int l) {
     // initialize attention block (complete attention)

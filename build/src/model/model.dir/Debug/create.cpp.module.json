@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "model.dir\\Debug\\create.obj",
+            "outputs": [
+                "D:\\gLLM\\bin\\Windows-AMD64-64\\static_libs\\Debug\\model.pdb",
+                "model.dir\\Debug\\"
+            ],
+            "requires": []
+        }
+    ]
+}

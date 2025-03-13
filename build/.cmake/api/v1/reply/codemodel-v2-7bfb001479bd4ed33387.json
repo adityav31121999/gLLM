@@ -1,0 +1,844 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4
+					],
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"build" : "src/maths",
+					"jsonFile" : "directory-src.maths-Debug-8eaa66cd890d754a0136.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "src/maths",
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"build" : "src/neural",
+					"jsonFile" : "directory-src.neural-Debug-c4e1867c20dcc1de3f42.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "src/neural",
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"build" : "src/model",
+					"jsonFile" : "directory-src.model-Debug-59c8d69a43659887638b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "src/model",
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				},
+				{
+					"build" : "src/script",
+					"jsonFile" : "directory-src.script-Debug-2232dc512a8142e37990.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src/script"
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3
+					],
+					"directoryIndexes" : 
+					[
+						0,
+						4
+					],
+					"name" : "gLLM",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "maths",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "neural",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "model",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-Debug-ff3ae7e111950cbe2c03.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@82281960fef5161a47a1",
+					"jsonFile" : "target-ALL_BUILD-Debug-4a7030675f26dd33fb07.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "ALL_BUILD::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-ALL_BUILD-Debug-1db5e19626192f1db101.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "ALL_BUILD::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-ALL_BUILD-Debug-4c5c8feff2287a4e4212.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-Debug-58531afd0d1e2ec87101.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "maths::@82281960fef5161a47a1",
+					"jsonFile" : "target-maths-Debug-1801c913e87887b84b69.json",
+					"name" : "maths",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "model::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-model-Debug-1c5b3a0dc7d8407a386d.json",
+					"name" : "model",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "neural::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-neural-Debug-8b95c9451081327aaa6b.json",
+					"name" : "neural",
+					"projectIndex" : 2
+				}
+			]
+		},
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4
+					],
+					"jsonFile" : "directory-.-Release-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"build" : "src/maths",
+					"jsonFile" : "directory-src.maths-Release-8eaa66cd890d754a0136.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "src/maths",
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"build" : "src/neural",
+					"jsonFile" : "directory-src.neural-Release-c4e1867c20dcc1de3f42.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "src/neural",
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"build" : "src/model",
+					"jsonFile" : "directory-src.model-Release-59c8d69a43659887638b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "src/model",
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				},
+				{
+					"build" : "src/script",
+					"jsonFile" : "directory-src.script-Release-2232dc512a8142e37990.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src/script"
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3
+					],
+					"directoryIndexes" : 
+					[
+						0,
+						4
+					],
+					"name" : "gLLM",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "maths",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "neural",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "model",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-Release-ff3ae7e111950cbe2c03.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@82281960fef5161a47a1",
+					"jsonFile" : "target-ALL_BUILD-Release-4a7030675f26dd33fb07.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "ALL_BUILD::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-ALL_BUILD-Release-1db5e19626192f1db101.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "ALL_BUILD::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-ALL_BUILD-Release-4c5c8feff2287a4e4212.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-Release-58531afd0d1e2ec87101.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "maths::@82281960fef5161a47a1",
+					"jsonFile" : "target-maths-Release-db7cd7486a4d97aa071e.json",
+					"name" : "maths",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "model::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-model-Release-cce8038b652b4ba8f644.json",
+					"name" : "model",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "neural::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-neural-Release-1dd9bef981f967bf1e0f.json",
+					"name" : "neural",
+					"projectIndex" : 2
+				}
+			]
+		},
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4
+					],
+					"jsonFile" : "directory-.-MinSizeRel-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"build" : "src/maths",
+					"jsonFile" : "directory-src.maths-MinSizeRel-8eaa66cd890d754a0136.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "src/maths",
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"build" : "src/neural",
+					"jsonFile" : "directory-src.neural-MinSizeRel-c4e1867c20dcc1de3f42.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "src/neural",
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"build" : "src/model",
+					"jsonFile" : "directory-src.model-MinSizeRel-59c8d69a43659887638b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "src/model",
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				},
+				{
+					"build" : "src/script",
+					"jsonFile" : "directory-src.script-MinSizeRel-2232dc512a8142e37990.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src/script"
+				}
+			],
+			"name" : "MinSizeRel",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3
+					],
+					"directoryIndexes" : 
+					[
+						0,
+						4
+					],
+					"name" : "gLLM",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "maths",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "neural",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "model",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-MinSizeRel-ff3ae7e111950cbe2c03.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@82281960fef5161a47a1",
+					"jsonFile" : "target-ALL_BUILD-MinSizeRel-4a7030675f26dd33fb07.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "ALL_BUILD::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-ALL_BUILD-MinSizeRel-1db5e19626192f1db101.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "ALL_BUILD::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-ALL_BUILD-MinSizeRel-4c5c8feff2287a4e4212.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-MinSizeRel-58531afd0d1e2ec87101.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "maths::@82281960fef5161a47a1",
+					"jsonFile" : "target-maths-MinSizeRel-af8ccc437ca2d8a2e864.json",
+					"name" : "maths",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "model::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-model-MinSizeRel-2a82f62509ed033983e5.json",
+					"name" : "model",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "neural::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-neural-MinSizeRel-b4f63f14e8fba6383f56.json",
+					"name" : "neural",
+					"projectIndex" : 2
+				}
+			]
+		},
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4
+					],
+					"jsonFile" : "directory-.-RelWithDebInfo-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"build" : "src/maths",
+					"jsonFile" : "directory-src.maths-RelWithDebInfo-8eaa66cd890d754a0136.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "src/maths",
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"build" : "src/neural",
+					"jsonFile" : "directory-src.neural-RelWithDebInfo-c4e1867c20dcc1de3f42.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "src/neural",
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"build" : "src/model",
+					"jsonFile" : "directory-src.model-RelWithDebInfo-59c8d69a43659887638b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "src/model",
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				},
+				{
+					"build" : "src/script",
+					"jsonFile" : "directory-src.script-RelWithDebInfo-2232dc512a8142e37990.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.30.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src/script"
+				}
+			],
+			"name" : "RelWithDebInfo",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3
+					],
+					"directoryIndexes" : 
+					[
+						0,
+						4
+					],
+					"name" : "gLLM",
+					"targetIndexes" : 
+					[
+						0,
+						4
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "maths",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						5
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "neural",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						2,
+						7
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "model",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						3,
+						6
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ALL_BUILD-RelWithDebInfo-ff3ae7e111950cbe2c03.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ALL_BUILD::@82281960fef5161a47a1",
+					"jsonFile" : "target-ALL_BUILD-RelWithDebInfo-4a7030675f26dd33fb07.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "ALL_BUILD::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-ALL_BUILD-RelWithDebInfo-1db5e19626192f1db101.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "ALL_BUILD::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-ALL_BUILD-RelWithDebInfo-4c5c8feff2287a4e4212.json",
+					"name" : "ALL_BUILD",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ZERO_CHECK-RelWithDebInfo-58531afd0d1e2ec87101.json",
+					"name" : "ZERO_CHECK",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "maths::@82281960fef5161a47a1",
+					"jsonFile" : "target-maths-RelWithDebInfo-578f3c51f190a3956623.json",
+					"name" : "maths",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "model::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-model-RelWithDebInfo-266a2acb166b6f73b8e4.json",
+					"name" : "model",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "neural::@aa3d0067ab9058994e35",
+					"jsonFile" : "target-neural-RelWithDebInfo-9c5dc2fff7ffa8432a76.json",
+					"name" : "neural",
+					"projectIndex" : 2
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "D:/gLLM/build",
+		"source" : "D:/gLLM"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

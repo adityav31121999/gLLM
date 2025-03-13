@@ -38,7 +38,9 @@ typedef struct modelDataInfo {
 
 
 /**
- * @brief Model Class
+ * @brief Model Class for storing transformers. Uses transformer class to store all the parametes
+ * trained and to be trained. This helps in keeping all values together and accessing the values 
+ * easily.
  */
 class model {
 public:
@@ -50,10 +52,13 @@ public:
     int d;          // token dimension
     int h;          // height of MQ, MK and columns of MV, MH
     int l;          // layers of mlp
-    int totalParams;    // total parameters of transformer
-    int total;      // total tokenLimit -> m * n
+    int totalParams;        // total parameters of transformer
+    int total;      // total tokenLimit -> t*count m * n
+    double learning;        // learning rate for MLPs
     transformer T;  // model with 1 transformer
-    // std::vector<transformer> Tg;  // model with tcount transformer
+    std::vector<transformer> Tg;        // model with tcount transformer
+    std::vector<std::vector<std::vector<block>>> b;     // attention block (1 or many)
+    std::vector<std::vector<std::vector<std::vector<std::vector<attention>>>>> att;      // inbetween tokens transfer
     modelDataInfo info;     // model info
     FILE *file;     // file where all data is to be stored
 
@@ -67,6 +72,8 @@ public:
     model() = default;
     model(int m, int x, int y, int n, int d, int h, int l);
     model(int tCount, int m, int x, int y, int n, int d, int h, int l);
+    model(int m, int x, int y, int n, int d, int h, int l, double learning);
+    model(int tCount, int m, int x, int y, int n, int d, int h, int l, double learning);
 
     void train();
     void load();
