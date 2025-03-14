@@ -303,6 +303,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\gLLM\src\model\src\save.cpp" />
     <ClCompile Include="D:\gLLM\src\model\src\serialise.cpp" />
     <ClCompile Include="D:\gLLM\src\model\src\deserialise.cpp" />
+    <ClCompile Include="D:\gLLM\src\model\src\chat.cpp" />
     <ClCompile Include="D:\gLLM\src\model\src\train\train.cpp" />
     <ClCompile Include="D:\gLLM\src\model\src\train\fine.cpp" />
     <ClCompile Include="D:\gLLM\src\model\src\use\load.cpp" />

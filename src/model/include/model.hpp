@@ -80,8 +80,32 @@ public:
     void save();
     void allocateMemory();
 
+    // chats
+    void takeInput();       // take required input for transformer
+    void runTransformer();  // run transformer for conversation
+    void newChat();         // for new chat clear everything and set all to 0
+    void endChat();         // end chat and clear all the memory
+    void continueChat();    // continue chat with the model
+    void previousResponse();    // get previous response from the model
+    void nextResponse();        // get next response from the model
+    void saveChat();        // save chat to file
+    void loadChat();        // load chat from file
+
     // default destructor
     ~model() = default;
 };
+
+// tokens management and embedding
+
+void alternateSplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
+void continuousSplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
+void QNASplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
+void sentenceSplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
+void punctutationSplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
+void fillInTheBlanks(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
+
+// provide token embedding from a csv file
+// provide token embedding from model binary file
+// perform dembedding by searching maximum value of probability
 
 #endif

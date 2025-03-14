@@ -325,16 +325,16 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\gLLM\src\neural\block\train.cpp">
       <ObjectFileName>$(IntDir)/block/train.cpp.obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\transformer\tokens.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\transformer\transformer.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\forward.cpp">
-      <ObjectFileName>$(IntDir)/transformer/forward.cpp.obj</ObjectFileName>
-    </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\transformer\feedfor.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\transformer\backfeed.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\transformer\feedback.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\transformer\spoonfeed.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\transformer\train.cpp">
       <ObjectFileName>$(IntDir)/transformer/train.cpp.obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\transformer\finetune.cpp" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

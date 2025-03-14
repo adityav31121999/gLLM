@@ -18,7 +18,7 @@
 #include <string>
 
 #define CONTEXT_SIZE 8192       // Attention head dimension: 2^13
-#define TOKEN_IMIN 1            // token input for one head
+#define TOKEN_IMIN 1            // token input
 #define TOKEN_IMAX 16384        // 2^14
 #define TOKEN_OMIN 1            // token output
 #define TOKEN_OMAX 2097152      // 8192*256 = 2^21
@@ -46,58 +46,42 @@ public:
     int tokenCount;         // how many tokens have been generated
     int totalTokens;        // total tokens generated
     double learning;        // learning rate for MLPs
+    int epochs;             // number of epochs for MLPs
     int reps;               // repetitions for conversation when totalTokens is reahced and more needed till TERMINATE
     std::vector<block> b;   // attention block (1 or many)
     std::vector<std::string> tinput;    // token input
     std::vector<std::string> expected;  // expected token output
     std::vector<std::string> toutput;   // predicted token output
     std::vector<std::string> token;     // Hold all input, generated or predicted tokens till TERMINATOR MEETS
-    std::vector<std::vector<double>> tokenEmbed;    // token as embedding for input and generated tokens
+    std::vector<std::vector<double>> tokenEmbed;        // token embedding
     std::vector<std::vector<std::vector<double>>> holdEVs;      // hold all EVs for backpropagation
     std::vector<std::vector<std::vector<double>>> holddVs;      // hold all dVs for backpropagation
     std::vector<std::vector<std::vector<double>>> changeVs;     // change in dVs for backpropagation
+    std::vector<std::vector<std::vector<double>>> errMLP;       // error of all MLPs
+    std::vector<std::vector<std::vector<double>>> errAtt;       // error of all attentions
 
     // default constructor
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l);
     transformer(int m, int x, int y, int n, int d, int h, int l);
-// train model
+// training
     void forward();         // forward propagation
     void fineTune();        // fine-tune transformer => altering certain properties while training
     void feedBack();        // self-correcting feedback loop
     void instruct();        // instruct the transformer to do something
     void spoonfeed();       // spoonfeeding => first to last
     void backfeed();        // backfeeding => last to first
-    void train();           // train the transformer
-// talk with model
-    void takeInput();       // take required input for transformer
-    void runTransformer();  // run transformer for conversation
-    void newChat();         // for new chat clear everything and set all to 0
-    void endChat();         // end chat and clear all the memory
-    void continueChat();    // continue chat with the model
-    void previousResponse();    // get previous response from the model
-    void nextResponse();        // get next response from the model
-    void saveChat();        // save chat to file
-    void loadChat();        // load chat from file
-// task
-    void think();           // thinking process for transformer
-    void rethink();         // rethinking process previous response
-    void reason();          // reasoning process for transformer
-    void question();        // question the user
-    void answer();          // answer the user
+    void train();           // train with feedforward()
+    void train4feedback();  // train with feedback()
+    void train4spoonfeed(); // train with spoonfeed()
+    void train4backfeed();  // train with backfeed()
+    void finetune();        // finetune transformer
 // set properties for transformer
     void setLearning(double learning);  // set learning rate for MLPs
-    void setReps(int reps);             // set repetitions for conversation
 
     // default destructor
     ~transformer() = default;
 };
-
-// embedding and token related fucntions
-
-std::vector<std::string> tokenizer(std::string& str);
-std::vector<std::string> detokenizer(std::vector<std::string>& tokens);
-std::vector<double> embedder(std::string& str);
 
 #endif
 

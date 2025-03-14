@@ -481,6 +481,15 @@ neural_IS_TOP_LEVEL:STATIC=OFF
 //Value Computed by CMake
 neural_SOURCE_DIR:STATIC=D:/gLLM/src/neural
 
+//Value Computed by CMake
+script_BINARY_DIR:STATIC=D:/gLLM/build/src/script
+
+//Value Computed by CMake
+script_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
+script_SOURCE_DIR:STATIC=D:/gLLM/src/script
+
 
 ########################
 # INTERNAL cache entries

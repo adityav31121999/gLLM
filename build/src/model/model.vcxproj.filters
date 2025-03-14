@@ -19,6 +19,9 @@
     <ClCompile Include="D:\gLLM\src\model\src\deserialise.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\gLLM\src\model\src\chat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\gLLM\src\model\src\train\train.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

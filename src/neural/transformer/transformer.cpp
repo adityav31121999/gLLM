@@ -2,7 +2,6 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include "include/transformer.hpp"
-#include "transformer.hpp"
 
 /**
  * @brief Constructor for single-block transformer for prediction
@@ -18,7 +17,7 @@ transformer::transformer(int x, int y, int n, int d, int h, int l):
     b = std::vector<block>(1, block(x, y, n, d, h, l));
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<double>>(n, std::vector<double>(d, 0));
-    totalParams = 2 * d * ((2 * h) + (l * d)) * x * y * n;
+    totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
     total = n;
 }
 
@@ -38,17 +37,6 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l) :
     b = std::vector<block>(m, block(x, y, n, d, h, l));
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<double>>(n * m, std::vector<double>(d, 0));
-    totalParams = 2 * d * ((2 * h) + (l * d)) * x * y * m * n;
+    totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
     total = m * n;
-}
-
-
-/**
- * @brief set all the input tokens in the beginning of token vector
- */
-void transformer::takeInput() {
-    for(auto& i : tinput) {
-        token.push_back(i);
-        // tokenEmbed.push_back(tokenise(i));
-    }
 }

@@ -24,15 +24,15 @@ void serialiseMAT(const mat& a, FILE* file) {
  * @param a mlp to be serialised
  * @param file FILE pointer to write to
  */
-void serialiseMLP(const mlp& a, FILE* file) {
+void serialiseMLP(const mlp& a, FILE* file, int in, int layers) {
     if (!file) {
         throw std::runtime_error("File pointer is null");
     }
     
     // Write weights layer by layer
-    for (unsigned int l = 0; l < a.layers; ++l) {
-        for (unsigned int i = 0; i < a.neurons; ++i) {
-            fwrite(a.weights[l][i].data(), sizeof(double), a.neurons, file);
+    for (unsigned int l = 0; l < layers; ++l) {
+        for (unsigned int i = 0; i < in; ++i) {
+            fwrite(a.weights[l][i].data(), sizeof(double), in, file);
         }
     }
 }
@@ -41,7 +41,7 @@ void serialiseMLP(const mlp& a, FILE* file) {
  * @brief serialising model parameters
  * @param a model to be serialised
  */
-void serialiseModel(const model& a) {
+void serialiseModel(const model& a, int in, int layers) {
     if (!a.file) {
         throw std::runtime_error("Model file pointer is null");
     }
@@ -75,8 +75,8 @@ void serialiseModel(const model& a) {
                 serialiseMAT(att.MH, file);   // vhrow * vhcol
 
                 // Serialize MLPs
-                serialiseMLP(att.ver, file);  // (d * d) * l
-                serialiseMLP(att.hor, file);  // (d * d) * l
+                serialiseMLP(att.ver, file, in, layers);  // (d * d) * l
+                serialiseMLP(att.hor, file, in, layers);  // (d * d) * l
             }
         }
     }

@@ -12,9 +12,11 @@ D:\gLLM\src\neural\block\block.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\blo
 D:\gLLM\src\neural\block\forward.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\block\forward.cpp.obj
 D:\gLLM\src\neural\block\backward.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\block\backward.cpp.obj
 D:\gLLM\src\neural\block\train.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\block\train.cpp.obj
+D:\gLLM\src\neural\transformer\tokens.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\tokens.obj
 D:\gLLM\src\neural\transformer\transformer.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\transformer.obj
-D:\gLLM\src\neural\transformer\forward.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\transformer\forward.cpp.obj
+D:\gLLM\src\neural\transformer\feedfor.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\feedfor.obj
 D:\gLLM\src\neural\transformer\backfeed.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\backfeed.obj
 D:\gLLM\src\neural\transformer\feedback.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\feedback.obj
 D:\gLLM\src\neural\transformer\spoonfeed.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\spoonfeed.obj
 D:\gLLM\src\neural\transformer\train.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\transformer\train.cpp.obj
+D:\gLLM\src\neural\transformer\finetune.cpp;D:\gLLM\build\src\neural\neural.dir\Debug\finetune.obj

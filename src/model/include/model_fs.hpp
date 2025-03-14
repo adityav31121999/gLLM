@@ -16,7 +16,7 @@
 // serialisation and deserilisation of model parameters
 
 void serialiseMAT(const mat& a, FILE* file);
-void serialiseMLP(const mlp& a, FILE* file);
+void serialiseMLP(const mlp& a, FILE* file, int, int);
 void serialiseModel(const model& a);
 
 void deserialiseMAT(mat& a, FILE* file, int, int);

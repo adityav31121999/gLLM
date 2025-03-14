@@ -21,7 +21,7 @@ void jumbledwbs(std::vector<std::vector<double>> weights) {
     // Randomly initialize weights
     for (size_t i = 0; i < weights.size(); ++i) {
         // Fill the weights vector with random values and increment by 1
-        std::iota(weights[i].begin(), weights[i].end(), i - rand() % 10);
+        std::iota(weights[i].begin(), weights[i].end(), static_cast<double>((i - rand()) % 10));
         // Randomize the order of weights values
         std::shuffle(weights[i].begin(), weights[i].end(), std::mt19937{std::random_device{}()});
     }

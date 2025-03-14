@@ -10,6 +10,7 @@ add_library(model STATIC
     src/save.cpp
     src/serialise.cpp
     src/deserialise.cpp
+    src/chat.cpp
 
     src/train/train.cpp
     src/train/fine.cpp

@@ -23,14 +23,7 @@
 class mlp {
 public:
 // member variables
-    unsigned int dim;           // dimension of embedding
-    unsigned int layers;        // number of layers
-    unsigned int neurons;       // number of neurons in each layer
-    unsigned int epochs;        // number of epochs
-    double mse;                 // mean square error
-    double learning;            // learning rate
     bool status;                // 1 if completely trained, 0 otherwise
-    int totalParams;            // total parameters in MLP
 // member containers
     std::vector<double> input;      // input vector
     std::vector<double> output;     // output vector
@@ -45,21 +38,20 @@ public:
     mlp() = default;
     mlp(unsigned int in, unsigned int layers, unsigned int epochs = 10, double learning = 0.01);
 
+    void forward(int in, int layers);
+    void backprop2in(int layers, int in, double learning);
+    void backward(int layers, int in, double learning);
+    void backprop(int layers, int in, double learning);
     double getL1Penalty();
     double getL2Penalty();
-
-    void forward();
-    void backprop2in();
-    void backward();
-    void backprop();
-    void backwithL1();
-    void backwithL2();
-    void rprop(std::vector<std::vector<double>>);
-    void train();
-    void train(std::vector<std::vector<double>>);
-    void validate();
-    void test();
-    void initializeWeights();
+    void backwithL1(int layers, int in, double learning);
+    void backwithL2(int layers, int in, double learning);
+    void rprop(std::vector<std::vector<double>>&, int layers, int in, double learning, int epochs);
+    void train(double& mse, int in, int layers, double learning);
+    void train(std::vector<std::vector<double>>&, double& mse, int in, int layers, double learning);
+    void validate(int in, int layers);
+    void test(int in, int layers);
+    void initializeWeights(int in, int layers);
 
     // default destructor
     ~mlp() = default;

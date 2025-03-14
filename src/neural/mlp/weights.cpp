@@ -7,7 +7,7 @@
  * This function initializes the weights of the mlp using a normal distribution
  * with a mean of 0.0 and a standard deviation of 1.0.
  */
-void mlp::initializeWeights() {
+void mlp::initializeWeights(int in, int layers) {
     // random number generator
     std::random_device rd;      // device
     std::mt19937 gen(rd());     // generator
@@ -15,8 +15,8 @@ void mlp::initializeWeights() {
 
     // initialize hidden to hidden weights
     for(int i = 0; i < layers; i++) {
-        for(int j = 0; j < neurons; j++) {
-            for(int k = 0; k < neurons; k++) {
+        for(int j = 0; j < in; j++) {
+            for(int k = 0; k < in; k++) {
                 weights[i][j][k] = (i+j + dis(gen)) / (k+1);
             }
         }

@@ -27,12 +27,14 @@ add_library(neural STATIC
     block/train.cpp
 
     # transformer
+    transformer/tokens.cpp
     transformer/transformer.cpp
-    transformer/forward.cpp
+    transformer/feedfor.cpp
     transformer/backfeed.cpp
     transformer/feedback.cpp
     transformer/spoonfeed.cpp
     transformer/train.cpp
+    transformer/finetune.cpp
 )
 
 target_link_libraries(neural

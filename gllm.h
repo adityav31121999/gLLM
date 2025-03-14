@@ -3,21 +3,24 @@
 #ifndef GLLM_H
 #define GLLM_H 1
 
+// for parallel computation
 /**
-// fir parallel computation
-#ifdef HAVE_CUDA
-    #include <cuda_runtime.h>
-#elif defined(__APPLE__)
-    #include <OpenCL/opencl.h>
-#else
-    #include <CL/cl.hpp>
-#endif
+ * if LINUX
+ *  - use CUDA or OpenCL if available
+ *  - else use CPU
+ * if WINDOWS
+ *  - use CUDA or OpenCL if available
+ *  - else use CPU
+ * if APPLE
+ *  - use CUDA or OpenCL if available
+ *  - else use CPU
  */
 
 // self defined headers
 #include <maths.hpp>
 #include <neural.hpp>
 #include <model.hpp>
+#include <script.hpp>
 
 #endif
 

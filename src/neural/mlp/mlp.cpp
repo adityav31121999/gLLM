@@ -15,18 +15,12 @@
  */
 mlp::mlp(unsigned int in, unsigned int layers, unsigned int epochs, double learning) {
     // all variables and containers
-    this->dim = in;
-    this->layers = layers;
-    this->neurons = dim;
-    this->epochs = epochs;
-    this->learning = learning;
-    input.resize(dim, 0.0);
-    output.resize(dim, 0.0);
-    expected.resize(dim, 0.0);
-    weights.resize(layers, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
-    hlayers.resize(layers, std::vector<double>(neurons, 0.0));
-    activations.resize(layers, std::vector<double>(neurons, 0.0));
-    gweights.resize(layers, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
-    initializeWeights();
-    totalParams = neurons * neurons * layers;
+    input.resize(in, 0.0);
+    output.resize(in, 0.0);
+    expected.resize(in, 0.0);
+    weights.resize(layers, std::vector<std::vector<double>>(in, std::vector<double>(in, 0.0)));
+    hlayers.resize(layers, std::vector<double>(in, 0.0));
+    activations.resize(layers, std::vector<double>(in, 0.0));
+    gweights.resize(layers, std::vector<std::vector<double>>(in, std::vector<double>(in, 0.0)));
+    initializeWeights(in, layers);
 }

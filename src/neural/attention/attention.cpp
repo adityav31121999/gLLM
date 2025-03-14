@@ -13,6 +13,8 @@
  */
 attention::attention(int n, int d, int h, int l) {
     // scaled dot product and activated attention head
+    K = std::vector<std::vector<double>>(n, std::vector<double>(h, 0));
+    Q = std::vector<std::vector<double>>(n, std::vector<double>(h, 0));
     head = std::vector<std::vector<double>>(n, std::vector<double>(n, 0));
     MQ = mat(h, d);     // hxd
     MK = mat(h, d);     // hxd
@@ -23,5 +25,4 @@ attention::attention(int n, int d, int h, int l) {
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     changeH = std::vector<double>(d, 0);    // change obtained from final step
-    error = 0;          // set initial error to 0
 }

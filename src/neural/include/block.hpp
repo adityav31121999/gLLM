@@ -23,6 +23,7 @@
 #include <maths.hpp>
 #include "mlp.hpp"
 #include "attention.hpp"
+#define VOCABSIZE 128000 // vocabulary size
 
 /**
  * @brief block for complete attention
@@ -31,6 +32,7 @@ class block {
 public:
     double error;       // error for block, mean of all incomplete attentions
     std::string str;    // to check whether new token is @#O or part of conversation
+    std::vector<double> probability;            // probability space for next token
     std::vector<std::vector<attention>> b;      // block complete attention
     std::vector<std::vector<std::vector<double>>> holdEVs;      // inbetween tokens transfer
     std::vector<std::vector<std::vector<double>>> changeVs;     // hold vertical change vectors
@@ -42,16 +44,31 @@ public:
     block(int x, int y, int n, int d, int h, int l);
 
     // partial attention forprop
-    void partialforprop(std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>& , std::vector<std::vector<double>>&, int&, int&, int&, int&);
+    void partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV,
+                        std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int& i, int& layers);
+    void partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EVp,
+                        std::vector<std::vector<double>>& EVc, std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int blockCount, 
+                        int& i, int& layers, int& n);
     // parallel partialforprop(i)
-    void forprop(std::vector<std::vector<double>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, int&, int&, int&);
+    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<std::vector<double>>>& dv, 
+                        std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, 
+                        int& tokenCount, int& layers);
+    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<std::vector<double>>>& dv, 
+                        std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, 
+                        int& tokenCount, int& layers, int& blockCount);
     // partial attention backward
-    void partialbackward(std::vector<double>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, std::vector<std::vector<double>>&, int&);
+    void partialbackward(std::vector<double>& expected, std::vector<std::vector<double>>& changeV, std::vector<std::vector<double>>& dv, 
+                        std::vector<std::vector<double>>& EV, int& in, int& layers, int layno);
     // parallel partialbackward(i)
-    void backward(std::vector<double>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&);
+    void backward(std::vector<double>& expected, std::vector<std::vector<std::vector<double>>>& changeV, std::vector<std::vector<std::vector<double>>>& dv, 
+                        std::vector<std::vector<std::vector<double>>>& EV, int& in, int& layers);
     // parallel forprop(i) and backward(i)
-    void train(std::vector<std::vector<double>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<std::vector<double>>>&, int&, int&, int&);
-
+    void train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double> expected, std::vector<std::vector<std::vector<double>>>& dv, 
+        std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers);
+    void train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double> expected, std::vector<std::vector<std::vector<double>>>& dv, 
+        std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers, 
+        int blockCount);
+    
     // default destructor
     ~block() = default;
 };

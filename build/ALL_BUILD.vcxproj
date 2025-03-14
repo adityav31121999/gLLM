@@ -191,6 +191,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{559FAC8A-C725-3A53-A3E9-279658C81B4A}</Project>
       <Name>neural</Name>
     </ProjectReference>
+    <ProjectReference Include="D:\gLLM\build\src\script\script.vcxproj">
+      <Project>{ED71338D-0FAB-3F88-BA71-3F0BD587B10B}</Project>
+      <Name>script</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

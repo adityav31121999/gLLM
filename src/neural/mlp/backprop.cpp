@@ -7,32 +7,32 @@
 /**
  * @brief Backpropagation till input vector
  */
-void mlp::backprop2in() {
+void mlp::backprop2in(int in, int layers, double learning) {
     // Compute output layer error
-    std::vector<double> output_error(dim, 0.0);
-    for (unsigned int i = 0; i < dim; ++i) {
+    std::vector<double> output_error(in, 0.0);
+    for (unsigned int i = 0; i < in; ++i) {
         output_error[i] = output[i] - expected[i];
     }
 
     // Initialize gradient weights if not already done
     if (gweights.size() != layers) {
-        gweights.resize(layers, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
+        gweights.resize(layers, std::vector<std::vector<double>>(in, std::vector<double>(in, 0.0)));
     }
 
     // Compute gradients for the output layer
-    for (unsigned int i = 0; i < dim; ++i) {
-        for (unsigned int j = 0; j < neurons; ++j) {
+    for (unsigned int i = 0; i < in; ++i) {
+        for (unsigned int j = 0; j < in; ++j) {
             gweights[layers - 1][i][j] = output_error[i] * activations[layers - 1][j];
         }
     }
 
     // Compute hidden layer errors and gradients
-    std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(neurons, 0.0));
+    std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(in, 0.0));
 
     // Compute error for the last hidden layer
-    for (unsigned int i = 0; i < neurons; ++i) {
+    for (unsigned int i = 0; i < in; ++i) {
         double error_sum = 0.0;
-        for (unsigned int j = 0; j < dim; ++j) {
+        for (unsigned int j = 0; j < in; ++j) {
             error_sum += weights[layers - 1][j][i] * output_error[j];
         }
         layer_errors[layers - 1][i] = error_sum * activations[layers - 1][i] * (1 - activations[layers - 1][i]);
@@ -40,9 +40,9 @@ void mlp::backprop2in() {
 
     // Propagate error backward through the network
     for (int l = layers - 2; l >= 0; --l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
+        for (unsigned int i = 0; i < in; ++i) {
             double error_sum = 0.0;
-            for (unsigned int j = 0; j < neurons; ++j) {
+            for (unsigned int j = 0; j < in; ++j) {
                 error_sum += weights[l + 1][j][i] * layer_errors[l + 1][j];
             }
             layer_errors[l][i] = error_sum * activations[l][i] * (1 - activations[l][i]);
@@ -51,8 +51,8 @@ void mlp::backprop2in() {
 
     // Compute gradients for all layers and update weights
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < (l == layers - 1 ? dim : neurons); ++i) {
-            for (unsigned int j = 0; j < (l == 0 ? dim : neurons); ++j) {
+        for (unsigned int i = 0; i < in; ++i) {
+            for (unsigned int j = 0; j < in; ++j) {
                 if (l == 0) {
                     gweights[l][i][j] = layer_errors[l][i] * input[j];
                     // Update input vector using gradient
@@ -72,27 +72,27 @@ void mlp::backprop2in() {
  * @brief The backward propagation function. This function performs the
  * backward propagation and calculates the error.
  */
-void mlp::backward() {
+void mlp::backward(int in, int layers, double learning) {
     // Initialize vectors
-    std::vector<double> error(dim);
-    std::vector<std::vector<double>> delta_weights(layers, std::vector<double>(neurons, 0.0));
-    std::vector<std::vector<double>> layer_deltas(layers, std::vector<double>(neurons, 0.0));
+    std::vector<double> error(in);
+    std::vector<std::vector<double>> delta_weights(layers, std::vector<double>(in, 0.0));
+    std::vector<std::vector<double>> layer_deltas(layers, std::vector<double>(in, 0.0));
     
     // Calculate output layer error
-    for(unsigned int i = 0; i < dim; i++) {
+    for(unsigned int i = 0; i < in; i++) {
         error[i] = output[i] - expected[i];
     }
 
     // Calculate output layer deltas (gradient of error with respect to output)
-    for (unsigned int i = 0; i < neurons; i++) {
+    for (unsigned int i = 0; i < in; i++) {
         layer_deltas[layers - 1][i] = error[i] * sigmoidder(output[i]);
     }
 
     // Backpropagate the error through hidden layers
     for (int l = layers - 2; l >= 0; l--) {
-        for (unsigned int i = 0; i < neurons; i++) {
+        for (unsigned int i = 0; i < in; i++) {
             double error_sum = 0.0;
-            for (unsigned int j = 0; j < neurons; j++) {
+            for (unsigned int j = 0; j < in; j++) {
                 error_sum += layer_deltas[l + 1][j] * weights[l + 1][j][i];
             }
             layer_deltas[l][i] = error_sum * sigmoidder(hlayers[l][i]);
@@ -101,8 +101,8 @@ void mlp::backward() {
 
     // Update weights for all layers
     for (unsigned int l = 0; l < layers; l++) {
-        for (unsigned int i = 0; i < neurons; i++) {
-            for (unsigned int j = 0; j < (l == 0 ? dim : neurons); j++) {
+        for (unsigned int i = 0; i < in; i++) {
+            for (unsigned int j = 0; j < (l == 0 ? in : in); j++) {
                 if (l == 0) {
                     weights[l][i][j] += learning * layer_deltas[l][i] * input[j];
                 }
@@ -114,39 +114,42 @@ void mlp::backward() {
     }
 
     // Update output layer weights
-    for (unsigned int i = 0; i < dim; i++) {
-        for (unsigned int j = 0; j < neurons; j++) {
+    for (unsigned int i = 0; i < in; i++) {
+        for (unsigned int j = 0; j < in; j++) {
             weights[layers - 1][i][j] += learning * error[i] * hlayers[layers - 1][j];
         }
     }
 }
 
-void mlp::backprop() {
+/**
+ * @brief Backward propagation with gradients
+ */
+void mlp::backprop(int in, int layers, double learning) {
     // Compute output layer error
-    std::vector<double> output_error(dim, 0.0);
-    for (unsigned int i = 0; i < dim; ++i) {
+    std::vector<double> output_error(in, 0.0);
+    for (unsigned int i = 0; i < in; ++i) {
         output_error[i] = output[i] - expected[i];
     }
 
     // Initialize gradient weights if not already done
     if (gweights.size() != layers) {
-        gweights.resize(layers, std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
+        gweights.resize(layers, std::vector<std::vector<double>>(in, std::vector<double>(in, 0.0)));
     }
 
     // Compute gradients for the output layer
-    for (unsigned int i = 0; i < dim; ++i) {
-        for (unsigned int j = 0; j < neurons; ++j) {
+    for (unsigned int i = 0; i < in; ++i) {
+        for (unsigned int j = 0; j < in; ++j) {
             gweights[layers - 1][i][j] = output_error[i] * activations[layers - 1][j];
         }
     }
 
     // Compute hidden layer errors and gradients
-    std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(neurons, 0.0));
+    std::vector<std::vector<double>> layer_errors(layers, std::vector<double>(in, 0.0));
 
     // Compute error for the last hidden layer
-    for (unsigned int i = 0; i < neurons; ++i) {
+    for (unsigned int i = 0; i < in; ++i) {
         double error_sum = 0.0;
-        for (unsigned int j = 0; j < dim; ++j) {
+        for (unsigned int j = 0; j < in; ++j) {
             error_sum += weights[layers - 1][j][i] * output_error[j];
         }
         layer_errors[layers - 1][i] = error_sum * activations[layers - 1][i] * (1 - activations[layers - 1][i]);
@@ -154,9 +157,9 @@ void mlp::backprop() {
 
     // Propagate error backward through the network
     for (int l = layers - 2; l >= 0; --l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
+        for (unsigned int i = 0; i < in; ++i) {
             double error_sum = 0.0;
-            for (unsigned int j = 0; j < neurons; ++j) {
+            for (unsigned int j = 0; j < in; ++j) {
                 error_sum += weights[l + 1][j][i] * layer_errors[l + 1][j];
             }
             layer_errors[l][i] = error_sum * activations[l][i] * (1 - activations[l][i]);
@@ -165,8 +168,8 @@ void mlp::backprop() {
 
     // Compute gradients for all layers and update weights
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < (l == layers - 1 ? dim : neurons); ++i) {
-            for (unsigned int j = 0; j < (l == 0 ? dim : neurons); ++j) {
+        for (unsigned int i = 0; i < (l == layers - 1 ? in : in); ++i) {
+            for (unsigned int j = 0; j < (l == 0 ? in : in); ++j) {
                 if (l == 0) {
                     gweights[l][i][j] = layer_errors[l][i] * input[j];
                 } else {
@@ -183,17 +186,17 @@ void mlp::backprop() {
 /**
  * @brief Compute backpropagation with L1 regularization
  */
-void mlp::backwithL1() {
+void mlp::backwithL1(int in, int layers, double learning) {
     double lambda = 0.01; // Regularization parameter
 
     // Perform standard backpropagation to compute gradients
-    backprop();
+    backprop(in, layers, learning);
 
     // Compute L1 penalty
     double l1_penalty = 0.0;
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
-            for (unsigned int j = 0; j < neurons; ++j) {
+        for (unsigned int i = 0; i < in; ++i) {
+            for (unsigned int j = 0; j < in; ++j) {
                 l1_penalty += std::abs(weights[l][i][j]);
             }
         }
@@ -201,8 +204,8 @@ void mlp::backwithL1() {
 
     // Update weights with L1 regularization
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
-            for (unsigned int j = 0; j < neurons; ++j) {
+        for (unsigned int i = 0; i < in; ++i) {
+            for (unsigned int j = 0; j < in; ++j) {
                 double gradient = gweights[l][i][j];
                 if (weights[l][i][j] > 0) {
                     weights[l][i][j] -= learning * (lambda + gradient);
@@ -222,17 +225,17 @@ void mlp::backwithL1() {
 /**
  * @brief Compute backpropagation with L2 regularization
  */
-void mlp::backwithL2() {
+void mlp::backwithL2(int in, int layers, double learning) {
     double lambda = 0.01; // Regularization parameter
 
     // Perform standard backpropagation to compute gradients
-    backprop();
+    backprop(in, layers, learning);
 
     // Compute L2 penalty
     double l2_penalty = 0.0;
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
-            for (unsigned int j = 0; j < neurons; ++j) {
+        for (unsigned int i = 0; i < in; ++i) {
+            for (unsigned int j = 0; j < in; ++j) {
                 l2_penalty += weights[l][i][j] * weights[l][i][j];
             }
         }
@@ -240,8 +243,8 @@ void mlp::backwithL2() {
 
     // Update weights with L2 regularization
     for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
-            for (unsigned int j = 0; j < neurons; ++j) {
+        for (unsigned int i = 0; i < in; ++i) {
+            for (unsigned int j = 0; j < in; ++j) {
                 double gradient = gweights[l][i][j];
                 weights[l][i][j] -= learning * (lambda * weights[l][i][j] + gradient);
             }
@@ -258,17 +261,15 @@ void mlp::backwithL2() {
  * @param dataset Input dataset
  * @note This version only updates the weights and doesn't update the bias
  */
-void mlp::rprop(std::vector<std::vector<double>> dataset) {
+void mlp::rprop(std::vector<std::vector<double>>& dataset, int layers, int in, double learning, int epochs) {
     const double etaPlus = 1.2;     // Increase factor
     const double etaMinus = 0.5;    // Decrease factor
     const double deltaMax = 50.0;   // Maximum update value
     const double deltaMin = 1e-6;   // Minimum update value
 
     // Initialize gradient and delta weight matrices
-    std::vector<std::vector<std::vector<double>>> prev_gradients(layers, 
-        std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, 0.0)));
-    std::vector<std::vector<std::vector<double>>> delta_weights(layers, 
-        std::vector<std::vector<double>>(neurons, std::vector<double>(neurons, deltaMin)));
+    std::vector<std::vector<std::vector<double>>> prev_gradients(layers, std::vector<std::vector<double>>(in, std::vector<double>(in, 0.0)));
+    std::vector<std::vector<std::vector<double>>> delta_weights(layers, std::vector<std::vector<double>>(in, std::vector<double>(in, deltaMin)));
 
     for (unsigned int epoch = 0; epoch < epochs; ++epoch) {
         double totalError = 0.0;
@@ -276,21 +277,21 @@ void mlp::rprop(std::vector<std::vector<double>> dataset) {
         for (const auto& data : dataset) {
             // Set input and perform forward and backward passes
             input = data;
-            forward();
-            backprop(); // This computes gradients and stores them in gweights
+            forward(in, layers);
+            backprop(in, layers, learning); // This computes gradients and stores them in gweights
             
             // Compute mean square error
             double error = 0.0;
-            for (unsigned int i = 0; i < dim; ++i) {
+            for (unsigned int i = 0; i < in; ++i) {
                 error += std::pow(expected[i] - output[i], 2);
             }
-            error /= dim;
+            error /= in;
             totalError += error;
 
             // Update weights using Rprop
             for (unsigned int l = 0; l < layers; ++l) {
-                for (unsigned int i = 0; i < neurons; ++i) {
-                    for (unsigned int j = 0; j < neurons; ++j) {
+                for (unsigned int i = 0; i < in; ++i) {
+                    for (unsigned int j = 0; j < in; ++j) {
                         double grad = gweights[l][i][j];
                         
                         // Apply Rprop update rule

@@ -12,10 +12,9 @@
  * @param learning learning rate for MLPs
  */
 void attention::train(std::vector<std::vector<double>>& tokens, std::vector<double>& dv, std::vector<double>& EV, 
-    std::vector<double>& changeV, int in, int tokenCount) 
+    std::vector<double>& changeV, int& in, int& layers, int& tokenCount, double& learning, double& error) 
 {
-    while(error > 0.01) {
-        forprop(tokens, dv, EV, changeV, in, tokenCount);
-        backward(tokens[tokenCount], changeV, dv, EV);
-    }
+    // use do-while loop for this
+    forprop(tokens, dv, EV, changeV, in, layers, tokenCount);
+    backward(tokens[tokenCount], changeV, dv, EV, in, layers);
 }

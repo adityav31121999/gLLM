@@ -43,10 +43,13 @@
     <ClCompile Include="D:\gLLM\src\neural\block\train.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\transformer\tokens.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\transformer\transformer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\forward.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\transformer\feedfor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\transformer\backfeed.cpp">
@@ -59,6 +62,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\transformer\train.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\transformer\finetune.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
