@@ -1,8 +1,7 @@
 
 // constructor for incomplete attention
 #include "include/attention.hpp"
-#include "attention.hpp"
-
+#include <numeric>
 
 /**
  * @brief Constructor for incomplete attention
@@ -25,4 +24,20 @@ attention::attention(int n, int d, int h, int l) {
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     changeH = std::vector<double>(d, 0);    // change obtained from final step
+}
+
+
+/**
+ * @brief compute attention head using keys and queries
+ * @param KdotQ dot product matrix
+ * @param Keys Keys vector
+ * @param Queries Queries vector
+ */
+void attention::computeAttention(std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& Keys, std::vector<std::vector<double>>& Queries, int count) {
+    for(int i = 0; i < count; i++) {
+        for(int j = 0; j < count; j++) {
+            // KdotQ[i][j] = Keys[i].Queries[j];
+            KdotQ[i][j] = std::inner_product(Keys[i].begin(), Keys[i].end(), Queries[i].begin(), 0.0);
+        }
+    }
 }

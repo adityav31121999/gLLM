@@ -43,6 +43,49 @@ model::model(int tCount, int m, int x, int y, int n, int d, int h, int l) :
     allocateMemory();
 }
 
+/**
+ * @brief Constructor for single transformer model with learning rate
+ * @param m number of blocks
+ * @param x number of incomplete attentions in each partial attention
+ * @param y number of layers of partial attention for complete attention block
+ * @param n total tokens for each attention head
+ * @param d token dimension
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ * @param learning learning rate for MLPs
+ */
+model::model(int m, int x, int y, int n, int d, int h, int l, double learning) :
+    m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning) {
+    totalParams = m * x * y * ((4 * h * d) + (2 * d * d * l));
+    T = transformer(m, x, y, n, d, h, l);
+    T.setLearning(learning);  // Set learning rate for the transformer
+    // allocate float value block of size totalParams to file
+    allocateMemory();
+}
+
+/**
+ * @brief Constructor for multiple transformer model with learning rate
+ * @param tCount transformer count
+ * @param m number of blocks
+ * @param x number of incomplete attentions in each partial attention
+ * @param y number of layers of partial attention for complete attention block
+ * @param n total tokens for each attention head
+ * @param d token dimension
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ * @param learning learning rate for MLPs
+ */
+model::model(int tCount, int m, int x, int y, int n, int d, int h, int l, double learning) :
+    tCount(tCount), m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning) {
+    totalParams = tCount * m * x * y * ((4 * h * d) + (2 * d * d * l));
+    Tg = std::vector<transformer>(tCount, transformer(m, x, y, n, d, h, l));
+    // Set learning rate for all transformers
+    for (auto& t : Tg) {
+        t.setLearning(learning);
+    }
+    // allocate float value block of size totalParams to file
+    allocateMemory();
+}
 
 /**
  * @brief allocate block of memory for given number of float values

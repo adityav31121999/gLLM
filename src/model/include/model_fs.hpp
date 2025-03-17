@@ -23,4 +23,26 @@ void deserialiseMAT(mat& a, FILE* file, int, int);
 void deserialiseMLP(mlp& a, FILE* file, int, int);
 void deserialiseModel(model& a);
 
+void loadModel(model& a, std::string& from);
+void loadModel(model& a, FILE* file);
+void loadModel(std::string& from, std::string& to);
+void loadModel(model& a, std::string& from, std::string& to);
+void loadModel(FILE* file, std::string& from, std::string& to);
+void loadModel(model& a, FILE* file, std::string& from, std::string& to);
+
+void saveModel(model& a, std::string& to);
+void saveModel(model& a, FILE* file);
+void saveModel(std::string& from, std::string& to);
+void saveModel(model& a, std::string& from, std::string& to);
+void saveModel(FILE* file, std::string& from, std::string& to);
+void saveModel(model& a, FILE* file, std::string& from, std::string& to);
+
+void serialiseModel(model& a, FILE* file);
+void serialiseModel(model& a, std::string& to);
+void serialiseModel(model& a, std::string& from, std::string& to);
+
+void deserialiseModel(model& a, FILE* file);
+void deserialiseModel(model& a, std::string& from);
+void deserialiseModel(model& a, std::string& from, std::string& to);
+
 #endif

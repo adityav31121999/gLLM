@@ -90,16 +90,109 @@ void jumbledwbs(std::vector<std::vector<double>>);
 void ijbasedwbs(std::vector<std::vector<double>>);
 void Random(std::vector<std::vector<double>>);
 
-// functions1.cpp
 
-unsigned int hcf(unsigned int, unsigned int);
-unsigned int lcm(unsigned int, unsigned int);
+#ifdef USE_OPENCL
 
-// functions2.cpp
+#include <CL/cl.hpp>
 
-long long int factorial(int);
-long long int nCr(int, int);
-long long int nPr(int, int);
+__kernel void operator_eq(__global double* a, __global double* b, __global int* result, int size);
+__kernel void operator_add(__global double* a, __global double* b, __global double* result, int size);
+__kernel void operator_sub(__global double* a, __global double* b, __global double* result, int size);
+__kernel void operator_mul_scalar(__global double* a, double scalar, __global double* result, int size);
+__kernel void operator_mul_scalar_reverse(double scalar, __global double* a, __global double* result, int size);
+__kernel void operator_div_scalar(__global double* a, double scalar, __global double* result, int size);
+__kernel void operator_add_2d(__global double* a, __global double* b, __global double* result, int rows, int cols);
+__kernel void operator_sub_2d(__global double* a, __global double* b, __global double* result, int rows, int cols);
+__kernel void operator_mul_2d_scalar(__global double* a, double scalar, __global double* result, int rows, int cols);
+__kernel void operator_div_2d_scalar(__global double* a, double scalar, __global double* result, int rows, int cols);
 
+__kernel void errorofv(__global double* a, __global double* b, __global double* result, int size);
+__kernel void gradientdesc(__global double* a, __global double* b, __global double* result, int size);
+__kernel void vdotv2val(__global double* a, __global double* b, __global double* result, int size);
+__kernel void vdotv2scal(__global double* a, __global double* b, __global double* result, int size);
+__kernel void MSE(__global double* a, __global double* b, __global double* result, int size);
+__kernel void sum(__global double* a, __global double* result, int size);
+__kernel void sum_2d(__global double* a, __global double* result, int rows, int cols);
+__kernel void product(__global double* a, __global double* result, int size);
+__kernel void product_2d(__global double* a, __global double* result, int rows, int cols);
+
+__kernel void sigmoidv(__global double* x, __global double* out, int size);
+__kernel void sigmoid2D(__global double* x, __global double* out, int rows, int cols);
+__kernel void softmax(__global double* x, __global double* out, double temp, int size);
+__kernel void softmax2D(__global double* x, __global double* out, double temp, int rows, int cols);
+__kernel void ReLUv(__global double* x, __global double* out, int size);
+__kernel void SeLUv(__global double* x, __global double* out, int size);
+__kernel void LOTA(__global double* y, __global double* out, int size);
+__kernel void LOTA2D(__global double* y, __global double* out, int rows, int cols);
+__kernel void LOTA2D(__global double* y, __global double* out, int rows, int cols, int limit);
+__kernel void LOTA3D(__global double* y, __global double* out, int rows, int cols, int depth);
+
+__kernel void sigmoidvder(__global double* x, __global double* out, int size);
+__kernel void sigmoidder2D(__global double* x, __global double* out, int rows, int cols);
+__kernel void softmaxder(__global double* x, __global double* out, double temp, int size);
+__kernel void softmaxder2D(__global double* x, __global double* out, double temp, int rows, int cols);
+__kernel void ReLUvder(__global double* x, __global double* out, int size);
+__kernel void SeLUvder(__global double* x, __global double* out, int size);
+__kernel void LOTAder(__global double* y, __global double* out, int size);
+__kernel void LOTAder2D(__global double* y, __global double* out, int rows, int cols);
+__kernel void LOTAder3D(__global double* y, __global double* out, int rows, int cols, int depth);
+
+__kernel void randomweights(__global double* weights, int rows, int cols, unsigned int seed);
+__kernel void jumbledwbs(__global double* weights, int rows, int cols, unsigned int seed);
+__kernel void ijbasedwbs(__global double* weights, int rows, int cols);
+__kernel void Random(__global double* weights, int rows, int cols, unsigned int seed);
+
+#elif USE_CUDA
+
+#include <cuda_runtime.h>
+
+__device__ bool operator_eq(const double* a, const double* b, int size);
+__global__ void operator_add(const double* a, const double* b, double* result, int size);
+__global__ void operator_sub(const double* a, const double* b, double* result, int size);
+__global__ void operator_mul(const double* a, double scalar, double* result, int size);
+__global__ void operator_mul_reverse(double scalar, const double* a, double* result, int size);
+__global__ void operator_div(const double* a, double scalar, double* result, int size);
+__global__ void operator_add_2d(const double* a, const double* b, double* result, int rows, int cols);
+__global__ void operator_sub_2d(const double* a, const double* b, double* result, int rows, int cols);
+__global__ void operator_mul_2d(const double* a, double scalar, double* result, int rows, int cols);
+__global__ void operator_div_2d(const double* a, double scalar, double* result, int rows, int cols);
+
+__global__ void errorofv(const double* a, const double* b, double* result, int size);
+__global__ void gradientdesc(const double* a, const double* b, double* result, int size);
+__global__ void vdotv2val(const double* a, const double* b, double* result, int size);
+__global__ void vdotv2scal(const double* a, const double* b, double* result, int size);
+__global__ void MSE(const double* a, const double* b, double* result, int size);
+__global__ void sum(const double* a, double* result, int size);
+__global__ void sum_2d(const double* a, double* result, int rows, int cols);
+__global__ void product(const double* a, double* result, int size);
+__global__ void product_2d(const double* a, double* result, int rows, int cols);
+
+__global__ void sigmoidv(double* x, double* out, int size);
+__global__ void sigmoid2D(double* x, double* out, int rows, int cols);
+__global__ void softmax(double* x, double* out, double temp, int size);
+__global__ void softmax2D(double* x, double* out, double temp, int rows, int cols);
+__global__ void ReLUv(double* x, double* out, int size);
+__global__ void SeLUv(double* x, double* out, int size);
+__global__ void LOTA(double* y, double* out, int size);
+__global__ void LOTA2D(double* y, double* out, int rows, int cols);
+__global__ void LOTA2D(double* y, double* out, int rows, int cols, int limit);
+__global__ void LOTA3D(double* y, double* out, int rows, int cols, int depth);
+
+__global__ void sigmoidvder(double* x, double* out, int size);
+__global__ void sigmoidder2D(double* x, double* out, int rows, int cols);
+__global__ void softmaxder(double* x, double* out, double temp, int size);
+__global__ void softmaxder2D(double* x, double* out, double temp, int rows, int cols);
+__global__ void ReLUvder(double* x, double* out, int size);
+__global__ void SeLUvder(double* x, double* out, int size);
+__global__ void LOTAder(double* y, double* out, int size);
+__global__ void LOTAder2D(double* y, double* out, int rows, int cols);
+__global__ void LOTAder3D(double* y, double* out, int rows, int cols, int depth);
+
+__global__ void randomweights(double* weights, int rows, int cols, unsigned int seed);
+__global__ void jumbledwbs(double* weights, int rows, int cols, unsigned int seed);
+__global__ void ijbasedwbs(double* weights, int rows, int cols);
+__global__ void Random(double* weights, int rows, int cols, unsigned int seed);
+
+#endif
 
 #endif

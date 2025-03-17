@@ -77,6 +77,7 @@ public:
 
     void train();
     void load();
+    void load(std::string& from, std::string& to);
     void save();
     void allocateMemory();
 

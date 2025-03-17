@@ -64,19 +64,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">maths.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">maths.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\MinSizeRel\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\MinSizeRel\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">maths.dir\MinSizeRel\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\RelWithDebInfo\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">maths.dir\RelWithDebInfo\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
@@ -96,14 +96,28 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;USE_CUDA;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;USE_CUDA;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;USE_CUDA;CMAKE_INTDIR="Debug"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob0 -Zi"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>Od</Optimization>
+      <Runtime>MDd</Runtime>
+      <RuntimeChecks>RTC1</RuntimeChecks>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -134,16 +148,29 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="Release"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob2"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>O2</Optimization>
+      <Runtime>MD</Runtime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -174,16 +201,29 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="MinSizeRel"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob1"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>O1</Optimization>
+      <Runtime>MD</Runtime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -215,14 +255,27 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="RelWithDebInfo"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob1 -Zi"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>O2</Optimization>
+      <Runtime>MD</Runtime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\maths\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -297,12 +350,22 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="D:\gLLM\src\maths\basic\activations.cpp">
+      <ObjectFileName>$(IntDir)/basic/activations.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <CudaCompile Include="..\..\..\src\maths\basic\activations.cu">
+      <CompileOut>$(IntDir)/basic/activations.cu.obj</CompileOut>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</ScanSourceForModuleDependencies>
+    </CudaCompile>
+    <None Include="D:\gLLM\src\maths\basic\activations.cl">
+    </None>
     <ClCompile Include="D:\gLLM\src\maths\basic\functions1.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\basic\functions2.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\basic\vect.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\basic\weights.cpp" />
-    <ClCompile Include="D:\gLLM\src\maths\basic\activations.cpp" />
-    <ClCompile Include="D:\gLLM\src\maths\basic\nnacci.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\mat\det.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\mat\eigenval.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\mat\inverse.cpp" />

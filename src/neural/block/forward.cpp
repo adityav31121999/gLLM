@@ -13,12 +13,13 @@
  * @param i
  * @param layers
  */
-void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV,
-    std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int& i, int& layers)
+void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV, std::vector<std::vector<double>>& changeV, 
+    int& in, int& tokenCount, int& i, int& layers)
 {
     // for one partial attention
     for(int j = 0; j < b[0].size(); j++) {
-        b[i][j].forprop(tokenEmbed, dv[i], EV[i], changeV[i], in, layers, tokenCount);      // incomplete attention forprop
+        b[i][j].forprop(tokenEmbed, KdotQ, K, Q, dv[i], EV[i], changeV[i], in, layers, tokenCount);      // incomplete attention forprop
         if(j == b[0].size() - 1) 
             break;
         b[i][j + 1].EH = b[i][j].EH;
@@ -38,12 +39,13 @@ void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::ve
  * @param i
  * @param layers
  */
-void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EVp,
-    std::vector<std::vector<double>>& EVc, std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int blockCount, int& i, int& layers, int& n)
+void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EVp, std::vector<std::vector<double>>& EVc, 
+    std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int blockCount, int& i, int& layers, int& n)
 {
     // for one partial attention
     for(int j = 0; j < b[0].size(); j++) {
-        b[i][j].forprop(tokenEmbed, EVp, dv[i], EVc[i], changeV[i], in, layers, tokenCount, blockCount, n);      // incomplete attention forprop
+        b[i][j].forprop(tokenEmbed, KdotQ, K, Q, EVp, dv[i], EVc[i], changeV[i], in, layers, tokenCount, blockCount, n);      // incomplete attention forprop
         if(j == b[0].size() - 1) 
             break;
         b[i][j + 1].EH = b[i][j].EH;
@@ -61,14 +63,14 @@ void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::ve
  * @param tokenCount
  * @param layers
  */
-void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<std::vector<double>>>& dv, 
-    std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, 
-    int& tokenCount, int& layers)
+void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
+    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers)
 {
     // y partial attention in x layers => x parallel processes
     while(1) {
         for(int i = 0; i < b.size(); i++) {
-            partialforprop(tokenEmbed, dv[i], EV[i], changeV[i], in, tokenCount, i, layers);
+            partialforprop(tokenEmbed, KdotQ, K, Q, dv[i], EV[i], changeV[i], in, tokenCount, i, layers);
         }
         // dembed the EH and check for "@#O" token
         // @#0 = and its over
@@ -95,14 +97,14 @@ void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<st
  * @param layers
  * @param blockCount
  */
-void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<std::vector<double>>>& dv, 
-    std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, 
-    int& tokenCount, int& layers, int& blockCount)
+void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
+    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers, int& blockCount)
 {
     // y partial attention in x layers => x parallel processes
     while(1) {
         for(int i = 0; i < b.size(); i++) {
-            partialforprop(tokenEmbed, dv[i], EV[i], changeV[i], in, tokenCount, i, layers);
+            partialforprop(tokenEmbed, KdotQ, K, Q, dv[i], EV[i], changeV[i], in, tokenCount, i, layers);
         }
         // dembed the EH and check for "@#O" token
         // @#0 = and its over

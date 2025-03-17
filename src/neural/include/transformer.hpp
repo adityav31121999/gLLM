@@ -65,19 +65,29 @@ public:
     transformer(int x, int y, int n, int d, int h, int l);
     transformer(int m, int x, int y, int n, int d, int h, int l);
 // training
-    void forward();         // forward propagation
+    // forward propagation for single-block and multi-block
+    void forward(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
+                    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers);
+    void forward(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EVp, 
+                    std::vector<std::vector<std::vector<double>>>& EVc, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, 
+                    int& layers, int& blockCount);
+    // fine tune
     void fineTune();        // fine-tune transformer => altering certain properties while training
+    // backpropagations
     void feedBack();        // self-correcting feedback loop
-    void instruct();        // instruct the transformer to do something
     void spoonfeed();       // spoonfeeding => first to last
     void backfeed();        // backfeeding => last to first
+    // train functions
     void train();           // train with feedforward()
     void train4feedback();  // train with feedback()
     void train4spoonfeed(); // train with spoonfeed()
     void train4backfeed();  // train with backfeed()
-    void finetune();        // finetune transformer
+    // instruct model
+    void instruct();        // instruct the transformer to do something
 // set properties for transformer
-    void setLearning(double learning);  // set learning rate for MLPs
+    void setLearning(double learning);      // set learning rate for MLPs
 
     // default destructor
     ~transformer() = default;

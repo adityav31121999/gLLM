@@ -82,8 +82,6 @@ std::vector<std::vector<double>> sigmoidder(std::vector<std::vector<double>> x) 
     return result;
 }
 
-
-
 //----------------SOFTMAX----------------//
 
 /**
@@ -369,9 +367,14 @@ std::vector<double> LOTA(std::vector<double>& y) {
  */
 std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
     // Create a copy of the input 2D vector
-    if(y.size() == 1 && y[0].size() == 1)
-        return {{1}};
     std::vector<std::vector<double>> x(y);
+    if(y.size() == 1 && y[0].size() == 1) {
+        for (auto& row : x) {
+            std::fill(row.begin(), row.end(), 0);
+        }
+        x[0][0] = 1;
+        return x;
+    }
     // Find the minimum value in the entire 2D vector
     double min_val = 0.0;
     for (const auto& v: x) {
@@ -405,9 +408,6 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
 std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t) {
-    // Create a copy of the input 2D vector
-    if(y.size() == 1 && y[0].size() == 1)
-        return {{1}};
     // Check if the input 2D vector has the required number of terms
     if(y.size() == t) {
         std::vector<std::vector<double>> x(y);
@@ -416,6 +416,14 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t)
     }
     // Create a copy of the input 2D vector
     std::vector<std::vector<double>> x(y);
+    // Create a copy of the input 2D vector
+    if(y.size() == 1 && y[0].size() == 1) {
+        for (auto& row : x) {
+            std::fill(row.begin(), row.end(), 0);
+        }
+        x[0][0] = 1;
+        return x;
+    }
     // Find the minimum value in the entire 2D vector
     double min_val = 0.0;
     for (int i = 0; i < t; i++) {

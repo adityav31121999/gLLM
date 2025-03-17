@@ -11,6 +11,7 @@
 #include <neural.hpp>
 #include <model.hpp>
 
+/**
 // functions for command parsing
 
 void runModel();
@@ -34,5 +35,5 @@ std::unordered_map<std::string, std::function<void()>> commands = {
     {"newchat", newChat},
     {"help", show_help}
 };
-
+ */
 #endif

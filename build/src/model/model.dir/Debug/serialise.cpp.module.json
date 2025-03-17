@@ -5,7 +5,7 @@
         {
             "primary-output": "model.dir\\Debug\\serialise.obj",
             "outputs": [
-                "D:\\gLLM\\bin\\Windows-AMD64-64\\static_libs\\Debug\\model.pdb",
+                "D:\\gLLM\\bin\\Windows-AMD64-64\\Debug\\static_libs\\Debug\\model.pdb",
                 "model.dir\\Debug\\"
             ],
             "requires": []

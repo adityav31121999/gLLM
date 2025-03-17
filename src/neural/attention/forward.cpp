@@ -14,7 +14,7 @@
  */
 
 /**
- * @brief forward propagation for attention class (incomplete attention)
+ * @brief forward propagation for first block's attention class (incomplete attention)
  * @param tokens token embeddings
  * @param holddv dv vector for next block
  * @param holdEV EV vector from this block
@@ -22,16 +22,19 @@
  * @param in input token count
  * @param tokenCount token count for each attention head (hiw many tokens have been generated or taken as input)
  */
-void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<double>& dv, std::vector<double>& EV,
-    std::vector<double>& changeV, int& in, int& layers, int& tokenCount)
+void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<double>& dv, std::vector<double>& EV, std::vector<double>& changeV, int& in, int& layers, 
+    int& tokenCount)
 {
     // head calculation by inner product of KEYS and QUERYS
     if(tokenCount == 1) {
+        // for single token input like "Hi", "Hello", "Hey", "How", "What", etc.
         K[0] = dot(tokens[0], MK);
         Q[0] = dot(tokens[0], MQ);
         KdotQ[0][0] = std::inner_product(K[0].begin(), K[0].end(), Q[0].begin(), 0.0)/SCALING;
     }
     else if(tokenCount == in) {
+        // for a sentence and long prompt
         for(int i = 0; i < tokenCount; i++) {
             K[i] = dot(tokens[i], MK);
             Q[i] = dot(tokens[i], MQ);
@@ -43,6 +46,7 @@ void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<do
         }
     }
     else if(tokenCount > in) {
+        // when new token is predicted or generated
         K[tokenCount] = dot(tokens[0], MK);
         Q[tokenCount] = dot(tokens[0], MQ);
         KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
@@ -62,11 +66,11 @@ void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<do
             k += head[i][j];
             l += head[j][i];
         }
-        dh = dh + (k * dot(tokens[i], MH));     // Ki.MV, dh = weighted sums horizontal
-        dv = dv + (l * dot(tokens[i], MV));     // Qj.MH, dv = weighted sums vertical
+        dh = dh + (k * K[i]);     // Ki.MV, dh = weighted sums horizontal
+        dv = dv + (l * Q[i]);     // Qj.MH, dv = weighted sums vertical
     }
-    dh = dot(dh, MH);       // dh = weighted sums * MH
-    dv = dot(dv, MV);       // dv = weighted sums * MV
+    dh = dot(dh, MH);
+    dv = dot(dv, MV);
     // get the required change from MLPs
     hor.input = EH + dh;
     ver.input = EV + dv;
@@ -79,53 +83,56 @@ void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<do
 
 
 /**
- * @brief forward propagation for attention class (incomplete attention)
+ * @brief forward propagation for a specific block's attention class (incomplete attention)
  * @param tokens token embeddings
  * @param dv dv vector
  * @param EVp EV vector from previous block
  * @param EVc EV vector for current block
  * @param changeV vertical change vector for current block
  * @param in input token count
- * @param tokenCount token count for each attention head (hiw many tokens have been generated or taken as input)
- * @param blockCount block count for each attention head (how many blocks have been processed)
+ * @param tokenCount which token is being processed
+ * @param blockCount which block is being processed
  * @param n number of tokens for each attention head
  */
-void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<std::vector<double>>& EVp, std::vector<double>& dv,
-    std::vector<double>& EVc, std::vector<double>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n)
+void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K, 
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& EVp, std::vector<double>& dv, std::vector<double>& EVc, 
+    std::vector<double>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n)
 {
     // KdotQ calculation by inner product of KEYS and QUERYS
     if(blockCount == 0) {
-        forprop(tokens, dv, EVc, changeV, in, layers, tokenCount);
+        // for first block's attention class
+        forprop(tokens, KdotQ, K, Q, dv, EVc, changeV, in, layers, tokenCount);
     }
-    if((tokenCount - n*blockCount) == 1) {
-        KdotQ[0][0] = std::inner_product(dot(tokens[0], MK).begin(), dot(tokens[0], MK).end(), dot(EVp[0], MQ).begin(), 0.0)/SCALING;
+    int count = tokenCount - n * blockCount;        // tokenCount for this head if blockCount block
+    if(count == 1) {
+        // for predicting first token of new block
+        K[0] = dot(tokens[0], MK);
+        Q[0] = dot(EVp[0], MQ);
+        KdotQ[0][0] = std::inner_product(K[0].begin(), K[0].end(), Q[0].begin(), 0.0)/SCALING;
     }
     else {
-        for(int i = 0; i < tokenCount - n*blockCount - 1; i++) {
-            for(int j = 0; j < tokenCount - n*blockCount - 1; j++) {
-                // head calculation
-                KdotQ[i][j] = std::inner_product(dot(tokens[i], MK).begin(), dot(tokens[i], MK).end(), dot(tokens[i], MQ).begin(), 0.0)/SCALING;
-            }
-        }
-        KdotQ[tokenCount][tokenCount] = std::inner_product(dot(tokens[tokenCount], MK).begin(), dot(tokens[tokenCount], MK).end(), dot(EVp[tokenCount], MQ).begin(), 0.0)/SCALING;
-        for(int j = 0; j < tokenCount-1; j++) {
+        // for next prediction
+        K[count] = dot(tokens[n*blockCount + count], MK);
+        Q[count] = dot(EVp[count], MQ);
+        KdotQ[count][count] = std::inner_product(K[count].begin(), K[count].end(), Q[count].begin(), 0.0)/SCALING;
+        for(int j = 0; j < count - 1; j++) {
             // head calculation
-            KdotQ[tokenCount][j] = std::inner_product(dot(tokens[tokenCount], MK).begin(), dot(tokens[tokenCount], MK).end(), dot(EVp[j], MQ).begin(), 0.0)/SCALING;
-            KdotQ[j][tokenCount] = std::inner_product(dot(tokens[j], MK).begin(), dot(tokens[j], MK).end(), dot(EVp[tokenCount], MQ).begin(), 0.0)/SCALING;
+            KdotQ[count][j] = std::inner_product(K[count].begin(), K[count].end(), Q[j].begin(), 0.0)/SCALING;
+            KdotQ[j][count] = std::inner_product(K[j].begin(), K[j].end(), Q[count].begin(), 0.0)/SCALING;
         }
     }
     // probability distribution
     int k, l;
-    head = LOTA(KdotQ, tokenCount);
-    for(int i = 0; i < tokenCount; i++) {
+    head = LOTA(KdotQ, count);
+    for(int i = 0; i < count; i++) {
         k = 0;
         l = 0;
-        for(int j = 0; j < tokenCount; j++) {    
+        for(int j = 0; j < count; j++) {    
             k += head[i][j];
             l += head[j][i];
         }
-        dh = dh + (k * dot(tokens[i], MH));     // Ki.MV, dh = weighted sums horizontal
-        dv = dv + (l * dot(tokens[i], MV));     // Qj.MH, dv = weighted sums vertical
+        dh = dh + (k * K[i]);     // Ki.MV, dh = weighted sums horizontal
+        dv = dv + (l * Q[i]);     // Qj.MH, dv = weighted sums vertical
     }
     dh = dot(dh, MH);       // dh = weighted sums * MH
     dv = dot(dv, MV);       // dv = weighted sums * MV
@@ -138,121 +145,3 @@ void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<st
     EH = EH + ReLUv(hor.output);
     EVc = EVc + ReLUv(ver.output);
 }
-
-
-/**
- * @brief forward propagation for attention class (incomplete attention)
- * @param tokens token embeddings
- * @param holddv dv vector for next block
- * @param holdEV EV vector for next block
- * @param changeV vertical change vector for next block
- * @param in input token count
- * @param tokenCount token count for each attention head (hiw many tokens have been generated or taken as input)
-void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<double>& dv, std::vector<double>& EV,
-    std::vector<double>& changeV, int& in, int& tokenCount)
-{
-    // take total tokens available in the tokens embeddings and then make head
-    double d = sqrt(head.size());
-    // head calculation by inner product of KEYS and QUERYS
-    if(tokenCount == 1) {
-        KdotQ[0][0] = std::inner_product(dot(tokens[0], MK).begin(), dot(tokens[0], MK).end(), dot(tokens[0], MQ).begin(), 0.0)/d;
-    }
-    else if(tokenCount == in) {
-        for(int i = 0; i < tokenCount; i++) {
-            for(int j = 0; j < tokenCount; j++) {
-                // head calculation
-                KdotQ[i][j] = std::inner_product(dot(tokens[i], MK).begin(), dot(tokens[i], MK).end(), dot(tokens[i], MQ).begin(), 0.0)/d;
-            }
-        }
-    }
-    else if(tokenCount > in) {
-        KdotQ[tokenCount][tokenCount] = std::inner_product(dot(tokens[tokenCount], MK).begin(), dot(tokens[tokenCount], MK).end(), dot(tokens[tokenCount], MQ).begin(), 0.0)/d;
-        for(int j = 0; j < tokenCount-1; j++) {
-            // head calculation
-            KdotQ[tokenCount][j] = std::inner_product(dot(tokens[tokenCount], MK).begin(), dot(tokens[tokenCount], MK).end(), dot(tokens[j], MQ).begin(), 0.0)/d;
-            KdotQ[j][tokenCount] = std::inner_product(dot(tokens[j], MK).begin(), dot(tokens[j], MK).end(), dot(tokens[tokenCount], MQ).begin(), 0.0)/d;
-        }
-    }
-    // probability distribution
-    int k, l;
-    head = LOTA(KdotQ, tokenCount);
-    for(int i = 0; i < tokenCount; i++) {
-        k = 0;
-        l = 0;
-        for(int j = 0; j < tokenCount; j++) {    
-            k = head[i][j];
-            l = head[j][i];
-        }
-        dh = dh + (k * dot(tokens[i], MH));     // Ki.MV, dh = weighted sums horizontal
-        dv = dv + (l * dot(tokens[i], MV));     // Qj.MH, dv = weighted sums vertical
-    }
-    // hold in change vectors, do not overuse the memory for this calculation
-    // as it is not necessary calculate them every time
-    changeH = dot(dh, MH);
-    changeV = dot(dv, MV);
-    // get the required change from MLPs
-    hor.input = EH + dh;
-    ver.input = EV + dv;
-    hor.forward();
-    ver.forward();
-    // AND gate for the final output
-    EH = EH + ReLUv(hor.output);
-    EV = EV + ReLUv(ver.output);
-}
-
-
- * @brief forward propagation for attention class (incomplete attention)
- * @param tokens token embeddings
- * @param dv dv vector
- * @param EVp EV vector from previous block
- * @param EVc EV vector for current block
- * @param changeV vertical change vector for current block
- * @param in input token count
- * @param tokenCount token count for each attention head (hiw many tokens have been generated or taken as input)
- * @param blockCount block count for each attention head (how many blocks have been processed)
- * @param n number of tokens for each attention head
-void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<std::vector<double>>& EVp, std::vector<double>& dv,
-    std::vector<double>& EVc, std::vector<double>& changeV, int& in, int& tokenCount, int& blockCount, int& n)
-{
-    // take total tokens available in the tokens embeddings and then make head
-    double d = sqrt(KdotQ.size());
-    // KdotQ calculation by inner product of KEYS and QUERYS
-    if((tokenCount - n*blockCount) == 1) {
-        KdotQ[0][0] = std::inner_product(dot(tokens[0], MK).begin(), dot(tokens[0], MK).end(), dot(EVp[0], MQ).begin(), 0.0)/d;
-    }
-    else {
-        for(int i = 0; i < tokenCount - n*blockCount - 1; i++) {
-            for(int j = 0; j < tokenCount - n*blockCount - 1; j++) {
-                // head calculation
-                KdotQ[i][j] = std::inner_product(dot(tokens[i], MK).begin(), dot(tokens[i], MK).end(), dot(tokens[i], MQ).begin(), 0.0)/d;
-            }
-        }
-        KdotQ[tokenCount][tokenCount] = std::inner_product(dot(tokens[tokenCount], MK).begin(), dot(tokens[tokenCount], MK).end(), dot(EVp[tokenCount], MQ).begin(), 0.0)/d;
-        for(int j = 0; j < tokenCount-1; j++) {
-            // head calculation
-            KdotQ[tokenCount][j] = std::inner_product(dot(tokens[tokenCount], MK).begin(), dot(tokens[tokenCount], MK).end(), dot(EVp[j], MQ).begin(), 0.0)/d;
-            KdotQ[j][tokenCount] = std::inner_product(dot(tokens[j], MK).begin(), dot(tokens[j], MK).end(), dot(EVp[tokenCount], MQ).begin(), 0.0)/d;
-        }
-    }
-    // probability distribution
-    head = LOTA(KdotQ, tokenCount);
-    for(int i = 0; i < tokenCount; i++) {
-        // hold in change vectors, do not overuse the memory for this calculation
-        // as it is not necessary calculate them every time
-        changeH = dot(dot(tokens[i], MK), MH);
-        changeV = dot(dot(tokens[i], MQ), MV);
-        for(int j = 0; j < tokenCount; j++) {
-            dh = dh + (KdotQ[i][j] * changeH);      // Ki.MV, dh = weighted sums horizontal
-            dv = dv + (KdotQ[j][i] * changeV);      // Qj.MH, dv = weighted sums vertical
-        }
-    }
-    // get the required change from MLPs
-    hor.input = EH + dh;
-    ver.input = EVc + dv;
-    hor.forward();
-    ver.forward();
-    // AND gate for the final output
-    EH = EH + ReLUv(hor.output);
-    EVc = EVc + ReLUv(ver.output);
-}
- */

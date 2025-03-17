@@ -3,13 +3,12 @@
     "revision": 0,
     "rules": [
         {
-            "primary-output": "neural.dir\\Debug\\/block/forward.cpp.obj",
+            "primary-output": "neural.dir\\Debug\\/attention/forward.cpp.obj",
             "outputs": [
-                "D:\\gLLM\\bin\\Windows-AMD64-64\\static_libs\\Debug\\neural.pdb",
+                "D:\\gLLM\\bin\\Windows-AMD64-64\\Debug\\static_libs\\Debug\\neural.pdb",
                 "neural.dir\\Debug\\"
             ],
             "requires": []
         }
     ]
-}]
 }

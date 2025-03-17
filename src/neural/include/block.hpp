@@ -32,6 +32,7 @@ class block {
 public:
     double error;       // error for block, mean of all incomplete attentions
     std::string str;    // to check whether new token is @#O or part of conversation
+    std::vector<double> EH;         // Common Approximation vector to add all tokens
     std::vector<double> probability;            // probability space for next token
     std::vector<std::vector<attention>> b;      // block complete attention
     std::vector<std::vector<std::vector<double>>> holdEVs;      // inbetween tokens transfer
@@ -42,18 +43,22 @@ public:
     // default constructor
     block() = default;
     block(int x, int y, int n, int d, int h, int l);
-
+    void computeAttention(std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& Keys, std::vector<std::vector<double>>& Queries, int tokenCount);
     // partial attention forprop
-    void partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV,
+    void partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                        std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV,
                         std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int& i, int& layers);
-    void partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EVp,
+    void partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                        std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EVp,
                         std::vector<std::vector<double>>& EVc, std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int blockCount, 
                         int& i, int& layers, int& n);
     // parallel partialforprop(i)
-    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<std::vector<double>>>& dv, 
+    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                        std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, 
                         std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, 
                         int& tokenCount, int& layers);
-    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<std::vector<double>>>& dv, 
+    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                        std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, 
                         std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, 
                         int& tokenCount, int& layers, int& blockCount);
     // partial attention backward
@@ -63,11 +68,13 @@ public:
     void backward(std::vector<double>& expected, std::vector<std::vector<std::vector<double>>>& changeV, std::vector<std::vector<std::vector<double>>>& dv, 
                         std::vector<std::vector<std::vector<double>>>& EV, int& in, int& layers);
     // parallel forprop(i) and backward(i)
-    void train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double> expected, std::vector<std::vector<std::vector<double>>>& dv, 
-        std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers);
-    void train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double> expected, std::vector<std::vector<std::vector<double>>>& dv, 
-        std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers, 
-        int blockCount);
+    void train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double>& expected, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                        std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
+                        std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers);
+    void train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double>& expected, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+                        std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EVp, 
+                        std::vector<std::vector<std::vector<double>>>& EVc, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, 
+                        int& layers, int& blockCount);
     
     // default destructor
     ~block() = default;

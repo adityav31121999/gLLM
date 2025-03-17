@@ -14,7 +14,8 @@
 block::block(int x, int y, int n, int d, int h, int l) {
     // initialize attention block (complete attention)
     b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l)));
-    probability = std::vector<double>(VOCABSIZE, 0);
+    probability = std::vector<double>(VOCABSIZE, 0.0);
+    EH = std::vector<double>(EMBEDDING, 0.0);
     // initialize holdEVs to hold all inbetween tokens transfer for context transfer and retention
-    holdEVs = std::vector<std::vector<std::vector<double>>>(x, std::vector<std::vector<double>>(y, std::vector<double>(d, 0)));
+    holdEVs = std::vector<std::vector<std::vector<double>>>(x, std::vector<std::vector<double>>(y, std::vector<double>(d, 0.0)));
 }

@@ -71,4 +71,79 @@ void deserialiseModel(model& a) {
     }
 
     FILE* file = a.file;
+    
+    // Read model metadata
+    fread(&a.tCount, sizeof(int), 1, file);       // transformer count
+    fread(&a.m, sizeof(int), 1, file);            // number of blocks
+    fread(&a.x, sizeof(int), 1, file);            // incomplete attentions
+    fread(&a.y, sizeof(int), 1, file);            // layers of partial attention
+    fread(&a.n, sizeof(int), 1, file);            // total tokens
+    fread(&a.d, sizeof(int), 1, file);            // token dimension
+    fread(&a.h, sizeof(int), 1, file);            // height of matrices
+    fread(&a.l, sizeof(int), 1, file);            // layers of mlp
+    fread(&a.totalParams, sizeof(int), 1, file);  // total parameters
+    fread(&a.total, sizeof(int), 1, file);        // total token limit
+    
+    // Initialize the transformer based on read parameters
+    if (a.tCount == 1) {
+        a.T = transformer(a.m, a.x, a.y, a.n, a.d, a.h, a.l);
+        
+        // Deserialize transformer by deserializing attention class
+        for (auto& block : a.T.b) {
+            // For each block, deserialize its attention layers
+            for (auto& alay : block.b) {
+                // For each attention layer, deserialize each attention's 4mat and 2mlp
+                for (auto& att : alay) {
+                    // Deserialize matrices
+                    deserialiseMAT(att.MQ, file, a.d, a.h);   // qkrow * qkcol
+                    deserialiseMAT(att.MK, file, a.d, a.h);   // qkrow * qkcol
+                    deserialiseMAT(att.MV, file, a.h, a.d);   // vhrow * vhcol
+                    deserialiseMAT(att.MH, file, a.h, a.d);   // vhrow * vhcol
+
+                    // Deserialize MLPs
+                    deserialiseMLP(att.ver, file, a.l, a.d);  // (d * d) * l
+                    deserialiseMLP(att.hor, file, a.l, a.d);  // (d * d) * l
+                }
+            }
+        }
+    } else {
+        // Initialize multiple transformers
+        a.Tg = std::vector<transformer>(a.tCount, transformer(a.m, a.x, a.y, a.n, a.d, a.h, a.l));
+        
+        // Deserialize each transformer
+        for (auto& T : a.Tg) {
+            for (auto& block : T.b) {
+                // For each block, deserialize its attention layers
+                for (auto& alay : block.b) {
+                    // For each attention layer, deserialize each attention's 4mat and 2mlp
+                    for (auto& att : alay) {
+                        // Deserialize matrices
+                        deserialiseMAT(att.MQ, file, a.d, a.h);   // qkrow * qkcol
+                        deserialiseMAT(att.MK, file, a.d, a.h);   // qkrow * qkcol
+                        deserialiseMAT(att.MV, file, a.h, a.d);   // vhrow * vhcol
+                        deserialiseMAT(att.MH, file, a.h, a.d);   // vhrow * vhcol
+
+                        // Deserialize MLPs
+                        deserialiseMLP(att.ver, file, a.l, a.d);  // (d * d) * l
+                        deserialiseMLP(att.hor, file, a.l, a.d);  // (d * d) * l
+                    }
+                }
+            }
+        }
+    }
+    
+    // Update model info structure with the loaded parameters
+    a.info.d = a.d;
+    a.info.qkrow = a.d;
+    a.info.qkcol = a.h;
+    a.info.vhrow = a.h;
+    a.info.vhcol = a.d;
+    a.info.layer = a.l;
+    a.info.nIAs = a.y;
+    a.info.nPAs = a.x;
+    a.info.nCAs = a.m;
+    a.info.paramsIA = (4 * a.h * a.d) + (2 * a.d * a.d * a.l);
+    a.info.totalParams = a.totalParams;
+    
+    std::cout << "Model deserialized successfully." << std::endl;
 }

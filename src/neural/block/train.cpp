@@ -3,7 +3,7 @@
 #include "include/block.hpp"
 
 /**
- * @brief block training
+ * @brief FIRST block training
  * @param tokenEmbed token embeddings
  * @param expected expected token embedding
  * @param dv all the dvs
@@ -13,11 +13,12 @@
  * @param tokenCount token count
  * @param layers layers of mlp
  */
-void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double> expected, std::vector<std::vector<std::vector<double>>>& dv, 
-    std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers)
+void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double>& expected, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
+    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers)
 {
     while(1) {
-        forprop(tokenEmbed, dv, EV, changeV, in, tokenCount, layers);
+        forprop(tokenEmbed, KdotQ, K, Q, dv, EV, changeV, in, tokenCount, layers);
         backward(expected, changeV, dv, EV, in, layers);
         if(str == TERMINATE)
             break;
@@ -30,7 +31,7 @@ void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<doub
 
 
 /**
- * @brief block training
+ * @brief INTERMEDIATE and END block training
  * @param tokenEmbed token embeddings
  * @param expected expected token embedding
  * @param dv all the dvs
@@ -41,13 +42,14 @@ void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<doub
  * @param layers layers of mlp
  * @param blockCount block count
  */
-void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double> expected, std::vector<std::vector<std::vector<double>>>& dv, 
-    std::vector<std::vector<std::vector<double>>>& EV, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers, 
-    int blockCount)
+void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double>& expected, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
+    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EVp, 
+    std::vector<std::vector<std::vector<double>>>& EVc, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, 
+    int& layers, int& blockCount)
 {
     while(1) {
-        forprop(tokenEmbed, dv, EV, changeV, in, tokenCount, layers, blockCount);
-        backward(expected, changeV, dv, EV, in, layers);
+        forprop(tokenEmbed, KdotQ, K, Q, dv, EVp, changeV, in, tokenCount, layers, blockCount);
+        backward(expected, changeV, dv, EVp, in, layers);
         if(str == TERMINATE)
             break;
         tokenCount++;
@@ -56,4 +58,3 @@ void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<doub
         }
     }
 }
-
