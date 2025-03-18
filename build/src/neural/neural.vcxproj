@@ -64,19 +64,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">neural.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">neural</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">neural.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">neural</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\MinSizeRel\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\MinSizeRel\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">neural.dir\MinSizeRel\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">neural</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\RelWithDebInfo\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">neural.dir\RelWithDebInfo\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">neural</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
@@ -297,44 +297,44 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\mlp.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\mlp\forprop.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\mlp\backprop.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\mlp\loss.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\mlp\weights.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\mlp\train.cpp">
-      <ObjectFileName>$(IntDir)/mlp/train.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\mlp.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\forprop.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\backprop.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\loss.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\weights.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\train.cpp">
+      <ObjectFileName>$(IntDir)/src/mlp/train.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\attention.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\attention\forward.cpp">
-      <ObjectFileName>$(IntDir)/attention/forward.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\attention.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\forward.cpp">
+      <ObjectFileName>$(IntDir)/src/attention/forward.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\backward.cpp">
-      <ObjectFileName>$(IntDir)/attention/backward.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\backward.cpp">
+      <ObjectFileName>$(IntDir)/src/attention/backward.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\train.cpp">
-      <ObjectFileName>$(IntDir)/attention/train.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\train.cpp">
+      <ObjectFileName>$(IntDir)/src/attention/train.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\block.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\block\forward.cpp">
-      <ObjectFileName>$(IntDir)/block/forward.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\block\block.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\block\forward.cpp">
+      <ObjectFileName>$(IntDir)/src/block/forward.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\backward.cpp">
-      <ObjectFileName>$(IntDir)/block/backward.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\block\backward.cpp">
+      <ObjectFileName>$(IntDir)/src/block/backward.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\train.cpp">
-      <ObjectFileName>$(IntDir)/block/train.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\block\train.cpp">
+      <ObjectFileName>$(IntDir)/src/block/train.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\tokens.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\transformer.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\feedfor.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\backfeed.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\feedback.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\spoonfeed.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\transformer\train.cpp">
-      <ObjectFileName>$(IntDir)/transformer/train.cpp.obj</ObjectFileName>
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\tokens.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\transformer.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedfor.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\backfeed.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedback.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\spoonfeed.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\train.cpp">
+      <ObjectFileName>$(IntDir)/src/transformer/train.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\finetune.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\finetune.cpp" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

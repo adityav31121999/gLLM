@@ -4,12 +4,6 @@
     <ClCompile Include="D:\gLLM\src\maths\basic\activations.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\maths\basic\functions1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="D:\gLLM\src\maths\basic\functions2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="D:\gLLM\src\maths\basic\vect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,7 +42,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\..\..\src\maths\basic\activations.cu">
+    <CudaCompile Include="..\..\..\src\maths\basic\cu\activations.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\..\..\src\maths\basic\cu\vect.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
@@ -56,7 +53,8 @@
     <CustomBuild Include="D:\gLLM\src\maths\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="D:\gLLM\src\maths\basic\activations.cl" />
+    <None Include="D:\gLLM\src\maths\basic\cl\activations.cl" />
+    <None Include="D:\gLLM\src\maths\basic\cl\vect.cl" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">

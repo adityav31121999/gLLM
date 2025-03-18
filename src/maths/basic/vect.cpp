@@ -1,7 +1,6 @@
 
 // vect.cpp: all vector related functions
 #include "include/basic.hpp"
-#include "basic.hpp"
 
 
 /**
@@ -408,6 +407,8 @@ std::vector<double> sumofcol(std::vector<std::vector<double>> a) {
     // Return the vector of sums
     return b;
 }
+
+//----------------------//
 
 /**
  * @brief Calculate the error between two vectors

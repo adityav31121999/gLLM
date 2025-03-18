@@ -5,7 +5,7 @@
         {
             "primary-output": "script.dir\\Debug\\train.obj",
             "outputs": [
-                "D:\\gLLM\\bin\\Windows-AMD64-64\\Debug\\static_libs\\Debug\\script.pdb",
+                "D:\\gLLM\\bin\\Windows-AMD64-64\\static_libs\\Debug\\script.pdb",
                 "script.dir\\Debug\\"
             ],
             "requires": []

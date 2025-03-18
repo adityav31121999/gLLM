@@ -5,7 +5,7 @@
         {
             "primary-output": "maths.dir\\Debug\\qrdecom.obj",
             "outputs": [
-                "D:\\gLLM\\bin\\Windows-AMD64-64\\Debug\\static_libs\\Debug\\maths.pdb",
+                "D:\\gLLM\\bin\\Windows-AMD64-64\\static_libs\\Debug\\maths.pdb",
                 "maths.dir\\Debug\\"
             ],
             "requires": []

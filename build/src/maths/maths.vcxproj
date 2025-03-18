@@ -64,19 +64,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">maths.dir\Debug\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">maths.dir\Release\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\MinSizeRel\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\MinSizeRel\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">maths.dir\MinSizeRel\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\gLLM\bin\Windows-AMD64-64\Debug\static_libs\RelWithDebInfo\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\gLLM\bin\Windows-AMD64-64\static_libs\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">maths.dir\RelWithDebInfo\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">maths</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
@@ -353,19 +353,28 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\gLLM\src\maths\basic\activations.cpp">
       <ObjectFileName>$(IntDir)/basic/activations.cpp.obj</ObjectFileName>
     </ClCompile>
-    <CudaCompile Include="..\..\..\src\maths\basic\activations.cu">
-      <CompileOut>$(IntDir)/basic/activations.cu.obj</CompileOut>
+    <ClCompile Include="D:\gLLM\src\maths\basic\vect.cpp">
+      <ObjectFileName>$(IntDir)/basic/vect.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="D:\gLLM\src\maths\basic\weights.cpp" />
+    <CudaCompile Include="..\..\..\src\maths\basic\cu\activations.cu">
+      <CompileOut>$(IntDir)/basic/cu/activations.cu.obj</CompileOut>
       <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ScanSourceForModuleDependencies>
       <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ScanSourceForModuleDependencies>
       <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</ScanSourceForModuleDependencies>
       <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</ScanSourceForModuleDependencies>
     </CudaCompile>
-    <None Include="D:\gLLM\src\maths\basic\activations.cl">
+    <CudaCompile Include="..\..\..\src\maths\basic\cu\vect.cu">
+      <CompileOut>$(IntDir)/basic/cu/vect.cu.obj</CompileOut>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</ScanSourceForModuleDependencies>
+    </CudaCompile>
+    <None Include="D:\gLLM\src\maths\basic\cl\activations.cl">
     </None>
-    <ClCompile Include="D:\gLLM\src\maths\basic\functions1.cpp" />
-    <ClCompile Include="D:\gLLM\src\maths\basic\functions2.cpp" />
-    <ClCompile Include="D:\gLLM\src\maths\basic\vect.cpp" />
-    <ClCompile Include="D:\gLLM\src\maths\basic\weights.cpp" />
+    <None Include="D:\gLLM\src\maths\basic\cl\vect.cl">
+    </None>
     <ClCompile Include="D:\gLLM\src\maths\mat\det.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\mat\eigenval.cpp" />
     <ClCompile Include="D:\gLLM\src\maths\mat\inverse.cpp" />

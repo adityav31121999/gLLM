@@ -8,6 +8,8 @@
 #include <vector>
 #include <neural.hpp>
 
+#define ARCH "SHADY-ATTENTION"
+
 // metadata for model and data information
 typedef struct modelDataInfo {
     // model information
@@ -16,11 +18,11 @@ typedef struct modelDataInfo {
     std::string author;             // author of model
     std::string date;               // any date as per author
     std::string modelArch;          // architecture of model
-    std::string description;        // model description
-    std::string capability;         // model capabilities
-    std::string limitations;        // model limitations
+    // std::string description;        // model description
+    // std::string capability;         // model capabilities
+    // std::string limitations;        // model limitations
     std::string license;            // license for model use
-    std::string trainingData;       // data used to train model
+    // std::string trainingData;       // data used to train model
 
     // data information and distribution
     int d;              // dimension of embedding

@@ -1,70 +1,70 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\mlp.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\mlp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\forprop.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\forprop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\backprop.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\backprop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\loss.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\loss.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\weights.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\weights.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\mlp\train.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\train.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\attention.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\attention.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\forward.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\forward.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\backward.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\backward.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\attention\train.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\attention\train.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\block.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\block\block.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\forward.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\block\forward.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\backward.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\block\backward.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\block\train.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\block\train.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\tokens.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\tokens.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\transformer.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\transformer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\feedfor.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedfor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\backfeed.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\backfeed.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\feedback.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\spoonfeed.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\spoonfeed.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\train.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\train.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\transformer\finetune.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\finetune.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

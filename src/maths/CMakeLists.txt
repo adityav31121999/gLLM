@@ -8,12 +8,14 @@ include_directories(include)
 add_library(maths STATIC
     # basic files
     basic/activations.cpp
-    basic/activations.cu
-    basic/activations.cl
-    basic/functions1.cpp
-    basic/functions2.cpp
     basic/vect.cpp
     basic/weights.cpp
+
+    basic/cu/activations.cu
+    basic/cu/vect.cu
+
+    basic/cl/activations.cl
+    basic/cl/vect.cl
 
     # mat files
     mat/det.cpp
@@ -25,6 +27,7 @@ add_library(maths STATIC
     mat/qrdecom.cpp
     mat/svd.cpp
     mat/submat.cpp
+
 
     # stats files
     stats/basic.cpp

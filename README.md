@@ -14,7 +14,7 @@
   - *C VERSION*: 17
   - *C++ VERSION*: 20
   - *OpenCL VERSION*: 300
-  - *CUDA*: 12.8
+  - *CUDA*: 12.6
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**: Shady Attention Mechanism
 
@@ -43,9 +43,9 @@
 - *maths.hpp*: Main Header
 
 ### src/neural
+- *mlp*: Multi-Layer Perceptron
 - *attention*: Attention Mechanism
 - *block*: Attention Block
-- *mlp*: Multi-Layer Perceptron
 - *transformer*: Transformer Structure
 - *neural.hpp*: Main Header
 
@@ -59,25 +59,6 @@
 - Output directory for compiled binaries: .lib and .dll
 
 ## MODEL STRUCTURE
-
-**Model Name**:
-- If possible for everyone's usefullness and easy understanding, use this syntax for naming of model:
-  - **Use Cases**: Use cases as per T, C, G, L, P
-    - *T*: translation
-    - *C*: conversation
-    - *G*: generative and reasoning
-    - *L*: natural languages
-    - *P*: programming languages
-  - **Model Name**: user-defined-name
-  - **Model Version**: user-defined-version
-  - **Extension**:
-    - **.gllm**: default
-    - **.xyz**: user-defined extension (for all types of models) 
-  - **Name**: 
-    - ex: name_CP3_V.clm:
-      - C for conversation, P for programmig language, 3 for number of programming languages with V as version and extension .clm
-    - ex: name_TCGL10P4_2.0.3.2.rizz:
-      - C for conversation, T for translation, G for generative and reasoning, L for natural languages, 10 for natural languages, P for programming languages, 2.0.3.2 version and extension .rizz
  
 **MODEL METADATA**:
 ```
@@ -95,8 +76,12 @@
   }
 }
 ```
+**MODEL SERIALISATION**:
+```
 
-### Important for making an application with this library
+```
+
+### NOTE: for making an application with this library
 
 ```
 # add executable
@@ -119,12 +104,12 @@ target_include_directories(gLLM
 
 # link 3rd party libraries
 target_link_libraries(gLLM
-PRIVATE
-	${OpenCL_LIBRARIES}
-  ${CUDAToolkit LIBS}
-    maths
-    model
-    neural
-    script
+  PRIVATE
+    ${OpenCL_LIBRARIES}
+    ${CUDAToolkit LIBS}
+  maths
+  model
+  neural
+  script
 )
 ```

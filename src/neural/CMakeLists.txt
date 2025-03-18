@@ -7,34 +7,34 @@ include_directories(include)
 
 add_library(neural STATIC
     # mlp files
-    mlp/mlp.cpp
-    mlp/forprop.cpp
-    mlp/backprop.cpp
-    mlp/loss.cpp
-    mlp/weights.cpp
-    mlp/train.cpp
-    
+    src/mlp/mlp.cpp
+    src/mlp/forprop.cpp
+    src/mlp/backprop.cpp
+    src/mlp/loss.cpp
+    src/mlp/weights.cpp
+    src/mlp/train.cpp
+
     # attention
-    attention/attention.cpp
-    attention/forward.cpp
-    attention/backward.cpp
-    attention/train.cpp
+    src/attention/attention.cpp
+    src/attention/forward.cpp
+    src/attention/backward.cpp
+    src/attention/train.cpp
 
     # block
-    block/block.cpp
-    block/forward.cpp
-    block/backward.cpp
-    block/train.cpp
+    src/block/block.cpp
+    src/block/forward.cpp
+    src/block/backward.cpp
+    src/block/train.cpp
 
     # transformer
-    transformer/tokens.cpp
-    transformer/transformer.cpp
-    transformer/feedfor.cpp
-    transformer/backfeed.cpp
-    transformer/feedback.cpp
-    transformer/spoonfeed.cpp
-    transformer/train.cpp
-    transformer/finetune.cpp
+    src/transformer/tokens.cpp
+    src/transformer/transformer.cpp
+    src/transformer/feedfor.cpp
+    src/transformer/backfeed.cpp
+    src/transformer/feedback.cpp
+    src/transformer/spoonfeed.cpp
+    src/transformer/train.cpp
+    src/transformer/finetune.cpp
 )
 
 target_link_libraries(neural

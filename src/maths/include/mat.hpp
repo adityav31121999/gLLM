@@ -4,6 +4,12 @@
 #define MAT_HPP 1
 
 #include <vector>
+#ifdef USE_OPENCL
+    #include <CL/cl.h>
+#elif USE_CUDA
+    #include <cuda_runtime.h>
+#endif
+
 
 /**
  * @brief CLASS: Matrix class
@@ -16,7 +22,7 @@ public:
     // for other classes to access this class
     int row;
     int col;
-    std::vector<std::vector<double>> a;     // coefficient matrix
+    std::vector<std::vector<double>> a;     // matrix
 
     // default constructor
     mat():row(0), col(0) {a = {{0}};}
