@@ -6,9 +6,10 @@
 /**
  * @brief Calculates the L1 penalty for all weights in the network.
  * The L1 penalty is the sum of the absolute value of all the weights in the network.
+ * @param 3d matrix
  * @return The L1 penalty for the network.
  */
-double mlp::getL1Penalty() {
+double getL1Penalty(std::vector<std::vector<std::vector<double>>>& weights) {
     double penalty = 0;
     for (const auto& layer : weights) {
         for (const auto& neuron : layer) {
@@ -24,14 +25,97 @@ double mlp::getL1Penalty() {
 /**
  * @brief Calculates the L2 penalty for all weights in the network.
  * The L2 penalty is the sum of the squares of all the weights in the network.
+ * @param weights 3d matrix
  * @return The L2 penalty for the network.
  */
-double mlp::getL2Penalty() {
+double getL2Penalty(std::vector<std::vector<std::vector<double>>>& weights) {
     double penalty = 0;
     for (const auto& layer : weights) {
         for (const auto& neuron : layer) {
             for (const auto& w : neuron) {
                 penalty += w * w;
+            }
+        }
+    }
+    return penalty;
+}
+
+
+/**
+ * @brief Calculates the LN penalty for all weights in the network.
+ * The L2 penalty is the sum of the squares of all the weights in the network.
+ * @param weights 3d matrix
+ * @return The LN penalty for the network.
+ */
+double get_LN_Penalty(std::vector<std::vector<std::vector<double>>>& weights, int N) {
+    double penalty = 0;
+    if(N%2 == 0) {
+        for (const auto& layer : weights) {
+            for (const auto& neuron : layer) {
+                for (const auto& w : neuron) {
+                    penalty += std::pow(w, N);
+                }
+            }
+        }
+    }
+    else {
+        for (const auto& layer : weights) {
+            for (const auto& neuron : layer) {
+                for (const auto& w : neuron) {
+                    penalty += std::abs(w) * std::pow(w, N-1);
+                }
+            }
+        }
+    }
+    return penalty;
+}
+
+
+/**
+ * @brief Calculates the Lxyz penalty for all weights in the network.
+ * The L2 penalty is the sum of the squares of all the weights in the network.
+ * @param weights 3d matrix
+ * @return The Lxyz penalty for the network.
+ */
+double getLxyzPenalty(std::vector<std::vector<std::vector<double>>>& weights) {
+    double penalty = 0;
+    for (int i = 0; i < weights.size(); i++) {
+        for (int j = 0; j < weights.size(); j++) {
+            for (int k = 0; k < weights.size(); k++) {
+                if(i*j*k % 2 == 0) 
+                    penalty += std::pow(weights[i][j][k], i * j * k);
+                else
+                    penalty += std::abs(weights[i][j][k]) * std::pow(weights[i][j][k], i * j * k - 1);
+            }
+        }
+    }
+    return penalty;
+}
+
+
+/**
+ * @brief Calculates the LN penalty for all weights in the network.
+ * The L2 penalty is the sum of the squares of all the weights in the network.
+ * @param weights 3d matrix
+ * @return The LN penalty for the network.
+ */
+double get_LNs_Penalty(std::vector<std::vector<std::vector<double>>>& weights, int N) {
+    double penalty = 0;
+    if(N % 2 == 0) {
+        for (int i = 0; i < weights.size(); i++) {
+            for (int j = 0; j < weights.size(); j++) {
+                for (int k = 0; k < weights.size(); k++) {
+                    penalty += std::pow(weights[i][j][k], i+j+k);
+                }
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < weights.size(); i++) {
+            for (int j = 0; j < weights.size(); j++) {
+                for (int k = 0; k < weights.size(); k++) {
+                    penalty += std::pow(weights[i][j][k], i*j*k);
+                }
             }
         }
     }
@@ -54,7 +138,7 @@ double computeLossWithL1(std::vector<double>& outputs, std::vector<double>& targ
     for (size_t i = 0; i < outputs.size(); ++i) {
         loss += std::abs(outputs[i] - targets[i]);
     }
-    return loss + 0.5 * lambda * network.getL1Penalty();
+    return loss + 0.5 * lambda * getL1Penalty(network.weights);
 }
 
 
@@ -73,7 +157,7 @@ double computeLossWithL2(std::vector<double>& outputs, std::vector<double>& targ
     for (size_t i = 0; i < outputs.size(); ++i) {
         loss += std::pow(outputs[i] - targets[i], 2);
     }
-    return 0.5 * loss + 0.5 * lambda * network.getL2Penalty();
+    return 0.5 * loss + 0.5 * lambda * getL2Penalty(network.weights);
 }
 
 

@@ -1,7 +1,7 @@
 {
     "Version": "1.2",
     "Data": {
-        "Source": "d:\\gllm\\src\\script\\src\\model.cpp",
+        "Source": "d:\\gllm\\src\\script\\src\\use.cpp",
         "ProvidedModule": "",
         "Includes": [
             "d:\\gllm\\src\\script\\include\\script.hpp",
@@ -174,6 +174,7 @@
             "c:\\program files\\nvidia gpu computing toolkit\\cuda\\v12.6\\include\\vector_functions.hpp",
             "c:\\program files\\nvidia gpu computing toolkit\\cuda\\v12.6\\include\\cuda_runtime_api.h",
             "d:\\gllm\\src\\maths\\include\\mat.hpp",
+            "c:\\program files\\nvidia gpu computing toolkit\\cuda\\v12.6\\include\\cuda_runtime.h",
             "d:\\gllm\\src\\maths\\include\\poly.hpp",
             "d:\\gllm\\src\\maths\\include\\stats.hpp",
             "d:\\gllm\\src\\neural\\neural.hpp",

@@ -17,7 +17,6 @@
 #include "block.hpp"
 #include <string>
 
-#define CONTEXT_SIZE 8192       // Attention head dimension: 2^13
 #define TOKEN_IMIN 1            // token input
 #define TOKEN_IMAX 16384        // 2^14
 #define TOKEN_OMIN 1            // token output
@@ -37,17 +36,13 @@ public:
     int total;      // total tokenLimit -> m * n
     int y;          // number of incomplete attentions in each partial attention
     int x;          // number of layers of partial attention for complete attention block
-    int n;          // total tokens for each attention head
+    int n;          // total tokens for each attention head or context window
     int d;          // token dimension
     int h;          // height of MQ, MK and columns of MV, MH
     int l;          // layers of mlp
-    int totalParams;        // total parameters of transformer
-    int blockCount;         // which block is working
-    int tokenCount;         // how many tokens have been generated
-    int totalTokens;        // total tokens generated
     double learning;        // learning rate for MLPs
     int epochs;             // number of epochs for MLPs
-    int reps;               // repetitions for conversation when totalTokens is reahced and more needed till TERMINATE
+    int reps;               // repetitions for conversation when totalTokens is reahced and more needed till TERMINATE is met
     std::vector<block> b;   // attention block (1 or many)
     std::vector<std::string> tinput;    // token input
     std::vector<std::string> expected;  // expected token output
@@ -58,9 +53,12 @@ public:
     std::vector<std::vector<std::vector<double>>> holddVs;      // hold all dVs for backpropagation
     std::vector<std::vector<std::vector<double>>> changeVs;     // change in dVs for backpropagation
     std::vector<std::vector<std::vector<double>>> errMLP;       // error of all MLPs
-    std::vector<std::vector<std::vector<double>>> errAtt;       // error of all attentions
+    int totalParams;        // total parameters of transformer
+    int blockCount;         // which block is working
+    int tokenCount;         // how many tokens have been generated
+    int totalTokens;        // total tokens generated
+    // error of all attentions
 
-    // default constructor
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l);
     transformer(int m, int x, int y, int n, int d, int h, int l);

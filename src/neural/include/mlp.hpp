@@ -42,8 +42,6 @@ public:
     void backprop2in(int layers, int in, double learning);
     void backward(int layers, int in, double learning);
     void backprop(int layers, int in, double learning);
-    double getL1Penalty();
-    double getL2Penalty();
     void backwithL1(int layers, int in, double learning);
     void backwithL2(int layers, int in, double learning);
     void rprop(std::vector<std::vector<double>>&, int layers, int in, double learning, int epochs);
@@ -58,7 +56,8 @@ public:
 };
 
 // mlp-related functions
-
+double getL1Penalty(std::vector<std::vector<std::vector<double>>>&);
+double getL2Penalty(std::vector<std::vector<std::vector<double>>>&);
 double computeLossWithL1(std::vector<double>&, std::vector<double>&, mlp&, double);
 double computeLossWithL2(std::vector<double>&, std::vector<double>&, mlp&, double);
 double dropoutGeneralisation(std::vector<double>&, std::vector<double>&, mlp&, double);
