@@ -13,9 +13,9 @@
  * @param tokenCount token count
  * @param layers layers of mlp
  */
-void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double>& expected, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
-    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers)
+void block::train(std::vector<std::vector<float>>& tokenEmbed, std::vector<float>& expected, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EV, 
+    std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, int& layers)
 {
     while(1) {
         forprop(tokenEmbed, KdotQ, K, Q, dv, EV, changeV, in, tokenCount, layers);
@@ -42,9 +42,9 @@ void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<doub
  * @param layers layers of mlp
  * @param blockCount block count
  */
-void block::train(std::vector<std::vector<double>>& tokenEmbed, std::vector<double>& expected, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EVp, 
-    std::vector<std::vector<std::vector<double>>>& EVc, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, 
+void block::train(std::vector<std::vector<float>>& tokenEmbed, std::vector<float>& expected, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EVp, 
+    std::vector<std::vector<std::vector<float>>>& EVc, std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, 
     int& layers, int& blockCount)
 {
     while(1) {

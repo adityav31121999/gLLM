@@ -14,184 +14,184 @@
 
 // vect.cpp
 
-bool operator==(std::vector<double>, std::vector<double>);
-bool operator!=(std::vector<double>, std::vector<double>);
-std::vector<double> operator+(std::vector<double>, std::vector<double>);
-std::vector<double> operator-(std::vector<double>, std::vector<double>);
-std::vector<double> operator*(std::vector<double>, double);
-std::vector<double> operator*(double, std::vector<double>);
-std::vector<double> operator/(std::vector<double>, double);
-std::vector<std::vector<double>> operator+(std::vector<std::vector<double>>, std::vector<std::vector<double>>);
-std::vector<std::vector<double>> operator-(std::vector<std::vector<double>>, std::vector<std::vector<double>>);
-std::vector<std::vector<double>> operator*(std::vector<std::vector<double>>, double y);
-std::vector<std::vector<double>> operator/(std::vector<std::vector<double>>, double y);
+bool operator==(std::vector<float>, std::vector<float>);
+bool operator!=(std::vector<float>, std::vector<float>);
+std::vector<float> operator+(std::vector<float>, std::vector<float>);
+std::vector<float> operator-(std::vector<float>, std::vector<float>);
+std::vector<float> operator*(std::vector<float>, float);
+std::vector<float> operator*(float, std::vector<float>);
+std::vector<float> operator/(std::vector<float>, float);
+std::vector<std::vector<float>> operator+(std::vector<std::vector<float>>, std::vector<std::vector<float>>);
+std::vector<std::vector<float>> operator-(std::vector<std::vector<float>>, std::vector<std::vector<float>>);
+std::vector<std::vector<float>> operator*(std::vector<std::vector<float>>, float y);
+std::vector<std::vector<float>> operator/(std::vector<std::vector<float>>, float y);
 
-double errorofv(std::vector<double> , std::vector<double> );
-double gradientdesc1(std::vector<double>, std::vector<double>);
-double vdotv2val(std::vector<double>, std::vector<double>);
-double vdotv2scal(std::vector<double> , std::vector<double>);
-double MSE(std::vector<double>, std::vector<double>);
-double sum(std::vector<double>);
-double sum(std::vector<std::vector<double>>);
-double product(std::vector<double>);
-double product(std::vector<std::vector<double>>);
+float errorofv(std::vector<float> , std::vector<float> );
+float gradientdesc1(std::vector<float>, std::vector<float>);
+float vdotv2val(std::vector<float>, std::vector<float>);
+float vdotv2scal(std::vector<float> , std::vector<float>);
+float MSE(std::vector<float>, std::vector<float>);
+float sum(std::vector<float>);
+float sum(std::vector<std::vector<float>>);
+float product(std::vector<float>);
+float product(std::vector<std::vector<float>>);
 
-std::vector<double> error(std::vector<double>, std::vector<double>);
-std::vector<double> percenterrorofvec(std::vector<double> , std::vector<double>);
-std::vector<double> gradient_descent(std::vector<double>, std::vector<double>, double);
-std::vector<double> power(std::vector<double>, double);
-std::vector<double> sumofrow(std::vector<std::vector<double>>);
-std::vector<double> sumofcol(std::vector<std::vector<double>>);
-std::vector<double> vxv2v(std::vector<double>, std::vector<double>);
-std::vector<double> vdotv2v(std::vector<double>, std::vector<double>);
-std::vector<double> vxmat2vec(std::vector<double>, std::vector<std::vector<double>>);
-std::vector<double> mat2vec(std::vector<std::vector<double>>);
-std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>>, std::vector<std::vector<double>>);
-std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>>, std::vector<double>);
-std::vector<std::vector<double>> hadamard(std::vector<std::vector<double>>, std::vector<std::vector<double>>);
-std::vector<std::vector<double>> vec2mat(std::vector<double>, unsigned int, unsigned int);
-std::vector<std::vector<double>> vdotmat2mat(std::vector<double>, std::vector<std::vector<double>>);
-std::vector<std::vector<double>> vxv2mat(std::vector<double>, std::vector<double>);
-std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>>);
-std::vector<std::vector<double>> power(std::vector<std::vector<double>>, double);
+std::vector<float> error(std::vector<float>, std::vector<float>);
+std::vector<float> percenterrorofvec(std::vector<float> , std::vector<float>);
+std::vector<float> gradient_descent(std::vector<float>, std::vector<float>, float);
+std::vector<float> power(std::vector<float>, float);
+std::vector<float> sumofrow(std::vector<std::vector<float>>);
+std::vector<float> sumofcol(std::vector<std::vector<float>>);
+std::vector<float> vxv2v(std::vector<float>, std::vector<float>);
+std::vector<float> vdotv2v(std::vector<float>, std::vector<float>);
+std::vector<float> vxmat2vec(std::vector<float>, std::vector<std::vector<float>>);
+std::vector<float> mat2vec(std::vector<std::vector<float>>);
+std::vector<std::vector<float>> kronecker(std::vector<std::vector<float>>, std::vector<std::vector<float>>);
+std::vector<std::vector<float>> kronecker(std::vector<std::vector<float>>, std::vector<float>);
+std::vector<std::vector<float>> hadamard(std::vector<std::vector<float>>, std::vector<std::vector<float>>);
+std::vector<std::vector<float>> vec2mat(std::vector<float>, unsigned int, unsigned int);
+std::vector<std::vector<float>> vdotmat2mat(std::vector<float>, std::vector<std::vector<float>>);
+std::vector<std::vector<float>> vxv2mat(std::vector<float>, std::vector<float>);
+std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>>);
+std::vector<std::vector<float>> power(std::vector<std::vector<float>>, float);
 
 // activations.cpp
 
-double sigmoid(double);
-std::vector<double> sigmoidv(std::vector<double>);
-std::vector<std::vector<double>> sigmoid(std::vector<std::vector<double>>);
-std::vector<double> softmax(std::vector<double>, double);
-std::vector<std::vector<double>> softmax(std::vector<std::vector<double>>, double);
-double ReLU(double);
-std::vector<double> ReLUv(std::vector<double>);
-double SeLU(double);
-std::vector<double> SeLUv(std::vector<double>);
-std::vector<double> LOTA(std::vector<double> y);
-std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>>);
-std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>>, int);
+float sigmoid(float);
+std::vector<float> sigmoidv(std::vector<float>);
+std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>>);
+std::vector<float> softmax(std::vector<float>, float);
+std::vector<std::vector<float>> softmax(std::vector<std::vector<float>>, float);
+float ReLU(float);
+std::vector<float> ReLUv(std::vector<float>);
+float SeLU(float);
+std::vector<float> SeLUv(std::vector<float>);
+std::vector<float> LOTA(std::vector<float> y);
+std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>>);
+std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>>, int);
 
-double sigmoidder(double);
-std::vector<double> sigmoidvder(std::vector<double>);
-std::vector<std::vector<double>> sigmoidder(std::vector<std::vector<double>>);
-std::vector<double> softmaxder(std::vector<double>, double);
-std::vector<std::vector<double>> softmaxder(std::vector<std::vector<double>>, double);
-double ReLUder(double);
-std::vector<double> ReLUvder(std::vector<double>);
-double SeLUder(double);
-std::vector<double> SeLUvder(std::vector<double>);
-std::vector<double> LOTAder(std::vector<double> y);
-std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>>);
-std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>>, int);
+float sigmoidder(float);
+std::vector<float> sigmoidvder(std::vector<float>);
+std::vector<std::vector<float>> sigmoidder(std::vector<std::vector<float>>);
+std::vector<float> softmaxder(std::vector<float>, float);
+std::vector<std::vector<float>> softmaxder(std::vector<std::vector<float>>, float);
+float ReLUder(float);
+std::vector<float> ReLUvder(std::vector<float>);
+float SeLUder(float);
+std::vector<float> SeLUvder(std::vector<float>);
+std::vector<float> LOTAder(std::vector<float> y);
+std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>>);
+std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>>, int);
 
 // weights.cpp
 
-void randomweights(std::vector<std::vector<double>>);
-void jumbledwbs(std::vector<std::vector<double>>);
-void ijbasedwbs(std::vector<std::vector<double>>);
-void Random(std::vector<std::vector<double>>);
+void randomweights(std::vector<std::vector<float>>);
+void jumbledwbs(std::vector<std::vector<float>>);
+void ijbasedwbs(std::vector<std::vector<float>>);
+void Random(std::vector<std::vector<float>>);
 
 
 #ifdef USE_OPENCL
 
 #include <CL/cl.hpp>
 
-__kernel void operator_eq(__global double* a, __global double* b, __global int* result, int size);
-__kernel void operator_add(__global double* a, __global double* b, __global double* result, int size);
-__kernel void operator_sub(__global double* a, __global double* b, __global double* result, int size);
-__kernel void operator_mul_scalar(__global double* a, double scalar, __global double* result, int size);
-__kernel void operator_mul_scalar_reverse(double scalar, __global double* a, __global double* result, int size);
-__kernel void operator_div_scalar(__global double* a, double scalar, __global double* result, int size);
-__kernel void operator_add_2d(__global double* a, __global double* b, __global double* result, int rows, int cols);
-__kernel void operator_sub_2d(__global double* a, __global double* b, __global double* result, int rows, int cols);
-__kernel void operator_mul_2d_scalar(__global double* a, double scalar, __global double* result, int rows, int cols);
-__kernel void operator_div_2d_scalar(__global double* a, double scalar, __global double* result, int rows, int cols);
+__kernel void operator_eq(__global float* a, __global float* b, __global int* result, int size);
+__kernel void operator_add(__global float* a, __global float* b, __global float* result, int size);
+__kernel void operator_sub(__global float* a, __global float* b, __global float* result, int size);
+__kernel void operator_mul_scalar(__global float* a, float scalar, __global float* result, int size);
+__kernel void operator_mul_scalar_reverse(float scalar, __global float* a, __global float* result, int size);
+__kernel void operator_div_scalar(__global float* a, float scalar, __global float* result, int size);
+__kernel void operator_add_2d(__global float* a, __global float* b, __global float* result, int rows, int cols);
+__kernel void operator_sub_2d(__global float* a, __global float* b, __global float* result, int rows, int cols);
+__kernel void operator_mul_2d_scalar(__global float* a, float scalar, __global float* result, int rows, int cols);
+__kernel void operator_div_2d_scalar(__global float* a, float scalar, __global float* result, int rows, int cols);
 
-__kernel void errorofv(__global double* a, __global double* b, __global double* result, int size);
-__kernel void gradientdesc(__global double* a, __global double* b, __global double* result, int size);
-__kernel void vdotv2val(__global double* a, __global double* b, __global double* result, int size);
-__kernel void vdotv2scal(__global double* a, __global double* b, __global double* result, int size);
-__kernel void MSE(__global double* a, __global double* b, __global double* result, int size);
-__kernel void sum(__global double* a, __global double* result, int size);
-__kernel void sum_2d(__global double* a, __global double* result, int rows, int cols);
-__kernel void product(__global double* a, __global double* result, int size);
-__kernel void product_2d(__global double* a, __global double* result, int rows, int cols);
+__kernel void errorofv(__global float* a, __global float* b, __global float* result, int size);
+__kernel void gradientdesc(__global float* a, __global float* b, __global float* result, int size);
+__kernel void vdotv2val(__global float* a, __global float* b, __global float* result, int size);
+__kernel void vdotv2scal(__global float* a, __global float* b, __global float* result, int size);
+__kernel void MSE(__global float* a, __global float* b, __global float* result, int size);
+__kernel void sum(__global float* a, __global float* result, int size);
+__kernel void sum_2d(__global float* a, __global float* result, int rows, int cols);
+__kernel void product(__global float* a, __global float* result, int size);
+__kernel void product_2d(__global float* a, __global float* result, int rows, int cols);
 
-__kernel void sigmoidv(__global double* x, __global double* out, int size);
-__kernel void sigmoid2D(__global double* x, __global double* out, int rows, int cols);
-__kernel void softmax(__global double* x, __global double* out, double temp, int size);
-__kernel void softmax2D(__global double* x, __global double* out, double temp, int rows, int cols);
-__kernel void ReLUv(__global double* x, __global double* out, int size);
-__kernel void SeLUv(__global double* x, __global double* out, int size);
-__kernel void LOTA(__global double* y, __global double* out, int size);
-__kernel void LOTA2D(__global double* y, __global double* out, int rows, int cols);
-__kernel void LOTA2D(__global double* y, __global double* out, int rows, int cols, int limit);
-__kernel void LOTA3D(__global double* y, __global double* out, int rows, int cols, int depth);
+__kernel void sigmoidv(__global float* x, __global float* out, int size);
+__kernel void sigmoid2D(__global float* x, __global float* out, int rows, int cols);
+__kernel void softmax(__global float* x, __global float* out, float temp, int size);
+__kernel void softmax2D(__global float* x, __global float* out, float temp, int rows, int cols);
+__kernel void ReLUv(__global float* x, __global float* out, int size);
+__kernel void SeLUv(__global float* x, __global float* out, int size);
+__kernel void LOTA(__global float* y, __global float* out, int size);
+__kernel void LOTA2D(__global float* y, __global float* out, int rows, int cols);
+__kernel void LOTA2D(__global float* y, __global float* out, int rows, int cols, int limit);
+__kernel void LOTA3D(__global float* y, __global float* out, int rows, int cols, int depth);
 
-__kernel void sigmoidvder(__global double* x, __global double* out, int size);
-__kernel void sigmoidder2D(__global double* x, __global double* out, int rows, int cols);
-__kernel void softmaxder(__global double* x, __global double* out, double temp, int size);
-__kernel void softmaxder2D(__global double* x, __global double* out, double temp, int rows, int cols);
-__kernel void ReLUvder(__global double* x, __global double* out, int size);
-__kernel void SeLUvder(__global double* x, __global double* out, int size);
-__kernel void LOTAder(__global double* y, __global double* out, int size);
-__kernel void LOTAder2D(__global double* y, __global double* out, int rows, int cols);
-__kernel void LOTAder3D(__global double* y, __global double* out, int rows, int cols, int depth);
+__kernel void sigmoidvder(__global float* x, __global float* out, int size);
+__kernel void sigmoidder2D(__global float* x, __global float* out, int rows, int cols);
+__kernel void softmaxder(__global float* x, __global float* out, float temp, int size);
+__kernel void softmaxder2D(__global float* x, __global float* out, float temp, int rows, int cols);
+__kernel void ReLUvder(__global float* x, __global float* out, int size);
+__kernel void SeLUvder(__global float* x, __global float* out, int size);
+__kernel void LOTAder(__global float* y, __global float* out, int size);
+__kernel void LOTAder2D(__global float* y, __global float* out, int rows, int cols);
+__kernel void LOTAder3D(__global float* y, __global float* out, int rows, int cols, int depth);
 
-__kernel void randomweights(__global double* weights, int rows, int cols, unsigned int seed);
-__kernel void jumbledwbs(__global double* weights, int rows, int cols, unsigned int seed);
-__kernel void ijbasedwbs(__global double* weights, int rows, int cols);
-__kernel void Random(__global double* weights, int rows, int cols, unsigned int seed);
+__kernel void randomweights(__global float* weights, int rows, int cols, unsigned int seed);
+__kernel void jumbledwbs(__global float* weights, int rows, int cols, unsigned int seed);
+__kernel void ijbasedwbs(__global float* weights, int rows, int cols);
+__kernel void Random(__global float* weights, int rows, int cols, unsigned int seed);
 
 #elif USE_CUDA
 
 #include <cuda_runtime.h>
 
-__device__ bool operator_eq(const double* a, const double* b, int size);
-__global__ void operator_add(const double* a, const double* b, double* result, int size);
-__global__ void operator_sub(const double* a, const double* b, double* result, int size);
-__global__ void operator_mul(const double* a, double scalar, double* result, int size);
-__global__ void operator_mul_reverse(double scalar, const double* a, double* result, int size);
-__global__ void operator_div(const double* a, double scalar, double* result, int size);
-__global__ void operator_add_2d(const double* a, const double* b, double* result, int rows, int cols);
-__global__ void operator_sub_2d(const double* a, const double* b, double* result, int rows, int cols);
-__global__ void operator_mul_2d(const double* a, double scalar, double* result, int rows, int cols);
-__global__ void operator_div_2d(const double* a, double scalar, double* result, int rows, int cols);
+__device__ bool operator_eq(const float* a, const float* b, int size);
+__global__ void operator_add(const float* a, const float* b, float* result, int size);
+__global__ void operator_sub(const float* a, const float* b, float* result, int size);
+__global__ void operator_mul(const float* a, float scalar, float* result, int size);
+__global__ void operator_mul_reverse(float scalar, const float* a, float* result, int size);
+__global__ void operator_div(const float* a, float scalar, float* result, int size);
+__global__ void operator_add_2d(const float* a, const float* b, float* result, int rows, int cols);
+__global__ void operator_sub_2d(const float* a, const float* b, float* result, int rows, int cols);
+__global__ void operator_mul_2d(const float* a, float scalar, float* result, int rows, int cols);
+__global__ void operator_div_2d(const float* a, float scalar, float* result, int rows, int cols);
 
-__global__ void errorofv(const double* a, const double* b, double* result, int size);
-__global__ void gradientdesc(const double* a, const double* b, double* result, int size);
-__global__ void vdotv2val(const double* a, const double* b, double* result, int size);
-__global__ void vdotv2scal(const double* a, const double* b, double* result, int size);
-__global__ void MSE(const double* a, const double* b, double* result, int size);
-__global__ void sum(const double* a, double* result, int size);
-__global__ void sum_2d(const double* a, double* result, int rows, int cols);
-__global__ void product(const double* a, double* result, int size);
-__global__ void product_2d(const double* a, double* result, int rows, int cols);
+__global__ void errorofv(const float* a, const float* b, float* result, int size);
+__global__ void gradientdesc(const float* a, const float* b, float* result, int size);
+__global__ void vdotv2val(const float* a, const float* b, float* result, int size);
+__global__ void vdotv2scal(const float* a, const float* b, float* result, int size);
+__global__ void MSE(const float* a, const float* b, float* result, int size);
+__global__ void sum(const float* a, float* result, int size);
+__global__ void sum_2d(const float* a, float* result, int rows, int cols);
+__global__ void product(const float* a, float* result, int size);
+__global__ void product_2d(const float* a, float* result, int rows, int cols);
 
-__global__ void sigmoidv(double* x, double* out, int size);
-__global__ void sigmoid2D(double* x, double* out, int rows, int cols);
-__global__ void softmax(double* x, double* out, double temp, int size);
-__global__ void softmax2D(double* x, double* out, double temp, int rows, int cols);
-__global__ void ReLUv(double* x, double* out, int size);
-__global__ void SeLUv(double* x, double* out, int size);
-__global__ void LOTA(double* y, double* out, int size);
-__global__ void LOTA2D(double* y, double* out, int rows, int cols);
-__global__ void LOTA2D(double* y, double* out, int rows, int cols, int limit);
-__global__ void LOTA3D(double* y, double* out, int rows, int cols, int depth);
+__global__ void sigmoidv(float* x, float* out, int size);
+__global__ void sigmoid2D(float* x, float* out, int rows, int cols);
+__global__ void softmax(float* x, float* out, float temp, int size);
+__global__ void softmax2D(float* x, float* out, float temp, int rows, int cols);
+__global__ void ReLUv(float* x, float* out, int size);
+__global__ void SeLUv(float* x, float* out, int size);
+__global__ void LOTA(float* y, float* out, int size);
+__global__ void LOTA2D(float* y, float* out, int rows, int cols);
+__global__ void LOTA2D(float* y, float* out, int rows, int cols, int limit);
+__global__ void LOTA3D(float* y, float* out, int rows, int cols, int depth);
 
-__global__ void sigmoidvder(double* x, double* out, int size);
-__global__ void sigmoidder2D(double* x, double* out, int rows, int cols);
-__global__ void softmaxder(double* x, double* out, double temp, int size);
-__global__ void softmaxder2D(double* x, double* out, double temp, int rows, int cols);
-__global__ void ReLUvder(double* x, double* out, int size);
-__global__ void SeLUvder(double* x, double* out, int size);
-__global__ void LOTAder(double* y, double* out, int size);
-__global__ void LOTAder2D(double* y, double* out, int rows, int cols);
-__global__ void LOTAder3D(double* y, double* out, int rows, int cols, int depth);
+__global__ void sigmoidvder(float* x, float* out, int size);
+__global__ void sigmoidder2D(float* x, float* out, int rows, int cols);
+__global__ void softmaxder(float* x, float* out, float temp, int size);
+__global__ void softmaxder2D(float* x, float* out, float temp, int rows, int cols);
+__global__ void ReLUvder(float* x, float* out, int size);
+__global__ void SeLUvder(float* x, float* out, int size);
+__global__ void LOTAder(float* y, float* out, int size);
+__global__ void LOTAder2D(float* y, float* out, int rows, int cols);
+__global__ void LOTAder3D(float* y, float* out, int rows, int cols, int depth);
 
-__global__ void randomweights(double* weights, int rows, int cols, unsigned int seed);
-__global__ void jumbledwbs(double* weights, int rows, int cols, unsigned int seed);
-__global__ void ijbasedwbs(double* weights, int rows, int cols);
-__global__ void Random(double* weights, int rows, int cols, unsigned int seed);
+__global__ void randomweights(float* weights, int rows, int cols, unsigned int seed);
+__global__ void jumbledwbs(float* weights, int rows, int cols, unsigned int seed);
+__global__ void ijbasedwbs(float* weights, int rows, int cols);
+__global__ void Random(float* weights, int rows, int cols, unsigned int seed);
 
 #endif
 

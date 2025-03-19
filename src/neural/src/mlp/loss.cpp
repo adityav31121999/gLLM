@@ -9,8 +9,8 @@
  * @param 3d matrix
  * @return The L1 penalty for the network.
  */
-double getL1Penalty(std::vector<std::vector<std::vector<double>>>& weights) {
-    double penalty = 0;
+float getL1Penalty(std::vector<std::vector<std::vector<float>>>& weights) {
+    float penalty = 0;
     for (const auto& layer : weights) {
         for (const auto& neuron : layer) {
             for (const auto& w : neuron) {
@@ -28,8 +28,8 @@ double getL1Penalty(std::vector<std::vector<std::vector<double>>>& weights) {
  * @param weights 3d matrix
  * @return The L2 penalty for the network.
  */
-double getL2Penalty(std::vector<std::vector<std::vector<double>>>& weights) {
-    double penalty = 0;
+float getL2Penalty(std::vector<std::vector<std::vector<float>>>& weights) {
+    float penalty = 0;
     for (const auto& layer : weights) {
         for (const auto& neuron : layer) {
             for (const auto& w : neuron) {
@@ -47,8 +47,8 @@ double getL2Penalty(std::vector<std::vector<std::vector<double>>>& weights) {
  * @param weights 3d matrix
  * @return The LN penalty for the network.
  */
-double get_LN_Penalty(std::vector<std::vector<std::vector<double>>>& weights, int N) {
-    double penalty = 0;
+float get_LN_Penalty(std::vector<std::vector<std::vector<float>>>& weights, int N) {
+    float penalty = 0;
     if(N%2 == 0) {
         for (const auto& layer : weights) {
             for (const auto& neuron : layer) {
@@ -77,8 +77,8 @@ double get_LN_Penalty(std::vector<std::vector<std::vector<double>>>& weights, in
  * @param weights 3d matrix
  * @return The Lxyz penalty for the network.
  */
-double getLxyzPenalty(std::vector<std::vector<std::vector<double>>>& weights) {
-    double penalty = 0;
+float getLxyzPenalty(std::vector<std::vector<std::vector<float>>>& weights) {
+    float penalty = 0;
     for (int i = 0; i < weights.size(); i++) {
         for (int j = 0; j < weights.size(); j++) {
             for (int k = 0; k < weights.size(); k++) {
@@ -99,8 +99,8 @@ double getLxyzPenalty(std::vector<std::vector<std::vector<double>>>& weights) {
  * @param weights 3d matrix
  * @return The LN penalty for the network.
  */
-double get_LNs_Penalty(std::vector<std::vector<std::vector<double>>>& weights, int N) {
-    double penalty = 0;
+float get_LNs_Penalty(std::vector<std::vector<std::vector<float>>>& weights, int N) {
+    float penalty = 0;
     if(N % 2 == 0) {
         for (int i = 0; i < weights.size(); i++) {
             for (int j = 0; j < weights.size(); j++) {
@@ -133,8 +133,8 @@ double get_LNs_Penalty(std::vector<std::vector<std::vector<double>>>& weights, i
  * @param lambda The regularization parameter.
  * @return The loss with L1 regularization.
  */
-double computeLossWithL1(std::vector<double>& outputs, std::vector<double>& targets, mlp& network, double lambda) {
-    double loss = 0;
+float computeLossWithL1(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float lambda) {
+    float loss = 0;
     for (size_t i = 0; i < outputs.size(); ++i) {
         loss += std::abs(outputs[i] - targets[i]);
     }
@@ -152,8 +152,8 @@ double computeLossWithL1(std::vector<double>& outputs, std::vector<double>& targ
  * @param lambda The regularization parameter.
  * @return The loss with L2 regularization.
  */
-double computeLossWithL2(std::vector<double>& outputs, std::vector<double>& targets, mlp& network, double lambda) {
-    double loss = 0;
+float computeLossWithL2(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float lambda) {
+    float loss = 0;
     for (size_t i = 0; i < outputs.size(); ++i) {
         loss += std::pow(outputs[i] - targets[i], 2);
     }
@@ -171,8 +171,8 @@ double computeLossWithL2(std::vector<double>& outputs, std::vector<double>& targ
  * @param p The dropout probability.
  * @return The loss with dropout generalization.
  */
-double dropoutGeneralisation(std::vector<double>& outputs, std::vector<double>& targets, mlp& network, double p) {
-    double loss = 0;
+float dropoutGeneralisation(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float p) {
+    float loss = 0;
     for (size_t i = 0; i < outputs.size(); ++i) {
         loss += std::pow(outputs[i] - targets[i], 2);
     }

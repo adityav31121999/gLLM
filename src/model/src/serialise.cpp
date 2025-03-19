@@ -16,7 +16,7 @@ void serialiseMAT(const mat& a, FILE* file) {
     
     // Write matrix elements row by row in binary format
     for (int i = 0; i < a.row; i++) {
-        fwrite(a.a[i].data(), sizeof(double), a.col, file);
+        fwrite(a.a[i].data(), sizeof(float), a.col, file);
     }
 }
 
@@ -35,7 +35,7 @@ void serialiseMLP(const mlp& a, FILE* file, int in, int layers) {
     // Write weights layer by layer
     for (unsigned int l = 0; l < layers; ++l) {
         for (unsigned int i = 0; i < in; ++i) {
-            fwrite(a.weights[l][i].data(), sizeof(double), in, file);
+            fwrite(a.weights[l][i].data(), sizeof(float), in, file);
         }
     }
 }

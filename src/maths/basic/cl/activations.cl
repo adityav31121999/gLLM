@@ -12,7 +12,7 @@
  * @param x Input value
  * @return Sigmoid of x
  */
-double sigmoid(double x) {
+float sigmoid(float x) {
     // The sigmoid function is defined as 1 / (1 + exp(-x)).
     return (1 / (1 + std::exp(-x)));
 }
@@ -23,9 +23,9 @@ double sigmoid(double x) {
  * @param x Input value
  * @return The derivative of sigmoid(x)
  */
-double sigmoidder(double x) {
+float sigmoidder(float x) {
     // Calculate the sigmoid of x
-    double s = sigmoid(x);
+    float s = sigmoid(x);
     // Calculate the derivative of sigmoid(x)
     return s * (1 - s);
 }
@@ -36,9 +36,9 @@ double sigmoidder(double x) {
  * vector in-place.
  * @return Sigmoid of vector: element-wise
  */
-std::vector<double> sigmoidv(std::vector<double> x) {
-    std::vector<double> y(x);
-    std::transform(x.begin(), x.end(), y.begin(), [](double& i){ return sigmoid(i); });
+std::vector<float> sigmoidv(std::vector<float> x) {
+    std::vector<float> y(x);
+    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return sigmoid(i); });
     return y;
 }
 
@@ -49,11 +49,11 @@ std::vector<double> sigmoidv(std::vector<double> x) {
  * @return A vector where each element is the derivative of the corresponding 
  *      element in the input vector.
  */
-std::vector<double> sigmoidvder(std::vector<double> x) {
+std::vector<float> sigmoidvder(std::vector<float> x) {
     // Create a copy of the input vector
-    std::vector<double> y(x);
+    std::vector<float> y(x);
     // Apply the derivative of sigmoid function to each element of the input vector
-    std::transform(x.begin(), x.end(), y.begin(), [](double& i){ return sigmoidder(i); });
+    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return sigmoidder(i); });
     return y;
 }
 
@@ -62,8 +62,8 @@ std::vector<double> sigmoidvder(std::vector<double> x) {
  * @param x A reference to the input matrix. 
  * @return Sigmoid of matrix: element-wise
  */
-std::vector<std::vector<double>> sigmoid(std::vector<std::vector<double>> x) {
-    std::vector<std::vector<double>> result(x.size(), std::vector<double>(x[0].size()));
+std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>> x) {
+    std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     for (size_t i = 0; i < x.size(); ++i) {
         result[i] = sigmoidv(x[i]);
     }
@@ -77,8 +77,8 @@ std::vector<std::vector<double>> sigmoid(std::vector<std::vector<double>> x) {
  * @return A matrix where each element is the derivative of the corresponding 
  *      element in the input matrix.
  */
-std::vector<std::vector<double>> sigmoidder(std::vector<std::vector<double>> x) {
-    std::vector<std::vector<double>> result(x.size(), std::vector<double>(x[0].size()));
+std::vector<std::vector<float>> sigmoidder(std::vector<std::vector<float>> x) {
+    std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     for (size_t i = 0; i < x.size(); ++i) {
         result[i] = sigmoidvder(x[i]);
     }
@@ -99,16 +99,16 @@ std::vector<std::vector<double>> sigmoidder(std::vector<std::vector<double>> x) 
  *          uniform distribution.
  * @return Vector of softmax values
  */
-std::vector<double> softmax(std::vector<double> x, double temp = 1.0) {
+std::vector<float> softmax(std::vector<float> x, float temp = 1.0) {
     // Create a copy of the input vector
-    std::vector<double> y(x);
+    std::vector<float> y(x);
     // Calculate the sum of the exponentials of the vector elements
-    double sum = 0;
+    float sum = 0;
     // Calculate the sum of the exponentials of the vector elements
-    std::transform(y.begin(), y.end(), y.begin(), [temp](double& val) { return exp(val / temp); });
+    std::transform(y.begin(), y.end(), y.begin(), [temp](float& val) { return exp(val / temp); });
     sum = std::accumulate(y.begin(), y.end(), 0.0);
     // Normalize the exponentials by dividing each by the sum
-    std::transform(y.begin(), y.end(), y.begin(), [sum](double val) {
+    std::transform(y.begin(), y.end(), y.begin(), [sum](float val) {
         return val / sum;
     });
     // Return the normalized vector
@@ -127,16 +127,16 @@ std::vector<double> softmax(std::vector<double> x, double temp = 1.0) {
  *          uniform distribution.
  * @return The derivative of softmax(x) for each input value
  */
-std::vector<double> softmaxder(std::vector<double> x, double temp = 1.0) {
+std::vector<float> softmaxder(std::vector<float> x, float temp = 1.0) {
     // Create a copy of the input vector
-    std::vector<double> y(x);
+    std::vector<float> y(x);
     // Calculate the sum of exponential of each element of the input vector
-    double sum = 0;
-    std::for_each(y.begin(), y.end(), [&sum, temp](double& val) { sum += exp(val/temp); });
+    float sum = 0;
+    std::for_each(y.begin(), y.end(), [&sum, temp](float& val) { sum += exp(val/temp); });
     // Calculate the softmax of each element of the input vector
-    std::for_each(y.begin(), y.end(), [&sum](double& val) { val = exp(val) / sum; });
+    std::for_each(y.begin(), y.end(), [&sum](float& val) { val = exp(val) / sum; });
     // Calculate the derivative of softmax(x) for each input value
-    std::vector<double> result(y.size(), 0.0);
+    std::vector<float> result(y.size(), 0.0);
     for (size_t i = 0; i < y.size(); ++i) {
         // Calculate the derivative of softmax(x) using the formula: softmax_derivative(x) = softmax(x) * (1 - softmax(x))
         result[i] = y[i] * (1 - y[i]);
@@ -162,18 +162,18 @@ std::vector<double> softmaxder(std::vector<double> x, double temp = 1.0) {
  *          uniform distribution.
  * @return Vector of softmax values
  */
-std::vector<std::vector<double>> softmax(std::vector<std::vector<double>> x, double temp = 1.0) {
+std::vector<std::vector<float>> softmax(std::vector<std::vector<float>> x, float temp = 1.0) {
     // Create a copy of the input vector
-    std::vector<std::vector<double>> y(x);
+    std::vector<std::vector<float>> y(x);
     // Calculate the sum of the exponentials of the vector elements
-    double sum = 0.0;
+    float sum = 0.0;
     for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&temp](double& i){ return exp(i/temp); });
+        std::transform(v.begin(), v.end(), v.begin(), [&temp](float& i){ return exp(i/temp); });
         sum += std::accumulate(v.begin(), v.end(), 0.0);
     }
     // Normalize each element by dividing it by the total sum
     for (auto& v: x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](double& i){ return i / sum; });
+        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return i / sum; });
     }
     return y;
 }
@@ -189,27 +189,27 @@ std::vector<std::vector<double>> softmax(std::vector<std::vector<double>> x, dou
  *          uniform distribution.
  * @return The derivative of softmax(x) for each input value
  */
-std::vector<std::vector<double>> softmaxder(std::vector<std::vector<double>> x, double temp = 1.0) {
+std::vector<std::vector<float>> softmaxder(std::vector<std::vector<float>> x, float temp = 1.0) {
     // Create a copy of the input vector
-    std::vector<std::vector<double>> y(x);
+    std::vector<std::vector<float>> y(x);
     // Calculate the sum of the exponentials of the vector elements
-    double sum = 0.0;
+    float sum = 0.0;
     for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&temp](double& i){ return exp(i/temp); });
+        std::transform(v.begin(), v.end(), v.begin(), [&temp](float& i){ return exp(i/temp); });
         sum += std::accumulate(v.begin(), v.end(), 0.0);
     }
     // Normalize each element by dividing it by the total sum
     for (auto& v: x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](double& i){ return i / sum; });
+        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return i / sum; });
     }
-    std::vector<std::vector<double>> result(y.size(), std::vector<double>(y[0].size()));       // Initialize the result vector
+    std::vector<std::vector<float>> result(y.size(), std::vector<float>(y[0].size()));       // Initialize the result vector
     // Calculate the derivative of softmax(x) for each input value
     for (size_t i = 0; i < y.size(); ++i) {
         for (size_t j = 0; j < y[0].size(); ++j) {
             result[i][j] = y[i][j] * (1 - y[i][j]);
             // Subtract the softmax of each other element from the derivative of softmax(x)
-            std::transform(y[i].begin(), y[i].end(), result[i].begin(), [i, &y](double val){ 
-                double sum = 0.0;
+            std::transform(y[i].begin(), y[i].end(), result[i].begin(), [i, &y](float val){ 
+                float sum = 0.0;
                 for (size_t k = 0; k < y[0].size(); ++k) {
                     if (k == i) {
                         continue;
@@ -230,9 +230,9 @@ std::vector<std::vector<double>> softmaxder(std::vector<std::vector<double>> x, 
  * @param x Input value
  * @return The ReLU of x, which is the maximum of 0 and x
  */
-double ReLU(double x) {
+float ReLU(float x) {
     // The ReLU function is defined as max(0, x)
-    return std::max(double(0), x); // Return the maximum of 0 and x
+    return std::max(float(0), x); // Return the maximum of 0 and x
 }
 
 /**
@@ -242,7 +242,7 @@ double ReLU(double x) {
  * @param x Input value
  * @return 0 if x < 0, 1 otherwise
  */
-double ReLUder(double x) {
+float ReLUder(float x) {
     // The derivative of the ReLU function is 0 if the input value is less than 0, and 1 otherwise.
     return (x > 0) ? 1 : 0; // Return 1 if x > 0, 0 otherwise
 }
@@ -252,11 +252,11 @@ double ReLUder(double x) {
  * @param x Input vector
  * @return A vector where each element is the ReLU of the corresponding element in the input vector.
  */
- std::vector<double> ReLUv(std::vector<double> x) {
+ std::vector<float> ReLUv(std::vector<float> x) {
     // Create a copy of the input vector
-    std::vector<double> y(x);
+    std::vector<float> y(x);
     // Apply the ReLU function to each element of the input vector
-    std::transform(x.begin(), x.end(), y.begin(), [](double& i){ return ReLU(i); });
+    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return ReLU(i); });
     return y;
 }
 
@@ -267,10 +267,10 @@ double ReLUder(double x) {
  * @tparam t type of the elements in the input vector
  * @param x input vector
  */
-std::vector<double> ReLUvder(std::vector<double> x) {
-    std::vector<double> y(x);
+std::vector<float> ReLUvder(std::vector<float> x) {
+    std::vector<float> y(x);
     // Use std::transform to apply ReLU_derivative to each element in x
-    std::transform(x.begin(), x.end(), y.begin(), [](double& i){ return ReLUder(i); });
+    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return ReLUder(i); });
     return y;
 }
 
@@ -284,7 +284,7 @@ std::vector<double> ReLUvder(std::vector<double> x) {
  * @param x input value
  * @return the value of the SeLU function applied to the input
  */
-double SeLU(double x) {
+float SeLU(float x) {
     // Apply the SeLU function to the input
     return (x > 0) ? x : 0.1 * x;
 }
@@ -297,7 +297,7 @@ double SeLU(double x) {
  * @param x input value
  * @return the value of the SeLU derivative function applied to the input
  */
-double SeLUder(double x) {
+float SeLUder(float x) {
     // Apply the SeLU derivative function to the input
     return (x > 0) ? 1 : 0.1;
 }
@@ -310,10 +310,10 @@ double SeLUder(double x) {
  * @param x Input vector
  * @return A vector where each element is the SeLU of the corresponding element in the input vector.
  */
-std::vector<double> SeLUv(std::vector<double> x) {
-    std::vector<double> y(x);
+std::vector<float> SeLUv(std::vector<float> x) {
+    std::vector<float> y(x);
     // Use std::transform to apply SeLU to each element in x
-    std::transform(x.begin(), x.end(), y.begin(), [](double& i){ return SeLU(i); });
+    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return SeLU(i); });
     return y;
 }
 
@@ -326,11 +326,11 @@ std::vector<double> SeLUv(std::vector<double> x) {
  * @param x Input vector
  * @return A vector where each element is the derivative of the SeLU function for the corresponding element in the input vector.
  */
-std::vector<double> SeLUvder(std::vector<double> x) {
+std::vector<float> SeLUvder(std::vector<float> x) {
     // Create a copy of the input vector
-    std::vector<double> y(x);
+    std::vector<float> y(x);
     // Apply the SeLU derivative function to each element of the input vector
-    std::transform(x.begin(), x.end(), y.begin(), [](double& i){ return SeLUder(i); });
+    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return SeLUder(i); });
     return y;
 }
 
@@ -344,21 +344,21 @@ std::vector<double> SeLUvder(std::vector<double> x) {
  * @param y Input 2D vector
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
-std::vector<double> LOTA(std::vector<double>& y) {
+std::vector<float> LOTA(std::vector<float>& y) {
     if(y.size() == 1)
         return {1};
     // Create a copy of the input vector
-    std::vector<double> x(y);
+    std::vector<float> x(y);
     // Find the minimum value in the input vector
-    double min_val = 0.0;
+    float min_val = 0.0;
     min_val = *std::min_element(x.begin(), x.end());
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the vector
-    std::transform(x.begin(), x.end(), x.begin(), [&min_val](double& i){ return (i + min_val); });
+    std::transform(x.begin(), x.end(), x.begin(), [&min_val](float& i){ return (i + min_val); });
     // Calculate the sum of the elements in the vector
-    double sum = std::accumulate(x.begin(), x.end(), 0.0);
+    float sum = std::accumulate(x.begin(), x.end(), 0.0);
     // Normalize the vector by dividing each element by the sum
-    std::transform(x.begin(), x.end(), x.begin(), [&sum](double& i){ return i / sum; });
+    std::transform(x.begin(), x.end(), x.begin(), [&sum](float& i){ return i / sum; });
     return x;
 }
 
@@ -370,9 +370,9 @@ std::vector<double> LOTA(std::vector<double>& y) {
  * @param y Input 2D vector
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
-std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
+std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y) {
     // Create a copy of the input 2D vector
-    std::vector<std::vector<double>> x(y);
+    std::vector<std::vector<float>> x(y);
     if(y.size() == 1 && y[0].size() == 1) {
         for (auto& row : x) {
             std::fill(row.begin(), row.end(), 0);
@@ -381,24 +381,24 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
         return x;
     }
     // Find the minimum value in the entire 2D vector
-    double min_val = 0.0;
+    float min_val = 0.0;
     for (const auto& v: x) {
-        double val = *std::min_element(v.begin(), v.end());
+        float val = *std::min_element(v.begin(), v.end());
         if (val < min_val) { min_val = val; }
     }
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the 2D vector
     for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&min_val](double& i){ return (i + min_val); });
+        std::transform(v.begin(), v.end(), v.begin(), [&min_val](float& i){ return (i + min_val); });
     }
-    double sum = 0.0; // Variable to store the sum of all elements
+    float sum = 0.0; // Variable to store the sum of all elements
     // Calculate the sum of all elements in the 2D vector
     for (const auto& v: x) {
         sum += std::accumulate(v.begin(), v.end(), 0.0);
     }
     // Normalize each element by dividing it by the total sum
     for (auto& v: x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](double& i){ return i / sum; });
+        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return i / sum; });
     }
     return x; // Return the normalized 2D vector
 }
@@ -412,15 +412,15 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y) {
  * @param t allowable terms
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
-std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t) {
+std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y, int t) {
     // Check if the input 2D vector has the required number of terms
     if(y.size() == t) {
-        std::vector<std::vector<double>> x(y);
+        std::vector<std::vector<float>> x(y);
         x = LOTA(x);
         return x;
     }
     // Create a copy of the input 2D vector
-    std::vector<std::vector<double>> x(y);
+    std::vector<std::vector<float>> x(y);
     // Create a copy of the input 2D vector
     if(y.size() == 1 && y[0].size() == 1) {
         for (auto& row : x) {
@@ -430,7 +430,7 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t)
         return x;
     }
     // Find the minimum value in the entire 2D vector
-    double min_val = 0.0;
+    float min_val = 0.0;
     for (int i = 0; i < t; i++) {
         for(int j = 0; j < t; j++) {
             if (x[i][j] < min_val)
@@ -440,16 +440,16 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t)
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the 2D vector
     for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](double& i){ return (i + min_val); });
+        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](float& i){ return (i + min_val); });
     }
-    double sum = 0.0; // Variable to store the sum of all elements
+    float sum = 0.0; // Variable to store the sum of all elements
     // Calculate the sum of all elements in the 2D vector
     for (int i = 0; i < t; i++) {
         sum += std::accumulate(x[i].begin(), x[i].begin() + t, 0.0);
     }
     // Normalize each element by dividing it by the total sum
     for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](double& i){ return i / sum; });
+        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](float& i){ return i / sum; });
     }
     return x; // Return the normalized 2D vector
 }
@@ -462,18 +462,18 @@ std::vector<std::vector<double>> LOTA(std::vector<std::vector<double>> y, int t)
  * @param y Input vector
  * @return A vector where each element is the derivative of the LOTA function applied to the corresponding element in the input vector.
  */
-std::vector<double> LOTAder(std::vector<double>& y) {
+std::vector<float> LOTAder(std::vector<float>& y) {
     // Create a copy of the input vector
-    std::vector<double> v(y);
+    std::vector<float> v(y);
     // Find the minimum value in the entire vector
-    double min_val =  *std::min_element(v.begin(), v.end());
+    float min_val =  *std::min_element(v.begin(), v.end());
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the vector
-    std::transform(v.begin(), v.end(), v.begin(), [&min_val](double& i){ return (i + min_val); });
+    std::transform(v.begin(), v.end(), v.begin(), [&min_val](float& i){ return (i + min_val); });
     // Calculate the sum of the elements in the vector
-    double sum = std::accumulate(v.begin(), v.end(), 0.0);
+    float sum = std::accumulate(v.begin(), v.end(), 0.0);
     // Normalize the vector by dividing each element by the sum
-    std::transform(v.begin(), v.end(), v.begin(), [&sum](double& i){ return ((sum - i) / std::pow(sum, 2)); });
+    std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return ((sum - i) / std::pow(sum, 2)); });
     return v;
 }
 
@@ -486,13 +486,13 @@ std::vector<double> LOTAder(std::vector<double>& y) {
  * @return A 2D vector where each element is the derivative of the LOTA function applied 
  *         to the corresponding element in the input vector.
  */
-std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>> y) {
+std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y) {
     // Create a copy of the input 2D vector
-    std::vector<std::vector<double>> x(y);
+    std::vector<std::vector<float>> x(y);
     // Find the minimum value in the entire 2D vector
-    double min_val = 0.0; 
+    float min_val = 0.0; 
     for (const auto& v: x) {
-        double val = *std::min_element(v.begin(), v.end());
+        float val = *std::min_element(v.begin(), v.end());
         if (val < min_val) {
             min_val = val;
         }
@@ -500,18 +500,18 @@ std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>> y) {
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the 2D vector
     for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&min_val](double& i) {
+        std::transform(v.begin(), v.end(), v.begin(), [&min_val](float& i) {
             return (i + min_val);
         });
     }
-    double sum = 0.0; // Variable to store the sum of all elements
+    float sum = 0.0; // Variable to store the sum of all elements
     // Calculate the sum of all elements in the 2D vector
     for (const auto& v: x) {
         sum += std::accumulate(v.begin(), v.end(), 0.0);
     }
     // Calculate the derivative of the LOTA function for each element
     for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](double& i) {
+        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i) {
             return ((sum - i) / std::pow(sum, 2));
         });
     }
@@ -529,11 +529,11 @@ std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>> y) {
  * @return A 2D vector where each element is the derivative of the LOTA function applied 
  *         to the corresponding element in the input vector.
  */
-std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>> y, int t) {
+std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y, int t) {
     // Create a copy of the input 2D vector
-    std::vector<std::vector<double>> x(y);
+    std::vector<std::vector<float>> x(y);
     // Find the minimum value in the entire 2D vector
-    double min_val = 0.0; 
+    float min_val = 0.0; 
     for (int i = 0; i < t; i++) {
         for(int j = 0; j < t; j++) {
             if (x[i][j] < min_val)
@@ -543,16 +543,16 @@ std::vector<std::vector<double>> LOTAder(std::vector<std::vector<double>> y, int
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the 2D vector
     for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](double& i){ return (i + min_val); });
+        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](float& i){ return (i + min_val); });
     }
-    double sum = 0.0; // Variable to store the sum of all elements
+    float sum = 0.0; // Variable to store the sum of all elements
     // Calculate the sum of all elements in the 2D vector
     for (int i = 0; i < t; i++) {
         sum += std::accumulate(x[i].begin(), x[i].begin() + t, 0.0);
     }
     // Calculate the derivative of the LOTA function for each element
     for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](double& i) {
+        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](float& i) {
             return ((sum - i) / std::pow(sum, 2));
         });
     }

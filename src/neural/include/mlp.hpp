@@ -25,28 +25,28 @@ public:
 // member variables
     bool status;                // 1 if completely trained, 0 otherwise
 // member containers
-    std::vector<double> input;      // input vector
-    std::vector<double> output;     // output vector
-    std::vector<double> expected;   // expected output vectors
-    std::vector<std::vector<std::vector<double>>> weights;      // weights for matrix layer (i + h + o)
-    std::vector<std::vector<double>> hlayers;       // hidden layers
-    std::vector<std::vector<double>> activations;   // activations for each layer
-    std::vector<std::vector<std::vector<double>>> gweights;     // gradient of weights for matrix layer gradient(i + h + o)
+    std::vector<float> input;      // input vector
+    std::vector<float> output;     // output vector
+    std::vector<float> expected;   // expected output vectors
+    std::vector<std::vector<std::vector<float>>> weights;      // weights for matrix layer (i + h + o)
+    std::vector<std::vector<float>> hlayers;       // hidden layers
+    std::vector<std::vector<float>> activations;   // activations for each layer
+    std::vector<std::vector<std::vector<float>>> gweights;     // gradient of weights for matrix layer gradient(i + h + o)
 
 // member functions
     // default constructor
     mlp() = default;
-    mlp(unsigned int in, unsigned int layers, unsigned int epochs = 10, double learning = 0.01);
+    mlp(unsigned int in, unsigned int layers, unsigned int epochs = 10, float learning = 0.01);
 
     void forward(int in, int layers);
-    void backprop2in(int layers, int in, double learning);
-    void backward(int layers, int in, double learning);
-    void backprop(int layers, int in, double learning);
-    void backwithL1(int layers, int in, double learning);
-    void backwithL2(int layers, int in, double learning);
-    void rprop(std::vector<std::vector<double>>&, int layers, int in, double learning, int epochs);
-    void train(double& mse, int in, int layers, double learning);
-    void train(std::vector<std::vector<double>>&, double& mse, int in, int layers, double learning);
+    void backprop2in(int layers, int in, float learning);
+    void backward(int layers, int in, float learning);
+    void backprop(int layers, int in, float learning);
+    void backwithL1(int layers, int in, float learning);
+    void backwithL2(int layers, int in, float learning);
+    void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
+    void train(float& mse, int in, int layers, float learning);
+    void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void validate(int in, int layers);
     void test(int in, int layers);
     void initializeWeights(int in, int layers);
@@ -56,10 +56,10 @@ public:
 };
 
 // mlp-related functions
-double getL1Penalty(std::vector<std::vector<std::vector<double>>>&);
-double getL2Penalty(std::vector<std::vector<std::vector<double>>>&);
-double computeLossWithL1(std::vector<double>&, std::vector<double>&, mlp&, double);
-double computeLossWithL2(std::vector<double>&, std::vector<double>&, mlp&, double);
-double dropoutGeneralisation(std::vector<double>&, std::vector<double>&, mlp&, double);
+float getL1Penalty(std::vector<std::vector<std::vector<float>>>&);
+float getL2Penalty(std::vector<std::vector<std::vector<float>>>&);
+float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
+float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
+float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 
 #endif

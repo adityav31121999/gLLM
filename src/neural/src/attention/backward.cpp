@@ -6,8 +6,8 @@
  * @param expected expected vector
  * @param changeV 
  */
-void attention::backward(std::vector<double>& expected, std::vector<double>& changeV, std::vector<double>& dv, 
-    std::vector<double>& EV, int& in, int& layers) 
+void attention::backward(std::vector<float>& expected, std::vector<float>& changeV, std::vector<float>& dv, 
+    std::vector<float>& EV, int& in, int& layers) 
 {
     // get required changes
     hor.expected = expected;

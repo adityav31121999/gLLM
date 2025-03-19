@@ -14,7 +14,7 @@
  * @param j index of column
  * @return reference to the element at position (i, j)
  */
-double& mat::operator()(int i, int j) {
+float& mat::operator()(int i, int j) {
     return a[i][j];
 }
 
@@ -45,14 +45,14 @@ mat mat::operator=(mat b) {
 
 /**
  * @brief Overloaded assignment operator for matrix.
- * This function takes another matrix represented as a vector of vectors of doubles and assigns it to the current matrix.
+ * This function takes another matrix represented as a vector of vectors of floats and assigns it to the current matrix.
  * It checks if the dimensions of the two matrices are the same, and if not, it prints an error message and returns an empty matrix.
  * Otherwise, it copies the elements of the given matrix into the current matrix and returns the resulting matrix.
- * @param b The matrix to be assigned to the current matrix represented as a vector of vectors of doubles.
+ * @param b The matrix to be assigned to the current matrix represented as a vector of vectors of floats.
  * @return A matrix that is a copy of `b`.
  * @throws throws error if the dimensions of the two matrices are not the same.
  */
-mat mat::operator=(std::vector<std::vector<double>> b) {
+mat mat::operator=(std::vector<std::vector<float>> b) {
     // Check if the dimensions of the two matrices are the same.
     if(a.size() != b.size() || a[0].size() != b[0].size()) {
         // If the dimensions are not the same, print an error message and return an empty matrix.
@@ -90,14 +90,14 @@ mat mat::operator+(mat b) {
 
 /**
  * @brief Overloaded addition operator for matrix.
- * This function takes a vector of vectors of type `std::vector<std::vector<double>>` and adds it to the current matrix.
+ * This function takes a vector of vectors of type `std::vector<std::vector<float>>` and adds it to the current matrix.
  * It checks if the dimensions of the two matrices are the same, and if not, it prints an error message and returns an empty matrix.
  * Otherwise, it adds the elements of the two matrices and returns the resulting matrix.
  * @param b The matrix to be added to the current matrix.
  * @return A matrix that is the sum of the current matrix and `b`.
  * @throws throws error if the dimensions of the two matrices are not the same.
  */
-mat mat::operator+(std::vector<std::vector<double>> b) {
+mat mat::operator+(std::vector<std::vector<float>> b) {
     // Check if the dimensions of the two matrices are the same.
     if(a.size() != b.size() || a[0].size() != b[0].size()) {
         // If the dimensions are not the same, print an error message and return an empty matrix.
@@ -143,7 +143,7 @@ mat mat::operator-(mat b) {
  * @return A matrix that is the difference of the current matrix and `b`.
  * @throws throws error if the dimensions of the two matrices are not the same.
  */
-mat mat::operator-(std::vector<std::vector<double>> b) {
+mat mat::operator-(std::vector<std::vector<float>> b) {
     if(a.size() != b.size() || a[0].size() != b[0].size()) {
         // If the dimensions are not the same, print an error message and return an empty matrix.
         std::cerr << "Matrix sizes do not match" << std::endl;
@@ -165,7 +165,7 @@ mat mat::operator-(std::vector<std::vector<double>> b) {
  * in the input matrix and the scalar value.
  * @throws None.
  */
-mat mat::operator*(double b) {
+mat mat::operator*(float b) {
     // Create a new matrix with the same dimensions as the input matrix
     mat c(a.size(), a[0].size());
     // Iterate over each element in the input matrix and multiply it by the scalar
@@ -187,7 +187,7 @@ mat mat::operator*(double b) {
  * in the input matrix and the scalar value.
  * @throws None.
  */
-mat mat::operator/(double b) {
+mat mat::operator/(float b) {
     // Create a new matrix with the same dimensions as the input matrix
     mat c(a.size(), a[0].size());
     // Iterate over each element in the input matrix and divide it by the scalar
@@ -216,13 +216,13 @@ mat mat::operator*(mat a) {
         // use of strassens for same matrix multiplication
         if (this->row == 2) {            
             mat c(2);
-            double p1 = this->a[0][0] * (a.a[0][1] - a.a[1][1]);
-            double p2 = (this->a[0][0] + this->a[0][1]) * a.a[1][1];
-            double p3 = (this->a[1][0] + this->a[1][1]) * a.a[0][0];
-            double p4 = this->a[1][1] * (a.a[1][0] - a.a[0][0]);
-            double p5 = (this->a[0][0] + this->a[1][1]) * (a.a[0][0] + a.a[1][1]);
-            double p6 = (this->a[0][1] - this->a[1][1]) * (a.a[1][0] + a.a[1][1]);
-            double p7 = (this->a[0][0] - this->a[1][0]) * (a.a[0][0] + a.a[0][1]);
+            float p1 = this->a[0][0] * (a.a[0][1] - a.a[1][1]);
+            float p2 = (this->a[0][0] + this->a[0][1]) * a.a[1][1];
+            float p3 = (this->a[1][0] + this->a[1][1]) * a.a[0][0];
+            float p4 = this->a[1][1] * (a.a[1][0] - a.a[0][0]);
+            float p5 = (this->a[0][0] + this->a[1][1]) * (a.a[0][0] + a.a[1][1]);
+            float p6 = (this->a[0][1] - this->a[1][1]) * (a.a[1][0] + a.a[1][1]);
+            float p7 = (this->a[0][0] - this->a[1][0]) * (a.a[0][0] + a.a[0][1]);
             // calculate the four submatrices
             c.a[0][0] = p5 + p4 - p2 + p6;
             c.a[0][1] = p1 + p2;
@@ -339,7 +339,7 @@ mat mat::operator-=(mat other) {
  * @return The updated matrix after addition.
  * @throws std::runtime_error if the dimensions of the two matrices do not match.
  */
-mat mat::operator+=(std::vector<std::vector<double>> other) {
+mat mat::operator+=(std::vector<std::vector<float>> other) {
     if (this->row != other.size() || this->col != other[0].size()) {
         throw std::runtime_error("Matrix sizes do not match");
     }
@@ -360,7 +360,7 @@ mat mat::operator+=(std::vector<std::vector<double>> other) {
  * @return The updated matrix after subtraction.
  * @throws std::runtime_error if the dimensions of the two matrices do not match.
  */
-mat mat::operator-=(std::vector<std::vector<double>> other) {
+mat mat::operator-=(std::vector<std::vector<float>> other) {
     if (this->row != other.size() || this->col != other[0].size()) {
         throw std::runtime_error("Matrix sizes do not match");
     }
@@ -380,7 +380,7 @@ mat mat::operator-=(std::vector<std::vector<double>> other) {
  * @return The updated matrix after multiplication.
  * @throws None.
  */
-mat mat::operator*=(double value) {
+mat mat::operator*=(float value) {
     for (int i = 0; i < row; i++) {
         for (int j = 0; j < col; j++) {
             this->a[i][j] *= value;
@@ -423,7 +423,7 @@ mat mat::operator*=(mat other) {
  * @return The updated matrix after division.
  * @throws std::runtime_error if the scalar value is zero.
  */
-mat mat::operator/=(double value) {
+mat mat::operator/=(float value) {
     if (value == 0) {
         throw std::runtime_error("Division by zero");
     }
@@ -515,16 +515,16 @@ void mat::trnsps() {
 
 /**
  * @brief Multiplies a matrix by a vector using hadamard matrix multiplication.
- * @param[in] a 2D vector of doubles representing a matrix
- * @param[in] b 1D vector of doubles representing a vector
- * @return a 1D vector of doubles representing the result of the matrix multiplication
+ * @param[in] a 2D vector of floats representing a matrix
+ * @param[in] b 1D vector of floats representing a vector
+ * @return a 1D vector of floats representing the result of the matrix multiplication
  * @throws throws error if the sizes of the matrices are not compatible
  */
-std::vector<double> matmul(std::vector<std::vector<double>> a, std::vector<double> b) {
+std::vector<float> matmul(std::vector<std::vector<float>> a, std::vector<float> b) {
     if(a[0].size() != b.size()) {
         throw std::runtime_error("Size of matrix and vector must be the same");
     }
-    std::vector<double> c(a.size());
+    std::vector<float> c(a.size());
     for(int i = 0; i < a.size(); i++) {
         for(int j = 0; j < a[0].size(); j++) {
             c[i] += a[i][j] * b[j];
@@ -539,12 +539,12 @@ std::vector<double> matmul(std::vector<std::vector<double>> a, std::vector<doubl
  * @return The trace of the matrix.
  * @throws throws error if the matrix is not square.
  */
-double mat::trace() {
+float mat::trace() {
     // Check if the matrix is square
     if(this->ifsquare() == false) {
         throw std::invalid_argument("Matrix is not square");
     }
-    double tr = 0;  // Initialize the trace to 0
+    float tr = 0;  // Initialize the trace to 0
     int n = a.size(); // Get the number of rows and columns
     // Iterate over the main diagonal and add the elements to the trace
     for(int i = 0; i < n;i++) {
@@ -598,16 +598,16 @@ mat mat::cofac() {
  * @brief Transpose a matrix.
  * @details This function takes a 2D vector (matrix) as input and returns its transpose.
  * The transpose of a matrix is obtained by swapping its rows and columns.
- * @param b 2D vector of doubles representing the matrix to be transposed.
- * @return A 2D vector of doubles representing the transposed matrix.
+ * @param b 2D vector of floats representing the matrix to be transposed.
+ * @return A 2D vector of floats representing the transposed matrix.
  */
-std::vector<std::vector<double>> trnsps(std::vector<std::vector<double>> b) {
+std::vector<std::vector<float>> trnsps(std::vector<std::vector<float>> b) {
     if(b[0].size() != b.size()) {
         throw std::invalid_argument("Matrix is not square");
         return b;
     }
     // Create a copy of the input matrix to store the transposed matrix
-    std::vector<std::vector<double>> c = b;
+    std::vector<std::vector<float>> c = b;
     // Iterate over each element in the matrix
     for(int i = 0; i < c.size(); i++) {
         for(int j = i+1; j < c.size(); j++) {
@@ -637,14 +637,14 @@ mat mat::adjoint() {
  * @brief Compute the covariance matrix of a dataset.
  * @details This function computes the covariance matrix for a matrix of data points.
  * Each column of the input matrix represents a variable, and each row represents a data point.
- * @param a A 2D vector of doubles representing the dataset.
- * @return A 2D vector of doubles representing the covariance matrix.
+ * @param a A 2D vector of floats representing the dataset.
+ * @return A 2D vector of floats representing the covariance matrix.
  */
 mat covariance(mat a) {
     // Compute mean of each column
     mat cov(a.a.size());     // covariance matrix
     mat trnsp = a.transpose();  // transpose of matrix a
-    std::vector<double> m(a.a.size());
+    std::vector<float> m(a.a.size());
     for (int i = 0; i < a.a.size(); i++) {
         // compute mean of column i
         m.push_back(std::accumulate(trnsp.a[i].begin(), trnsp.a[i].end(), 0.0)/a.a[i].size());
@@ -661,7 +661,7 @@ mat covariance(mat a) {
         throw std::invalid_argument("Matrix size cannot be 0");
     }
     // compute covariance matrix
-    cov = (a1*trnsp)*(1/(static_cast<double>(a.a[0].size())-1));
+    cov = (a1*trnsp)*(1/(static_cast<float>(a.a[0].size())-1));
     return cov;
 }
 
@@ -669,15 +669,15 @@ mat covariance(mat a) {
  * @brief Calculate the covariance matrix of a dataset.
  * @details This function computes the covariance matrix for a matrix of data points.
  * Each column of the input matrix represents a variable, and each row represents a data point.
- * @param a A 2D vector of doubles representing the dataset.
- * @return A 2D vector of doubles representing the covariance matrix.
+ * @param a A 2D vector of floats representing the dataset.
+ * @return A 2D vector of floats representing the covariance matrix.
  */
-std::vector<std::vector<double>> covmat(std::vector<std::vector<double>> a) {
-    std::vector<double> m(a.size()); // Mean of columns of a
-    std::vector<std::vector<double>> cov(a.size(), std::vector<double>(a.size(), 0));
+std::vector<std::vector<float>> covmat(std::vector<std::vector<float>> a) {
+    std::vector<float> m(a.size()); // Mean of columns of a
+    std::vector<std::vector<float>> cov(a.size(), std::vector<float>(a.size(), 0));
     // Transpose of matrix a
-    std::vector<std::vector<double>> c(a.size(), std::vector<double>(a[0].size(), 0));
-    std::vector<std::vector<double>> d(a[0].size(), std::vector<double>(a.size(), 0));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(a[0].size(), 0));
+    std::vector<std::vector<float>> d(a[0].size(), std::vector<float>(a.size(), 0));
     // Calculate transpose
     for (int i = 0; i < a.size(); i++) {
         for (int j = 0; j < a.size(); j++) {
@@ -705,7 +705,7 @@ std::vector<std::vector<double>> covmat(std::vector<std::vector<double>> a) {
         }
     }
     // Normalize the covariance matrix
-    double normalizationFactor = 1 / (static_cast<double>(a.size()) - 1);
+    float normalizationFactor = 1 / (static_cast<float>(a.size()) - 1);
     for (int i = 0; i < cov.size(); i++) {
         for (int j = 0; j < cov[0].size(); j++) {
             cov[i][j] *= normalizationFactor;
@@ -724,7 +724,7 @@ std::vector<std::vector<double>> covmat(std::vector<std::vector<double>> a) {
 mat mat::Random(int row, int col) {
     mat result(row, col);
     std::mt19937 gen(std::random_device{}()); // Create a random number generator
-    std::normal_distribution<double> dist(-10.0, 10.0); // Create a distribution that generates random numbers between 0 and 1
+    std::normal_distribution<float> dist(-10.0, 10.0); // Create a distribution that generates random numbers between 0 and 1
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
             result.a[i][j] = dist(gen); // Generate a random number and assign it to the current position in the matrix
@@ -740,11 +740,11 @@ mat mat::Random(int row, int col) {
 * @return The dot product of the matrix and the vector
 * @throws std::runtime_error if the row vectors of the matrix have different sizes than the vector
 */
-std::vector<double> dot(mat a, std::vector<double> b) {
+std::vector<float> dot(mat a, std::vector<float> b) {
     if(a.a.empty() || a.a[0].size() != b.size())
         throw std::runtime_error("Row vectors of matrix should have the same size as the vector");
     
-    std::vector<double> c(a.a.size());
+    std::vector<float> c(a.a.size());
     
     for(size_t i = 0; i < a.a.size(); i++) {
         c[i] = std::inner_product(a.a[i].begin(), a.a[i].end(), b.begin(), 0.0);
@@ -760,11 +760,11 @@ std::vector<double> dot(mat a, std::vector<double> b) {
 * @return The dot product of the vector and the matrix
 * @throws std::runtime_error if the row vectors of the matrix have different sizes than the vector
 */
-std::vector<double> dot(std::vector<double> a, mat b) {
+std::vector<float> dot(std::vector<float> a, mat b) {
     if(b.a.empty() || b.a[0].size() != a.size())
         throw std::runtime_error("Row vectors of matrix should have the same size as the vector");
     
-    std::vector<double> c(b.a.size());
+    std::vector<float> c(b.a.size());
     
     for(size_t i = 0; i < b.a.size(); i++) {
         c[i] = std::inner_product(b.a[i].begin(), b.a[i].end(), a.begin(), 0.0);

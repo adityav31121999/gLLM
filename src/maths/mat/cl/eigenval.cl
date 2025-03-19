@@ -12,12 +12,12 @@ std::pair<mat*, mat*> eigen(mat *a) {
     int n = a->getrow();
     mat *e = new mat(n);            // eigen values
     mat *v = new mat(n);            // eigen vectors
-    double *b = new double[n];      // temporary vector
-    double *c = new double[n];      // temporary vector
-    double *z = new double[n];      // temporary vector
-    double s, h, f, g;
+    float *b = new float[n];      // temporary vector
+    float *c = new float[n];      // temporary vector
+    float *z = new float[n];      // temporary vector
+    float s, h, f, g;
     int i, its, j, k, l;
-    double anorm = 0.0;
+    float anorm = 0.0;
     // compute the norm of the matrix
     for (i = 0; i < n; i++) {
         l = 0;
@@ -153,12 +153,12 @@ std::pair<mat*, mat*> eigen(mat *a) {
  * @param a matrix input
  * @return eigen vector of matrix
  */
-std::vector<double> eigenvec(mat *a) {
+std::vector<float> eigenvec(mat *a) {
     int n = a->getrow();
-    std::vector<double> eigenvector(n, 1.0); // Initial guess for eigenvector
-    std::vector<double> temp(n, 0.0);
-    double tolerance = 1e-10;
-    double diff = 1.0;
+    std::vector<float> eigenvector(n, 1.0); // Initial guess for eigenvector
+    std::vector<float> temp(n, 0.0);
+    float tolerance = 1e-10;
+    float diff = 1.0;
     // Repeatedly multiply matrix 'a' with the current eigenvector guess
     while (diff > tolerance) {
         // Multiply matrix 'a' with the current eigenvector guess
@@ -167,13 +167,13 @@ std::vector<double> eigenvec(mat *a) {
             for (int j = 0; j < n; ++j) { temp[i] += a->a[i][j] * eigenvector[j]; }
         }
         // Normalize the result
-        double norm = 0.0;
+        float norm = 0.0;
         for (int i = 0; i < n; ++i) { norm += temp[i] * temp[i]; }
         norm = sqrt(norm);
         // Update the eigenvector and calculate the difference
         diff = 0.0;
         for (int i = 0; i < n; ++i) {
-            double new_val = temp[i] / norm;
+            float new_val = temp[i] / norm;
             diff += fabs(new_val - eigenvector[i]);
             eigenvector[i] = new_val;
         }
@@ -192,12 +192,12 @@ std::vector<double> eigenvec(mat *a) {
  * @param a matrix input
  * @return eigen values of matrix
  */
-std::vector<double> eigenval(mat *a) {
+std::vector<float> eigenval(mat *a) {
     int n = a->getrow();
-    std::vector<double> eigenvalue(n, 0.0);
+    std::vector<float> eigenvalue(n, 0.0);
     mat *b = new mat(n, n);
     int l, k, j, i, its;
-    double f, g, s, z;
+    float f, g, s, z;
     b = a;
     // QR algorithm
     for (its = 0; its < 50; its++) {

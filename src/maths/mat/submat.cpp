@@ -19,7 +19,7 @@ mat submat(mat a, unsigned int i, unsigned int j) {
     // Create a new matrix with dimensions one less than the input matrix
     mat c(a.row - 1);
     // Copy the original matrix data
-    std::vector<std::vector<double>> b(a.a);
+    std::vector<std::vector<float>> b(a.a);
     // Remove the i-th row
     b.erase(b.begin() + i);
     // Remove the j-th column from each remaining row
@@ -42,7 +42,7 @@ mat submat(mat a, unsigned int i, unsigned int j) {
  * @param j The index of the column to be removed.
  * @return A new matrix that is the result of removing the specified row and column from the input matrix.
  */
-mat submat(std::vector<std::vector<double>> a, unsigned int i, unsigned int j) {
+mat submat(std::vector<std::vector<float>> a, unsigned int i, unsigned int j) {
     if(a.size() != a[0].size()) {
         throw std::runtime_error("Matrix Should Be Square.");
         return mat(0);
@@ -51,7 +51,7 @@ mat submat(std::vector<std::vector<double>> a, unsigned int i, unsigned int j) {
     // Create a new matrix with dimensions one less than the input matrix
     mat c(a.size() - 1);
     // Copy the original matrix data
-    std::vector<std::vector<double>> b(a);
+    std::vector<std::vector<float>> b(a);
     // Remove the i-th row
     b.erase(b.begin() + i);
     // Remove the j-th column from each remaining row
@@ -67,10 +67,10 @@ mat submat(std::vector<std::vector<double>> a, unsigned int i, unsigned int j) {
 
 /**
  * @brief Converts a matrix to its row echelon form using Gaussian elimination.
- * @param a The input matrix as a 2D vector of doubles.
+ * @param a The input matrix as a 2D vector of floats.
  * @return A matrix in row echelon form.
  */
-mat rowechelon(std::vector<std::vector<double>> a) {
+mat rowechelon(std::vector<std::vector<float>> a) {
     // Initialize matrix b with the same dimensions as the input matrix
     mat b(a.size(), a[0].size());
     
@@ -97,7 +97,7 @@ mat rowechelon(std::vector<std::vector<double>> a) {
 
         // Eliminate all elements below the pivot in the current column
         for(int i = k + 1; i < b.a.size(); i++) {
-            double f = b.a[i][k];
+            float f = b.a[i][k];
             for(int j = k; j < b.a[0].size(); j++) {
                 b.a[i][j] -= b.a[k][j] * f;
             }
@@ -109,7 +109,7 @@ mat rowechelon(std::vector<std::vector<double>> a) {
 
 /**
  * @brief Converts a matrix to its row echelon form using Gaussian elimination.
- * @param a The input matrix as a 2D vector of doubles.
+ * @param a The input matrix as a 2D vector of floats.
  * @return A matrix in row echelon form.
  */
 mat rowechelon(mat a) {
@@ -141,7 +141,7 @@ mat rowechelon(mat a) {
 
         // Eliminate all elements below the pivot in the current column
         for (int i = k + 1; i < b.a.size(); i++) {
-            double f = b.a[i][k] / b.a[k][k];
+            float f = b.a[i][k] / b.a[k][k];
             for (int j = k; j < b.a[0].size(); j++) {
                 b.a[i][j] -= f * b.a[k][j];
             }
@@ -163,7 +163,7 @@ mat mat::resize(int row, int col) {
     // Create a new matrix with the specified dimensions
     mat a;
     // Resize the matrix data
-    a.a.resize(row, std::vector<double>(col, 0.0));
+    a.a.resize(row, std::vector<float>(col, 0.0));
     // Set the number of rows and columns
     a.row = row;
     a.col = col;

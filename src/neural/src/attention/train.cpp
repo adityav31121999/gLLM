@@ -11,9 +11,9 @@
  * @param tokenCount token count for each attention head (how many tokens have been generated or taken as input)
  * @param learning learning rate for MLPs
  */
-void attention::train(std::vector<std::vector<double>> &tokenEmded, std::vector<std::vector<double>> &KdotQ, std::vector<std::vector<double>> &K, 
-    std::vector<std::vector<double>> &Q, std::vector<double> &dv, std::vector<double> &EV, std::vector<double> &changeV, int &in, int &layers, 
-    int &tokenCount, double &learning, double &error)
+void attention::train(std::vector<std::vector<float>> &tokenEmded, std::vector<std::vector<float>> &KdotQ, std::vector<std::vector<float>> &K, 
+    std::vector<std::vector<float>> &Q, std::vector<float> &dv, std::vector<float> &EV, std::vector<float> &changeV, int &in, int &layers, 
+    int &tokenCount, float &learning, float &error)
 {
     // 
 }

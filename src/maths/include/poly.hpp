@@ -76,8 +76,8 @@ public:
     poly operator+(const poly);
     poly operator-(const poly);
     poly operator*(const poly);
-    poly operator*(const double);
-    poly operator/(const double);
+    poly operator*(const float);
+    poly operator/(const float);
     poly power(poly, unsigned int);
 
     poly dp_dx(poly);

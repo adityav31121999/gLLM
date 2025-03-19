@@ -11,7 +11,7 @@ void mlp::initializeWeights(int in, int layers) {
     // random number generator
     std::random_device rd;      // device
     std::mt19937 gen(rd());     // generator
-    std::normal_distribution<double> dis(0.0, 1.0);     // min and max of distribution
+    std::normal_distribution<float> dis(0.0, 1.0);     // min and max of distribution
 
     // initialize hidden to hidden weights
     for(int i = 0; i < layers; i++) {

@@ -11,13 +11,13 @@
 void mlp::forward(int in, int layers) {
     // Ensure vectors are properly initialized
     if (hlayers.size() != layers || activations.size() != layers) {
-        hlayers.resize(layers, std::vector<double>(in, 0.0));
-        activations.resize(layers, std::vector<double>(in, 0.0));
+        hlayers.resize(layers, std::vector<float>(in, 0.0));
+        activations.resize(layers, std::vector<float>(in, 0.0));
     }
 
     // Calculate activation of the first hidden layer (input to hidden)
     for (unsigned int j = 0; j < in; j++) {
-        double sum = std::inner_product(input.begin(), input.end(), weights[0][j].begin(), 0.0);
+        float sum = std::inner_product(input.begin(), input.end(), weights[0][j].begin(), 0.0);
         hlayers[0][j] = sum;
         activations[0][j] = sigmoid(sum); // Apply activation function
     }
@@ -25,7 +25,7 @@ void mlp::forward(int in, int layers) {
     // Calculate activations for the remaining hidden layers
     for (unsigned int i = 1; i < layers; i++) {
         for (unsigned int j = 0; j < in; j++) {
-            double sum = std::inner_product(activations[i-1].begin(), activations[i-1].end(), weights[i][j].begin(), 0.0);
+            float sum = std::inner_product(activations[i-1].begin(), activations[i-1].end(), weights[i][j].begin(), 0.0);
             hlayers[i][j] = sum;
             activations[i][j] = sigmoid(sum); // Apply activation function
         }

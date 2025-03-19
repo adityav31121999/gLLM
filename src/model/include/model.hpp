@@ -56,7 +56,7 @@ public:
     int l;          // layers of mlp
     int totalParams;        // total parameters of transformer
     int total;      // total tokenLimit -> t*count m * n
-    double learning;        // learning rate for MLPs
+    float learning;        // learning rate for MLPs
     transformer T;  // model with 1 transformer
     std::vector<transformer> Tg;        // model with tcount transformer
     std::vector<std::vector<std::vector<block>>> b;     // attention block (1 or many)
@@ -74,8 +74,8 @@ public:
     model() = default;
     model(int m, int x, int y, int n, int d, int h, int l);
     model(int tCount, int m, int x, int y, int n, int d, int h, int l);
-    model(int m, int x, int y, int n, int d, int h, int l, double learning);
-    model(int tCount, int m, int x, int y, int n, int d, int h, int l, double learning);
+    model(int m, int x, int y, int n, int d, int h, int l, float learning);
+    model(int tCount, int m, int x, int y, int n, int d, int h, int l, float learning);
 
     void train();
     void load();

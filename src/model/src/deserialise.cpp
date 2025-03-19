@@ -19,7 +19,7 @@ void deserialiseMAT(mat& a, FILE* file, int row, int col) {
         if (a.a[i].size() != static_cast<size_t>(col)) {
             a.a[i].resize(col);
         }
-        size_t read = fread(a.a[i].data(), sizeof(double), col, file);
+        size_t read = fread(a.a[i].data(), sizeof(float), col, file);
         if (read != static_cast<size_t>(a.col)) {
             throw std::runtime_error("Matrix data read error: expected " + 
                                    std::to_string(a.col) + " elements, got " + 
@@ -42,7 +42,7 @@ void deserialiseMLP(mlp& a, FILE* file, int layers, int neurons) {
     if (a.weights.size() != layers) {
         a.weights.resize(layers);
         for (auto& layer : a.weights) {
-            layer.resize(neurons, std::vector<double>(neurons));
+            layer.resize(neurons, std::vector<float>(neurons));
         }
     }
     
@@ -52,7 +52,7 @@ void deserialiseMLP(mlp& a, FILE* file, int layers, int neurons) {
             if (a.weights[l][i].size() != neurons) {
                 a.weights[l][i].resize(neurons);
             }
-            size_t read = fread(a.weights[l][i].data(), sizeof(double), neurons, file);
+            size_t read = fread(a.weights[l][i].data(), sizeof(float), neurons, file);
             if (read != neurons) {
                 throw std::runtime_error("MLP weights read error at layer " + std::to_string(l) + 
                                             ", neuron " + std::to_string(i));

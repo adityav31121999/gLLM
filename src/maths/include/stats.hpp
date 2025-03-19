@@ -7,21 +7,21 @@
 
 // basic functions of statistics
 
-double mean(std::vector<double> a);
-double median(std::vector<double> a);
-double mode(std::vector<double> a);
-double variance(std::vector<double> a);
-double standardDeviation(std::vector<double> a);
-double covariance(std::vector<double> a, std::vector<double> b);
-double correlation(std::vector<double> a, std::vector<double> b);
-double spearman(std::vector<double> a, std::vector<double> b);
-double rank(double val, std::vector<double> vec);
-double percentile(double p, std::vector<double> vec);
-double quartile(double q, std::vector<double> vec);
-double interquartileRange(std::vector<double> vec);
-double zScore(double val, std::vector<double> vec);
-double outlier(double val, std::vector<double> vec);
-std::vector<double> outlier(std::vector<double> vec);
+float mean(std::vector<float> a);
+float median(std::vector<float> a);
+float mode(std::vector<float> a);
+float variance(std::vector<float> a);
+float standardDeviation(std::vector<float> a);
+float covariance(std::vector<float> a, std::vector<float> b);
+float correlation(std::vector<float> a, std::vector<float> b);
+float spearman(std::vector<float> a, std::vector<float> b);
+float rank(float val, std::vector<float> vec);
+float percentile(float p, std::vector<float> vec);
+float quartile(float q, std::vector<float> vec);
+float interquartileRange(std::vector<float> vec);
+float zScore(float val, std::vector<float> vec);
+float outlier(float val, std::vector<float> vec);
+std::vector<float> outlier(std::vector<float> vec);
 
 
 #endif

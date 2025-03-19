@@ -36,35 +36,35 @@ public:
     mat MV;             // vertical value for deltas
     mat MH;             // horizontal value for deltas
 // containers
-    std::vector<std::vector<double>> K;         // keys = Tokens x MK
-    std::vector<std::vector<double>> Q;         // Querys = Tokens x MQ
-    std::vector<std::vector<double>> head;      // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar
-    std::vector<std::vector<double>> KdotQ;     // = LOTA(head, CurrentTokenCount) -> probability distribution of relation between tokens
-    std::vector<double> EH;         // Next Embedding in same block
-    std::vector<double> dh;         // sum of (KdotQ[i][j] * Keys[i] * MH)
-    std::vector<double> mh;         // ReLU of hor output
-    std::vector<double> changeH;    // change in Horizontal process as expected vector for backpropagation in hor mlp
+    std::vector<std::vector<float>> K;         // keys = Tokens x MK
+    std::vector<std::vector<float>> Q;         // Querys = Tokens x MQ
+    std::vector<std::vector<float>> head;      // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar
+    std::vector<std::vector<float>> KdotQ;     // = LOTA(head, CurrentTokenCount) -> probability distribution of relation between tokens
+    std::vector<float> EH;         // Next Embedding in same block
+    std::vector<float> dh;         // sum of (KdotQ[i][j] * Keys[i] * MH)
+    std::vector<float> mh;         // ReLU of hor output
+    std::vector<float> changeH;    // change in Horizontal process as expected vector for backpropagation in hor mlp
 
 // functions
     // default constructor
     attention() = default;
     attention(int n, int d, int h, int l);
     // compute attention
-    void computeAttention(std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& Keys, std::vector<std::vector<double>>& Queries, int count);
+    void computeAttention(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int count);
     // forward propagation for both first and specific block's attention
-    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K, 
-                    std::vector<std::vector<double>>& Q, std::vector<double>& dv, std::vector<double>& EV, std::vector<double>& changeV, int& in, 
+    void forprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
+                    std::vector<std::vector<float>>& Q, std::vector<float>& dv, std::vector<float>& EV, std::vector<float>& changeV, int& in, 
                     int& layers, int& tokenCount);
-    void forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K, 
-                    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& EVp, std::vector<double>& dv, std::vector<double>& EVc, 
-                    std::vector<double>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
+    void forprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
+                    std::vector<std::vector<float>>& Q, std::vector<std::vector<float>>& EVp, std::vector<float>& dv, std::vector<float>& EVc, 
+                    std::vector<float>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     // backward propagation
-    void backward(std::vector<double>& expected, std::vector<double>& changeV, std::vector<double>& dv, std::vector<double>& EV,
+    void backward(std::vector<float>& expected, std::vector<float>& changeV, std::vector<float>& dv, std::vector<float>& EV,
                     int& in, int& layers);
     // train the attention class
-    void train(std::vector<std::vector<double>>& tokenEmded, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K, 
-                    std::vector<std::vector<double>>& Q, std::vector<double>& dv, std::vector<double>& EV, std::vector<double>& changeV, int& in, 
-                    int& layers, int& tokenCount, double& learning, double& error);
+    void train(std::vector<std::vector<float>>& tokenEmded, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
+                    std::vector<std::vector<float>>& Q, std::vector<float>& dv, std::vector<float>& EV, std::vector<float>& changeV, int& in, 
+                    int& layers, int& tokenCount, float& learning, float& error);
 
     // default destructor
     ~attention() = default;

@@ -22,8 +22,8 @@
  * @param in input token count
  * @param tokenCount token count for each attention head (hiw many tokens have been generated or taken as input)
  */
-void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<double>& dv, std::vector<double>& EV, std::vector<double>& changeV, int& in, int& layers, 
+void attention::forprop(std::vector<std::vector<float>>& tokens, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<float>& dv, std::vector<float>& EV, std::vector<float>& changeV, int& in, int& layers, 
     int& tokenCount)
 {
     // head calculation by inner product of KEYS and QUERYS
@@ -94,9 +94,9 @@ void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<st
  * @param blockCount which block is being processed
  * @param n number of tokens for each attention head
  */
-void attention::forprop(std::vector<std::vector<double>>& tokens, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K, 
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& EVp, std::vector<double>& dv, std::vector<double>& EVc, 
-    std::vector<double>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n)
+void attention::forprop(std::vector<std::vector<float>>& tokens, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<float>>& EVp, std::vector<float>& dv, std::vector<float>& EVc, 
+    std::vector<float>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n)
 {
     // KdotQ calculation by inner product of KEYS and QUERYS
     if(blockCount == 0) {

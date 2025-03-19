@@ -15,18 +15,18 @@ std::pair<mat*, mat*> makeOrthogonalMatrix(mat *a) {
     // Compute the QR decomposition
     for(int k = 0; k < std::min(m, n); k++) {
         // Compute the kth column of Q
-        double *v = new double[m];
+        float *v = new float[m];
         for(int i = 0; i < m; i++) {
             v[i] = a->a[i][k];
         }
 
-        double *u = householder(v, m, k);
-        double *qk = householderTransform(u, m, k);
+        float *u = householder(v, m, k);
+        float *qk = householderTransform(u, m, k);
 
         // Compute the kth row of R
-        double *rk = new double[n];
+        float *rk = new float[n];
         for(int j = 0; j < n; j++) {
-            double sum = 0;
+            float sum = 0;
             for(int i = 0; i < m; i++) {
                 sum += a->a[i][j] * qk[i];
             }
@@ -62,14 +62,14 @@ std::pair<mat*, mat*> qrdecom(mat *a) {
     // Compute the QR decomposition
     for(int k = 0; k < std::min(m, n); k++) {
         // Compute the kth column of Q
-        double *v = new double[m];
+        float *v = new float[m];
         for(int i = 0; i < m; i++) { v[i] = a->a[i][k]; }
-        double *u = householder(v, m, k);
-        double *qk = householderTransform(u, m, k);
+        float *u = householder(v, m, k);
+        float *qk = householderTransform(u, m, k);
         // Compute the kth row of R
-        double *rk = new double[n];
+        float *rk = new float[n];
         for(int j = 0; j < n; j++) {
-            double sum = 0;
+            float sum = 0;
             for(int i = 0; i < m; i++) { sum += a->a[i][j] * qk[i]; }
             rk[j] = sum;
         }

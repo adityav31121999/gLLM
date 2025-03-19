@@ -14,8 +14,8 @@ mat jacobian(mat *a) {
 /// @brief 
 /// @param a 
 /// @return 
-double jacobianval(mat *a) {
-    double val = 0;
+float jacobianval(mat *a) {
+    float val = 0;
 
     return val;
 }

@@ -8,7 +8,7 @@
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)
  */
-void mlp::train(double& mse, int in, int layers, double learning) {
+void mlp::train(float& mse, int in, int layers, float learning) {
     unsigned int e = 0;
     while (1) {
         forward(in, layers);
@@ -27,9 +27,9 @@ void mlp::train(double& mse, int in, int layers, double learning) {
  * (error threshold: 10^-6)
  * @param inputs 2D vector of Multiple Inputs
  */
-void mlp::train(std::vector<std::vector<double>>& inputs, double& mse, int in, int layers, double learning) {
+void mlp::train(std::vector<std::vector<float>>& inputs, float& mse, int in, int layers, float learning) {
     unsigned int e = 0;
-    double total_mse = 0.0;
+    float total_mse = 0.0;
     while (1) {
         for (const auto& single_input : inputs) {
             // Set the current input
@@ -37,7 +37,7 @@ void mlp::train(std::vector<std::vector<double>>& inputs, double& mse, int in, i
             // Perform forward propagation
             forward(in, layers);
             // Calculate mean squared error for the current input
-            double current_mse = 0.0;
+            float current_mse = 0.0;
             for (size_t i = 0; i < output.size(); ++i) {
                 current_mse += std::pow(expected[i] - output[i], 2);
             }
@@ -61,15 +61,15 @@ void mlp::train(std::vector<std::vector<double>>& inputs, double& mse, int in, i
  */
 void mlp::validate(int in, int layers) {
     // Assuming validation data is available in some form
-    std::vector<double> validation_input(in, 0.0);      // Replace with actual validation input
-    std::vector<double> validation_expected(in, 0.0);  // Replace with actual expected output
+    std::vector<float> validation_input(in, 0.0);      // Replace with actual validation input
+    std::vector<float> validation_expected(in, 0.0);  // Replace with actual expected output
     // Set the input and expected output for validation
     input = validation_input;
     expected = validation_expected;
     // Perform forward propagation
     forward(in, layers);
     // Calculate mean squared error
-    double mse = 0.0;
+    float mse = 0.0;
     for (size_t i = 0; i < output.size(); ++i) {
         mse += std::pow(expected[i] - output[i], 2);
     }
@@ -82,8 +82,8 @@ void mlp::validate(int in, int layers) {
  */
 void mlp::test(int in, int layers) {
     // Assuming test data is available in some form
-    std::vector<double> test_input(in, 0.0);        // Replace with actual test input
-    std::vector<double> test_expected(in, 0.0);    // Replace with actual expected output
+    std::vector<float> test_input(in, 0.0);        // Replace with actual test input
+    std::vector<float> test_expected(in, 0.0);    // Replace with actual expected output
     // Set the input and expected output for testing
     input = test_input;
     expected = test_expected;

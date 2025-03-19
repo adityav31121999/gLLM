@@ -40,7 +40,7 @@ public:
     int d;          // token dimension
     int h;          // height of MQ, MK and columns of MV, MH
     int l;          // layers of mlp
-    double learning;        // learning rate for MLPs
+    float learning;        // learning rate for MLPs
     int epochs;             // number of epochs for MLPs
     int reps;               // repetitions for conversation when totalTokens is reahced and more needed till TERMINATE is met
     std::vector<block> b;   // attention block (1 or many)
@@ -48,11 +48,11 @@ public:
     std::vector<std::string> expected;  // expected token output
     std::vector<std::string> toutput;   // predicted token output
     std::vector<std::string> token;     // Hold all input, generated or predicted tokens till TERMINATOR MEETS
-    std::vector<std::vector<double>> tokenEmbed;        // token embedding
-    std::vector<std::vector<std::vector<double>>> holdEVs;      // hold all EVs for backpropagation
-    std::vector<std::vector<std::vector<double>>> holddVs;      // hold all dVs for backpropagation
-    std::vector<std::vector<std::vector<double>>> changeVs;     // change in dVs for backpropagation
-    std::vector<std::vector<std::vector<double>>> errMLP;       // error of all MLPs
+    std::vector<std::vector<float>> tokenEmbed;        // token embedding
+    std::vector<std::vector<std::vector<float>>> holdEVs;      // hold all EVs for backpropagation
+    std::vector<std::vector<std::vector<float>>> holddVs;      // hold all dVs for backpropagation
+    std::vector<std::vector<std::vector<float>>> changeVs;     // change in dVs for backpropagation
+    std::vector<std::vector<std::vector<float>>> errMLP;       // error of all MLPs
     int totalParams;        // total parameters of transformer
     int blockCount;         // which block is working
     int tokenCount;         // how many tokens have been generated
@@ -64,12 +64,12 @@ public:
     transformer(int m, int x, int y, int n, int d, int h, int l);
 // training
     // forward propagation for single-block and multi-block
-    void forward(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-                    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
-                    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers);
-    void forward(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-                    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EVp, 
-                    std::vector<std::vector<std::vector<double>>>& EVc, std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, 
+    void forward(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+                    std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EV, 
+                    std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, int& layers);
+    void forward(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+                    std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EVp, 
+                    std::vector<std::vector<std::vector<float>>>& EVc, std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, 
                     int& layers, int& blockCount);
     // fine tune
     void fineTune();        // fine-tune transformer => altering certain properties while training
@@ -85,7 +85,7 @@ public:
     // instruct model
     void instruct();        // instruct the transformer to do something
 // set properties for transformer
-    void setLearning(double learning);      // set learning rate for MLPs
+    void setLearning(float learning);      // set learning rate for MLPs
 
     // default destructor
     ~transformer() = default;

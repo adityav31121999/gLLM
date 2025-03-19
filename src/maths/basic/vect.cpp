@@ -5,12 +5,12 @@
 
 /**
  * @brief Checks if two vectors are equal.
- * This function takes two vectors of doubles as an input and returns true if they are equal and false otherwise.
+ * This function takes two vectors of floats as an input and returns true if they are equal and false otherwise.
  * @param a first vector
  * @param b second vector
  * @return true if the vectors are equal, false otherwise
  */
-bool operator==(std::vector<double> a, std::vector<double> b) {
+bool operator==(std::vector<float> a, std::vector<float> b) {
     if (a.size() != b.size()) {
         return false;
     }
@@ -24,12 +24,12 @@ bool operator==(std::vector<double> a, std::vector<double> b) {
 
 /**
  * @brief Checks if two vectors are not equal.
- * This function takes two vectors of doubles as an input and returns true if they are not equal and false otherwise.
+ * This function takes two vectors of floats as an input and returns true if they are not equal and false otherwise.
  * @param a first vector
  * @param b second vector
  * @return true if the vectors are not equal, false otherwise
  */
-bool operator!=(std::vector<double> a, std::vector<double> b) {
+bool operator!=(std::vector<float> a, std::vector<float> b) {
     return !(a == b);
 }
 
@@ -42,11 +42,11 @@ bool operator!=(std::vector<double> a, std::vector<double> b) {
  * @return a vector where each element is the sum of the corresponding elements of the 
  * input vectors
  */
-std::vector<double> operator+(std::vector<double>x, std::vector<double> y) {
+std::vector<float> operator+(std::vector<float>x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
-    std::vector<double> result(x.size());
+    std::vector<float> result(x.size());
     std::transform(x.begin(), x.end(), y.begin(), result.begin(), [](const auto& i, const auto& j) { return i+j; });
     return result;
 }
@@ -60,11 +60,11 @@ std::vector<double> operator+(std::vector<double>x, std::vector<double> y) {
  * @return a vector where each element is the difference between the corresponding elements of 
  * the input vectors
  */
-std::vector<double> operator-(std::vector<double>x, std::vector<double> y) {
+std::vector<float> operator-(std::vector<float>x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
-    std::vector<double> result(x.size());
+    std::vector<float> result(x.size());
     std::transform(x.begin(), x.end(), y.begin(), result.begin(), [](const auto& i, const auto& j) { return i-j; });
     return result;
 }
@@ -78,8 +78,8 @@ std::vector<double> operator-(std::vector<double>x, std::vector<double> y) {
  * @return a vector where each element is the product of the corresponding elements of the
  * input vector and number
  */
-std::vector<double> operator*(std::vector<double> x, double y) {
-    std::vector<double> result(x.size());
+std::vector<float> operator*(std::vector<float> x, float y) {
+    std::vector<float> result(x.size());
     std::transform(x.begin(), x.end(), result.begin(), [&y](const auto& i) { return i*y; });
     return result;
 }
@@ -93,8 +93,8 @@ std::vector<double> operator*(std::vector<double> x, double y) {
  * @return a vector where each element is the product of the corresponding elements of the
  * input vector and number
  */
-std::vector<double> operator*(double a, std::vector<double> b) {
-    std::vector<double> c(b.size(), 0.0);
+std::vector<float> operator*(float a, std::vector<float> b) {
+    std::vector<float> c(b.size(), 0.0);
     for(int i = 0; i < b.size(); i++) {
         c[i] = b[i] * a;
     }
@@ -110,11 +110,11 @@ std::vector<double> operator*(double a, std::vector<double> b) {
  * @return a vector where each element is the division of the corresponding elements of the
  * input vector and number
  */
-std::vector<double> operator/(std::vector<double> x, double y) {
+std::vector<float> operator/(std::vector<float> x, float y) {
     if(y == 0) {
         throw std::runtime_error("Division by zero is undefined");
     }
-    std::vector<double> result(x.size());
+    std::vector<float> result(x.size());
     std::transform(x.begin(), x.end(), result.begin(), [&y](const auto& i) { return i/y; });
     return result;
 }
@@ -129,11 +129,11 @@ std::vector<double> operator/(std::vector<double> x, double y) {
  * @return a matrix where each element is the sum of the corresponding elements of the input 
  * matrices
  */
-std::vector<std::vector<double>> operator+(std::vector<std::vector<double>> x, std::vector<std::vector<double>> y) {
+std::vector<std::vector<float>> operator+(std::vector<std::vector<float>> x, std::vector<std::vector<float>> y) {
     if(x.size() != y.size() && x[0].size() != y[0].size()) {
         throw std::runtime_error("Matrices must be of the same size");
     }
-    std::vector<std::vector<double>> a(x.size(), std::vector<double>(x[0].size()));
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
     for(int i = 0; i < x.size(); ++i) {
         std::transform(x[i].begin(), x[i].end(), y[i].begin(), a[i].begin(), [](const auto& j, const auto& k) { return j+k; });
     }
@@ -149,11 +149,11 @@ std::vector<std::vector<double>> operator+(std::vector<std::vector<double>> x, s
  * @param y second matrix
  * @return a matrix where each element is the sum of the corresponding elements of the input matrices
  */
-std::vector<std::vector<double>> operator-(std::vector<std::vector<double>> x, std::vector<std::vector<double>> y) {
+std::vector<std::vector<float>> operator-(std::vector<std::vector<float>> x, std::vector<std::vector<float>> y) {
     if(x.size() != y.size() && x[0].size() != y[0].size()) {
         throw std::runtime_error("Matrices must be of the same size");
     }
-    std::vector<std::vector<double>> a(x.size(), std::vector<double>(x[0].size()));
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
     for(int i = 0; i < x.size(); ++i) {
         std::transform(x[i].begin(), x[i].end(), y[i].begin(), a[i].begin(), [](const auto& j, const auto& k) { return j-k; });
     }
@@ -170,9 +170,9 @@ std::vector<std::vector<double>> operator-(std::vector<std::vector<double>> x, s
  * @return a matrix where each element is the product of the corresponding elements of the input
  * matrix and the number
  */
-std::vector<std::vector<double>> operator*(std::vector<std::vector<double>> x, double y) {
+std::vector<std::vector<float>> operator*(std::vector<std::vector<float>> x, float y) {
     // Create a new matrix where each element is the product of the corresponding elements of the input matrix and the number
-    std::vector<std::vector<double>> a(x.size(), std::vector<double>(x[0].size()));
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
     for(int i = 0; i < x.size(); ++i) {
         // Use the std::transform algorithm to fill the matrix with the product of the corresponding elements of the input matrix and the number
         std::transform(x[i].begin(), x[i].end(), a[i].begin(), [&y](const auto& j) { return j*y; });
@@ -190,11 +190,11 @@ std::vector<std::vector<double>> operator*(std::vector<std::vector<double>> x, d
  * @return a matrix where each element is the division of the corresponding elements of the input
  * matrix by the number
  */
-std::vector<std::vector<double>> operator/(std::vector<std::vector<double>> x, double y) {
+std::vector<std::vector<float>> operator/(std::vector<std::vector<float>> x, float y) {
     if(y == 0) {
         throw std::runtime_error("Division by zero is undefined");
     }
-    std::vector<std::vector<double>> a(x.size(), std::vector<double>(x[0].size()));
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
     for(int i = 0; i < x.size(); ++i) {
         std::transform(x[i].begin(), x[i].end(), a[i].begin(), [&y](const auto& j) { return j/y; });
     }
@@ -203,21 +203,21 @@ std::vector<std::vector<double>> operator/(std::vector<std::vector<double>> x, d
 }
 
 /**
- * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of doubles 
- * and two unsigned integers as input and returns a 2D vector of doubles. The two unsigned 
+ * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of floats 
+ * and two unsigned integers as input and returns a 2D vector of floats. The two unsigned 
  * integers represent the number of rows and columns in the output matrix.
- * @param vec 1D vector of doubles
+ * @param vec 1D vector of floats
  * @param row number of rows in the output matrix
  * @param col number of columns in the output matrix
- * @return a 2D vector of doubles
+ * @return a 2D vector of floats
  */
-std::vector<std::vector<double>> vec2mat(std::vector<double> vec, unsigned int row, unsigned int col) {
+std::vector<std::vector<float>> vec2mat(std::vector<float> vec, unsigned int row, unsigned int col) {
     // Check if the size of the input vector is equal to the product of row and col
     if (vec.size() != row * col) {
         throw std::runtime_error("Vector size is not equal to row * col");
     }
-    // Create a 2D vector of doubles with the given number of rows and columns
-    std::vector<std::vector<double>> m = std::vector(row, std::vector<double>(col, 0.0));
+    // Create a 2D vector of floats with the given number of rows and columns
+    std::vector<std::vector<float>> m = std::vector(row, std::vector<float>(col, 0.0));
     // Iterate over the elements of the input vector and assign them to the corresponding elements of the output matrix
     for (unsigned int i = 0; i < row; ++i) {
         for (unsigned int j = 0; j < col; ++j) {
@@ -229,17 +229,17 @@ std::vector<std::vector<double>> vec2mat(std::vector<double> vec, unsigned int r
 }
 
 /**
- * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of doubles 
- * and two unsigned integers as input and returns a 2D vector of doubles. The two unsigned 
+ * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of floats 
+ * and two unsigned integers as input and returns a 2D vector of floats. The two unsigned 
  * integers represent the number of rows and columns in the output matrix.
- * @param vec 1D vector of doubles
+ * @param vec 1D vector of floats
  * @param row number of rows in the output matrix
  * @param col number of columns in the output matrix
- * @return a 2D vector of doubles
+ * @return a 2D vector of floats
  */
-std::vector<double> mat2vec(std::vector<std::vector<double>> m) {
-    // Create a 2D vector of doubles with the given number of rows and columns
-    std::vector<double> vec(m.size() * m[0].size());
+std::vector<float> mat2vec(std::vector<std::vector<float>> m) {
+    // Create a 2D vector of floats with the given number of rows and columns
+    std::vector<float> vec(m.size() * m[0].size());
     // Iterate over the elements of the input vector and assign them to the corresponding elements of the output matrix
     for (unsigned int i = 0; i < m.size(); ++i) {
         for (unsigned int j = 0; j < m[0].size(); ++j) {
@@ -252,47 +252,47 @@ std::vector<double> mat2vec(std::vector<std::vector<double>> m) {
 
 /**
  * @brief Calculates the sum of the elements in a vector.
- * This function takes a vector of doubles as an input and returns the sum of all its elements.
- * @param a vector of doubles
+ * This function takes a vector of floats as an input and returns the sum of all its elements.
+ * @param a vector of floats
  * @return the sum of the elements in the vector
  */
-double sum(std::vector<double> a) {
+float sum(std::vector<float> a) {
     return std::accumulate(a.begin(), a.end(), 0.0);
 }
 
 /**
  * @brief Calculates the sum of all elements in a 2D vector.
- * This function takes a 2D vector of doubles as input and returns the sum of all its elements.
+ * This function takes a 2D vector of floats as input and returns the sum of all its elements.
  * Internally, it computes the sum of each row and then sums up these row sums.
- * @param a 2D vector of doubles
+ * @param a 2D vector of floats
  * @return the sum of all elements in the 2D vector
  */
-double sum(std::vector<std::vector<double>> a) {
+float sum(std::vector<std::vector<float>> a) {
     // Sum the elements of each row using sumofrow and then sum those results
     return sum(sumofrow(a));
 }
 
 /**
  * @brief Calculates the product of the elements in a vector.
- * This function takes a vector of doubles as an input and returns the product of all its elements.
- * @param a vector of doubles
+ * This function takes a vector of floats as an input and returns the product of all its elements.
+ * @param a vector of floats
  * @return the product of the elements in the vector
  */
-double product(std::vector<double> a) {
-    return std::accumulate(a.begin(), a.end(), 1.0, std::multiplies<double>());
+float product(std::vector<float> a) {
+    return std::accumulate(a.begin(), a.end(), 1.0, std::multiplies<float>());
 }
 
 /**
  * @brief Calculates the product of all elements in a 2D vector.
- * This function takes a 2D vector of doubles as input and returns the product of all its elements.
+ * This function takes a 2D vector of floats as input and returns the product of all its elements.
  * Internally, it first calculates the sum of each row using sumofrow and then calculates the product of these row sums.
- * @param a 2D vector of doubles
+ * @param a 2D vector of floats
  * @return the product of all elements in the 2D vector
  */
-double product(std::vector<std::vector<double>> b) {
-    double a = 1;
+float product(std::vector<std::vector<float>> b) {
+    float a = 1;
     for(int i = 0; i < b.size(); i++) {
-        a *= std::accumulate(b[i].begin(), b[i].end(), 1.0, std::multiplies<double>());
+        a *= std::accumulate(b[i].begin(), b[i].end(), 1.0, std::multiplies<float>());
     }
     return a;
 }
@@ -304,11 +304,11 @@ double product(std::vector<std::vector<double>> b) {
  * @return The product of the matrix with itself
  * @throws std::runtime_error if the input matrix is empty
  */
-std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>> a) {
+std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>> a) {
     if(a.empty()) 
         throw std::runtime_error("embeddings must not be empty");
 
-    std::vector<std::vector<double>> c(a.size(), std::vector<double>(a.size(), 0.0));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(a.size(), 0.0));
     
     for(size_t i = 0; i < a.size(); i++) {
         for(size_t j = 0; j < a.size(); j++) {
@@ -327,11 +327,11 @@ std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>> a) {
  * @return The product of the two matrices
  * @throws std::runtime_error if the rows of the matrices are not of equal sizes
  */
-std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>> a, std::vector<std::vector<double>> b) {
+std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>> a, std::vector<std::vector<float>> b) {
     if(a.empty() || b.empty() || a[0].size() != b[0].size()) 
         throw std::runtime_error("Rows must be of equal sizes");
 
-    std::vector<std::vector<double>> c(a.size(), std::vector<double>(b[0].size(), 0.0));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(b[0].size(), 0.0));
     
     for(size_t i = 0; i < a.size(); i++) {
         for(size_t j = 0; j < b.size(); j++) {
@@ -344,29 +344,29 @@ std::vector<std::vector<double>> iproduct(std::vector<std::vector<double>> a, st
 
 /**
  * @brief Calculates the power of each element in a vector.
- * This function takes a vector of doubles as an input and returns a new vector where each element is the 
+ * This function takes a vector of floats as an input and returns a new vector where each element is the 
  * result of raising the corresponding element of the input vector to the power of y.
- * @param x vector of doubles
+ * @param x vector of floats
  * @param y power to raise the elements of x to
  * @return a new vector where each element is the result of raising the corresponding element of x to the power of y
  */
-std::vector<double> power(std::vector<double> x, double y) {
-    std::vector<double> result(x.size());
+std::vector<float> power(std::vector<float> x, float y) {
+    std::vector<float> result(x.size());
     std::transform(x.begin(), x.end(), result.begin(),
-                   [y](double value) { return std::pow(value, y); });
+                   [y](float value) { return std::pow(value, y); });
     return result;
 }
 
 /**
  * @brief Calculates the power of each element in a 2D vector.
- * This function takes a 2D vector of doubles as an input and returns a new 2D vector where each element is the 
+ * This function takes a 2D vector of floats as an input and returns a new 2D vector where each element is the 
  * result of raising the corresponding element of the input vector to the power of y.
- * @param x 2D vector of doubles
+ * @param x 2D vector of floats
  * @param y power to raise the elements of x to
  * @return a new 2D vector where each element is the result of raising the corresponding element of x to the power of y
  */
-std::vector<std::vector<double>> power(std::vector<std::vector<double>> x, double y) {
-    std::vector<std::vector<double>> result(x.size(), std::vector<double>(x[0].size()));
+std::vector<std::vector<float>> power(std::vector<std::vector<float>> x, float y) {
+    std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     std::transform(x.begin(), x.end(), result.begin(),
                    [y](const auto& row) { return power(row, y); });
     return result;
@@ -378,12 +378,12 @@ std::vector<std::vector<double>> power(std::vector<std::vector<double>> x, doubl
  * @param a 2D vector
  * @return a vector of sums of each row
  */
-std::vector<double> sumofrow(std::vector<std::vector<double>> a) {
-    std::vector<double> b(a.size());
+std::vector<float> sumofrow(std::vector<std::vector<float>> a) {
+    std::vector<float> b(a.size());
     // use std::transform to sum each row
     std::transform(a.begin(), a.end(), b.begin(),
                    // lambda to sum each row
-                   [](const auto& row) { return std::accumulate(row.begin(), row.end(), 0.0); });
+                   [](const auto& row) { return std::accumulate(row.begin(), row.end(), 0.0f); });
     // return the result
     return b;
 }
@@ -393,9 +393,9 @@ std::vector<double> sumofrow(std::vector<std::vector<double>> a) {
  * @param a 2D vector
  * @return a vector of sums of each column
  */
-std::vector<double> sumofcol(std::vector<std::vector<double>> a) {
+std::vector<float> sumofcol(std::vector<std::vector<float>> a) {
     // Create a vector to hold the sum of each column
-    std::vector<double> b(a[0].size());
+    std::vector<float> b(a[0].size());
     // Iterate through each column
     for (int i = 0; i < a[0].size(); i++) {
         // Iterate through each row in the column
@@ -419,12 +419,12 @@ std::vector<double> sumofcol(std::vector<std::vector<double>> a) {
  * @param y second vector
  * @return a vector of errors
  */
-std::vector<double> error(std::vector<double> x, std::vector<double> y) {
+std::vector<float> error(std::vector<float> x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a vector to hold the errors
-    std::vector<double> b(x.size());
+    std::vector<float> b(x.size());
     // Use std::transform to calculate the error
     std::transform(x.begin(), x.end(), y.begin(), b.begin(), \
                 // lambda to calculate the error
@@ -442,8 +442,8 @@ std::vector<double> error(std::vector<double> x, std::vector<double> y) {
  * @param[in] v2 The second vector (actual values).
  * @return The mean error between the two vectors.
  */
-double errorofv(std::vector<double> v1, std::vector<double> v2) {
-    double error = 0.0;
+float errorofv(std::vector<float> v1, std::vector<float> v2) {
+    float error = 0.0;
     for(int i = 0; i < v1.size(); i++) {
         // Accumulate the error as the difference between corresponding elements
         error += v1[i] - v2[i];
@@ -461,10 +461,10 @@ double errorofv(std::vector<double> v1, std::vector<double> v2) {
  * @param b The second vector.
  * @return The mean squared error between the two vectors.
  */
-double MSE(std::vector<double> a, std::vector<double> b) {
+float MSE(std::vector<float> a, std::vector<float> b) {
     if(a.size() != b.size())
         throw std::runtime_error("Same Size Vectors are ALLOWED only");
-    double sum = 0.0;
+    float sum = 0.0;
     for(int i = 0; i < a.size(); i++) {
         // Calculate the squared difference between the elements of the two vectors
         sum += pow(a[i] - b[i], 2);
@@ -478,11 +478,11 @@ double MSE(std::vector<double> a, std::vector<double> b) {
  * @param v2 The second vector: produced.
  * @return A vector containing the error between the two vectors as a fraction of the first vector.
  */
-std::vector<double> percenterrorofvec(std::vector<double> v1, std::vector<double> v2) {
+std::vector<float> percenterrorofvec(std::vector<float> v1, std::vector<float> v2) {
     if(v1.size() != v2.size()) {
         throw std::runtime_error("Vectors must be of the same size, enlarge or shorten any one.");
     }
-    std::vector<double> error;
+    std::vector<float> error;
     for(int i = 0; i < v1.size(); i++) {
         // Calculate the error between the two vectors as a fraction of the first vector.
         error.push_back((v1[i] - v2[i])*100/v1[i]);
@@ -497,11 +497,11 @@ std::vector<double> percenterrorofvec(std::vector<double> v1, std::vector<double
  * @param size Size of the vectors
  * @return The gradient descent output
  */
-std::vector<double> gradient_descent(std::vector<double> y_true, std::vector<double> y_pred, double learning_rate) {
+std::vector<float> gradient_descent(std::vector<float> y_true, std::vector<float> y_pred, float learning_rate) {
     if(y_true.size() != y_pred.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
-    std::vector<double> dw(y_true.size(), 0.0);
+    std::vector<float> dw(y_true.size(), 0.0);
     for (size_t i = 0; i < y_true.size(); i++) {
         dw[i] = learning_rate * (y_true[i] - y_pred[i]);
     }
@@ -517,12 +517,12 @@ std::vector<double> gradient_descent(std::vector<double> y_true, std::vector<dou
  * @param y second vector
  * @return the sum of the errors
  */
-double gradientdesc1(std::vector<double> x, std::vector<double> y) {
+float gradientdesc1(std::vector<float> x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a vector to hold the errors
-    std::vector<double> b(x.size());
+    std::vector<float> b(x.size());
     // Use std::transform to calculate the error
     std::transform(x.begin(), x.end(), y.begin(), b.begin(), \
                 // lambda to calculate the error
@@ -540,12 +540,12 @@ double gradientdesc1(std::vector<double> x, std::vector<double> y) {
  * @param y second vector
  * @return a matrix where each element is the product of the corresponding elements of the input vectors
  */
-std::vector<std::vector<double>> vxv2mat(std::vector<double> x, std::vector<double> y) {
+std::vector<std::vector<float>> vxv2mat(std::vector<float> x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a matrix to hold the result
-    std::vector<std::vector<double>> a(x.size(), std::vector<double>(y.size()));
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(y.size()));
     // Iterate through each element in the matrix and calculate the product
     for (int i = 0; i < x.size(); i++) {
         for (int j = 0; j < y.size(); j++) {
@@ -566,12 +566,12 @@ std::vector<std::vector<double>> vxv2mat(std::vector<double> x, std::vector<doub
  * @return a new vector where each element is the product of the corresponding
  * elements of the input vectors
  */
-std::vector<double> vxv2v(std::vector<double> x, std::vector<double> y) {
+std::vector<float> vxv2v(std::vector<float> x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a matrix to hold the result
-    std::vector<std::vector<double>> a(vxv2mat(x, y));
+    std::vector<std::vector<float>> a(vxv2mat(x, y));
     // Return the resulting matrix
     return sumofrow(a);
 }
@@ -585,12 +585,12 @@ std::vector<double> vxv2v(std::vector<double> x, std::vector<double> y) {
  * @return a new vector where each element is the product of the corresponding
  * elements of the input vectors
  */
-std::vector<double> vdotv2v(std::vector<double> x, std::vector<double> y) {
+std::vector<float> vdotv2v(std::vector<float> x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a vector to hold the result
-    std::vector<double> a(x.size());
+    std::vector<float> a(x.size());
     // Iterate through each element in the vector and calculate the product
     for (int i = 0; i < x.size(); i++) {
         // Calculate the product of the corresponding elements of the input vectors
@@ -608,12 +608,12 @@ std::vector<double> vdotv2v(std::vector<double> x, std::vector<double> y) {
  * @param y second vector
  * @return the sum of the products of the corresponding elements of the input vectors
  */
-double vdotv2val(std::vector<double> x, std::vector<double> y) {
+float vdotv2val(std::vector<float> x, std::vector<float> y) {
     if(x.size() != y.size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Initialize the sum of products to 0
-    double a = 0;
+    float a = 0;
     for (int i = 0; i < x.size(); i++) {
         a += x[i] * y[i];
     }
@@ -629,8 +629,8 @@ double vdotv2val(std::vector<double> x, std::vector<double> y) {
  * @param[in] v2 The second vector
  * @return The dot product of the two vectors
  */
-double vdotv2scal(std::vector<double> v1, std::vector<double> v2) {
-    double sum = 0;
+float vdotv2scal(std::vector<float> v1, std::vector<float> v2) {
+    float sum = 0;
     for(int i = 0; i < v1.size(); i++) {
         sum += v1[i] * v2[i];
     }
@@ -646,12 +646,12 @@ double vdotv2scal(std::vector<double> v1, std::vector<double> v2) {
  * @param y second vector
  * @return a matrix where each element is the product of the corresponding elements of the input vectors
  */
-std::vector<std::vector<double>> vdotmat2mat(std::vector<double> x, std::vector<std::vector<double>> y) {
+std::vector<std::vector<float>> vdotmat2mat(std::vector<float> x, std::vector<std::vector<float>> y) {
     if(x.size() != y[0].size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a matrix to hold the result
-    std::vector<std::vector<double>> a(x.size(), std::vector<double>(y[0].size()));
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(y[0].size()));
     // Iterate through each element in the matrix and calculate the product
     for (int i = 0; i < x.size(); i++) {
         // Calculate the product of the corresponding elements of the input vectors
@@ -670,12 +670,12 @@ std::vector<std::vector<double>> vdotmat2mat(std::vector<double> x, std::vector<
  * @return a new vector where each element is the sum of the products of the corresponding
  * elements of the input vector and matrix
  */
-std::vector<double> vxmat2vec(std::vector<double> x, std::vector<std::vector<double>> y) {
+std::vector<float> vxmat2vec(std::vector<float> x, std::vector<std::vector<float>> y) {
     if(x.size() != y[0].size()) {
         throw std::runtime_error("Vectors must be of the same size");
     }
     // Create a matrix to hold the result
-    std::vector<double> a(x.size());
+    std::vector<float> a(x.size());
     // Iterate through each element in the matrix and calculate the product
     for (int i = 0; i < x.size(); i++) {
         for(int j = 0; j < y[i].size(); j++) {
@@ -695,9 +695,9 @@ std::vector<double> vxmat2vec(std::vector<double> x, std::vector<std::vector<dou
  * @param b Second matrix
  * @return The Kronecker product of the two matrices
  */
-std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>> a, std::vector<std::vector<double>> b) {
+std::vector<std::vector<float>> kronecker(std::vector<std::vector<float>> a, std::vector<std::vector<float>> b) {
     // Initialize the resulting matrix with appropriate dimensions
-    std::vector<std::vector<double>> c(a.size() * b.size(), std::vector<double>(a[0].size() * b[0].size()));
+    std::vector<std::vector<float>> c(a.size() * b.size(), std::vector<float>(a[0].size() * b[0].size()));
     // Iterate over each element in the first matrix
     for(int i = 0; i < a.size(); i++) {
         for(int k = 0; k < a[0].size(); k++) {
@@ -723,9 +723,9 @@ std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>> a, s
  * @param b Vector (1D vector)
  * @return The Kronecker product of the matrix and the vector
  */
-std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>> a, std::vector<double> b) {
+std::vector<std::vector<float>> kronecker(std::vector<std::vector<float>> a, std::vector<float> b) {
     // Initialize the resulting matrix with appropriate dimensions
-    std::vector<std::vector<double>> c(a.size(), std::vector<double>(a[0].size() * b.size()));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(a[0].size() * b.size()));
     // Iterate over each row in the matrix
     for(int i = 0; i < a.size(); i++) {
         // Iterate over each element in the vector
@@ -750,13 +750,13 @@ std::vector<std::vector<double>> kronecker(std::vector<std::vector<double>> a, s
  * @return The Hadamard product of the input matrices
  * @throws std::runtime_error if the dimensions of the matrices do not match
  */
-std::vector<std::vector<double>> hadamard(std::vector<std::vector<double>> a, std::vector<std::vector<double>> b) {
+std::vector<std::vector<float>> hadamard(std::vector<std::vector<float>> a, std::vector<std::vector<float>> b) {
     // Check if the dimensions of the input matrices match
     if (a.size() != b.size() || a[0].size() != b[0].size()) {
         throw std::runtime_error("Matrices must be of the same dimensions");
     }
     // Create a matrix to store the result with the same dimensions as the input matrices
-    std::vector<std::vector<double>> c(a.size(), std::vector<double>(a[0].size()));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(a[0].size()));
     // Iterate through each element of the matrices
     for(int i = 0; i < a.size(); i++) {
         for(int j = 0; j < a[0].size(); j++) {

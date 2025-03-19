@@ -54,7 +54,7 @@ model::model(int tCount, int m, int x, int y, int n, int d, int h, int l) :
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(int m, int x, int y, int n, int d, int h, int l, double learning) :
+model::model(int m, int x, int y, int n, int d, int h, int l, float learning) :
     m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning) {
     totalParams = m * x * y * ((4 * h * d) + (2 * d * d * l));
     T = transformer(m, x, y, n, d, h, l);
@@ -75,7 +75,7 @@ model::model(int m, int x, int y, int n, int d, int h, int l, double learning) :
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(int tCount, int m, int x, int y, int n, int d, int h, int l, double learning) :
+model::model(int tCount, int m, int x, int y, int n, int d, int h, int l, float learning) :
     tCount(tCount), m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning) {
     totalParams = tCount * m * x * y * ((4 * h * d) + (2 * d * d * l));
     Tg = std::vector<transformer>(tCount, transformer(m, x, y, n, d, h, l));

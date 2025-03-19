@@ -13,8 +13,8 @@
  * @param i
  * @param layers
  */
-void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EV, std::vector<std::vector<double>>& changeV, 
+void block::partialforprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<float>>& dv, std::vector<std::vector<float>>& EV, std::vector<std::vector<float>>& changeV, 
     int& in, int& tokenCount, int& i, int& layers)
 {
     // for one partial attention
@@ -39,9 +39,9 @@ void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::ve
  * @param i
  * @param layers
  */
-void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<double>>& dv, std::vector<std::vector<double>>& EVp, std::vector<std::vector<double>>& EVc, 
-    std::vector<std::vector<double>>& changeV, int& in, int& tokenCount, int blockCount, int& i, int& layers, int& n)
+void block::partialforprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<float>>& dv, std::vector<std::vector<float>>& EVp, std::vector<std::vector<float>>& EVc, 
+    std::vector<std::vector<float>>& changeV, int& in, int& tokenCount, int blockCount, int& i, int& layers, int& n)
 {
     // for one partial attention
     for(int j = 0; j < b[0].size(); j++) {
@@ -63,9 +63,9 @@ void block::partialforprop(std::vector<std::vector<double>>& tokenEmbed, std::ve
  * @param tokenCount
  * @param layers
  */
-void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
-    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers)
+void block::forprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EV, 
+    std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, int& layers)
 {
     // y partial attention in x layers => x parallel processes
     while(1) {
@@ -97,9 +97,9 @@ void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<st
  * @param layers
  * @param blockCount
  */
-void block::forprop(std::vector<std::vector<double>>& tokenEmbed, std::vector<std::vector<double>>& KdotQ, std::vector<std::vector<double>>& K,
-    std::vector<std::vector<double>>& Q, std::vector<std::vector<std::vector<double>>>& dv, std::vector<std::vector<std::vector<double>>>& EV, 
-    std::vector<std::vector<std::vector<double>>>& changeV, int& in, int& tokenCount, int& layers, int& blockCount)
+void block::forprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
+    std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EV, 
+    std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, int& layers, int& blockCount)
 {
     // y partial attention in x layers => x parallel processes
     while(1) {

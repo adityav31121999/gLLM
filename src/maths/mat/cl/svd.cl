@@ -13,15 +13,15 @@
  * @param k index of the vector
  * @return Householder vector u
  */
-double *householder(double *v, int n, int k) {
-    double *u = new double[n];
-    double sigma = 0;
+float *householder(float *v, int n, int k) {
+    float *u = new float[n];
+    float sigma = 0;
     // Compute the norm of the vector v
     for(int i = k; i < n; i++) {
         sigma += v[i]*v[i];
     }
     // Compute the value of alpha
-    double alpha = v[k];
+    float alpha = v[k];
     if(alpha >= 0) { 
         alpha = sqrt(sigma);
     } 
@@ -29,7 +29,7 @@ double *householder(double *v, int n, int k) {
         alpha = -sqrt(sigma); 
     }
     // Compute the value of beta
-    double beta = alpha*alpha - v[k]*v[k];
+    float beta = alpha*alpha - v[k]*v[k];
     // Compute the Householder vector u
     u[k] = v[k] - alpha;
     // Copy the elements of v into u
@@ -49,16 +49,16 @@ double *householder(double *v, int n, int k) {
  * @param k index of the vector
  * @return Householder vector qk
  */
-double *householderTransform(double *u, int n, int k) {
-    double *qk = new double[n];
-    double *v = new double[n];
+float *householderTransform(float *u, int n, int k) {
+    float *qk = new float[n];
+    float *v = new float[n];
     // Compute the result of the Householder transformation
     for(int i = 0; i < n; i++) { v[i] = 0; }
     v[k] = 1;
-    double beta = u[k];
-    double alpha = 2/beta;
+    float beta = u[k];
+    float alpha = 2/beta;
     for(int i = k; i < n; i++) {
-        double sum = 0;
+        float sum = 0;
         // Compute the sum of the elements of u and v
         for(int j = k; j < n; j++) { sum += u[j]*v[j]; }
         // Compute the result of the Householder transformation

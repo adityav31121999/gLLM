@@ -1155,7 +1155,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/extras/CUPTI/include"
+			"value" : "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/include/../extras/CUPTI/include"
 		},
 		{
 			"name" : "CUDAToolkit_NVCC_EXECUTABLE",

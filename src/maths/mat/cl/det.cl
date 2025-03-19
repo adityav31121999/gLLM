@@ -11,7 +11,7 @@
  *      |10 11|
  * @return The determinant of the 2x2 matrix
  */
-double mat::det2() {
+float mat::det2() {
     // Determinant formula: ad - bc
     return (this->a[0][0] * this->a[1][1] - this->a[0][1] * this->a[1][0]);
 }
@@ -23,7 +23,7 @@ double mat::det2() {
  *      |20 21 22|
  * @return The determinant of the 3x3 matrix
  */
-double mat::det3() {
+float mat::det3() {
     // Sarrus rule for 3x3 matrix
     return this->a[0][0]*(this->a[1][1] * this->a[2][2] - this->a[1][2] * this->a[2][1])
           -this->a[0][1]*(this->a[0][0] * this->a[1][2] - this->a[0][2] * this->a[1][0])
@@ -38,7 +38,7 @@ double mat::det3() {
  *      |30 31 32 33|
  * @return The determinant of the 3x3 matrix
  */
-double mat::det4() {
+float mat::det4() {
     // Sarrus rule for 3x3 matrix
     return (this->a[0][0] * this->a[1][1] - this->a[0][1] * this->a[1][0]) * (this->a[2][2] * this->a[3][3] - this->a[2][3] * this->a[3][2])
           -(this->a[0][0] * this->a[1][2] - this->a[0][2] * this->a[1][0]) * (this->a[2][1] * this->a[3][3] - this->a[2][3] * this->a[3][1])
@@ -60,9 +60,9 @@ double mat::det4() {
  * @return The determinant of the matrix
  * @throws std::runtime_error if the matrix is not square
  */
-double mat::detn() {
+float mat::detn() {
     if(this->ifsquare() == 1) {
-        double det = 1;
+        float det = 1;
         mat b(this->row);
         int n = this->row;
         int row_swap_counter = 0;
@@ -81,7 +81,7 @@ double mat::detn() {
         }
         // Convert matrix to upper triangular form
         int k = 0;
-        double f = 0;
+        float f = 0;
         while(k < n-1) {
             for(int i = k; i < n-1; i++) {
                 if(b.a[i+1][k] == 0)
@@ -106,10 +106,10 @@ double mat::detn() {
  * @return The determinant of the matrix
  * @throws std::runtime_error if the matrix is not square
  */
-double mat::det() {
+float mat::det() {
     if(this->ifsquare()) {
         int n = this->row;
-        double det = 0;
+        float det = 0;
         switch(n) {
             case 1:
                 det = this->a[0][0];

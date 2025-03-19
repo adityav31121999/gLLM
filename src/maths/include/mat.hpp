@@ -22,7 +22,7 @@ public:
     // for other classes to access this class
     int row;
     int col;
-    std::vector<std::vector<double>> a;     // matrix
+    std::vector<std::vector<float>> a;     // matrix
 
     // default constructor
     mat():row(0), col(0) {a = {{0}};}
@@ -35,7 +35,7 @@ public:
     mat(int x, int y) {
         row = x;
         col = y;
-        a.resize(x, std::vector<double>(y, 0.0));
+        a.resize(x, std::vector<float>(y, 0.0));
     }
 
     /**
@@ -44,14 +44,14 @@ public:
      */
     mat(int x) {
         row = col = x;
-        a.resize(x, std::vector<double>(x, 0.0));
+        a.resize(x, std::vector<float>(x, 0.0));
     }
 
     /**
      * @brief Constructor for matrix from a 2D vector
-     * @param b 2D vector of doubles representing the matrix
+     * @param b 2D vector of floats representing the matrix
      */
-    mat(std::vector<std::vector<double>> b) {
+    mat(std::vector<std::vector<float>> b) {
         // Set the number of rows and columns from the input 2D vector
         row = b.size();
         col = b[0].size();
@@ -97,26 +97,26 @@ public:
 
     int getrow() { return row; };       // get row
     int getcol() { return col; };       // get column
-    std::vector<std::vector<double>> geta() { return a; };       // get matrix
+    std::vector<std::vector<float>> geta() { return a; };       // get matrix
 
-    double& operator()(int i, int j);   // operator overload for accessing element
+    float& operator()(int i, int j);   // operator overload for accessing element
     mat operator=(mat);                 // assignement operator overload
     mat operator+(mat);                 // addition operator overload
     mat operator-(mat);                 // subtraction operator overload
-    mat operator=(std::vector<std::vector<double>>);        // assignment operator overload
-    mat operator+(std::vector<std::vector<double>>);        // Addition operator overload
-    mat operator-(std::vector<std::vector<double>>);        // subtraction operator overload
-    mat operator*(double);              // multiplication operator overload for value
+    mat operator=(std::vector<std::vector<float>>);        // assignment operator overload
+    mat operator+(std::vector<std::vector<float>>);        // Addition operator overload
+    mat operator-(std::vector<std::vector<float>>);        // subtraction operator overload
+    mat operator*(float);              // multiplication operator overload for value
     mat operator*(mat);                 // multiplication operator overload for matrix (fmmlt)
-    mat operator/(double);              // division operator overload for value
+    mat operator/(float);              // division operator overload for value
     mat operator/(mat);                 // division operator overload for value
     mat operator+=(mat);                // addition operator overload
     mat operator-=(mat);                // subtraction operator overload
-    mat operator+=(std::vector<std::vector<double>>);       // Addition operator overload
-    mat operator-=(std::vector<std::vector<double>>);       // subtraction operator overload
-    mat operator*=(double);             // multiplication operator overload for value
+    mat operator+=(std::vector<std::vector<float>>);       // Addition operator overload
+    mat operator-=(std::vector<std::vector<float>>);       // subtraction operator overload
+    mat operator*=(float);             // multiplication operator overload for value
     mat operator*=(mat);                // multiplication operator overload for matrix (fmmlt)
-    mat operator/=(double);             // division operator overload for value
+    mat operator/=(float);             // division operator overload for value
     mat operator/=(mat);                // division operator overload for value
     mat imat(int);                      // identity matrix
     mat inva();                         // additive inverse of matrix
@@ -129,12 +129,12 @@ public:
     mat resize(int row, int col);       // resize the matrix by row and col
     mat mult(mat, mat);                 // multiplication of two matrices
 
-    double det2();                      // determinant of 2x2 matrix
-    double det3();                      // determinant of 3x3 matrix
-    double det4();                      // determinant of 4x4 matrix
-    double detn();                      // determinant of nxn matrix
-    double det();                       // determinant of square matrix
-    double trace();                     // trace of square matrix
+    float det2();                      // determinant of 2x2 matrix
+    float det3();                      // determinant of 3x3 matrix
+    float det4();                      // determinant of 4x4 matrix
+    float detn();                      // determinant of nxn matrix
+    float det();                       // determinant of square matrix
+    float trace();                     // trace of square matrix
 
     void trnsps();                      // transpose the current matrix
     bool ifsquare();                    // check if matrix is square
@@ -150,22 +150,22 @@ public:
 };
 
 mat rowechelon(mat a);
-mat rowechelon(std::vector<std::vector<double>> a);
+mat rowechelon(std::vector<std::vector<float>> a);
 mat submat(mat, unsigned int, unsigned int);
-mat submat(std::vector<std::vector<double>>, unsigned int, unsigned int);
+mat submat(std::vector<std::vector<float>>, unsigned int, unsigned int);
 mat minor(mat a);
-mat minor(std::vector<std::vector<double>>);
+mat minor(std::vector<std::vector<float>>);
 
-double *householder(double*, int, int);
-double *householderTransform(double*, int, int);
+float *householder(float*, int, int);
+float *householderTransform(float*, int, int);
 
 std::pair<mat*, mat*> eigen(mat *a);
 std::pair<mat*, mat*> makeOrthogonalMatrix(mat*);
 mat jacobian(mat *a);
-double jacobianval(mat *a);
+float jacobianval(mat *a);
 
-std::vector<double> dot(mat a, std::vector<double> b);
-std::vector<double> dot(std::vector<double> a, mat b);
+std::vector<float> dot(mat a, std::vector<float> b);
+std::vector<float> dot(std::vector<float> a, mat b);
 
 
 #endif
