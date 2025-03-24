@@ -279,7 +279,7 @@ float sum(std::vector<std::vector<float>> a) {
  * @return the product of the elements in the vector
  */
 float product(std::vector<float> a) {
-    return std::accumulate(a.begin(), a.end(), 1.0, std::multiplies<float>());
+    return static_cast<float>(std::accumulate(a.begin(), a.end(), 1.0, std::multiplies<float>()));
 }
 
 /**

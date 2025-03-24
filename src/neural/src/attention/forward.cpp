@@ -20,7 +20,7 @@
  * @param holdEV EV vector from this block
  * @param changeV vertical change vector for next block
  * @param in input token count
- * @param tokenCount token count for each attention head (hiw many tokens have been generated or taken as input)
+ * @param tokenCount token count for each attention head (how many tokens have been generated or taken as input)
  */
 void attention::forprop(std::vector<std::vector<float>>& tokens, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
     std::vector<std::vector<float>>& Q, std::vector<float>& dv, std::vector<float>& EV, std::vector<float>& changeV, int& in, int& layers, 
@@ -47,13 +47,44 @@ void attention::forprop(std::vector<std::vector<float>>& tokens, std::vector<std
     }
     else if(tokenCount > in) {
         // when new token is predicted or generated
-        K[tokenCount] = dot(tokens[0], MK);
-        Q[tokenCount] = dot(tokens[0], MQ);
-        KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-        for(int j = 0; j < tokenCount-1; j++) {
-            // head calculation
-            KdotQ[tokenCount][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
-            KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+        if(tokenCount - in == 1 || tokenCount - tokens.size() == 1) {
+            K[tokenCount] = dot(tokens[0], MK);
+            Q[tokenCount] = dot(tokens[0], MQ);
+            KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+            for(int j = 0; j < tokenCount-1; j++) {
+                // head calculation
+                KdotQ[tokenCount][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
+                KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+            }
+        }
+        else if(tokenCount - tokens.size() > 1) {
+            // for next prediction
+            int diff = tokenCount - tokens.size();
+            K[tokenCount] = dot(tokens[tokenCount-1], MK);
+            Q[tokenCount] = dot(tokens[tokenCount-1], MQ);
+            KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+            for(int i = tokens.size(); i < tokens.size() + diff - 1; i++) {
+                for(int j = tokens.size(); j < tokens.size() + diff -1; j++) {
+                    // head calculation: row
+                    KdotQ[i][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
+                    // head calculation: column
+                    KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+                }
+            }
+        }
+        else {
+            // for next prediction
+            int diff = tokenCount - in;
+            K[tokenCount] = dot(tokens[tokenCount-1], MK);
+            Q[tokenCount] = dot(tokens[tokenCount-1], MQ);
+            KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+            for(int j = 0; j < diff; j++) {
+                for(int i = 0; j < in + diff -1; i++) {
+                    // head calculation
+                    KdotQ[tokenCount][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
+                    KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
+                }
+            }
         }
     }
     // probability distribution

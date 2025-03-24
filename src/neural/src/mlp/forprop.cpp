@@ -4,6 +4,7 @@
 #include <numeric>
 #include <maths.hpp>
 
+
 /**
  * @brief The forward propagation function. This function performs the
  * forward propagation and calculates the activations of each layer.

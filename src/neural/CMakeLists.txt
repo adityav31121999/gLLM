@@ -14,6 +14,10 @@ add_library(neural STATIC
     src/mlp/weights.cpp
     src/mlp/train.cpp
 
+    src/mlp/cl/forprop.cl
+
+    src/mlp/cu/forprop.cu
+
     # attention
     src/attention/attention.cpp
     src/attention/forward.cpp
@@ -30,9 +34,7 @@ add_library(neural STATIC
     src/transformer/tokens.cpp
     src/transformer/transformer.cpp
     src/transformer/feedfor.cpp
-    src/transformer/backfeed.cpp
-    src/transformer/feedback.cpp
-    src/transformer/spoonfeed.cpp
+    src/transformer/backward.cpp
     src/transformer/train.cpp
     src/transformer/finetune.cpp
 )

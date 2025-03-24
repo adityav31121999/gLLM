@@ -12,9 +12,6 @@ add_library(model STATIC
     src/deserialise.cpp
     src/chat.cpp
 
-    src/train/train.cpp
-    src/train/fine.cpp
-
     src/use/load.cpp
     src/use/act.cpp
 )

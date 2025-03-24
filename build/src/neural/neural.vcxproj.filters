@@ -52,13 +52,7 @@
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedfor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\src\transformer\backfeed.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedback.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\src\transformer\spoonfeed.cpp">
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\backward.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\train.cpp">
@@ -69,7 +63,15 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="..\..\..\src\neural\src\mlp\cu\forprop.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="D:\gLLM\src\neural\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\gLLM\src\neural\src\mlp\cl\forprop.cl" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">

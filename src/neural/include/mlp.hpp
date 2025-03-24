@@ -39,18 +39,17 @@ public:
     mlp(unsigned int in, unsigned int layers, unsigned int epochs = 10, float learning = 0.01);
 
     void forward(int in, int layers);
-    void backprop2in(int layers, int in, float learning);
     void backward(int layers, int in, float learning);
     void backprop(int layers, int in, float learning);
     void backwithL1(int layers, int in, float learning);
     void backwithL2(int layers, int in, float learning);
+    void backprop2in(int layers, int in, float learning);
     void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void train(float& mse, int in, int layers, float learning);
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void validate(int in, int layers);
     void test(int in, int layers);
     void initializeWeights(int in, int layers);
-
     // default destructor
     ~mlp() = default;
 };
@@ -61,5 +60,43 @@ float getL2Penalty(std::vector<std::vector<std::vector<float>>>&);
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
+
+
+
+#ifdef USE_CUDA
+
+    // cuda equivalent functions for mlp
+    __global__ void forwardcu(const float* input, float* output, float* weights, float* hlayers, float* activations, int in, int layers, 
+                                int input_size, int* layer_offsets, int* weight_offsets);
+    __global__ void backpropcu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l, float learning);
+    __global__ void backprop2incu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l, float learning);
+    __global__ void backpropL1cu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l, float learning);
+    __global__ void backpropL2cu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l, float learning);
+    __global__ void rpropcu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l, float learning, int epochs);
+    __global__ void traincu(const float* in, const float* out, const float* w, const float* h, const float* a, float* mse, int i, int l, float learning);
+    __global__ void train2cu(const float* in, const float* out, const float* w, const float* h, const float* a, float* mse, int i, int l, float learning);
+    __global__ void validatecu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l);
+    __global__ void testcu(const float* in, const float* out, const float* w, const float* h, const float* a, int i, int l);
+    __global__ void L1Penaltycu(const float* w, float* penalty, int i, int l);
+    __global__ void L2Penaltycu(const float* w, float* penalty, int i, int l);
+
+#elif USE_OPENCL
+
+    // opencl equivalent functions for mlp
+    __kernel void forwardcl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l);
+    __kernel void backpropcl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l, float learning);
+    __kernel void backprop2incl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l, float learning);
+    __kernel void backpropL1cl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l, float learning);
+    __kernel void backpropL2cl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l, float learning);
+    __kernel void rpropcl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l, float learning, int epochs);
+    __kernel void traincl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, __global float* mse, int i, int l, float learning);
+    __kernel void train2cl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, __global float* mse, int i, int l, float learning);
+    __kernel void validatecl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l);
+    __kernel void testcl(__global float* in, __global float* out, __global float* w, __global float* h, __global float* a, int i, int l);
+    __kernel void L1Penaltycl(__global float* w, __global float* penalty, int i, int l);
+    __kernel void L2Penaltycl(__global float* w, __global float* penalty, int i, int l);
+
+#endif
+
 
 #endif

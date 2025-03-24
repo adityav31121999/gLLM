@@ -77,6 +77,12 @@ public:
     model(int m, int x, int y, int n, int d, int h, int l, float learning);
     model(int tCount, int m, int x, int y, int n, int d, int h, int l, float learning);
 
+#ifdef USE_CUDA
+    // cuda implementation
+#elif USE_OPENCL
+    // opencl implementation
+#elif USE_CPU
+    // cpp implementation
     void train();
     void load();
     void load(std::string& from, std::string& to);
@@ -93,6 +99,7 @@ public:
     void nextResponse();        // get next response from the model
     void saveChat();        // save chat to file
     void loadChat();        // load chat from file
+#endif
 
     // default destructor
     ~model() = default;

@@ -449,6 +449,7 @@ std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y, int t) {
     return x; // Return the normalized 2D vector
 }
 
+
 /**
  * @brief Calculates the derivative of the LOTA (Least Of Them All) activation function for a vector.
  *        This function calculates the derivative of the LOTA function for each element in a vector.

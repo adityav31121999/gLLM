@@ -23,10 +23,4 @@ mlp::mlp(unsigned int in, unsigned int layers, unsigned int epochs, float learni
     activations.resize(layers, std::vector<float>(in, 0.0));
     gweights.resize(layers, std::vector<std::vector<float>>(in, std::vector<float>(in, 0.0)));
     initializeWeights(in, layers);
-#ifdef USE_OPENCL
-    // define the size of each buffer
-    
-#elif USE_CUDA
-    // define the size of each pointer to buffer
-#endif
 }

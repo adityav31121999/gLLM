@@ -114,9 +114,9 @@ public:
     mat operator-=(mat);                // subtraction operator overload
     mat operator+=(std::vector<std::vector<float>>);       // Addition operator overload
     mat operator-=(std::vector<std::vector<float>>);       // subtraction operator overload
-    mat operator*=(float);             // multiplication operator overload for value
+    mat operator*=(float);              // multiplication operator overload for value
     mat operator*=(mat);                // multiplication operator overload for matrix (fmmlt)
-    mat operator/=(float);             // division operator overload for value
+    mat operator/=(float);              // division operator overload for value
     mat operator/=(mat);                // division operator overload for value
     mat imat(int);                      // identity matrix
     mat inva();                         // additive inverse of matrix
@@ -129,14 +129,16 @@ public:
     mat resize(int row, int col);       // resize the matrix by row and col
     mat mult(mat, mat);                 // multiplication of two matrices
 
-    float det2();                      // determinant of 2x2 matrix
-    float det3();                      // determinant of 3x3 matrix
-    float det4();                      // determinant of 4x4 matrix
-    float detn();                      // determinant of nxn matrix
-    float det();                       // determinant of square matrix
-    float trace();                     // trace of square matrix
+    float det2();                       // determinant of 2x2 matrix
+    float det3();                       // determinant of 3x3 matrix
+    float det4();                       // determinant of 4x4 matrix
+    float detn();                       // determinant of nxn matrix
+    float det();                        // determinant of square matrix
+    float trace();                      // trace of square matrix
+    float get(int i, int j);            // get value of (i, j) index
 
     void trnsps();                      // transpose the current matrix
+    void set(int i, int j, float val);  // set val to (i, j)th element
     bool ifsquare();                    // check if matrix is square
     bool ifrectangular();               // check if matrix is rectangular
     bool ifsymmetric();                 // check if matrix is symmetric

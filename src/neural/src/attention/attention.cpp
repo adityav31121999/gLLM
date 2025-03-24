@@ -32,12 +32,85 @@ attention::attention(int n, int d, int h, int l) {
  * @param KdotQ dot product matrix
  * @param Keys Keys vector
  * @param Queries Queries vector
+ * @param in number of tokens in first prompt
+ * @param count number of embeddings in tokens
+ * @param promptCount number of tokens in prompt
  */
-void attention::computeAttention(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int count) {
-    for(int i = 0; i < count; i++) {
-        for(int j = 0; j < count; j++) {
-            // KdotQ[i][j] = Keys[i].Queries[j];
-            KdotQ[i][j] = std::inner_product(Keys[i].begin(), Keys[i].end(), Queries[i].begin(), 0.0);
+void attention::computeAttention(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, 
+        int in, int count, int promptCount)
+{
+    // for single token input like "Hi", "Hello", "Hey", "How", "What", etc.
+    if (in == 1 && promptCount == 1 && count == 0) {
+        KdotQ[0][0] = std::inner_product(Keys[0].begin(), Keys[0].end(), Queries[0].begin(), 0.0)/SCALING;
+        count++;
+    }
+    // for a first and long prompt input
+    else if (in > 1 && promptCount == in && count == 0) {    
+        for(int i = 0; i < count; i++) {
+            for(int j = 0; j < count; j++) {
+                // KdotQ[i][j] = Keys[i].Queries[j];
+                KdotQ[i][j] = std::inner_product(Keys[i].begin(), Keys[i].end(), Queries[i].begin(), 0.0);
+            }
+        }
+        count = in;
+    }
+    // for single term promt after response or newly predicted term
+    else if(count > in) {
+        if (promptCount == 1) {
+            // diagonal calculation
+            KdotQ[count][count] = std::inner_product(K[count].begin(), K[count].end(), Q[count].begin(), 0.0)/SCALING;
+            for(int j = 0; j < count-1; j++) {
+                // head calculation
+                KdotQ[count][j] = std::inner_product(K[count].begin(), K[count].end(), Q[j].begin(), 0.0)/SCALING;
+                KdotQ[j][count] = std::inner_product(K[j].begin(), K[j].end(), Q[count].begin(), 0.0)/SCALING;
+            }
+            count++;
+        }
+        else if(promptCount > 1) {
+            int diff = count - promptCount;
+            for(int i = 0; i < diff; i++) {
+                // diagonal calculation
+                KdotQ[count + i][count + i] = std::inner_product(K[count + i].begin(), K[count + i].end(), Q[count + i].begin(), 0.0)/SCALING;
+                for(int j = 0; j < count + i; j++) {
+                    // head calculation
+                    KdotQ[i][j] = std::inner_product(K[i].begin(), K[i].end(), Q[j].begin(), 0.0)/SCALING;
+                    KdotQ[j][i] = std::inner_product(K[j].begin(), K[j].end(), Q[i].begin(), 0.0)/SCALING;
+                }
+            }
+            count += diff;
+        }
+    }
+}
+
+
+/**
+ * @brief forward propagation for a specific block's attention class (incomplete attention)
+ * @param T token embedding
+ * @param M matrix for attention head calculation (MQ x MK')
+ * @param dot dot product of T x M x T'
+ */
+void calculateDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot) {
+    std::vector<double> temp(T.size(), 0);
+    for(int i = 0; i < T.size(); i++) {
+        temp[i] = std::inner_product(T.begin(), T.end(), M[i].begin(), 0.0);
+    }
+    dot = std::inner_product(temp.begin(), temp.end(), T.begin(), 0.0);
+}
+
+
+/**
+ * @brief head calculation (via T x M x T')
+ * @param tokens token embeddings
+ * @param KdotQ dot product matrix
+ * @param M matrix for attention head calculation (MQ x MK')
+ * @param terms number of terms for attention head
+ */
+void calculateHead(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokens, std::vector<std::vector<float>>& M, int terms) {
+    // i for token
+    for(int i = 0; i < terms; i++) {
+        // j for column of M
+        for(int j = 0; j < terms; j++) {
+            calculateDot(tokens[i], M, KdotQ[i][j]);
         }
     }
 }

@@ -95,6 +95,9 @@ void Random(std::vector<std::vector<float>>);
 
 #include <CL/cl.hpp>
 
+float cl_sigmoid(float x);
+float cl_sigmoidder(float x);
+
 __kernel void operator_eq(__global float* a, __global float* b, __global int* result, int size);
 __kernel void operator_add(__global float* a, __global float* b, __global float* result, int size);
 __kernel void operator_sub(__global float* a, __global float* b, __global float* result, int size);
@@ -146,7 +149,10 @@ __kernel void Random(__global float* weights, int rows, int cols, unsigned int s
 
 #include <cuda_runtime.h>
 
+__device__ float cuda_sigmoid(float x);
+__device__ float cuda_sigmoidder(float x);
 __device__ bool operator_eq(const float* a, const float* b, int size);
+
 __global__ void operator_add(const float* a, const float* b, float* result, int size);
 __global__ void operator_sub(const float* a, const float* b, float* result, int size);
 __global__ void operator_mul(const float* a, float scalar, float* result, int size);

@@ -104,6 +104,20 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;USE_CUDA;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;USE_CUDA;CMAKE_INTDIR="Debug"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob0 -Zi"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>Od</Optimization>
+      <Runtime>MDd</Runtime>
+      <RuntimeChecks>RTC1</RuntimeChecks>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -144,6 +158,19 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="Release"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob2"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>O2</Optimization>
+      <Runtime>MD</Runtime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -184,6 +211,19 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="MinSizeRel"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob1"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>O1</Optimization>
+      <Runtime>MD</Runtime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -223,6 +263,19 @@
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(Include)</Include>
+      <Defines>%(Defines);_WINDOWS;NDEBUG;USE_CUDA;CMAKE_INTDIR="RelWithDebInfo"</Defines>
+      <AdditionalOptions>%(AdditionalOptions) -std=c++20 --generate-code=arch=compute_86,code=[compute_86,sm_86] -Xcompiler="/EHsc -Ob1 -Zi"</AdditionalOptions>
+      <CodeGeneration></CodeGeneration>
+      <CompileOut>$(IntDir)%(Filename).obj</CompileOut>
+      <CudaRuntime>Static</CudaRuntime>
+      <GPUDebugInfo>false</GPUDebugInfo>
+      <Optimization>O2</Optimization>
+      <Runtime>MD</Runtime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <UseHostInclude>false</UseHostInclude>
+    </CudaCompile>
     <Midl>
       <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include;D:\gLLM\src\maths;D:\gLLM\src\neural;D:\gLLM\src\neural\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
@@ -298,13 +351,24 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D:\gLLM\src\neural\src\mlp\mlp.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\src\mlp\forprop.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\mlp\forprop.cpp">
+      <ObjectFileName>$(IntDir)/src/mlp/forprop.cpp.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\mlp\backprop.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\mlp\loss.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\mlp\weights.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\mlp\train.cpp">
       <ObjectFileName>$(IntDir)/src/mlp/train.cpp.obj</ObjectFileName>
     </ClCompile>
+    <None Include="D:\gLLM\src\neural\src\mlp\cl\forprop.cl">
+    </None>
+    <CudaCompile Include="..\..\..\src\neural\src\mlp\cu\forprop.cu">
+      <CompileOut>$(IntDir)/src/mlp/cu/forprop.cu.obj</CompileOut>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</ScanSourceForModuleDependencies>
+    </CudaCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\attention\attention.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\attention\forward.cpp">
       <ObjectFileName>$(IntDir)/src/attention/forward.cpp.obj</ObjectFileName>
@@ -328,9 +392,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\tokens.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\transformer.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedfor.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\src\transformer\backfeed.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedback.cpp" />
-    <ClCompile Include="D:\gLLM\src\neural\src\transformer\spoonfeed.cpp" />
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\backward.cpp">
+      <ObjectFileName>$(IntDir)/src/transformer/backward.cpp.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\train.cpp">
       <ObjectFileName>$(IntDir)/src/transformer/train.cpp.obj</ObjectFileName>
     </ClCompile>

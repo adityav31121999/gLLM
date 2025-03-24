@@ -6,7 +6,7 @@
  * last of EVs are then used to continue the context for next iteration on command.
  *                                Complete Attention
  * ---------------------------------------------------------------------------------
- * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention
+ * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention (layer)
  * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention
  * (Incomplete Attention - ----- - Incomplete Attention -> E') <-- Partial attention 
  *      |           |                   |           |                       |
@@ -23,7 +23,6 @@
 #include <maths.hpp>
 #include "mlp.hpp"
 #include "attention.hpp"
-#define VOCABSIZE 128000 // vocabulary size
 
 /**
  * @brief block for complete attention
@@ -75,7 +74,12 @@ public:
                         std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EVp, 
                         std::vector<std::vector<std::vector<float>>>& EVc, std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, 
                         int& layers, int& blockCount);
-    
+#ifdef USE_CUDA
+    // cuda equivalent functions for block
+#elif USE_OPENCL
+    // opencl equivalent functions for block
+#endif
+
     // default destructor
     ~block() = default;
 };

@@ -1,29 +1,48 @@
 
-/**
- * @file Transformer class for token/chunk prediction and context retention
- * and grammatical restriction. This can be single block or multi-block.
- * For training purpose, the model will have many-block transformer, but 
- * for prediction purpose, the model will have single-block transformer.
- * This will help in making the model more efficient and effective and also
- * reduce memory usage while prediction. Having multi-block transformer will
- * help in increasing the context size and also help in making the model more
- * responsive for large data.
- */
-
+// transformer.hpp: header source for transformer class
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
 #include "attention.hpp"
 #include "block.hpp"
 #include <string>
+#include <cmath>
 
-#define TOKEN_IMIN 1            // token input
-#define TOKEN_IMAX 16384        // 2^14
-#define TOKEN_OMIN 1            // token output
-#define TOKEN_OMAX 2097152      // 8192*256 = 2^21
-#define BLOCK_MIN 1             // number of blocks in transformer
-#define BLOCK_MAX 256           // 2^7
-// #define TERMINATE "@#O"         // end of conversation
+// token embedding
+#define EMBED_MIN 64
+#define EMBED_MAX (64*64*64)
+// context window for each block
+#define WINDOW_MIN 4096
+#define WINDOW_MAX 8388608          // 4096*2048
+// Weight matrix heights for MQ, MK, MV, MH
+#define MATHEIGHT_MIN std::pow(EMBED_MIN, 2)
+#define MATHEIGHT_MAX std::pow(EMBED_MAX, 2)
+// token input and output for each block
+#define TOKEN_IMIN 1
+#define TOKEN_IMAX (WINDOW_MAX/2)
+// number of blocks in transformer
+#define BLOCK_MIN 1                 // number of blocks in transformer
+#define BLOCK_MAX (WINDOW_MAX/WINDOW_MIN)
+// token output for transformer
+#define TOKEN_OMIN 1
+#define TOKEN_OMAX (WINDOW_MAX*BLOCK_MAX)
+// layers per block
+#define BLAYER_MIN (8*BLOCK_MIN)
+#define BLAYER_MAX (16*BLOCK_MAX)
+// number of incomplete attentions in each partial attention
+#define ATTENTION_MIN (4*LAYER_MIN)
+#define ATTENTION_MAX (8*LAYER_MAX)
+// number of layers in mlp
+#define MLAYER_MIN (BLAYER_MIN*2)
+#define MLAYER_MAX (BLAYER_MAX*8)
+
+// properties for LLM
+#define EMBEDDING 64        // token embedding
+#define MATHEIGHTS 4096     // weight matrix heights
+#define LAYERS_MLP 16       // layers of mlp
+#define LEARNING 0.01       // learning rate for MLPs
+#define EPOCHS 10           // number of epochs for MLPs
+
 
 /**
  * @brief Common Transformer class for token/chunk prediction and context 
@@ -57,13 +76,14 @@ public:
     int blockCount;         // which block is working
     int tokenCount;         // how many tokens have been generated
     int totalTokens;        // total tokens generated
-    // error of all attentions
+    float error;            // error for transformer
 
+    // default constructor
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l);
     transformer(int m, int x, int y, int n, int d, int h, int l);
+
 // training
-    // forward propagation for single-block and multi-block
     void forward(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
                     std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EV, 
                     std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, int& layers);
@@ -71,21 +91,16 @@ public:
                     std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EVp, 
                     std::vector<std::vector<std::vector<float>>>& EVc, std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, 
                     int& layers, int& blockCount);
-    // fine tune
     void fineTune();        // fine-tune transformer => altering certain properties while training
-    // backpropagations
-    void feedBack();        // self-correcting feedback loop
-    void spoonfeed();       // spoonfeeding => first to last
-    void backfeed();        // backfeeding => last to first
-    // train functions
+    void backward(std::vector<float>& expected, std::vector<std::vector<std::vector<float>>>& changeV, std::vector<std::vector<std::vector<float>>>& dv, 
+                    std::vector<std::vector<std::vector<float>>>& EV, int& in, int& layers);
     void train();           // train with feedforward()
-    void train4feedback();  // train with feedback()
-    void train4spoonfeed(); // train with spoonfeed()
-    void train4backfeed();  // train with backfeed()
-    // instruct model
     void instruct();        // instruct the transformer to do something
+    void computeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output
 // set properties for transformer
     void setLearning(float learning);      // set learning rate for MLPs
+// run transformer
+    void run();             // run the transformer
 
     // default destructor
     ~transformer() = default;

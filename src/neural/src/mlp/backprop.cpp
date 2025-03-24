@@ -5,87 +5,17 @@
 #include <maths.hpp>
 
 /**
- * @brief Backpropagation till input vector
- */
-void mlp::backprop2in(int in, int layers, float learning) {
-    // Compute output layer error
-    std::vector<float> output_error(in, 0.0);
-    for (unsigned int i = 0; i < in; ++i) {
-        output_error[i] = output[i] - expected[i];
-    }
-
-    // Initialize gradient weights if not already done
-    if (gweights.size() != layers) {
-        gweights.resize(layers, std::vector<std::vector<float>>(in, std::vector<float>(in, 0.0)));
-    }
-
-    // Compute gradients for the output layer
-    for (unsigned int i = 0; i < in; ++i) {
-        for (unsigned int j = 0; j < in; ++j) {
-            gweights[layers - 1][i][j] = output_error[i] * activations[layers - 1][j];
-        }
-    }
-
-    // Compute hidden layer errors and gradients
-    std::vector<std::vector<float>> layer_errors(layers, std::vector<float>(in, 0.0));
-
-    // Compute error for the last hidden layer
-    for (unsigned int i = 0; i < in; ++i) {
-        float error_sum = 0.0;
-        for (unsigned int j = 0; j < in; ++j) {
-            error_sum += weights[layers - 1][j][i] * output_error[j];
-        }
-        layer_errors[layers - 1][i] = error_sum * activations[layers - 1][i] * (1 - activations[layers - 1][i]);
-    }
-
-    // Propagate error backward through the network
-    for (int l = layers - 2; l >= 0; --l) {
-        for (unsigned int i = 0; i < in; ++i) {
-            float error_sum = 0.0;
-            for (unsigned int j = 0; j < in; ++j) {
-                error_sum += weights[l + 1][j][i] * layer_errors[l + 1][j];
-            }
-            layer_errors[l][i] = error_sum * activations[l][i] * (1 - activations[l][i]);
-        }
-    }
-
-    // Compute gradients for all layers and update weights
-    for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < in; ++i) {
-            for (unsigned int j = 0; j < in; ++j) {
-                if (l == 0) {
-                    gweights[l][i][j] = layer_errors[l][i] * input[j];
-                    // Update input vector using gradient
-                    input[j] -= learning * layer_errors[l][i] * weights[l][i][j];
-                } else {
-                    gweights[l][i][j] = layer_errors[l][i] * activations[l - 1][j];
-                }
-                // Update weights
-                weights[l][i][j] -= learning * gweights[l][i][j];
-            }
-        }
-    }
-}
-
-
-/**
  * @brief The backward propagation function. This function performs the
  * backward propagation and calculates the error.
  */
 void mlp::backward(int in, int layers, float learning) {
     // Initialize vectors
-    std::vector<float> error(in);
     std::vector<std::vector<float>> delta_weights(layers, std::vector<float>(in, 0.0));
     std::vector<std::vector<float>> layer_deltas(layers, std::vector<float>(in, 0.0));
-    
-    // Calculate output layer error
-    for(unsigned int i = 0; i < in; i++) {
-        error[i] = output[i] - expected[i];
-    }
 
     // Calculate output layer deltas (gradient of error with respect to output)
     for (unsigned int i = 0; i < in; i++) {
-        layer_deltas[layers - 1][i] = error[i] * sigmoidder(output[i]);
+        layer_deltas[layers - 1][i] = (output[i] - expected[i]) * sigmoidder(output[i]);
     }
 
     // Backpropagate the error through hidden layers
@@ -102,7 +32,7 @@ void mlp::backward(int in, int layers, float learning) {
     // Update weights for all layers
     for (unsigned int l = 0; l < layers; l++) {
         for (unsigned int i = 0; i < in; i++) {
-            for (unsigned int j = 0; j < (l == 0 ? in : in); j++) {
+            for (unsigned int j = 0; j < in; j++) {
                 if (l == 0) {
                     weights[l][i][j] += learning * layer_deltas[l][i] * input[j];
                 }
@@ -116,13 +46,14 @@ void mlp::backward(int in, int layers, float learning) {
     // Update output layer weights
     for (unsigned int i = 0; i < in; i++) {
         for (unsigned int j = 0; j < in; j++) {
-            weights[layers - 1][i][j] += learning * error[i] * hlayers[layers - 1][j];
+            weights[layers - 1][i][j] += learning * (output[i] - expected[i]) * hlayers[layers - 1][j];
         }
     }
 }
 
+
 /**
- * @brief Backward propagation with gradients
+ * @brief Backward propagation with gradients, uses gradients to update weights.
  */
 void mlp::backprop(int in, int layers, float learning) {
     // Compute output layer error
@@ -222,6 +153,7 @@ void mlp::backwithL1(int in, int layers, float learning) {
     std::cout << "Loss with L1 penalty: " << loss << std::endl;
 }
 
+
 /**
  * @brief Compute backpropagation with L2 regularization
  */
@@ -255,6 +187,7 @@ void mlp::backwithL2(int in, int layers, float learning) {
     float loss = computeLossWithL2(output, expected, *this, lambda);
     std::cout << "Loss with L2 penalty: " << loss << std::endl;
 }
+
 
 /**
  * @brief Rprop algorithm for MLP
@@ -324,6 +257,77 @@ void mlp::rprop(std::vector<std::vector<float>>& dataset, int layers, int in, fl
         if (totalError < 0.01) {
             status = true;
             break;
+        }
+    }
+}
+
+
+/**
+ * @brief Backpropagation till input vector
+ */
+void mlp::backprop2in(int in, int layers, float learning) {
+    // Compute output layer error
+    std::vector<float> output_error(in, 0.0);
+    for (unsigned int i = 0; i < in; ++i) {
+        output_error[i] = output[i] - expected[i];
+    }
+
+    // Initialize gradient weights if not already done
+    if (gweights.size() != layers) {
+        gweights.resize(layers, std::vector<std::vector<float>>(in, std::vector<float>(in, 0.0)));
+    }
+
+    // Compute gradients for the output layer
+    for (unsigned int i = 0; i < in; ++i) {
+        for (unsigned int j = 0; j < in; ++j) {
+            gweights[layers - 1][i][j] = output_error[i] * activations[layers - 1][j];
+        }
+    }
+
+    // Compute hidden layer errors and gradients
+    std::vector<std::vector<float>> layer_errors(layers, std::vector<float>(in, 0.0));
+
+    // Compute error for the last hidden layer
+    for (unsigned int i = 0; i < in; ++i) {
+        float error_sum = 0.0;
+        for (unsigned int j = 0; j < in; ++j) {
+            error_sum += weights[layers - 1][j][i] * output_error[j];
+        }
+        layer_errors[layers - 1][i] = error_sum * activations[layers - 1][i] * (1 - activations[layers - 1][i]);
+    }
+
+    // Propagate error backward through the network
+    for (int l = layers - 2; l >= 0; --l) {
+        for (unsigned int i = 0; i < in; ++i) {
+            float error_sum = 0.0;
+            for (unsigned int j = 0; j < in; ++j) {
+                error_sum += weights[l + 1][j][i] * layer_errors[l + 1][j];
+            }
+            layer_errors[l][i] = error_sum * activations[l][i] * (1 - activations[l][i]);
+        }
+    }
+
+    // Compute gradients for all layers and update weights
+    for (unsigned int l = 0; l < layers; ++l) {
+        for (unsigned int i = 0; i < in; ++i) {
+            for (unsigned int j = 0; j < in; ++j) {
+                if (l == 0) {
+                    gweights[l][i][j] = layer_errors[l][i] * input[j];
+                    // Update input vector using gradient
+                    input[j] -= learning * layer_errors[l][i] * weights[l][i][j];
+                } else {
+                    gweights[l][i][j] = layer_errors[l][i] * activations[l - 1][j];
+                }
+                // Update weights
+                weights[l][i][j] -= learning * gweights[l][i][j];
+            }
+        }
+    }
+
+    // Update input vector using gradients of the first layer of weights
+    for (unsigned int i = 0; i < in; ++i) {
+        for (unsigned int j = 0; j < in; ++j) {
+            input[j] -= learning * layer_errors[0][i] * gweights[0][i][j];
         }
     }
 }

@@ -9,7 +9,7 @@ void randomweights(std::vector<std::vector<float>> weights) {
     // Randomly intialize weights
     for(size_t i = 0; i < weights.size(); i++) {
         std::transform(weights[i].begin(), weights[i].end(), weights[i].begin(), [i](float x) {
-            return pow(-1, x)*i + (rand() % 10);
+            return static_cast<float>(pow(-1, x)*i + (rand() % 10));
         });
     }
 }

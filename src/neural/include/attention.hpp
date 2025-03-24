@@ -18,6 +18,7 @@
 
 #define TERMINATE "@#O"     // end of conversation (And Its Over)
 #define LEARNING 0.01       // learning rate for MLPs
+#define MATHEIGHTS 4096     // weight matrix heights
 #define EMBEDDING 64        // embedding dimension for each token
 #define SCALING std::sqrt(EMBEDDING)    // SCALING FACTOR for ATTENTION HEAD
 
@@ -50,7 +51,8 @@ public:
     attention() = default;
     attention(int n, int d, int h, int l);
     // compute attention
-    void computeAttention(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int count);
+    void computeAttention(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, 
+                    int in, int count, int promptCount);
     // forward propagation for both first and specific block's attention
     void forprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
                     std::vector<std::vector<float>>& Q, std::vector<float>& dv, std::vector<float>& EV, std::vector<float>& changeV, int& in, 
@@ -59,7 +61,7 @@ public:
                     std::vector<std::vector<float>>& Q, std::vector<std::vector<float>>& EVp, std::vector<float>& dv, std::vector<float>& EVc, 
                     std::vector<float>& changeV, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     // backward propagation
-    void backward(std::vector<float>& expected, std::vector<float>& changeV, std::vector<float>& dv, std::vector<float>& EV,
+    void backward(std::vector<float>& expected, std::vector<double>& dh, std::vector<float>& dv, std::vector<float>& EV, std::vector<double>& EH, 
                     int& in, int& layers);
     // train the attention class
     void train(std::vector<std::vector<float>>& tokenEmded, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
@@ -69,5 +71,11 @@ public:
     // default destructor
     ~attention() = default;
 };
+
+#ifdef USE_CUDA
+    // cuda equivalent functions for attention
+#elif USE_OPENCL
+    // opencl equivalent functions for attention
+#endif
 
 #endif
