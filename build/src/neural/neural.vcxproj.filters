@@ -63,11 +63,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\..\..\src\neural\src\mlp\cu\forprop.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="D:\gLLM\src\neural\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>

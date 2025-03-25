@@ -19,11 +19,12 @@ attention::attention(int n, int d, int h, int l) {
     MK = mat(h, d);     // hxd
     MV = mat(d, h);     // dxh
     MH = mat(d, h);     // dxh
-    dh = std::vector<float>(d, 0);     // dh = sum(dH)
-    EH = std::vector<float>(d, 0);     // EH = EH + dH
+    dh = std::vector<float>(d, 0);      // dh = sum(dH)
+    EH = std::vector<float>(d, 0);      // EH = EH + dH
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
-    changeH = std::vector<float>(d, 0);    // change obtained from final step
+    changeH = std::vector<float>(d, 0);     // change obtained from final step
+    isCrossAttention = 0;               // default attention
 }
 
 
@@ -99,18 +100,77 @@ void calculateDot(std::vector<float>& T, std::vector<std::vector<float>>& M, flo
 
 
 /**
+ * @brief forward propagation for a specific block's attention class (incomplete attention)
+ * @param T token embedding
+ * @param M matrix for attention head calculation (MQ x MK')
+ * @param dot dot product of T x M x T'
+ */
+void calculateDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot) {
+    std::vector<double> temp(T1.size(), 0);
+    for(int i = 0; i < T1.size(); i++) {
+        temp[i] = std::inner_product(T1.begin(), T1.end(), M[i].begin(), 0.0);
+    }
+    dot = std::inner_product(temp.begin(), temp.end(), T2.begin(), 0.0);
+}
+
+
+/**
  * @brief head calculation (via T x M x T')
  * @param tokens token embeddings
  * @param KdotQ dot product matrix
  * @param M matrix for attention head calculation (MQ x MK')
  * @param terms number of terms for attention head
  */
-void calculateHead(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokens, std::vector<std::vector<float>>& M, int terms) {
-    // i for token
-    for(int i = 0; i < terms; i++) {
-        // j for column of M
-        for(int j = 0; j < terms; j++) {
-            calculateDot(tokens[i], M, KdotQ[i][j]);
+void calculateHead(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokens, std::vector<std::vector<float>>& M, 
+    int in, int count, int promptCount) 
+{
+    // for single token input like "Hi", "Hello", "Hey", "How", "What", etc.
+    if (in == 1 && promptCount == 1 && count == 0) {
+        calculateDot(tokens[0], M, KdotQ[0][0]);
+        KdotQ[0][0] /= SCALING;
+        count++;
+    }
+    // for a first and long prompt input
+    else if (in > 1 && promptCount == in && count == 0) {    
+        for(int i = 0; i < count; i++) {
+            for(int j = 0; j < count; j++) {
+                // KdotQ[i][j] = Keys[i].Queries[j];
+                calculateDot(tokens[i], tokens[j], M, KdotQ[i][j]);
+                KdotQ[i][j] /= SCALING;
+            }
+        }
+        count = in;
+    }
+    // for single term promt after response or newly predicted term
+    else if(count > in) {
+        if (promptCount == 1) {
+            // diagonal calculation
+            calculateDot(tokens[count], M, KdotQ[count][count]);
+            KdotQ[count][count] /= SCALING;
+            for(int j = 0; j < count-1; j++) {
+                // head calculationKdotQ[i][j] /= SCALING;
+                calculateDot(tokens[count], tokens[j], M, KdotQ[count][j]);
+                KdotQ[count][j] /= SCALING;
+                calculateDot(tokens[j], tokens[count], M, KdotQ[j][count]);
+                KdotQ[j][count] /= SCALING;
+            }
+            count++;
+        }
+        else if(promptCount > 1) {
+            int diff = count - promptCount;
+            for(int i = 0; i < diff; i++) {
+                // diagonal calculation
+                calculateDot(tokens[count + i], M, KdotQ[count + i][count + i]);
+                KdotQ[count + i][count + i] /= SCALING;
+                for(int j = 0; j < count + i; j++) {
+                    // head calculation
+                    calculateDot(tokens[i], tokens[j], M, KdotQ[i][j]);
+                    KdotQ[i][j] /= SCALING;
+                    calculateDot(tokens[j], tokens[i], M, KdotQ[j][i]);
+                    KdotQ[j][i] /= SCALING;
+                }
+            }
+            count += diff;
         }
     }
 }

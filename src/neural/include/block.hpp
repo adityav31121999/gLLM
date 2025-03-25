@@ -24,6 +24,8 @@
 #include "mlp.hpp"
 #include "attention.hpp"
 
+#define VOCABSIZE
+
 /**
  * @brief block for complete attention
  */
@@ -41,7 +43,7 @@ public:
 
     // default constructor
     block() = default;
-    block(int x, int y, int n, int d, int h, int l);
+    block(int x, int y, int n, int d, int h, int l, int vocab);
     void computeAttention(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int tokenCount);
     // partial attention forprop
     void partialforprop(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,
@@ -74,14 +76,16 @@ public:
                         std::vector<std::vector<float>>& Q, std::vector<std::vector<std::vector<float>>>& dv, std::vector<std::vector<std::vector<float>>>& EVp, 
                         std::vector<std::vector<std::vector<float>>>& EVc, std::vector<std::vector<std::vector<float>>>& changeV, int& in, int& tokenCount, 
                         int& layers, int& blockCount);
+    // default destructor
+    ~block() = default;
+};
+
 #ifdef USE_CUDA
     // cuda equivalent functions for block
 #elif USE_OPENCL
     // opencl equivalent functions for block
 #endif
 
-    // default destructor
-    ~block() = default;
-};
+
 
 #endif

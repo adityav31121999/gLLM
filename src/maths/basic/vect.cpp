@@ -279,7 +279,7 @@ float sum(std::vector<std::vector<float>> a) {
  * @return the product of the elements in the vector
  */
 float product(std::vector<float> a) {
-    return static_cast<float>(std::accumulate(a.begin(), a.end(), 1.0, std::multiplies<float>()));
+    return static_cast<float>(std::accumulate(a.begin(), a.end(), 1.0f, std::multiplies<float>()));
 }
 
 /**
@@ -292,7 +292,7 @@ float product(std::vector<float> a) {
 float product(std::vector<std::vector<float>> b) {
     float a = 1;
     for(int i = 0; i < b.size(); i++) {
-        a *= std::accumulate(b[i].begin(), b[i].end(), 1.0, std::multiplies<float>());
+        a *= std::accumulate(b[i].begin(), b[i].end(), 1.0f, std::multiplies<float>());
     }
     return a;
 }
@@ -308,7 +308,7 @@ std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>> a) {
     if(a.empty()) 
         throw std::runtime_error("embeddings must not be empty");
 
-    std::vector<std::vector<float>> c(a.size(), std::vector<float>(a.size(), 0.0));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(a.size(), 0.0f));
     
     for(size_t i = 0; i < a.size(); i++) {
         for(size_t j = 0; j < a.size(); j++) {
@@ -331,11 +331,11 @@ std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>> a, std:
     if(a.empty() || b.empty() || a[0].size() != b[0].size()) 
         throw std::runtime_error("Rows must be of equal sizes");
 
-    std::vector<std::vector<float>> c(a.size(), std::vector<float>(b[0].size(), 0.0));
+    std::vector<std::vector<float>> c(a.size(), std::vector<float>(b[0].size(), 0.0f));
     
     for(size_t i = 0; i < a.size(); i++) {
         for(size_t j = 0; j < b.size(); j++) {
-            c[i][j] = std::inner_product(a[i].begin(), a[i].end(), b[j].begin(), 0.0);
+            c[i][j] = std::inner_product(a[i].begin(), a[i].end(), b[j].begin(), 0.0f);
         }
     }
     

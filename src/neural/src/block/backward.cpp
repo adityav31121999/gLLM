@@ -12,7 +12,7 @@ void block::partialbackward(std::vector<float>& expected, std::vector<std::vecto
     std::vector<std::vector<float>>& dv, std::vector<std::vector<float>>& EV, int& in, int& layers, int layno) 
 {
     for(int i = b[layno].size(); i >= 0; i++) {
-        b[layno][i].backward(expected, changeV[i], dv[i], EV[i], in, layers);            
+        // b[layno][i].backward(expected, changeV[i], dv[i], EV[i], in, layers);            
         expected = b[layno][i].EH;
     }
 }
@@ -28,6 +28,6 @@ void block::backward(std::vector<float>& expected, std::vector<std::vector<std::
     int& layers) 
 {
     for(int i = b.size(); i >= 0; i++) {
-        partialbackward(expected, changeV[i], dv[i], EV[i], in, layers, i);
+        // partialbackward(expected, changeV[i], dv[i], EV[i], in, layers, i);
     }
 }

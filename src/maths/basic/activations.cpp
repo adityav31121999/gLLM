@@ -370,7 +370,7 @@ std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y) {
     std::vector<std::vector<float>> x(y);
     if(y.size() == 1 && y[0].size() == 1) {
         for (auto& row : x) {
-            std::fill(row.begin(), row.end(), 0);
+            std::fill(row.begin(), row.end(), 0.0f);
         }
         x[0][0] = 1;
         return x;
@@ -389,7 +389,7 @@ std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y) {
     float sum = 0.0; // Variable to store the sum of all elements
     // Calculate the sum of all elements in the 2D vector
     for (const auto& v: x) {
-        sum += std::accumulate(v.begin(), v.end(), 0.0);
+        sum += std::accumulate(v.begin(), v.end(), 0.0f);
     }
     // Normalize each element by dividing it by the total sum
     for (auto& v: x) {
@@ -419,7 +419,7 @@ std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y, int t) {
     // Create a copy of the input 2D vector
     if(y.size() == 1 && y[0].size() == 1) {
         for (auto& row : x) {
-            std::fill(row.begin(), row.end(), 0);
+            std::fill(row.begin(), row.end(), 0.0f);
         }
         x[0][0] = 1;
         return x;
@@ -469,7 +469,7 @@ std::vector<float> LOTAder(std::vector<float>& y) {
     // Calculate the sum of the elements in the vector
     float sum = std::accumulate(v.begin(), v.end(), 0.0);
     // Normalize the vector by dividing each element by the sum
-    std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return ((sum - i) / std::pow(sum, 2)); });
+    std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return ((sum - i) / static_cast<float>(std::pow(sum, 2))); });
     return v;
 }
 
@@ -508,7 +508,7 @@ std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y) {
     // Calculate the derivative of the LOTA function for each element
     for (auto& v : x) {
         std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i) {
-            return ((sum - i) / std::pow(sum, 2));
+            return ((sum - i) / static_cast<float>(std::pow(sum, 2)));
         });
     }
     return x; // Return the derived 2D vector
@@ -549,7 +549,7 @@ std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y, int t
     // Calculate the derivative of the LOTA function for each element
     for (int i = 0; i < t; i++) {
         std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](float& i) {
-            return ((sum - i) / std::pow(sum, 2));
+            return ((sum - i) / static_cast<float>(std::pow(sum, 2)));
         });
     }
     return x; // Return the derived 2D vector

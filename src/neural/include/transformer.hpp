@@ -80,8 +80,8 @@ public:
 
     // default constructor
     transformer() = default;
-    transformer(int x, int y, int n, int d, int h, int l);
-    transformer(int m, int x, int y, int n, int d, int h, int l);
+    transformer(int x, int y, int n, int d, int h, int l, int vocab);
+    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab);
 
 // training
     void forward(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K,

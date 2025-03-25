@@ -10,11 +10,12 @@
  * @param d dimension of each token
  * @param h height of MQ, MK and columns of MV, MH
  * @param l layers of mlp
+ * @param vocab vocabulary size
  */
-block::block(int x, int y, int n, int d, int h, int l) {
+block::block(int x, int y, int n, int d, int h, int l, int vocab) {
     // initialize attention block (complete attention)
     b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l)));
-    probability = std::vector<float>(VOCABSIZE, 0.0);
+    probability = std::vector<float>(vocab, 0.0f);
     EH = std::vector<float>(EMBEDDING, 0.0);
     // initialize holdEVs to hold all inbetween tokens transfer for context transfer and retention
     holdEVs = std::vector<std::vector<std::vector<float>>>(x, std::vector<std::vector<float>>(y, std::vector<float>(d, 0.0)));

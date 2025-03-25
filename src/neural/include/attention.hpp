@@ -29,6 +29,7 @@
  */
 class attention {
 public:
+    bool isCrossAttention;          // = 1 if cross attention else = 0 for self attention
 // operands
     mlp ver;            // next block transfer
     mlp hor;            // horizontal transfer
@@ -63,6 +64,8 @@ public:
     // backward propagation
     void backward(std::vector<float>& expected, std::vector<double>& dh, std::vector<float>& dv, std::vector<float>& EV, std::vector<double>& EH, 
                     int& in, int& layers);
+    void backward(std::vector<float>& expectedH, std::vector<float> expectedV, std::vector<double>& dh, std::vector<float>& dv, std::vector<float>& EV, 
+                    std::vector<double>& EH, int& in, int& layers);
     // train the attention class
     void train(std::vector<std::vector<float>>& tokenEmded, std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, 
                     std::vector<std::vector<float>>& Q, std::vector<float>& dv, std::vector<float>& EV, std::vector<float>& changeV, int& in, 

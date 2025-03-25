@@ -16,7 +16,7 @@ add_library(neural STATIC
 
     src/mlp/cl/forprop.cl
 
-    src/mlp/cu/forprop.cu
+    # src/mlp/cu/forprop.cu
 
     # attention
     src/attention/attention.cpp

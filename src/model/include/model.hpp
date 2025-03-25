@@ -72,10 +72,14 @@ public:
 
     // default constructor
     model() = default;
-    model(int m, int x, int y, int n, int d, int h, int l);
-    model(int tCount, int m, int x, int y, int n, int d, int h, int l);
-    model(int m, int x, int y, int n, int d, int h, int l, float learning);
-    model(int tCount, int m, int x, int y, int n, int d, int h, int l, float learning);
+    model(int m, int x, int y, int n, int d, int h, int l, int vocab);
+    model(int tCount, int m, int x, int y, int n, int d, int h, int l, int vocab);
+    model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
+    model(int tCount, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
+
+    void allocateMemory();
+    void load();
+    void save();
 
 #ifdef USE_CUDA
     // cuda implementation
@@ -84,10 +88,8 @@ public:
 #elif USE_CPU
     // cpp implementation
     void train();
-    void load();
     void load(std::string& from, std::string& to);
-    void save();
-    void allocateMemory();
+    
 
     // chats
     void takeInput();       // take required input for transformer
