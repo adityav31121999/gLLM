@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "D:/gLLM/bin/Windows-AMD64-64/static_libs/MinSizeRel/neural.lib"
+			"path" : "D:/gLLM/bin/Windows-AMD64-64/static_libs/Debug/neural.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -88,7 +88,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /EHsc /O1 /Ob1 /DNDEBUG -std:c++20 -MD"
+					"fragment" : "/DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi"
 				}
 			],
 			"defines" : 
@@ -269,12 +269,6 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/neural/src/attention/train.cpp",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
 			"path" : "src/neural/src/block/block.cpp",
 			"sourceGroupIndex" : 0
 		},
@@ -294,6 +288,12 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/neural/src/block/train.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/neural/src/transformer/compute.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{

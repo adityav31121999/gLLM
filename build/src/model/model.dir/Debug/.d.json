@@ -183,6 +183,8 @@
             "d:\\gllm\\src\\neural\\include\\attention.hpp",
             "d:\\gllm\\src\\neural\\include\\transformer.hpp",
             "d:\\gllm\\src\\neural\\include\\block.hpp",
+            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\fstream",
+            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\__msvc_filebuf.hpp",
             "d:\\gllm\\src\\model\\include\\model_fs.hpp",
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\filesystem",
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\chrono",
@@ -210,9 +212,7 @@
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\iomanip",
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\optional",
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\xsmf_control.h",
-            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\sstream",
-            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\fstream",
-            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\__msvc_filebuf.hpp"
+            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\sstream"
         ],
         "ImportedModules": [],
         "ImportedHeaderUnits": []

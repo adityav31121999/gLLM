@@ -22,7 +22,6 @@ add_library(neural STATIC
     src/attention/attention.cpp
     src/attention/forward.cpp
     src/attention/backward.cpp
-    src/attention/train.cpp
 
     # block
     src/block/block.cpp
@@ -31,6 +30,7 @@ add_library(neural STATIC
     src/block/train.cpp
 
     # transformer
+    src/transformer/compute.cpp
     src/transformer/tokens.cpp
     src/transformer/transformer.cpp
     src/transformer/feedfor.cpp

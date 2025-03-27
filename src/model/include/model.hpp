@@ -26,6 +26,7 @@ typedef struct modelDataInfo {
 
     // data information and distribution
     int d;              // dimension of embedding
+    int vocab;          // vocabulary size
     int qkrow;          // matrix MQ and MK rows
     int qkcol;          // matrix MQ and MK columns
     int vhrow;          // matrix MV and MH rows
@@ -77,20 +78,25 @@ public:
     model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
     model(int tCount, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
 
+    void setLearning(float learning);
+    void setVocab(int vocab);
+    void setModelName(std::string& modelName);
+    void setVersion(std::string& version);
+    void setAuthor(std::string& author);
+    void setDate(std::string& date);
+    void setModelArch(std::string& modelArch);
+    void setLicense(std::string& license);
+    void setTrainingData(std::string& trainingData);
+    void setInfo(modelDataInfo& info);
+    void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, 
+                    std::string& modelArch, std::string& license, std::string& trainingData);
+
     void allocateMemory();
     void load();
-    void save();
-
-#ifdef USE_CUDA
-    // cuda implementation
-#elif USE_OPENCL
-    // opencl implementation
-#elif USE_CPU
-    // cpp implementation
-    void train();
     void load(std::string& from, std::string& to);
+    void save();
+    void train();
     
-
     // chats
     void takeInput();       // take required input for transformer
     void runTransformer();  // run transformer for conversation
@@ -101,6 +107,11 @@ public:
     void nextResponse();        // get next response from the model
     void saveChat();        // save chat to file
     void loadChat();        // load chat from file
+
+#ifdef USE_CUDA
+    // cuda implementation
+#elif USE_OPENCL
+    // opencl implementation    
 #endif
 
     // default destructor

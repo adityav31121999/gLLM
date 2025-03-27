@@ -1,9 +1,10 @@
 {
     "Version": "1.2",
     "Data": {
-        "Source": "d:\\gllm\\src\\neural\\src\\transformer\\finetune.cpp",
+        "Source": "d:\\gllm\\src\\neural\\src\\transformer\\compute.cpp",
         "ProvidedModule": "",
         "Includes": [
+            "d:\\gllm\\src\\neural\\include\\transformer.hpp",
             "d:\\gllm\\src\\neural\\include\\attention.hpp",
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\vector",
             "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\yvals_core.h",
@@ -177,8 +178,9 @@
             "d:\\gllm\\src\\maths\\include\\stats.hpp",
             "d:\\gllm\\src\\neural\\include\\mlp.hpp",
             "d:\\gllm\\src\\neural\\include\\block.hpp",
-            "d:\\gllm\\src\\neural\\include\\transformer.hpp",
-            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\string"
+            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\string",
+            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\fstream",
+            "c:\\program files\\microsoft visual studio\\2022\\community\\vc\\tools\\msvc\\14.43.34808\\include\\__msvc_filebuf.hpp"
         ],
         "ImportedModules": [],
         "ImportedHeaderUnits": []

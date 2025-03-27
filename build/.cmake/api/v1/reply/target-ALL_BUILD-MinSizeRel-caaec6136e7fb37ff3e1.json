@@ -5,7 +5,7 @@
 		"commands" : [],
 		"files" : 
 		[
-			"src/neural/CMakeLists.txt"
+			"CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -17,23 +17,32 @@
 	"dependencies" : 
 	[
 		{
-			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
+			"id" : "model::@dd52281f56f5d51f359a"
+		},
+		{
+			"id" : "maths::@82281960fef5161a47a1"
+		},
+		{
+			"id" : "script::@4a5bc53572e6b06111e5"
 		},
 		{
 			"id" : "neural::@aa3d0067ab9058994e35"
+		},
+		{
+			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
 		}
 	],
 	"folder" : 
 	{
 		"name" : "CMakePredefinedTargets"
 	},
-	"id" : "ALL_BUILD::@aa3d0067ab9058994e35",
+	"id" : "ALL_BUILD::@6890427a1f51a3e7e1df",
 	"isGeneratorProvided" : true,
 	"name" : "ALL_BUILD",
 	"paths" : 
 	{
-		"build" : "src/neural",
-		"source" : "src/neural"
+		"build" : ".",
+		"source" : "."
 	},
 	"sources" : [],
 	"type" : "UTILITY"

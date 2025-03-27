@@ -314,9 +314,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\gLLM\src\neural\src\attention\backward.cpp">
       <ObjectFileName>$(IntDir)/src/attention/backward.cpp.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\src\attention\train.cpp">
-      <ObjectFileName>$(IntDir)/src/attention/train.cpp.obj</ObjectFileName>
-    </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\block\block.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\block\forward.cpp">
       <ObjectFileName>$(IntDir)/src/block/forward.cpp.obj</ObjectFileName>
@@ -327,6 +324,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\gLLM\src\neural\src\block\train.cpp">
       <ObjectFileName>$(IntDir)/src/block/train.cpp.obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\compute.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\tokens.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\transformer.cpp" />
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\feedfor.cpp" />

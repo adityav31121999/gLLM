@@ -1,23 +1,20 @@
 
+// backward propagation
 #include "include/attention.hpp"
 
 /**
- * @brief Backward Propagation for the attention class using gradients from expected Horizontal output
+ * @brief Backward Propagation for the attention class using gradients from expected Horizontal output.
+ *      Use for First block only.
  * @param expected Expected output vector (target embedding for next token prediction)
- * @param dh Horizontal weighted sum vector (computed in forward pass)
- * @param dv Vertical weighted sum vector (computed in forward pass)
  * @param EV Vertical embedding vector (context transfer to next head)
- * @param EH Horizontal embedding vector (next token prediction)
- * @param in Input size (number of tokens)
+ * @param in Input size (embedding dimension)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward(std::vector<float>& expected, std::vector<double>& dh, std::vector<float>& dv, std::vector<float>& EV, 
-    std::vector<double>& EH, int& in, int& layers) 
+void attention::backward(std::vector<float> expected, int& in, int& count, int& layers) 
 {
     // Step 1: Compute loss gradient w.r.t. EH (for token prediction) and EV (for context)
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
-
     // EH is primarily responsible for token prediction
     for (int i = 0; i < EMBEDDING; i++) {
         grad_EH[i] = 2.0f * (EH[i] - expected[i]); // MSE gradient for EH
@@ -56,6 +53,9 @@ void attention::backward(std::vector<float>& expected, std::vector<double>& dh, 
     std::vector<float> pre_MH(MATHEIGHTS, 0.0f);
     std::vector<float> pre_MV(MATHEIGHTS, 0.0f);
 
+    std::vector<std::vector<float>> head = std::vector<std::vector<float>>(tokenCount, std::vector<float>(tokenCount, 0.0f));
+    head = LOTA(KdotQ, tokenCount);
+
     int tokenCount = K.size();
     for (int i = 0; i < tokenCount; i++) {
         float sum_head_row = 0.0f; // sum(head[i][j]) over j
@@ -148,13 +148,14 @@ void attention::backward(std::vector<float>& expected, std::vector<double>& dh, 
     // Step 10: Update EH and EV using gradients
     for (int i = 0; i < EMBEDDING; i++) {
         EH[i] -= LEARNING * grad_EH[i]; // Update EH with its gradient
-        EV[i] -= LEARNING * grad_EV[i]; // Update EV with its gradient
+        EV[count][i] -= LEARNING * grad_EV[i]; // Update EV with its gradient
     }
 }
 
 
 /**
- * @brief Backward Propagation for the attention class using gradients from expected Horizontal nd Vertical output
+ * @brief Backward Propagation for the attention class using gradients from expected Horizontal nd Vertical output.
+ *      Use for Second to Last Block and repetitions.
  * @param expectedH Expected horizontal output vector (target embedding for next token prediction)
  * @param expectedV Expected vertical output vector (target retention of context for new block)
  * @param dh Horizontal weighted sum vector (computed in forward pass)
@@ -164,8 +165,7 @@ void attention::backward(std::vector<float>& expected, std::vector<double>& dh, 
  * @param in Input size (number of tokens)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward(std::vector<float>& expectedH, std::vector<float> expectedV, std::vector<double>& dh, std::vector<float>& dv, std::vector<float>& EV, 
-    std::vector<double>& EH, int& in, int& layers) 
+void attention::backward(std::vector<float> expectedH, std::vector<float> expectedV, int& in, int& count, int& layers) 
 {
     // Step 1: Compute loss gradient w.r.t. EH (for token prediction) and EV (for context)
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
@@ -174,7 +174,7 @@ void attention::backward(std::vector<float>& expectedH, std::vector<float> expec
     // EH is primarily responsible for token prediction
     for (int i = 0; i < EMBEDDING; i++) {
         grad_EH[i] = 2.0f * (EH[i] - expectedH[i]); // MSE gradient for EH
-        grad_EV[i] = 2.0f * (EV[i] - expectedV[i]); // EV gets a smaller portion of gradient (context preservation)
+        grad_EV[i] = 2.0f * (EV[count][i] - expectedV[i]); // MSE gradient for EV
     }
 
     // Step 2: Backprop through MLPs (hor for EH, ver for EV)
@@ -209,6 +209,9 @@ void attention::backward(std::vector<float>& expectedH, std::vector<float> expec
     std::vector<float> pre_MH(MATHEIGHTS, 0.0f);
     std::vector<float> pre_MV(MATHEIGHTS, 0.0f);
 
+    std::vector<std::vector<float>> head = std::vector<std::vector<float>>(tokenCount, std::vector<float>(tokenCount, 0.0f));
+    head = LOTA(KdotQ, tokenCount);
+
     int tokenCount = K.size();
     for (int i = 0; i < tokenCount; i++) {
         float sum_head_row = 0.0f; // sum(head[i][j]) over j
@@ -301,7 +304,6 @@ void attention::backward(std::vector<float>& expectedH, std::vector<float> expec
     // Step 10: Update EH and EV using gradients
     for (int i = 0; i < EMBEDDING; i++) {
         EH[i] -= LEARNING * grad_EH[i]; // Update EH with its gradient
-        EV[i] -= LEARNING * grad_EV[i]; // Update EV with its gradient
+        EV[count][i] -= LEARNING * grad_EV[i]; // Update EV with its gradient
     }
 }
-

@@ -28,9 +28,6 @@
     <ClCompile Include="D:\gLLM\src\neural\src\attention\backward.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\gLLM\src\neural\src\attention\train.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\block\block.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -41,6 +38,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\block\train.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\gLLM\src\neural\src\transformer\compute.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\gLLM\src\neural\src\transformer\tokens.cpp">
