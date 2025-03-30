@@ -3,7 +3,7 @@
 #ifndef ATTENTION_HPP
 #define ATTENTION_HPP 1
 
-/**
+/** Attention Mechanism for SHADY ATTENTION ARCHITECTURE
  * K[i] = T[i] * MK, Q[i] = T[i] * MQ, M = MQ x MK'
  * KdotQ[i][j] = K[i]xQ'[j] = T[i] x M x T'[j]
  * head = LOTA(KdotQ) OR LOTA(ReLU(KdotQ)) OR Softmax(KdotQ)
@@ -45,12 +45,10 @@ public:
     std::vector<std::vector<float>> Q;          // Querys = Tokens x MQ
     std::vector<std::vector<float>> KdotQ;      // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar
     // std::vector<std::vector<float>> head;       // = LOTA(head, CurrentTokenCount) -> probability distribution of relation between tokens
-    std::vector<float> EH;          // Next Embedding in same block
-    std::vector<std::vector<float>> EV;         // Context retention for next block
-    std::vector<float> dh;          // sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
-    std::vector<std::vector<float>> dv;          // sum of (KdotQ[j][i] * Keys[j] * MH) (column wise)
-    std::vector<float> mh;          // ReLU of hor output
-    std::vector<float> mv;          // ReLU of ver output
+    std::vector<float> EH;      // Next Embedding in same block
+    std::vector<float> EV;      // Context retention for next block
+    std::vector<float> dh;      // sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
+    std::vector<float> dv;      // sum of (KdotQ[j][i] * Keys[j] * MH) (column wise)
 
 // functions
     // default constructor
@@ -58,15 +56,12 @@ public:
     attention(int n, int d, int h, int l);
     attention(int n, int d, int h, int l, bool attentionType);
     void setAttentionType(bool attentionType);
-    
     // forward propagation for both first and specific block's attention
     void forprop(int& in, int& layers, int& tokenCount);
     void forprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-
     // backward propagation
-    void backward(std::vector<float> expected, int& in, int& count, int& layers);
-    void backward(std::vector<float> expectedH, std::vector<float> expectedV, int& in, int& count, int& layers);
-    
+    void backward(std::vector<float>& expected, int& in, int& layers);
+    void backward(std::vector<float>& expectedH, std::vector<float>& expectedV, int& in, int& layers);
     // functions for using model
     void runAttention();
 

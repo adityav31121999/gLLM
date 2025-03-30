@@ -19,8 +19,22 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab) : x(x), y(y) {
     probability = std::vector<float>(vocab, 0.0f);
     // common embeddings for horizontal and vertical pass
     EH = std::vector<float>(EMBEDDING, 0.0);
-    EV = std::vector<float>(EMBEDDING, 0.0);
+    // EV = std::vector<float>(EMBEDDING, 0.0);
+    EV = std::vector<std::vector<std::vector<float>>>(x, std::vector<std::vector<float>>(y, std::vector<float>(d, 0)));
     // expected vectors for backprop in horizontal and vertical pass
     expectedH = std::vector<float>(EMBEDDING, 0.0);
-    expectedV = std::vector<float>(EMBEDDING, 0.0);
+    expectedV = std::vector<std::vector<std::vector<float>>>(x, std::vector<std::vector<float>>(y, std::vector<float>(EMBEDDING, 0)));
+}
+
+
+/**
+ * @brief set context retention vectors from each attention class to block
+ * @param EV context retention for current block
+ */
+void block::setVerticalRetention(std::vector<std::vector<std::vector<float>>>& EV) {
+    for(int j = 0; j < x ; j++) {
+        for(int k = 0; k < x ; k++) {
+            EV[j][k] = b[j][k].EV;
+        }
+    }
 }

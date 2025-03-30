@@ -14,7 +14,7 @@
  */
 transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab):
     m(1), x(x), y(y), n(n), d(d), h(h), l(l) {
-    b = std::vector<block>(1, block(x, y, n, d, h, l, vocab));
+    t = std::vector<block>(1, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
@@ -34,7 +34,7 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab):
  */
 transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab) :
     m(m), x(x), y(y), n(n), d(d), h(h), l(l) {
-    b = std::vector<block>(m, block(x, y, n, d, h, l, vocab));
+    t = std::vector<block>(m, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;

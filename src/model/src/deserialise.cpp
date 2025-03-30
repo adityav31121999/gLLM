@@ -28,6 +28,7 @@ void deserialiseMAT(mat& a, FILE* file, int row, int col) {
     }
 }
 
+
 /**
  * @brief Deserialize MLP from binary file
  * @param a MLP to deserialize into
@@ -89,7 +90,7 @@ void deserialiseModel(model& a) {
         a.T = transformer(a.m, a.x, a.y, a.n, a.d, a.h, a.l);
         
         // Deserialize transformer by deserializing attention class
-        for (auto& block : a.T.b) {
+        for (auto& block : a.T.t) {
             // For each block, deserialize its attention layers
             for (auto& alay : block.b) {
                 // For each attention layer, deserialize each attention's 4mat and 2mlp
@@ -112,7 +113,7 @@ void deserialiseModel(model& a) {
         
         // Deserialize each transformer
         for (auto& T : a.Tg) {
-            for (auto& block : T.b) {
+            for (auto& block : T.t) {
                 // For each block, deserialize its attention layers
                 for (auto& alay : block.b) {
                     // For each attention layer, deserialize each attention's 4mat and 2mlp

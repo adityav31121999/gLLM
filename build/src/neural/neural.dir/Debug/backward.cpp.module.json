@@ -3,7 +3,7 @@
     "revision": 0,
     "rules": [
         {
-            "primary-output": "neural.dir\\Debug\\/src/transformer/backward.cpp.obj",
+            "primary-output": "neural.dir\\Debug\\/src/attention/backward.cpp.obj",
             "outputs": [
                 "D:\\gLLM\\bin\\Windows-AMD64-64\\static_libs\\Debug\\neural.pdb",
                 "neural.dir\\Debug\\"
@@ -11,4 +11,5 @@
             "requires": []
         }
     ]
+}
 }

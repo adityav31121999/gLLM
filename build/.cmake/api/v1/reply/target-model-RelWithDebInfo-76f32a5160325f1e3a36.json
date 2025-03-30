@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "D:/gLLM/bin/Windows-AMD64-64/static_libs/Debug/model.lib"
+			"path" : "D:/gLLM/bin/Windows-AMD64-64/static_libs/RelWithDebInfo/model.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -88,7 +88,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++20 -MDd -Zi"
+					"fragment" : "/DWIN32 /D_WINDOWS /EHsc /O2 /Ob1 /DNDEBUG -std:c++20 -MD -Zi"
 				}
 			],
 			"defines" : 
@@ -144,11 +144,11 @@
 	[
 		{
 			"backtrace" : 2,
-			"id" : "maths::@82281960fef5161a47a1"
+			"id" : "neural::@aa3d0067ab9058994e35"
 		},
 		{
 			"backtrace" : 2,
-			"id" : "neural::@aa3d0067ab9058994e35"
+			"id" : "maths::@82281960fef5161a47a1"
 		},
 		{
 			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"

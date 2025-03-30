@@ -3,12 +3,12 @@
 #include "include/transformer.hpp"
 
 /**
- * @brief forward propagation for a specific block's attention class (incomplete attention)
+ * @brief Dot product of T x M x T'
  * @param T token embedding
  * @param M matrix for attention head calculation (MQ x MK')
- * @param dot dot product of T x M x T'
+ * @param dot = T x M x T'
  */
-void calculateDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot) {
+void computeDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot) {
     std::vector<double> temp(T.size(), 0);
     for(int i = 0; i < T.size(); i++) {
         temp[i] = std::inner_product(T.begin(), T.end(), M[i].begin(), 0.0);
@@ -18,12 +18,13 @@ void calculateDot(std::vector<float>& T, std::vector<std::vector<float>>& M, flo
 
 
 /**
- * @brief forward propagation for a specific block's attention class (incomplete attention)
- * @param T token embedding
+ * @brief Dot product of T1 x M x T2'
+ * @param T1 token embedding
+ * @param T2 token embedding
  * @param M matrix for attention head calculation (MQ x MK')
- * @param dot dot product of T x M x T'
+ * @param dot = T1 x M x T2'
  */
-void calculateDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot) {
+void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot) {
     std::vector<double> temp(T1.size(), 0);
     for(int i = 0; i < T1.size(); i++) {
         temp[i] = std::inner_product(T1.begin(), T1.end(), M[i].begin(), 0.0);
@@ -33,10 +34,11 @@ void calculateDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<st
 
 
 /**
- * @brief Kdot via T[i]xMxT'[j]
+ * @brief Dot product of Ti x M x Tj'
  * @param Ti ith token
  * @param M QK' cache
  * @param Tj jth token (count as transpose)
+ * @param dot = Ti x M x Tj'
  */
 void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot) {
     std::vector<float> vec(Ti.size(), 0.0f);
@@ -56,7 +58,7 @@ void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& do
  * @param promptCount tokens in prompt
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
-    int& currentTokenCount, int& promptCount) 
+    int& currentTokenCount, int& promptCount)
 {
     if (currentTokenCount == 0) {
         if(promptCount == 1) {
@@ -98,7 +100,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
  * @param promptCount tokens in prompt 
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
-    int& promptCount) 
+    int& promptCount)
 {
     // original input
     if (currentTokenCount == 0) {

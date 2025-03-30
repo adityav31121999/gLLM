@@ -68,7 +68,7 @@ void serialiseModel(const model& a) {
     if (a.tCount == 1) {
         // Serialize single transformer
         const transformer& T = a.T;
-        for (const auto& block : T.b) {
+        for (const auto& block : T.t) {
             // For each block, serialize its attention layers
             for (const auto& alay : block.b) {
                 // For each attention layer, serialise each attention's 4mat and 2mlp
@@ -88,7 +88,7 @@ void serialiseModel(const model& a) {
     } else {
         // Serialize multiple transformers
         for (const auto& T : a.Tg) {
-            for (const auto& block : T.b) {
+            for (const auto& block : T.t) {
                 // For each block, serialize its attention layers
                 for (const auto& alay : block.b) {
                     // For each attention layer, serialise each attention's 4mat and 2mlp

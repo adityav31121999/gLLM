@@ -10,6 +10,14 @@
 
 #define ARCH "SHADY-ATTENTION"
 
+/**
+ * Model will have several .bin files for storing all prameters in binary
+ * format. These files are of Matrices, NLPs and Caches:
+ * 1. Matrices: MQ.bin, MK.bin, MH.bin, MV.bin
+ * 2. MLPs: hor.bin, ver.bin
+ * 3. Caches: QK.bin, KH.bin, QV.bin
+ */
+
 // metadata for model and data information
 typedef struct modelDataInfo {
     // model information

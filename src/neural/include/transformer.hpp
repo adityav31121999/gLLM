@@ -32,8 +32,8 @@ public:
     int l;          // layers of mlp
     float learning;        // learning rate for MLPs
     int epochs;             // number of epochs for MLPs
-    int reps;               // repetitions for conversation when totalTokens is reahced and more needed till TERMINATE is met
-    std::vector<block> b;   // attention block (1 or many)
+    // int reps;               // repetitions for conversation when totalTokens is reahced and more needed till TERMINATE is met
+    std::vector<block> t;   // attention block (1 or many)
     std::vector<std::string> tinput;    // token input
     std::vector<std::string> expected;  // expected token output
     std::vector<std::string> toutput;   // predicted token output
@@ -50,6 +50,8 @@ public:
     int totalTokens;        // total tokens generated
     float error;            // error for transformer
     bool isSelf;            // if self attention or cross attention
+    bool toNextBlock;       // transfer to next block
+    bool isTerminate;       // 
 
     // default constructor
     transformer() = default;
@@ -63,14 +65,8 @@ public:
     void setPrompts(std::string prompts);   // set prompts file
 
 // training
-    void forward(int& in, int& tokenCount, int& layers);
-    void forward(int& in, int& tokenCount, int& layers, int& blockCount);
-
-    void backward(std::vector<float>& expected, std::vector<std::vector<std::vector<float>>>& changeV, std::vector<std::vector<std::vector<float>>>& dv, 
-                    std::vector<std::vector<std::vector<float>>>& EV, int& in, int& layers);
-    void backwardV();       // backward propagation for vertical attention
-    void backwardH();       // backward propagation for horizontal attention
-
+    void forward();
+    void backward();
     void train();           // train with feedforward()
     void instruct();        // instruct the transformer to do something
     void computeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output
@@ -89,13 +85,15 @@ public:
 };
 
 
-// compute functions for dot, KdotQ and other functions
+// compute functions for dot, KdotQ and other values
 
+void computeDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot);
+void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
 void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
-void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, int& currentTokenCount,
-                    int& promptCount);
-void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, int& promptCount);
-
+void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
+    int& currentTokenCount, int& promptCount);
+void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
+    int& promptCount);
 
 
 #endif

@@ -34,9 +34,11 @@ public:
     float error;            // error for block, mean of all incomplete attentions
     std::string str;        // to check whether new token is @#O or part of conversation
     std::vector<float> EH;              // Common Approximation vector to add all tokens in horizontal pass
-    std::vector<float> EV;              // Common Approximation vector to add all tokens in vertical pass
+    // context retention tokens from each head
+    std::vector<std::vector<std::vector<float>>> EV;
     std::vector<float> expectedH;       // expected output from horizontal pass for backprop
-    std::vector<float> expectedV;       // expected output from vertical pass for backprop
+    // expected output from vertical pass for backprop
+    std::vector<std::vector<std::vector<float>>> expectedV;
     std::vector<float> probability;             // probability space for next token
     std::vector<std::vector<attention>> b;      // block complete attention
 
@@ -52,9 +54,18 @@ public:
     void forprop(int& in, int& tokenCount, int& layers);
     void forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
 
+    // set retention vectors for vertical pass
+    void setVerticalRetention(std::vector<std::vector<std::vector<float>>>& EV);
+
     // partial attention backward
-    void partialbackward(std::vector<float>& expected, int& in, int& layers, int layno);
+    void partialbackward(std::vector<std::vector<float>>& expectedV, std::vector<float>& expectedH, int& in, int& layers, int layno);
+    void partialbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers, int layno);
+    void partialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
+
     // parallel partialbackward(i)
+    void backward(std::vector<std::vector<float>>& expectedV, std::vector<std::vector<float>>& expectedH, int& in, int& layers);
+    void backward(std::vector<std::vector<float>>& expectedV, std::vector<float>& expectedH, int& in, int& layers);
+    void backward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void backward(std::vector<float>& expected, int& in, int& layers);
 
     // parallel forprop(i) and backward(i)
@@ -67,7 +78,6 @@ public:
 #elif USE_OPENCL
     // opencl equivalent functions for block
 #endif
-
 
     // default destructor
     ~block() = default;

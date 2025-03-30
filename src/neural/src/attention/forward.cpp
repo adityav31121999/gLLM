@@ -33,21 +33,16 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
             l += head[j][i];
         }
         dh = dh + (k * K[i]);     // Ki.MV, dh = weighted sums horizontal
-        dv[i] = dv[i] + (l * Q[i]);     // Qj.MH, dv = weighted sums vertical
-        dv[i] = dot(dv[i], MV);
+        dv = dv + (l * Q[i]);     // Qj.MH, dv = weighted sums vertical
     }
     dh = dot(dh, MH);
+    dv = dot(dv, MV);
     // get the required change from MLPs
     hor.input = EH + dh;
     hor.forward(in, layers);
     // AND gate for the final output
     EH = EH + ReLUv(hor.output);
-    // for vertical mlp
-    for(int i = 0; i < tokenCount; i++) {
-        ver.input = EV[i] + dv[i];
-        ver.forward(in, layers);
-        EV[i] = EV[i] + ReLUv(ver.output);
-    }
+    EV = EV + ReLUv(ver.output);
 }
 
 
@@ -80,100 +75,14 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
             l += head[j][i];
         }
         dh = dh + (k * K[i]);     // Ki.MV, dh = weighted sums horizontal
-        dv[i] = dv[i] + (l * Q[i]);     // Qj.MH, dv = weighted sums vertical
+        dv = dv + (l * Q[i]);     // Qj.MH, dv = weighted sums vertical
     }
-    dh = dot(dh, MH);       // dh = weighted sums * MH
+    dh = dot(dh, MH);       // dh = weighted sums by row * MH
+    dv = dot(dv, MV);       // dv = weighted sums by column * MH
     // get the required change from MLPs
     hor.input = EH + dh;
     hor.forward(in, layers);
     // AND gate for the final output
     EH = EH + ReLUv(hor.output);
-    for(int i = 0; i < tokenCount; i++) {
-        dv[i] = dot(dv[i], MV);       // dv = weighted sums * MV
-        ver.input = EV[i] + dv[i];
-        ver.forward(in, layers);
-        EV[i] = EV[i] + ReLUv(ver.output);
-    }
+    EV = EV + ReLUv(ver.output);
 }
-
-/**
-    // head calculation by inner product of KEYS and QUERYS
-    if(tokenCount == 1) {
-        // for single token input like "Hi", "Hello", "Hey", "How", "What", etc.
-        K[0] = dot(tokens[0], MK);
-        Q[0] = dot(tokens[0], MQ);
-        KdotQ[0][0] = std::inner_product(K[0].begin(), K[0].end(), Q[0].begin(), 0.0)/SCALING;
-    }
-    else if(tokenCount == in) {
-        // for a sentence and long prompt
-        for(int i = 0; i < tokenCount; i++) {
-            K[i] = dot(tokens[i], MK);
-            Q[i] = dot(tokens[i], MQ);
-        }
-        for(int i = 0; i < tokenCount; i++) {
-            for(int j = 0; j < tokenCount; j++) {
-                KdotQ[i][j] = std::inner_product(K[i].begin(), K[i].end(), Q[j].begin(), 0.0)/SCALING;
-            }
-        }
-    }
-    else if(tokenCount > in) {
-        // when new token is predicted or generated
-        if(tokenCount - in == 1 || tokenCount - tokens.size() == 1) {
-            K[tokenCount] = dot(tokens[0], MK);
-            Q[tokenCount] = dot(tokens[0], MQ);
-            KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-            for(int j = 0; j < tokenCount-1; j++) {
-                // head calculation
-                KdotQ[tokenCount][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
-                KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-            }
-        }
-        else if(tokenCount - tokens.size() > 1) {
-            // for next prediction
-            int diff = tokenCount - tokens.size();
-            K[tokenCount] = dot(tokens[tokenCount-1], MK);
-            Q[tokenCount] = dot(tokens[tokenCount-1], MQ);
-            KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-            for(int i = tokens.size(); i < tokens.size() + diff - 1; i++) {
-                for(int j = tokens.size(); j < tokens.size() + diff -1; j++) {
-                    // head calculation: row
-                    KdotQ[i][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
-                    // head calculation: column
-                    KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-                }
-            }
-        }
-        else {
-            // for next prediction
-            int diff = tokenCount - in;
-            K[tokenCount] = dot(tokens[tokenCount-1], MK);
-            Q[tokenCount] = dot(tokens[tokenCount-1], MQ);
-            KdotQ[tokenCount][tokenCount] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-            for(int j = 0; j < diff; j++) {
-                for(int i = 0; j < in + diff -1; i++) {
-                    // head calculation
-                    KdotQ[tokenCount][j] = std::inner_product(K[tokenCount].begin(), K[tokenCount].end(), Q[j].begin(), 0.0)/SCALING;
-                    KdotQ[j][tokenCount] = std::inner_product(K[j].begin(), K[j].end(), Q[tokenCount].begin(), 0.0)/SCALING;
-                }
-            }
-        }
-    }
-    --------------------------------------------
-    if(count == 1) {
-        // for predicting first token of new block
-        K[0] = dot(tokens[0], MK);
-        Q[0] = dot(EVp[0], MQ);
-        KdotQ[0][0] = std::inner_product(K[0].begin(), K[0].end(), Q[0].begin(), 0.0)/SCALING;
-    }
-    else {
-        // for next prediction
-        K[count] = dot(tokens[n*blockCount + count], MK);
-        Q[count] = dot(EVp[count], MQ);
-        KdotQ[count][count] = std::inner_product(K[count].begin(), K[count].end(), Q[count].begin(), 0.0)/SCALING;
-        for(int j = 0; j < count - 1; j++) {
-            // head calculation
-            KdotQ[count][j] = std::inner_product(K[count].begin(), K[count].end(), Q[j].begin(), 0.0)/SCALING;
-            KdotQ[j][count] = std::inner_product(K[j].begin(), K[j].end(), Q[count].begin(), 0.0)/SCALING;
-        }
-    }
- */
