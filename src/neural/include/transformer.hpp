@@ -11,10 +11,6 @@
 #include <vector>
 #include <iostream>
 
-#define NUMBER_OF_PA 8              // number of Partial Attentions in one Block
-#define NUMBER_OF_HEADS 32          // number of heads in each layer (partial attention)
-#define NUMBER_OF_BLOCKS 8          // number of blocks in transformer
-
 /**
  * @brief Common Transformer class for token/chunk prediction and context 
  * retention and grammatical restriction. This can be single block or multi-block
@@ -51,12 +47,15 @@ public:
     float error;            // error for transformer
     bool isSelf;            // if self attention or cross attention
     bool toNextBlock;       // transfer to next block
-    bool isTerminate;       // 
+    bool toUp;              // backpropagation to upward blocks
+    bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
 
     // default constructor
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab);
+    transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
+    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
 
     void setLearning(float learning);       // set learning rate for MLPs
     void setEpochs(int epochs);             // set epochs for MLPs
@@ -66,7 +65,8 @@ public:
 
 // training
     void forward();
-    void backward();
+    void backward(std::vector<float>& expected);
+    void backward(std::vector<float>& expected, int& blockCount);
     void train();           // train with feedforward()
     void instruct();        // instruct the transformer to do something
     void computeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output
@@ -94,7 +94,6 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
     int& currentTokenCount, int& promptCount);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
     int& promptCount);
-
 
 #endif
 

@@ -9,7 +9,8 @@
  * @param i ith layer of block
  * @param layers number of layers of MLP
  */
-void block::partialforprop(int& in, int& tokenCount, int i, int& layers) {
+void block::partialforprop(int& in, int& tokenCount, int i, int& layers) 
+{
     // for one partial attention
     for(int j = 0; j < y; j++) {
         b[i][j].forprop(in, layers, tokenCount);      // incomplete attention forprop
@@ -49,7 +50,8 @@ void block::partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, in
  * @param tokenCount current token count
  * @param layers layers of mlp
  */
-void block::forprop(int& in, int& tokenCount, int& layers) {
+void block::forprop(int& in, int& tokenCount, int& layers) 
+{
     // y partial attention in x layers => x parallel processes
     while(1) {
         // forward propagation for all layers
@@ -64,17 +66,22 @@ void block::forprop(int& in, int& tokenCount, int& layers) {
         // push EH to tokenEmbed vector, dembed the EH and push to tokens vector of transformer
         for(int i = 0; i < x; i++) {
             for(int j = 0; j < y; j++) {
+                // diagonal element
                 b[i][j].KdotQ[tokenCount + 1][tokenCount + 1] = std::inner_product(b[i][j].K[tokenCount+1].begin(), 
                             b[i][j].K[tokenCount+1].end(), b[i][j].Q[tokenCount+1].begin(), 0.0f);
+                // rows and columns
                 for(int k = 0; k < tokenCount; k++) {
+                    // row
                     b[i][j].KdotQ[tokenCount + 1][k] = std::inner_product(b[i][j].K[tokenCount+1].begin(), 
                             b[i][j].K[tokenCount+1].end(), b[i][j].Q[j].begin(), 0.0f);
+                    // column
                     b[i][j].KdotQ[k][tokenCount + 1] = std::inner_product(b[i][j].K[j].begin(), b[i][j].K[j].end(), 
                             b[i][j].Q[tokenCount+1].begin(), 0.0f);
                 }
             }
         }
         tokenCount++;
+        // end the block forward propagation
         if(tokenCount == CONTEXT_WIN) {
             break;
         }
@@ -102,6 +109,7 @@ void block::forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& E
         for(int i = 0; i < b.size(); i++) {
             partialforprop(EVp[i], in, tokenCount, k, i, layers, n);
         }
+        // take sum of all EHs and then calculate the prediction for next token
         // dembed the EH and check for "@#O" token
         // @#0 = and its over
         // check for end of tokens and break
@@ -125,6 +133,7 @@ void block::forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& E
         }
         tokenCount++;
         count++;
+        // end block forward propagation
         if(tokenCount == CONTEXT_WIN) {
             break;
         }

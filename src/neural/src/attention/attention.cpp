@@ -22,7 +22,7 @@ attention::attention(int n, int d, int h, int l) {
     dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
     dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
     EH = std::vector<float>(d, 0);      // EH = EH + dH
-    EV = std::vector<float>(d, 0);
+    EV = std::vector<std::vector<float>>(CONTEXT_WIN, std::vector<float>(d, 0));
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     isSelfAttention = 0;                // default attention: Self
@@ -48,7 +48,7 @@ attention::attention(int n, int d, int h, int l, bool isSelf) {
     dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
     dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
     EH = std::vector<float>(d, 0);      // EH = EH + dH
-    EV = std::vector<float>(d, 0);
+    EV = std::vector<std::vector<float>>(CONTEXT_WIN, std::vector<float>(d, 0));
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     isSelfAttention = isSelf;                // default attention: Self

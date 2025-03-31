@@ -42,7 +42,8 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
     hor.forward(in, layers);
     // AND gate for the final output
     EH = EH + ReLUv(hor.output);
-    EV = EV + ReLUv(ver.output);
+    // set for current token count
+    EV[tokenCount] = EV[tokenCount] + ReLUv(ver.output);
 }
 
 
@@ -62,7 +63,8 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
         forprop(in, layers, tokenCount);
         return;
     }
-    int count = tokenCount - n * blockCount;        // tokenCount for this head if blockCount block
+    // number of tokens in context window of this block
+    int count = std::abs(tokenCount - n * blockCount);
     // probability distribution
     int k, l;
     std::vector<std::vector<float>> head = std::vector<std::vector<float>>(tokenCount, std::vector<float>(tokenCount, 0.0f));
@@ -84,5 +86,6 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
     hor.forward(in, layers);
     // AND gate for the final output
     EH = EH + ReLUv(hor.output);
-    EV = EV + ReLUv(ver.output);
+    // set for token count with respect to this attention
+    EV[count] = EV[count] + ReLUv(ver.output);
 }
