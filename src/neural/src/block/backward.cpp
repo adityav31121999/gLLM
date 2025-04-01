@@ -1,60 +1,7 @@
 
-// backward propagation of all types here
+// backward propagation for blocks
 #include "include/attention.hpp"
 #include "include/block.hpp"
-
-/**
- * @brief backward propagation for kth layer (when expected EV is not known)
- * @param expectedH expected token vector
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k layer number
- */
-void block::partialbackward(std::vector<float>& expectedH, int& in, int& layers, int k) {
-    std::vector<float> ex = expectedH;
-    for(int i = y-1; i >= 0; i ++) {
-        b[k][i].backward(ex, in, layers);
-        if(i == 0)
-            break;
-        ex = b[k][0].EH;
-    }
-}
-
-
-/**
- * @brief backward propagation for kth layer
- * @param expectedV expected retention vectors
- * @param expectedH expected token vector
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k layer number
- */
-void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, std::vector<float>& expectedH, int& in, int& layers, 
-    int k) 
-{
-    std::vector<float> ex = expectedH;
-    for(int i = y-1; i >= 0; i ++) {
-        b[k][i].backward(ex, expectedV[i], in, layers);
-        if(i == 0)
-            break;
-        ex = b[k][i].EH;
-    }
-}
-
-
-/**
- * @brief backward propagation for kth layer (when EVs need to be corrected only)
- * @param expectedV expected retention vectors
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k layer number
- */
-void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k) {
-    for(int i = y-1; i >= 0; i ++) {
-        b[k][i].backward(expectedV[i], in, layers);
-    }
-}
-
 
 /**
  * @brief backward propagation for block (when both EH and EV need to be corrected)
@@ -67,6 +14,7 @@ void block::backward(std::vector<std::vector<std::vector<std::vector<float>>>>& 
     int& in, int& layers) 
 {
     for(int i = 0; i < x; i++) {
+        // for each layer expectedH is available and for each head expectedV is available
         partialbackward(expectedV[i], expectedH[i], in, layers, i);
     }
 }
@@ -83,6 +31,7 @@ void block::backward(std::vector<std::vector<std::vector<std::vector<float>>>>& 
     int& layers)
 {
     for(int i = 0; i < x; i++) {
+        // common expectedH and for each head expectedV is available
         partialbackward(expectedV[i], expectedH, in, layers, i);
     }
 }
@@ -96,6 +45,7 @@ void block::backward(std::vector<std::vector<std::vector<std::vector<float>>>>& 
  */
 void block::backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers) {
     for(int i = 0; i < x; i++) {
+        // for each layer expectedV is available and the horizontal embedding is accurate
         partialbackward(expectedV[i], in, layers, i);
     }
 }
@@ -110,6 +60,7 @@ void block::backward(std::vector<std::vector<std::vector<std::vector<float>>>>& 
 void block::backward(std::vector<float>& expectedH, int& in, int& layers) {
     // run partial backpropagation in parallel
     for(int i = x-1; i >= 0; i++) {
+        // expectedV for each is not considered since the horizontal pass ended in this block
         partialbackward(expectedH, in, layers, i);
     }
 }

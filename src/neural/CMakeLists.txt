@@ -26,6 +26,7 @@ add_library(neural STATIC
     # block
     src/block/block.cpp
     src/block/forward.cpp
+    src/block/partialback.cpp
     src/block/backward.cpp
     src/block/train.cpp
 
@@ -39,9 +40,10 @@ add_library(neural STATIC
     src/transformer/finetune.cpp
 )
 
+# link libraries to this library
 target_link_libraries(neural
     PUBLIC # Important: Make OpenCL and CUDA linking public
         ${OpenCL_LIBRARIES}
-        # ${CUDAToolkit_LIBRARIES}
+        ${CUDAToolkit_LIBRARIES}
     maths
 )

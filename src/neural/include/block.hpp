@@ -59,15 +59,15 @@ public:
     void setVerticalRetention(std::vector<std::vector<std::vector<std::vector<float>>>>& EV);
 
     // partial attention backward
+    void partialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
     void partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, std::vector<float>& expectedH, int& in, int& layers, int layno);
     void partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
-    void partialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
 
     // parallel partialbackward(i)
-    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, std::vector<std::vector<float>>& expectedH, int& in, int& layers);
-    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, std::vector<float>& expectedH, int& in, int& layers);
-    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
     void backward(std::vector<float>& expectedH, int& in, int& layers);
+    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, std::vector<float>& expectedH, int& in, int& layers);
+    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, std::vector<std::vector<float>>& expectedH, int& in, int& layers);
+    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
 
     // parallel forprop(i) and backward(i)
     void train(std::vector<float>& expected, int& in, int& tokenCount, int& layers);

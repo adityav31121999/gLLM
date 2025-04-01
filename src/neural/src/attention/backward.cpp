@@ -1,5 +1,5 @@
 
-// backward propagation
+// backward propagation for attention class
 #include "include/attention.hpp"
 
 /**
