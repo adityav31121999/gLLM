@@ -67,6 +67,10 @@ public:
     void forward();
     void backward(std::vector<float>& expected);
     void backward(std::vector<float>& expected, int& blockCount);
+    void backward(std::vector<std::vector<float>>& expected);
+    void backward(std::vector<std::vector<float>>& expected, int& blockCount);
+    void backward(std::vector<std::vector<std::vector<float>>>& expected);
+    void backward(std::vector<std::vector<std::vector<float>>>& expected, int& blockCount);
     void train();           // train with feedforward()
     void instruct();        // instruct the transformer to do something
     void computeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output

@@ -66,6 +66,7 @@ public:
     attention(int n, int d, int h, int l);
     attention(int n, int d, int h, int l, bool attentionType);
     void setAttentionType(bool attentionType);
+    
     // forward propagation for both first and specific block's attention
     void forprop(int& in, int& layers, int& tokenCount);
     void forprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
@@ -73,6 +74,9 @@ public:
     void backward(std::vector<float>& expected, int& in, int& layers);
     void backward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void backward(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void backward1stHead(std::vector<float>& expected, int& in, int& layers);
+    void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void backward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
 
     // functions for using model
     void runAttention();

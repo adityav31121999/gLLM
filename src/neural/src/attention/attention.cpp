@@ -53,3 +53,12 @@ attention::attention(int n, int d, int h, int l, bool isSelf) {
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     isSelfAttention = isSelf;                // default attention: Self
 }
+
+
+/**
+ * @brief set attention type of model for cross and self attention
+ * @param isSelforCross 1 for self attention and 0 for cross attention
+ */
+void attention::setAttentionType(bool isSelforCross) {
+    isSelfAttention = isSelforCross;
+}
