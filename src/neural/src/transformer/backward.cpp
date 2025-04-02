@@ -7,6 +7,7 @@
 
 /**
  * @brief backward propagation for last to first block
+ *          (common expected EH for last block)
  */
 void transformer::backward(std::vector<float>& expected) {
     int count = 0;
@@ -33,7 +34,8 @@ void transformer::backward(std::vector<float>& expected) {
 
 
 /**
- * @brief backward propagation for kth to first block, Expected EVs are not known.
+ * @brief backward propagation for kth to first block, Expected EVs are not known
+ *          (common expected EH for kth block)
  * @param k block number (= index of block from t vector + 1)
  */
 void transformer::backward(std::vector<float>& expected, int& k) {
@@ -72,6 +74,7 @@ void transformer::backward(std::vector<float>& expected, int& k) {
 
 /**
  * @brief backward propagation for last to first block
+ *          (distinct expected EH for last block)
  */
 void transformer::backward(std::vector<std::vector<float>>& expected) {
     int count = 0;
@@ -91,7 +94,8 @@ void transformer::backward(std::vector<std::vector<float>>& expected) {
 
 
 /**
- * @brief backward propagation for kth to first block, Expected EVs are not known.
+ * @brief backward propagation for kth to first block, Expected EVs are not known
+ *          (distinct expected EH for last block)
  * @param k block number
  */
 void transformer::backward(std::vector<std::vector<float>>& expected, int& k) {
@@ -124,6 +128,7 @@ void transformer::backward(std::vector<std::vector<float>>& expected, int& k) {
 
 /**
  * @brief backward propagation for last to first block
+ *          (distinct expected EH for all blocks)
  */
 void transformer::backward(std::vector<std::vector<std::vector<float>>>& expected) {
     int count = 0;
@@ -143,7 +148,8 @@ void transformer::backward(std::vector<std::vector<std::vector<float>>>& expecte
 
 
 /**
- * @brief backward propagation for kth to first block, Expected EVs are not known.
+ * @brief backward propagation for kth to first block, Expected EVs are not known
+ *          (distinct expected EH for all k blocks)
  * @param k block number
  */
 void transformer::backward(std::vector<std::vector<std::vector<float>>>& expected, int& k) {

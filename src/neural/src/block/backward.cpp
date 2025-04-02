@@ -163,28 +163,3 @@ void block::backward1stBlock(std::vector<float>& expectedH, int& in, int& layers
         partialbackward1stBlock(expectedH, in, layers, i);
     }
 }
-
-
-/**
-    for(int i = b.size()-1; i >= 0; i--) {
-        std::vector<float> ex = expected;
-        for(int j = b[0].size()-1; j >=0; j--) {
-            b[i][j].backward(expected[i][j], in, layers);
-            if(i == 0)
-                break;
-            ex = b[i][0].EH;
-        }
-    }
-
-
-    void block::backward(std::vector<float>& expectedH, int& in, int& layers) {
-        // run partial backpropagation in parallel
-        std::vector<float> ex = expectedH;
-        for(int i = x-1; i >= 0; i++) {
-            partialbackward(ex, in, layers, i);
-            if(i == 0)
-                break;
-            ex = b[i][0].EH;
-        }
-    }
-*/

@@ -83,8 +83,32 @@ public:
 
 #ifdef USE_CUDA
     // cuda equivalent functions for attention
+    // forward propagation for both first and specific block's attention
+    void cuforprop(int& in, int& layers, int& tokenCount);
+    void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
+    // backward propagation
+    void cubackward(std::vector<float>& expected, int& in, int& layers);
+    void cubackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cubackward(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cubackward1stHead(std::vector<float>& expected, int& in, int& layers);
+    void cubackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cubackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    // functions for using model
+    void curunAttention();
 #elif USE_OPENCL
     // opencl equivalent functions for attention
+    // forward propagation for both first and specific block's attention
+    void clforprop(int& in, int& layers, int& tokenCount);
+    void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
+    // backward propagation
+    void clbackward(std::vector<float>& expected, int& in, int& layers);
+    void clbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void clbackward(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
+    void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    // functions for using model
+    void clrunAttention();
 #endif
 
     // default destructor

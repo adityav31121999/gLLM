@@ -3,6 +3,7 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
+#include "mlp.hpp"
 #include "attention.hpp"
 #include "block.hpp"
 #include <string>
@@ -65,20 +66,42 @@ public:
 
 // training
     void forward();
-    void backward(std::vector<float>& expected);
-    void backward(std::vector<float>& expected, int& blockCount);
-    void backward(std::vector<std::vector<float>>& expected);
-    void backward(std::vector<std::vector<float>>& expected, int& blockCount);
-    void backward(std::vector<std::vector<std::vector<float>>>& expected);
-    void backward(std::vector<std::vector<std::vector<float>>>& expected, int& blockCount);
+    void backward(std::vector<float>& expectedH);
+    void backward(std::vector<float>& expectedH, int& blockCount);
+    void backward(std::vector<std::vector<float>>& expectedH);
+    void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void backward(std::vector<std::vector<std::vector<float>>>& expectedH);
+    void backward(std::vector<std::vector<std::vector<float>>>& expectedH, int& blockCount);
     void train();           // train with feedforward()
     void instruct();        // instruct the transformer to do something
     void computeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output
 
 #ifdef USE_CUDA
     // cuda implementation
+    // training
+    void cuForward();
+    void cuBackward(std::vector<float>& expectedH);
+    void cuBackward(std::vector<float>& expectedH, int& blockCount);
+    void cuBackward(std::vector<std::vector<float>>& expectedH);
+    void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void cuBackward(std::vector<std::vector<std::vector<float>>>& expectedH);
+    void cuBackward(std::vector<std::vector<std::vector<float>>>& expectedH, int& blockCount);
+    void cuTrain();           // train with feedforward()
+    void cuInstruct();        // instruct the transformer to do something
+    void cuComputeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output
 #elif USE_OPENCL
     // opencl implementation
+    // training
+    void clForward();
+    void clBackward(std::vector<float>& expectedH);
+    void clBackward(std::vector<float>& expectedH, int& blockCount);
+    void clBackward(std::vector<std::vector<float>>& expectedH);
+    void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void clBackward(std::vector<std::vector<std::vector<float>>>& expectedH);
+    void clBackward(std::vector<std::vector<std::vector<float>>>& expectedH, int& blockCount);
+    void clTrain();           // train with feedforward()
+    void clInstruct();        // instruct the transformer to do something
+    void clComputeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);    // compute output
 #endif
 
 // run transformer
@@ -100,12 +123,3 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
     int& promptCount);
 
 #endif
-
-/**
- * to make and train model, initiate memory for the model first which is not
- * RAM or VRAM, use secondary memory in different drive so that a good amount
- * memory is available. This helps in two-way process where all FFN data can
- * be stored and then backprop can be done to alter as per changes needed. All
- * the process will run on RAM and VRAM parallely alongwith operations and as 
- * one incomplete attention is completed shift data directly to the model file.
- */
