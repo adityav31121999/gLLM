@@ -79,3 +79,48 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
     total = m * n;
 }
+
+
+/**
+ * @brief set all the dimension for transformer
+ * @param m number of blocks in transformer
+ * @param x number of partial attentions in block
+ * @param y number of attention in each partial attention
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ */
+void transformer::setDims(int m, int x, int y, int n, int d, int h, int l) {
+    this->m = m;
+    this->x = x;
+    this->y = y;
+    this->n = n;
+    this->d = d;
+    this->h = h;
+    this->l = l;
+}
+
+/**
+ * @brief set learning rate for MLPs
+ * @param learning learning rate
+ */
+void transformer::setLearning(float learning) {
+    this->learning = learning;
+}
+
+/**
+ * @brief set training cycle for training
+ * @param epochs training cycle
+ */
+void transformer::setEpochs(int epochs) {
+    //
+}
+
+/**
+ * @brief set attention type for transformer
+ * @param attentionType type of attention (1 for self and 0 for cross) 
+ */
+void transformer::setAttention(bool attentionType) {
+    this->isSelf = attentionType;
+}
