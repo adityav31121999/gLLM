@@ -28,7 +28,6 @@ add_library(neural STATIC
     src/block/forward.cpp
     src/block/partialback.cpp
     src/block/backward.cpp
-    src/block/train.cpp
 
     # transformer
     src/transformer/compute.cpp
@@ -37,7 +36,6 @@ add_library(neural STATIC
     src/transformer/feedfor.cpp
     src/transformer/backward.cpp
     src/transformer/train.cpp
-    src/transformer/finetune.cpp
 )
 
 # link libraries to this library

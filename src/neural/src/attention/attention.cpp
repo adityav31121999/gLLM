@@ -11,10 +11,8 @@
  * @param l layers of mlp
  */
 attention::attention(int n, int d, int h, int l) {
-    // scaled dot product and activated attention head
-    K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));
-    Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));
-    // head = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));
+    K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // KEYS
+    Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // QUERYS
     MQ = mat(h, d);     // hxd
     MK = mat(h, d);     // hxd
     MV = mat(d, h);     // dxh
@@ -22,6 +20,7 @@ attention::attention(int n, int d, int h, int l) {
     dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
     dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
     EH = std::vector<float>(d, 0);      // EH = EH + dH
+    // vertical retention vectors
     EV = std::vector<std::vector<float>>(CONTEXT_WIN, std::vector<float>(d, 0));
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
@@ -37,10 +36,8 @@ attention::attention(int n, int d, int h, int l) {
  * @param l layers of mlp
  */
 attention::attention(int n, int d, int h, int l, bool isSelf) {
-    // scaled dot product and activated attention head
-    K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));
-    Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));
-    // head = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));
+    K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // KEYS
+    Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // QUERYS
     MQ = mat(h, d);     // hxd
     MK = mat(h, d);     // hxd
     MV = mat(d, h);     // dxh
@@ -48,10 +45,11 @@ attention::attention(int n, int d, int h, int l, bool isSelf) {
     dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
     dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
     EH = std::vector<float>(d, 0);      // EH = EH + dH
+    // vertical retention vectors
     EV = std::vector<std::vector<float>>(CONTEXT_WIN, std::vector<float>(d, 0));
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
-    isSelfAttention = isSelf;                // default attention: Self
+    isSelfAttention = isSelf;           // default attention: Self
 }
 
 

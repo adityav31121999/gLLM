@@ -1,2 +1,0 @@
-
-#include "include/script.hpp"

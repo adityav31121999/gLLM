@@ -1,5 +1,6 @@
 
 // compute functions
+#include "include/block.hpp"
 #include "include/transformer.hpp"
 
 /**
@@ -50,57 +51,16 @@ void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& do
 
 
 /**
- * @brief KdotQ via QxK (Q[i].K[j])
- * @param KdotQ dot product
- * @param K Keys
- * @param Q Queries
- * @param currentTokenCount number of tokens in context
- * @param promptCount tokens in prompt
- */
-void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
-    int& currentTokenCount, int& promptCount)
-{
-    if (currentTokenCount == 0) {
-        if(promptCount == 1) {
-            KdotQ[0][0] = std::inner_product(K[0].begin(), K[0].end(), Q[0].begin(), 0.0f)/SCALING;
-            currentTokenCount += 1;
-        }
-        else {
-            for(int i = 0; i < promptCount; i++) {
-                for(int j = 0; j < promptCount; j++) {
-                    KdotQ[i][j] = std::inner_product(K[i].begin(), K[i].end(), Q[j].begin(), 0.0f)/SCALING;
-                }
-            }
-            currentTokenCount += promptCount;
-        }
-    }
-    else {
-        // promptCount >= 1
-        int c = currentTokenCount;
-        for(int i = 0; i < promptCount; i++) {
-            KdotQ[c+i][c+i] = std::inner_product(K[c+i].begin(), K[c+i].end(), Q[c+i].begin(), 0.0f)/SCALING;
-            for(int j = 0; j < currentTokenCount; j++) {
-                // for row
-                KdotQ[c+i][j] = std::inner_product(K[c+i].begin(), K[c+i].end(), Q[j].begin(), 0.0f)/SCALING;
-                // for column
-                KdotQ[j][c+i] = std::inner_product(K[j].begin(), K[j].end(), Q[c+i].begin(), 0.0f)/SCALING;
-            }
-            currentTokenCount += 1;
-        }
-    }
-}
-
-
-/**
  * @brief KdotQ via tokens (TxMxT') where M = MQ x MK'
  * @param KdotQ dot product
  * @param tokenEmbed tokens
- * @param M QK cache
+ * @param M QK' cache
  * @param currentTokenCount number of tokens in context
  * @param promptCount tokens in prompt 
+ * @param attentionType attention type, 1 for self, 0 for cross
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
-    int& promptCount)
+    int& promptCount, bool& attentionType)
 {
     // original input
     if (currentTokenCount == 0) {
@@ -113,7 +73,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
         // long prompt input like 'Hello there, Obi'van Kenobi here', etc.
         else {
             for(int i = 0; i < promptCount; i++) {
-                for(int j = 0; j < promptCount; j++) {
+                for(int j = 0; j < (attentionType ? i : promptCount); j++) {
                     computeDot(tokenEmbed[i], M, tokenEmbed[j], KdotQ[i][j]);
                     KdotQ[i][j] = KdotQ[i][j] / SCALING;
                 }
@@ -136,11 +96,96 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
                 // for row
                 computeDot(tokenEmbed[c + i], M, tokenEmbed[j], KdotQ[c+i][j]);
                 KdotQ[c+i][j] = KdotQ[c+i][j] / SCALING;
-                // for column
-                computeDot(tokenEmbed[j], M, tokenEmbed[c+i], KdotQ[j][c+i]);
-                KdotQ[j][c+i] = KdotQ[j][c+i] / SCALING;
+                // for column, FOR CROSS ATTENTION ONLY 
+                if(attentionType == 0) {
+                    computeDot(tokenEmbed[j], M, tokenEmbed[c+i], KdotQ[j][c+i]);
+                    KdotQ[j][c+i] = KdotQ[j][c+i] / SCALING;
+                }
             }
             currentTokenCount += 1;
+        }
+    }
+}
+
+
+/**
+ * @brief KdotQ via QxK (Q[i].K[j])
+ * @param KdotQ dot product
+ * @param K Keys
+ * @param Q Queries
+ * @param currentTokenCount number of tokens in context
+ * @param promptCount tokens in prompt
+ * @param attentionType attention type, 1 for self, 0 for cross
+ */
+void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
+    int& currentTokenCount, int& promptCount, bool& attentionType)
+{
+    if (currentTokenCount == 0) {
+        if(promptCount == 1) {
+            KdotQ[0][0] = std::inner_product(K[0].begin(), K[0].end(), Q[0].begin(), 0.0f)/SCALING;
+            currentTokenCount += 1;
+        }
+        else {
+            for(int i = 0; i < promptCount; i++) {
+                for(int j = 0; j < (attentionType ? i : promptCount); j++) {
+                    KdotQ[i][j] = std::inner_product(K[i].begin(), K[i].end(), Q[j].begin(), 0.0f)/SCALING;
+                }
+            }
+            currentTokenCount += promptCount;
+        }
+    }
+    else {
+        // promptCount >= 1
+        int c = currentTokenCount;
+        for(int i = 0; i < promptCount; i++) {
+            KdotQ[c+i][c+i] = std::inner_product(K[c+i].begin(), K[c+i].end(), Q[c+i].begin(), 0.0f)/SCALING;
+            for(int j = 0; j < currentTokenCount; j++) {
+                // for row
+                KdotQ[c+i][j] = std::inner_product(K[c+i].begin(), K[c+i].end(), Q[j].begin(), 0.0f)/SCALING;
+                // for column, FOR CROSS ATTENTION ONLY
+                if(attentionType == 0) {
+                    KdotQ[j][c+i] = std::inner_product(K[j].begin(), K[j].end(), Q[c+i].begin(), 0.0f)/SCALING;
+                }
+            }
+            currentTokenCount += 1;
+        }
+    }
+}
+
+
+/**
+ * @brief compute KdotQ of each head in the block
+ * @param promptCount number of tokens in prompt
+ * @param currentTokenCount current count of tokens in full context
+ * @param blockCount current block index
+ * @param isSelf attention type
+ */
+void transformer::computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf) {
+    // for first block
+    if (blockCount == 1) {
+        for (int i = 0; i < x; i++) {
+            for (int j = 0; j < y; j++) {
+                for (int k = 0; k < promptCount; k++) {
+                    computeKeys(input[k], t[0].b[i][j].MK.a, t[0].b[i][j].K[k]);
+                    computeQuerys(input[k], t[0].b[i][j].MQ.a, t[0].b[i][j].Q[k]);
+                }
+                computeKdotQ(t[0].b[i][j].KdotQ, t[0].b[i][j].K, t[0].b[i][j].Q, currentTokenCount, promptCount, isSelf);
+            }
+        }
+    }
+    // for second to last block
+    else {
+        // count -> gives current number of tokens in current context window
+        int count = std::abs(currentTokenCount - (blockCount-1)*CONTEXT_WIN);
+        for (int i = 0; i < x; i++) {
+            for (int j = 0; j < y; j++) {
+                for (int k = 0; k < count; k++) {
+                    computeKeys(input[tokenCount + k - 1], t[blockCount - 1].b[i][j].MK.a, t[blockCount - 1].b[i][j].K[k]);
+                    computeQuerys(t[blockCount - 2].b[i][j].EV[k], t[blockCount - 1].b[i][j].MQ.a, t[blockCount - 1].b[i][j].Q[k]);
+                }
+                computeKdotQ(t[blockCount - 1].b[i][j].KdotQ, t[blockCount - 1].b[i][j].K, t[blockCount - 1].b[i][j].Q, 
+                            currentTokenCount, count, isSelf);
+            }
         }
     }
 }

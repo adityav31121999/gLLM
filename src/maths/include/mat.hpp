@@ -118,6 +118,7 @@ public:
     mat operator*=(mat);                // multiplication operator overload for matrix (fmmlt)
     mat operator/=(float);              // division operator overload for value
     mat operator/=(mat);                // division operator overload for value
+
     mat imat(int);                      // identity matrix
     mat inva();                         // additive inverse of matrix
     mat inverse();                      // inverse of matrix using adjoint of matrix
@@ -135,9 +136,7 @@ public:
     float detn();                       // determinant of nxn matrix
     float det();                        // determinant of square matrix
     float trace();                      // trace of square matrix
-    float get(int i, int j);            // get value of (i, j) index
 
-    void trnsps();                      // transpose the current matrix
     void set(int i, int j, float val);  // set val to (i, j)th element
     bool ifsquare();                    // check if matrix is square
     bool ifrectangular();               // check if matrix is rectangular
@@ -147,6 +146,7 @@ public:
     bool ifupper();                     // check if matrix is upper triangular
     bool iflower();                     // check if matrix is lower triangular
     bool ifskew();                      // check if matrix is skew-symmetric
+    void trnsps();                      // transpose the current matrix
 
     ~mat() {};                          // destructor for matrix class
 };
@@ -157,14 +157,6 @@ mat submat(mat, unsigned int, unsigned int);
 mat submat(std::vector<std::vector<float>>, unsigned int, unsigned int);
 mat minor(mat a);
 mat minor(std::vector<std::vector<float>>);
-
-float *householder(float*, int, int);
-float *householderTransform(float*, int, int);
-
-std::pair<mat*, mat*> eigen(mat *a);
-std::pair<mat*, mat*> makeOrthogonalMatrix(mat*);
-mat jacobian(mat *a);
-float jacobianval(mat *a);
 
 std::vector<float> dot(mat a, std::vector<float> b);
 std::vector<float> dot(std::vector<float> a, mat b);

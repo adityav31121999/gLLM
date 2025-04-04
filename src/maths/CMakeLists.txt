@@ -19,15 +19,10 @@ add_library(maths STATIC
 
     # mat files
     mat/det.cpp
-    mat/eigenval.cpp
     mat/inverse.cpp
-    mat/jacobian.cpp
     mat/operators.cpp
     mat/prop.cpp
-    mat/qrdecom.cpp
-    mat/svd.cpp
     mat/submat.cpp
-
 
     # stats files
     stats/basic.cpp

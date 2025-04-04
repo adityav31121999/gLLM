@@ -9,7 +9,7 @@
  * @param x Input value
  * @return Sigmoid of x
  */
-float sigmoid(float x) {
+float sigmoid(float& x) {
     // The sigmoid function is defined as 1 / (1 + exp(-x)).
     return (1 / (1 + std::exp(-x)));
 }
@@ -20,7 +20,7 @@ float sigmoid(float x) {
  * @param x Input value
  * @return The derivative of sigmoid(x)
  */
-float sigmoidder(float x) {
+float sigmoidder(float& x) {
     // Calculate the sigmoid of x
     float s = sigmoid(x);
     // Calculate the derivative of sigmoid(x)
@@ -33,7 +33,7 @@ float sigmoidder(float x) {
  * vector in-place.
  * @return Sigmoid of vector: element-wise
  */
-std::vector<float> sigmoidv(std::vector<float> x) {
+std::vector<float> sigmoid(std::vector<float>& x) {
     std::vector<float> y(x);
     std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return sigmoid(i); });
     return y;
@@ -46,7 +46,7 @@ std::vector<float> sigmoidv(std::vector<float> x) {
  * @return A vector where each element is the derivative of the corresponding 
  *      element in the input vector.
  */
-std::vector<float> sigmoidvder(std::vector<float> x) {
+std::vector<float> sigmoidder(std::vector<float> x) {
     // Create a copy of the input vector
     std::vector<float> y(x);
     // Apply the derivative of sigmoid function to each element of the input vector
@@ -59,10 +59,12 @@ std::vector<float> sigmoidvder(std::vector<float> x) {
  * @param x A reference to the input matrix. 
  * @return Sigmoid of matrix: element-wise
  */
-std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>> x) {
+std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>>& x) {
     std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     for (size_t i = 0; i < x.size(); ++i) {
-        result[i] = sigmoidv(x[i]);
+        for(size_t j = 0; j < x[0].size(); ++j) {
+            result[i][j] = sigmoid(x[i][j]);
+        }
     }
     return result;
 }
@@ -74,10 +76,12 @@ std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>> x) {
  * @return A matrix where each element is the derivative of the corresponding 
  *      element in the input matrix.
  */
-std::vector<std::vector<float>> sigmoidder(std::vector<std::vector<float>> x) {
+std::vector<std::vector<float>> sigmoidder(std::vector<std::vector<float>>& x) {
     std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     for (size_t i = 0; i < x.size(); ++i) {
-        result[i] = sigmoidvder(x[i]);
+        for(size_t j = 0; j < x[0].size(); ++j) {
+            result[i][j] = sigmoidder(x[i][j]);
+        }
     }
     return result;
 }
@@ -225,7 +229,7 @@ std::vector<std::vector<float>> softmaxder(std::vector<std::vector<float>> x, fl
  * @param x Input value
  * @return The ReLU of x, which is the maximum of 0 and x
  */
-float ReLU(float x) {
+float ReLU(float& x) {
     // The ReLU function is defined as max(0, x)
     return std::max(float(0), x); // Return the maximum of 0 and x
 }
@@ -237,7 +241,7 @@ float ReLU(float x) {
  * @param x Input value
  * @return 0 if x < 0, 1 otherwise
  */
-float ReLUder(float x) {
+float ReLUder(float& x) {
     // The derivative of the ReLU function is 0 if the input value is less than 0, and 1 otherwise.
     return (x > 0) ? 1 : 0; // Return 1 if x > 0, 0 otherwise
 }
@@ -247,7 +251,7 @@ float ReLUder(float x) {
  * @param x Input vector
  * @return A vector where each element is the ReLU of the corresponding element in the input vector.
  */
- std::vector<float> ReLUv(std::vector<float> x) {
+std::vector<float> ReLU(std::vector<float> x) {
     // Create a copy of the input vector
     std::vector<float> y(x);
     // Apply the ReLU function to each element of the input vector
@@ -256,77 +260,47 @@ float ReLUder(float x) {
 }
 
 /**
- * @brief Calculate the derivative of the ReLU activation function for each element in a vector.
- *      The derivative of the ReLU function is 0 if the input value is less than 0, and 1 otherwise.
- *      This function applies the derivative of the ReLU function to each element in the input vector.
- * @tparam t type of the elements in the input vector
- * @param x input vector
+ * @brief Derivative of ReLU activation function. Applies the ReLU function to each element of a vector.
+ * @param x Input vector
+ * @return A vector where each element is the ReLU of the corresponding element in the input vector.
  */
-std::vector<float> ReLUvder(std::vector<float> x) {
+std::vector<float> ReLUder(std::vector<float> x) {
+    // Create a copy of the input vector
     std::vector<float> y(x);
-    // Use std::transform to apply ReLU_derivative to each element in x
+    // Apply the ReLU function to each element of the input vector
     std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return ReLUder(i); });
     return y;
 }
 
-//----------------SeLU----------------//
-
 /**
- * @brief Applies the SeLU (Scale-Exponential Linear Unit) activation function to the input.
- *      The SeLU function is defined as:
- *      f(x) = x if x > 0
- *      f(x) = 0.1 * x otherwise
- * @param x input value
- * @return the value of the SeLU function applied to the input
+ * @brief ReLU of 2D vector
+ * @param x input matrix
+ * @param t allowable terms
  */
-float SeLU(float x) {
-    // Apply the SeLU function to the input
-    return (x > 0) ? x : 0.1 * x;
+std::vector<std::vector<float>> ReLU(std::vector<std::vector<float>>& x, int& t) {
+    std::vector<std::vector<float>> result(t, std::vector<float>(t, 0.0f));
+    for (int i = 0; i < t; i++) {
+        for(int j = 0; j < t; j++) {
+            result[i][j] = ReLU(x[i][j]);
+        }
+    }
+    return result;
 }
 
 /**
- * @brief The derivative of the SeLU (Scale-Exponential Linear Unit) activation function.
- *        The SeLU derivative is defined as:
- *        f'(x) = 1 if x > 0
- *        f'(x) = 0.1 otherwise
- * @param x input value
- * @return the value of the SeLU derivative function applied to the input
+ * @brief Calculate the derivative of the ReLU activation function for each element in a matrix.
+ *      The derivative of the ReLU function is 0 if the input value is less than 0, and 1 otherwise.
+ *      This function applies the derivative of the ReLU function to each element in the input matrix.
+ * @param x input matrix
  */
-float SeLUder(float x) {
-    // Apply the SeLU derivative function to the input
-    return (x > 0) ? 1 : 0.1;
-}
-
-/**
- * @brief Applies the SeLU (Scale-Exponential Linear Unit) activation function to each element in a vector.
- * The SeLU function is defined as:
- *      f(x) = x if x > 0
- *      f(x) = 0.1 * x otherwise
- * @param x Input vector
- * @return A vector where each element is the SeLU of the corresponding element in the input vector.
- */
-std::vector<float> SeLUv(std::vector<float> x) {
-    std::vector<float> y(x);
-    // Use std::transform to apply SeLU to each element in x
-    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return SeLU(i); });
-    return y;
-}
-
-/**
- * @brief Calculates the derivative of the SeLU (Scale-Exponential Linear Unit) activation function 
- * for each element in a vector. 
- * The SeLU derivative is defined as:
- *        f'(x) = 1 if x > 0
- *        f'(x) = 0.1 otherwise
- * @param x Input vector
- * @return A vector where each element is the derivative of the SeLU function for the corresponding element in the input vector.
- */
-std::vector<float> SeLUvder(std::vector<float> x) {
-    // Create a copy of the input vector
-    std::vector<float> y(x);
-    // Apply the SeLU derivative function to each element of the input vector
-    std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return SeLUder(i); });
-    return y;
+std::vector<std::vector<float>> ReLUder(std::vector<std::vector<float>>& x, int& t) {
+    std::vector<std::vector<float>> result(t, std::vector<float>(t, 0.0f));
+    for (int i = 0; i < t; i++) {
+        for(int j = 0; j < t; j++) {
+            result[i][j] = ReLUder(x[i][j]);
+        }
+    }
+    return result;
 }
 
 //----------------Least of them all----------------//
@@ -340,6 +314,10 @@ std::vector<float> SeLUvder(std::vector<float> x) {
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
 std::vector<float> LOTA(std::vector<float>& y) {
+    if(y.empty()) {
+        return {0};
+    }
+
     if(y.size() == 1)
         return {1};
     // Create a copy of the input vector
@@ -355,98 +333,6 @@ std::vector<float> LOTA(std::vector<float>& y) {
     // Normalize the vector by dividing each element by the sum
     std::transform(x.begin(), x.end(), x.begin(), [&sum](float& i){ return i / sum; });
     return x;
-}
-
-/**
- * @brief Applies the LOTA (Least Of Them All) activation function to a 2D vector.
- *        The LOTA function is defined as:
- *        f(x) = x - min(x) for each element, and
- *        f(x) = f(x) / sum(f(x)) for normalization
- * @param y Input 2D vector
- * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
- */
-std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y) {
-    // Create a copy of the input 2D vector
-    std::vector<std::vector<float>> x(y);
-    if(y.size() == 1 && y[0].size() == 1) {
-        for (auto& row : x) {
-            std::fill(row.begin(), row.end(), 0.0f);
-        }
-        x[0][0] = 1;
-        return x;
-    }
-    // Find the minimum value in the entire 2D vector
-    float min_val = 0.0;
-    for (const auto& v: x) {
-        float val = *std::min_element(v.begin(), v.end());
-        if (val < min_val) { min_val = val; }
-    }
-    min_val = std::abs(min_val);
-    // Subtract the minimum value from each element in the 2D vector
-    for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&min_val](float& i){ return (i + min_val); });
-    }
-    float sum = 0.0; // Variable to store the sum of all elements
-    // Calculate the sum of all elements in the 2D vector
-    for (const auto& v: x) {
-        sum += std::accumulate(v.begin(), v.end(), 0.0f);
-    }
-    // Normalize each element by dividing it by the total sum
-    for (auto& v: x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return i / sum; });
-    }
-    return x; // Return the normalized 2D vector
-}
-
-/**
- * @brief Applies the LOTA (Least Of Them All) activation function to a 2D vector.
- *        The LOTA function is defined as:
- *        f(x) = x - min(x) for each element, and
- *        f(x) = f(x) / sum(f(x)) for normalization
- * @param y Input 2D vector
- * @param t allowable terms
- * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
- */
-std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>> y, int t) {
-    // Check if the input 2D vector has the required number of terms
-    if(y.size() == t) {
-        std::vector<std::vector<float>> x(y);
-        x = LOTA(x);
-        return x;
-    }
-    // Create a copy of the input 2D vector
-    std::vector<std::vector<float>> x(y);
-    // Create a copy of the input 2D vector
-    if(y.size() == 1 && y[0].size() == 1) {
-        for (auto& row : x) {
-            std::fill(row.begin(), row.end(), 0.0f);
-        }
-        x[0][0] = 1;
-        return x;
-    }
-    // Find the minimum value in the entire 2D vector
-    float min_val = 0.0;
-    for (int i = 0; i < t; i++) {
-        for(int j = 0; j < t; j++) {
-            if (x[i][j] < min_val)
-                min_val = x[i][j];
-        }
-    }
-    min_val = std::abs(min_val);
-    // Subtract the minimum value from each element in the 2D vector
-    for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](float& i){ return (i + min_val); });
-    }
-    float sum = 0.0; // Variable to store the sum of all elements
-    // Calculate the sum of all elements in the 2D vector
-    for (int i = 0; i < t; i++) {
-        sum += std::accumulate(x[i].begin(), x[i].begin() + t, 0.0);
-    }
-    // Normalize each element by dividing it by the total sum
-    for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](float& i){ return i / sum; });
-    }
-    return x; // Return the normalized 2D vector
 }
 
 
@@ -473,45 +359,59 @@ std::vector<float> LOTAder(std::vector<float>& y) {
     return v;
 }
 
+
 /**
- * @brief Derivative of the LOTA (Least Of Them All) activation function for a 2D vector.
- *        This function calculates the derivative of the LOTA function for each element
- *        in a 2D vector. The LOTA derivative is defined as:
- *        f'(x) = (sum - x) / sum^2 for normalization
+ * @brief Applies the LOTA (Least Of Them All) activation function to a 2D vector.
+ *        The LOTA function is defined as:
+ *        f(x) = x - min(x) for each element, and
+ *        f(x) = f(x) / sum(f(x)) for normalization
  * @param y Input 2D vector
- * @return A 2D vector where each element is the derivative of the LOTA function applied 
- *         to the corresponding element in the input vector.
+ * @param t allowable terms
+ * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
-std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y) {
+std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>>& y, int& t, bool& attentionType) {
     // Create a copy of the input 2D vector
     std::vector<std::vector<float>> x(y);
+    // Create a copy of the input 2D vector
+    if(y.size() == 1 && y[0].size() == 1) {
+        x[0][0] = 1;
+        return x;
+    }
+    // set all the values of x which are above diagonal and right side of diagonal to 0
+    if(attentionType == 1) {
+        for (int i = 0; i < t; i++) {
+            for(int j = i+1; j < t; j++) {
+                x[i][j] = 0;
+            }
+        }
+    }
     // Find the minimum value in the entire 2D vector
-    float min_val = 0.0; 
-    for (const auto& v: x) {
-        float val = *std::min_element(v.begin(), v.end());
-        if (val < min_val) {
-            min_val = val;
+    float min_val = 0.0;
+    for (int i = 0; i < t; i++) {
+        for(int j = 0; j < (attentionType ? i : t); j++) {
+            if (x[i][j] < min_val)
+                min_val = x[i][j];
         }
     }
     min_val = std::abs(min_val);
     // Subtract the minimum value from each element in the 2D vector
-    for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&min_val](float& i) {
-            return (i + min_val);
+    for (int i = 0; i < t; i++) {
+        std::transform(x[i].begin(), x[i].begin() + (attentionType ? i : t), x[i].begin(), [&min_val](float& j){ 
+            return (j + min_val); 
         });
     }
-    float sum = 0.0; // Variable to store the sum of all elements
+    float sum = 0.0;        // Variable to store the sum of all elements
     // Calculate the sum of all elements in the 2D vector
-    for (const auto& v: x) {
-        sum += std::accumulate(v.begin(), v.end(), 0.0);
+    for (int i = 0; i < t; i++) {
+        sum += std::accumulate(x[i].begin(), x[i].begin() + (attentionType ? i : t), 0.0);
     }
-    // Calculate the derivative of the LOTA function for each element
-    for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i) {
-            return ((sum - i) / static_cast<float>(std::pow(sum, 2)));
+    // Normalize each element by dividing it by the total sum
+    for (int i = 0; i < t; i++) {
+        std::transform(x[i].begin(), x[i].begin() + (attentionType ? i : t), x[i].begin(), [&sum](float& j){ 
+            return j / sum;
         });
     }
-    return x; // Return the derived 2D vector
+    return x; // Return the normalized 2D vector
 }
 
 
@@ -525,7 +425,7 @@ std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y) {
  * @return A 2D vector where each element is the derivative of the LOTA function applied 
  *         to the corresponding element in the input vector.
  */
-std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>> y, int t) {
+std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>>& y, int& t, bool& attentionType) {
     // Create a copy of the input 2D vector
     std::vector<std::vector<float>> x(y);
     // Find the minimum value in the entire 2D vector

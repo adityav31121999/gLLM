@@ -70,7 +70,7 @@ set(subProjects
     src/maths
     src/neural
     src/model
-    src/script
+    # src/script
 )
 
 # Include each subdirectory

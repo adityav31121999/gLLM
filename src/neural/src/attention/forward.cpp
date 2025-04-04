@@ -23,12 +23,14 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
 {
     // probability distribution
     int k, l;
-    std::vector<std::vector<float>> head = std::vector<std::vector<float>>(tokenCount, std::vector<float>(tokenCount, 0.0f));
-    head = LOTA(KdotQ, tokenCount);
+    std::vector<std::vector<float>> head(tokenCount, std::vector<float>(tokenCount, 0.0f));
+    // self attention (ReLU masking) or cross attention
+    head = LOTA(KdotQ, tokenCount, isSelfAttention);
+    // get weighted sums
     for(int i = 0; i < tokenCount; i++) {
         k = 0;
         l = 0;
-        for(int j = 0; j < tokenCount; j++) {    
+        for(int j = 0; j < (isSelfAttention ? i : tokenCount); j++) {    
             k += head[i][j];
             l += head[j][i];
         }
@@ -39,20 +41,22 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
     dv = dot(dv, MV);
     // get the required change from MLPs
     hor.input = EH + dh;
+    ver.input = EV[tokenCount] + dv;
     hor.forward(in, layers);
+    ver.forward(in, layers);
     // AND gate for the final output
-    EH = EH + ReLUv(hor.output);
-    // set for current token count
-    EV[tokenCount] = EV[tokenCount] + ReLUv(ver.output);
+    EH = EH + ReLU(hor.output);
+    EV[tokenCount] = EV[tokenCount] + ReLU(ver.output);
 }
 
 
 /**
- * @brief forward propagation for a specific block's attention class (incomplete attention)
+ * @brief forward propagation for a 2nd to last block's attention class (incomplete attention)
  * @param EVp EV vector from previous block
  * @param in input token count
- * @param tokenCount which token is being processed
- * @param blockCount which block is being processed
+ * @param layers layers of MLPs
+ * @param tokenCount which token is being processed in current context window
+ * @param blockCount which block is being processed in full context
  * @param n number of tokens for each attention head (context window)
  */
 void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n)
@@ -67,12 +71,14 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
     int count = std::abs(tokenCount - n * blockCount);
     // probability distribution
     int k, l;
-    std::vector<std::vector<float>> head = std::vector<std::vector<float>>(tokenCount, std::vector<float>(tokenCount, 0.0f));
-    head = LOTA(KdotQ, tokenCount);
+    std::vector<std::vector<float>> head(tokenCount, std::vector<float>(tokenCount, 0.0f));
+    // self attention (ReLU masking) or cross attention
+    head = LOTA(KdotQ, tokenCount, isSelfAttention);
+    // get weighted sums
     for(int i = 0; i < count; i++) {
         k = 0;
         l = 0;
-        for(int j = 0; j < count; j++) {
+        for(int j = 0; j < (isSelfAttention ? i : count); j++) {
             k += head[i][j];
             l += head[j][i];
         }
@@ -83,9 +89,10 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
     dv = dot(dv, MV);       // dv = weighted sums by column * MH
     // get the required change from MLPs
     hor.input = EH + dh;
+    ver.input = EV[count] + dv;
     hor.forward(in, layers);
+    ver.forward(in, layers);
     // AND gate for the final output
-    EH = EH + ReLUv(hor.output);
-    // set for token count with respect to this attention
-    EV[count] = EV[count] + ReLUv(ver.output);
+    EH = EH + ReLU(hor.output);
+    EV[count] = EV[count] + ReLU(ver.output);
 }

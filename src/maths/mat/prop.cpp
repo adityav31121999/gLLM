@@ -3,6 +3,17 @@
 #include "include/mat.hpp"
 
 /**
+ * @brief set value for ith row and jth column
+ * @param i row number
+ * @param j column number
+ * @param val value to be inserted or set
+ */
+void mat::set(int i, int j, float val) {
+    this->a[i][j] = val;
+}
+
+
+/**
  * @brief Check if the matrix is square.
  * @return true if the matrix is square, false otherwise.
  */

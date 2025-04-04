@@ -14,7 +14,8 @@ void block::partialforprop(int& in, int& tokenCount, int i, int& layers)
     // for one partial attention
     for(int j = 0; j < y; j++) {
         b[i][j].forprop(in, layers, tokenCount);      // incomplete attention forprop
-        if(j == (y - 1)) 
+        // break when last head forprop is done
+        if(j == (y - 1))
             break;
         b[i][j + 1].EH = b[i][j].EH;
     }
@@ -37,6 +38,7 @@ void block::partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, in
     // for one partial attention
     for(int j = 0; j < y; j++) {
         b[i][j].forprop(EVp[i], in, layers, tokenCount, k, n);      // incomplete attention forprop
+        // break when last head forprop is done
         if(j == (y - 1)) 
             break;
         b[i][j + 1].EH = b[i][j].EH;
@@ -53,38 +55,9 @@ void block::partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, in
 void block::forprop(int& in, int& tokenCount, int& layers) 
 {
     // y partial attention in x layers => x parallel processes
-    while(1) {
-        // forward propagation for all layers
-        for(int i = 0; i < x; i++) {
-            partialforprop(in, tokenCount, i, layers);
-        }
-        // dembed the EH and check for "@#O" token
-        // @#0 = and its over
-        // check for end of tokens and break
-        if(str == TERMINATE)
-            break;
-        // push EH to tokenEmbed vector, dembed the EH and push to tokens vector of transformer
-        for(int i = 0; i < x; i++) {
-            for(int j = 0; j < y; j++) {
-                // diagonal element
-                b[i][j].KdotQ[tokenCount + 1][tokenCount + 1] = std::inner_product(b[i][j].K[tokenCount+1].begin(), 
-                            b[i][j].K[tokenCount+1].end(), b[i][j].Q[tokenCount+1].begin(), 0.0f);
-                // rows and columns
-                for(int k = 0; k < tokenCount; k++) {
-                    // row
-                    b[i][j].KdotQ[tokenCount + 1][k] = std::inner_product(b[i][j].K[tokenCount+1].begin(), 
-                            b[i][j].K[tokenCount+1].end(), b[i][j].Q[j].begin(), 0.0f);
-                    // column
-                    b[i][j].KdotQ[k][tokenCount + 1] = std::inner_product(b[i][j].K[j].begin(), b[i][j].K[j].end(), 
-                            b[i][j].Q[tokenCount+1].begin(), 0.0f);
-                }
-            }
-        }
-        tokenCount++;
-        // end the block forward propagation
-        if(tokenCount == CONTEXT_WIN) {
-            break;
-        }
+    for(int i = 0; i < x; i++) {
+        // for all layers
+        partialforprop(in, tokenCount, i, layers);
     }
 }
 
@@ -103,40 +76,8 @@ void block::forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& E
 {
     // y partial attention in x layers => x parallel processes
     int tokenCount = std::abs(currentTokenCount - (n * k));
-    int count = 0;
-    while(1) {
-        // forward propagation for all layers
-        for(int i = 0; i < b.size(); i++) {
-            partialforprop(EVp[i], in, tokenCount, k, i, layers, n);
-        }
-        // take sum of all EHs and then calculate the prediction for next token
-        // dembed the EH and check for "@#O" token
-        // @#0 = and its over
-        // check for end of tokens and break
-        if(str == TERMINATE)
-            break;
-        // push EH to tokenEmbed vector, dembed the EH and push to tokens vector of transformer
-        for(int i = 0; i < x; i++) {
-            for(int j = 0; j < y; j++) {
-                // diagonal
-                b[i][j].KdotQ[tokenCount + 1][tokenCount + 1] = std::inner_product(b[i][j].K[tokenCount+1].begin(), 
-                            b[i][j].K[tokenCount+1].end(), b[i][j].Q[tokenCount+1].begin(), 0.0f);
-                for(int k = 0; k < tokenCount; k++) {
-                    // row
-                    b[i][j].KdotQ[tokenCount + 1][k] = std::inner_product(b[i][j].K[tokenCount+1].begin(), 
-                            b[i][j].K[tokenCount+1].end(), b[i][j].Q[j].begin(), 0.0f);
-                    // column
-                    b[i][j].KdotQ[k][tokenCount + 1] = std::inner_product(b[i][j].K[j].begin(), b[i][j].K[j].end(), 
-                            b[i][j].Q[tokenCount+1].begin(), 0.0f);
-                }
-            }
-        }
-        tokenCount++;
-        count++;
-        // end block forward propagation
-        if(tokenCount == CONTEXT_WIN) {
-            break;
-        }
+    // forward propagation for all layers
+    for(int i = 0; i < x; i++) {
+        partialforprop(EVp[i], in, tokenCount, k, i, layers, n);
     }
-    currentTokenCount += count;
 }

@@ -5,47 +5,26 @@
 
 
 /**
- * @brief backward propagation for kth layer (when expected EV is not known)
+ * @brief backward propagation for kth layer (when expected EV is not known, for block where backprop begins)
  * @param expectedH expected token vector
  * @param in dimension of embedding = EMBEDDING
  * @param layers layers of MLP
  * @param k layer number
  */
 void block::partialbackward(std::vector<float>& expectedH, int& in, int& layers, int k) {
+    bool first = 0;
     std::vector<float> ex = expectedH;
-    for(int i = y-1; i >= 0; i ++) { 
+    for(int i = y-1; i >= 1; i ++) {
         b[k][i].backward(ex, in, layers);
-        if(i == 0)
-            break;
         ex = b[k][0].EH;
     }
+    // need not to update the EH
+    b[k][0].backward1stHead(ex, in, layers, first);
 }
 
 
 /**
- * @brief backward propagation for kth layer
- * @param expectedV expected retention vectors
- * @param expectedH expected token vector
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k layer number
- */
-void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, std::vector<float>& expectedH, int& in, int& layers, 
-    int k) 
-{
-    std::vector<float> ex = expectedH;
-    for(int i = y-1; i >= 0; i ++) {
-        // common EH to make it better at horizontal prediction
-        b[k][i].backward(ex, expectedV[i], in, layers);
-        if(i == 0)
-            break;
-        ex = b[k][i].EH;
-    }
-}
-
-
-/**
- * @brief backward propagation for kth layer (when EVs need to be corrected only)
+ * @brief backward propagation for kth layer (when EVs need to be corrected only, for intermediate blocks)
  * @param expectedV expected retention vectors
  * @param in dimension of embedding = EMBEDDING
  * @param layers layers of MLP
@@ -53,54 +32,32 @@ void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expect
  */
 void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k) {
     for(int i = y-1; i >= 0; i ++) {
-        // horizontal is errors are not counted
         b[k][i].backward(expectedV[i], in, layers);
     }
 }
 
 
 /**
- * @brief backward propagation for kth layer (when expected EV is not known)
+ * @brief backward propagation for kth layer (when expected EV is not known, for first block)
  * @param expectedH expected token vector
- * @param in dimension of embedding = EMBEDDING
+ * @param in dimension of embedding
  * @param layers layers of MLP
  * @param k layer number
  */
 void block::partialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int k) {
+    bool first = 0;
     std::vector<float> ex = expectedH;
-    for(int i = y-1; i >= 0; i ++) { 
-        b[k][i].backward1stHead(ex, in, layers);
-        if(i == 0)
-            break;
+    for(int i = y-1; i >= 1; i ++) { 
+        b[k][i].backward1stHead(ex, in, layers, first);
         ex = b[k][0].EH;
     }
+    first = 1;
+    b[k][0].backward1stHead(ex, in, layers, first);
 }
 
 
 /**
- * @brief backward propagation for kth layer
- * @param expectedV expected retention vectors
- * @param expectedH expected token vector
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k layer number
- */
-void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, std::vector<float>& expectedH, int& in, int& layers, 
-    int k) 
-{
-    std::vector<float> ex = expectedH;
-    for(int i = y-1; i >= 0; i ++) {
-        // common EH to make it better at horizontal prediction
-        b[k][i].backward1stHead(ex, expectedV[i], in, layers);
-        if(i == 0)
-            break;
-        ex = b[k][i].EH;
-    }
-}
-
-
-/**
- * @brief backward propagation for kth layer (when EVs need to be corrected only)
+ * @brief backward propagation for kth layer (when EVs need to be corrected only, backropagation is continued here to end)
  * @param expectedV expected retention vectors
  * @param in dimension of embedding = EMBEDDING
  * @param layers layers of MLP
@@ -108,7 +65,6 @@ void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>
  */
 void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k) {
     for(int i = y-1; i >= 0; i ++) {
-        // horizontal is errors are not counted
         b[k][i].backward1stHead(expectedV[i], in, layers);
     }
 }

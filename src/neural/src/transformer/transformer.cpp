@@ -4,7 +4,7 @@
 #include "include/transformer.hpp"
 
 /**
- * @brief Constructor for single-block transformer for prediction
+ * @brief Constructor for single-block transformer for use
  * @param x number of partial attentions in block
  * @param y number of attention in each partial attention
  * @param n number of tokens for each attention head
@@ -18,7 +18,7 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab):
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
-    total = n;
+    isSelf = true;
 }
 
 
@@ -38,12 +38,12 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
-    total = m * n;
+    isSelf = 1;
 }
 
 
 /**
- * @brief Constructor for single-block transformer for prediction
+ * @brief Constructor for single-block transformer for use
  * @param x number of partial attentions in block
  * @param y number of attention in each partial attention
  * @param n number of tokens for each attention head
@@ -57,7 +57,6 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bo
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
-    total = n;
 }
 
 
@@ -77,7 +76,6 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
-    total = m * n;
 }
 
 
