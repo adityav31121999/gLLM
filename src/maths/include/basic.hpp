@@ -87,30 +87,35 @@ void Random(std::vector<std::vector<float>>);
 
 #include <CL/cl.hpp>
 
-__kernel void clSigmoid(float x, __global float* result);
-__kernel void clSigmoid(__global float* x, __global float* out, int size);
-__kernel void clSigmoid(__global float* x, __global float* out, int rows, int cols);
-__kernel void clSoftmax(__global float* x, __global float* out, float temp, int size);
-__kernel void clSoftmax(__global float* x, __global float* out, float temp, int rows, int cols);
-__kernel void clReLU(float x, __global float* result);
-__kernel void clReLU(__global float* x, __global float* out, int size);
-__kernel void clSeLU(float x, __global float* result);
-__kernel void clSeLU(__global float* x, __global float* out, int size);
-__kernel void clLOTA(__global float* y, __global float* out, int size);
-__kernel void clLOTA(__global float* y, __global float* out, int rows, int cols);
-__kernel void clLOTA(__global float* y, __global float* out, int rows, int cols, int limit);
+// Sigmoid kernel sources
+extern const char* sigmoidKernelSource;
+extern const char* sigmoidderKernelSource;
+extern const char* sigmoid1DKernelSource;
+extern const char* sigmoid2DKernelSource;
+extern const char* sigmoid1DderKernelSource;
+extern const char* sigmoidDer2DKernelSource;
 
-__kernel void clSigmoidder(float x, __global float* result);
-__kernel void clSigmoidder(__global float* x, __global float* out, int rows, int cols);
-__kernel void clSoftmaxder(__global float* x, __global float* out, float temp, int size);
-__kernel void clSoftmaxder(__global float* x, __global float* out, float temp, int rows, int cols);
-__kernel void clReLUder(float x, __global float* result);
-__kernel void clReLUder(__global float* x, __global float* out, int size);
-__kernel void clSeLUder(float x, __global float* result);
-__kernel void clSeLUder(__global float* x, __global float* out, int size);
-__kernel void clLOTAder(__global float* y, __global float* out, int size);
-__kernel void clLOTAder(__global float* y, __global float* out, int rows, int cols);
-__kernel void clLOTAder(__global float* y, __global float* out, int rows, int cols, int limit);
+// Softmax kernel sources
+extern const char* softmax1DKernelSource;
+extern const char* softmax2DKernelSource;
+extern const char* softmax1DderKernelSource;
+extern const char* softmax2DderKernelSource;
+
+// ReLU kernel sources
+extern const char* reluKernelSource;
+extern const char* relu1DKernelSource;
+extern const char* relu2DKernelSource;
+extern const char* reluDerKernelSource;
+extern const char* relu1DderKernelSource;
+extern const char* relu2DDerKernelSource;
+
+// LOTA kernel sources
+extern const char* lota1DKernelSource;
+extern const char* lota2DKernelSource;
+extern const char* lota2DWithLimitKernelSource;
+extern const char* lota1DDerKernelSource;
+extern const char* lota2DDerKernelSource;
+extern const char* lota2DDerWithLimitKernelSource;
 
 __kernel void operator_eq(__global float* a, __global float* b, __global float* result, int size);
 __kernel void operator_add(__global float* a, __global float* b, __global float* result, int size);
@@ -138,26 +143,26 @@ __kernel void product_2d(__global float* a, __global float* result, int rows, in
 
 #include <cuda_runtime.h>
 
-__global__ void cuSigmoid(float x, float result);
+__global__ void cuSigmoid(float x, float* result);
 __global__ void cuSigmoid(float* x, float* out, int size);
 __global__ void cuSigmoid(float* x, float* out, int rows, int cols);
 __global__ void cuSoftmax(float* x, float* out, float temp, int size);
 __global__ void cuSoftmax(float* x, float* out, float temp, int rows, int cols);
-__global__ void cuReLU(float x, float result);
+__global__ void cuReLU(float x, float* result);
 __global__ void cuReLU(float* x, float* out, int size);
-__global__ void cuSeLU(float x, float result);
+__global__ void cuSeLU(float x, float* result);
 __global__ void cuSeLU(float* x, float* out, int size);
 __global__ void cuLOTA(float* y, float* out, int size);
 __global__ void cuLOTA(float* y, float* out, int rows, int cols);
 __global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit);
 
-__global__ void cuSigmoidder(float x, float result);
+__global__ void cuSigmoidder(float x, float* result);
 __global__ void cuSigmoidder(float* x, float* out, int rows, int cols);
 __global__ void cuSoftmaxder(float* x, float* out, float temp, int size);
 __global__ void cuSoftmaxder(float* x, float* out, float temp, int rows, int cols);
-__global__ void cuReLUder(float x, float result);
+__global__ void cuReLUder(float x, float* result);
 __global__ void cuReLUder(float* x, float* out, int size);
-__global__ void cuSeLUder(float x, float result);
+__global__ void cuSeLUder(float x, float* result);
 __global__ void cuSeLUder(float* x, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int rows, int cols);

@@ -47,7 +47,8 @@ public:
     std::vector<std::vector<float>> output;             // output embeddings
     std::vector<std::vector<float>> embeddings;         // all glove embeddings with 64D
     FILE* promptNresponse;  // prompt and response text file
-    std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;        // when model in use
+    // when model is in use, hold EV of all the blocks here
+    std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
 
     // default constructor
     transformer() = default;
@@ -72,6 +73,7 @@ public:
     void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void train(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, std::vector<float>& expected);
     void train(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, std::vector<std::vector<float>>& expected);
+    void longtrain(std::string& filePath);
     void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void run();
 
