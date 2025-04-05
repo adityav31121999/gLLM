@@ -70,6 +70,11 @@ public:
     modelDataInfo info;     // model info
     FILE *file;             // file where all data is to be stored
 
+    std::vector<std::string> tinput;    // token input
+    std::vector<std::string> expected;  // expected token output
+    std::vector<std::string> toutput;   // predicted token output
+    std::vector<std::string> token;     // Hold all input, generated or predicted tokens till TERMINATOR MEETS (Input + Expected/Output + Terminator)
+
     // default constructor
     model() = default;
     model(int m, int x, int y, int n, int d, int h, int l, int vocab);

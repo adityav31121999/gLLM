@@ -34,9 +34,8 @@ public:
     float error;            // error for block, mean of all incomplete attentions
     bool isSelfAttention;   // if its self (1) or cross (0) attention
     std::string str;        // to check whether new token is "@#O" or part of conversation
-    // vertical retention vectors for each head
     std::vector<float> EH;  // common horizontal vector for calculating probability of output
-    // hold all EVs of attention heads
+    // hold all vertical retention vector EVs from each attention heads
     std::vector<std::vector<std::vector<std::vector<float>>>> EV;
     std::vector<float> probability;             // probability space for next token
     std::vector<std::vector<attention>> b;      // block complete attention

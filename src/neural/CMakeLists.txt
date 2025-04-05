@@ -36,6 +36,8 @@ add_library(neural STATIC
     src/transformer/feedfor.cpp
     src/transformer/backward.cpp
     src/transformer/train.cpp
+
+    src/transformer/cu/cucompute.cu
 )
 
 # link libraries to this library

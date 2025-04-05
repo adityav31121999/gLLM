@@ -4,6 +4,32 @@
 #include "include/transformer.hpp"
 
 /**
+ * @brief compute key vectors
+ * @param[in] t token embedding
+ * @param[in] m matrix input
+ * @param[out] k key vector = t x m
+ */
+void computeKeys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& k) {
+    for(int i = 0; i < m.size(); i++) {
+        k[i] = std::inner_product(t.begin(), t.end(), m[i].begin(), 0.0f);
+    }
+}
+
+
+/**
+ * @brief compute query vectors
+ * @param[in] t token embedding
+ * @param[in] m query matrix input
+ * @param[out] q query vector = t x m
+ */
+void computeQuerys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& q) {
+    for(int i = 0; i < m.size(); i++) {
+        q[i] = std::inner_product(t.begin(), t.end(), m[i].begin(), 0.0f);
+    }
+}
+
+
+/**
  * @brief Dot product of T x M x T'
  * @param T token embedding
  * @param M matrix for attention head calculation (MQ x MK')
@@ -55,7 +81,7 @@ void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& do
  * @param KdotQ dot product
  * @param tokenEmbed tokens
  * @param M QK' cache
- * @param currentTokenCount number of tokens in context
+ * @param currentTokenCount number of tokens in full context
  * @param promptCount tokens in prompt 
  * @param attentionType attention type, 1 for self, 0 for cross
  */
@@ -113,7 +139,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
  * @param KdotQ dot product
  * @param K Keys
  * @param Q Queries
- * @param currentTokenCount number of tokens in context
+ * @param currentTokenCount number of tokens in full context
  * @param promptCount tokens in prompt
  * @param attentionType attention type, 1 for self, 0 for cross
  */
@@ -180,7 +206,7 @@ void transformer::computeKdotQs(int& promptCount, int& currentTokenCount, int& b
         for (int i = 0; i < x; i++) {
             for (int j = 0; j < y; j++) {
                 for (int k = 0; k < count; k++) {
-                    computeKeys(input[tokenCount + k - 1], t[blockCount - 1].b[i][j].MK.a, t[blockCount - 1].b[i][j].K[k]);
+                    computeKeys(input[currentTokenCount + k - 1], t[blockCount - 1].b[i][j].MK.a, t[blockCount - 1].b[i][j].K[k]);
                     computeQuerys(t[blockCount - 2].b[i][j].EV[k], t[blockCount - 1].b[i][j].MQ.a, t[blockCount - 1].b[i][j].Q[k]);
                 }
                 computeKdotQ(t[blockCount - 1].b[i][j].KdotQ, t[blockCount - 1].b[i][j].K, t[blockCount - 1].b[i][j].Q, 

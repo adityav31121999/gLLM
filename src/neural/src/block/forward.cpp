@@ -11,6 +11,11 @@
  */
 void block::partialforprop(int& in, int& tokenCount, int i, int& layers) 
 {
+    // initialize the horizontal embedding vector to 0
+    for (int j = 0; j < y; j++) {
+        b[i][j].EH = std::vector<float>(in, 0.0f);
+    }
+
     // for one partial attention
     for(int j = 0; j < y; j++) {
         b[i][j].forprop(in, layers, tokenCount);      // incomplete attention forprop
@@ -35,11 +40,16 @@ void block::partialforprop(int& in, int& tokenCount, int i, int& layers)
 void block::partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& k, int i,
     int& layers, int& n)
 {
+    // initialize the horizontal embedding vector to 0
+    for (int j = 0; j < y; j++) {
+        b[i][j].EH = std::vector<float>(in, 0.0f);
+    }
+
     // for one partial attention
     for(int j = 0; j < y; j++) {
         b[i][j].forprop(EVp[i], in, layers, tokenCount, k, n);      // incomplete attention forprop
         // break when last head forprop is done
-        if(j == (y - 1)) 
+        if(j == (y - 1))
             break;
         b[i][j + 1].EH = b[i][j].EH;
     }

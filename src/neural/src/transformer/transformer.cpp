@@ -3,6 +3,7 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
+
 /**
  * @brief Constructor for single-block transformer for use
  * @param x number of partial attentions in block
