@@ -14,7 +14,8 @@
  * @param l layers of mlp
  */
 transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab):
-    m(1), x(x), y(y), n(n), d(d), h(h), l(l) {
+    m(1), x(x), y(y), n(n), d(d), h(h), l(l) 
+{
     t = std::vector<block>(1, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
@@ -34,7 +35,8 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab):
  * @param l layers of mlp
  */
 transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab) :
-    m(m), x(x), y(y), n(n), d(d), h(h), l(l) {
+    m(m), x(x), y(y), n(n), d(d), h(h), l(l) 
+{
     t = std::vector<block>(m, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
@@ -53,7 +55,8 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
  * @param l layers of mlp
  */
 transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType):
-    m(1), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) {
+    m(1), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
+{
     t = std::vector<block>(1, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
@@ -72,11 +75,43 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bo
  * @param l layers of mlp
  */
 transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType) :
-    m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) {
+    m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
+{
     t = std::vector<block>(m, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
+}
+
+
+/**
+ * @brief constructor for transformer when case is defined
+ * @param m number of blocks in trained transformer
+ * @param x number of layers of PA
+ * @param y number of attention heads in PA
+ * @param n context window for single head
+ * @param h height of matrices
+ * @param l layer of MLPs
+ * @param vocab vocabulary size
+ * @param attentionType self (1) or cross (0) attention
+ * @param CASE training (TRUE) or use (FALSE)
+ */
+transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& CASE) :
+    m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
+{
+    if(CASE == true || CASE == 1) {
+        // training
+        t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType));
+        tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
+        totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
+    }
+    else {
+        t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType));
+        tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
+        totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
+    }
+    EVs.resize(m, std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y, 
+                    std::vector<std::vector<float>>(n, std::vector<float>(d, 0)))));
 }
 
 

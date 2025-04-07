@@ -9,6 +9,7 @@
 #include <neural.hpp>
 
 #define ARCH "SHADY-ATTENTION"
+#define EXTENSION ".llm"
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -69,11 +70,14 @@ public:
     transformer T;          // model with 1 transformer
     modelDataInfo info;     // model info
     FILE *file;             // file where all data is to be stored
+    std::string path2model; // path to model for use and training
 
-    std::vector<std::string> tinput;    // token input
-    std::vector<std::string> expected;  // expected token output
-    std::vector<std::string> toutput;   // predicted token output
-    std::vector<std::string> token;     // Hold all input, generated or predicted tokens till TERMINATOR MEETS (Input + Expected/Output + Terminator)
+// using these strings, embeddings are provided to the transformer t (for training and application)
+    std::vector<std::string> tinput;        // token input
+    std::vector<std::string> expected;      // expected token output
+    std::vector<std::string> toutput;       // predicted token output
+    // Hold all input, generated or predicted tokens till TERMINATOR MEETS (Input + Expected/Output + Terminator)
+    std::vector<std::string> token;
 
     // default constructor
     model() = default;
@@ -88,12 +92,12 @@ public:
     void setVersion(std::string& version);
     void setAuthor(std::string& author);
     void setDate(std::string& date);
-    void setModelArch(std::string& modelArch);
     void setLicense(std::string& license);
-    void setTrainingData(std::string& trainingData);
     void setInfo(modelDataInfo& info);
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
                     std::string& license, std::string& trainingData);
+    void setEmbedding(std::string&);
+    void getToken(std::vector<float>&);
 
     void allocateMemory();
     void load();
@@ -130,9 +134,5 @@ void QNASplit(std::vector<std::string>& token, std::vector<std::string>& prompt,
 void sentenceSplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
 void punctutationSplit(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
 void fillInTheBlanks(std::vector<std::string>& token, std::vector<std::string>& prompt, std::vector<std::string>& response);
-
-// provide token embedding from a csv file
-// provide token embedding from model binary file
-// perform dembedding by searching maximum value of probability
 
 #endif

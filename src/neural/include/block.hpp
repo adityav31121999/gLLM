@@ -45,6 +45,10 @@ public:
     block(int x, int y, int n, int d, int h, int l, int vocab);
     block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
 
+    void computeKdotQforTrainParallel();
+    void computeKdotQforTrainLayer();
+    void computeKdotQforUseParallel();
+    void computeKdotQforUseLayer();
     // partial attention forprop
     void partialforprop(int& in, int& tokenCount, int i, int& layers);
     void partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
@@ -66,8 +70,7 @@ public:
     void backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void backward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
 
-#ifdef USE_CUDA
-    // cuda equivalent functions for block
+#ifdef USE_CUDA     // cuda equivalent functions for block
     void cuPartialforprop(int& in, int& tokenCount, int i, int& layers);
     void cuPartialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
     void cuForprop(int& in, int& tokenCount, int& layers);
@@ -82,8 +85,7 @@ public:
     void cubackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
     void cubackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void cubackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-#elif USE_OPENCL
-    // opencl equivalent functions for block
+#elif USE_OPENCL    // opencl equivalent functions for block
     void clPartialforprop(int& in, int& tokenCount, int i, int& layers);
     void clPartialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
     void clForprop(int& in, int& tokenCount, int& layers);

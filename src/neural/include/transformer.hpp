@@ -3,13 +3,13 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
-#include "mlp.hpp"
-#include "attention.hpp"
-#include "block.hpp"
 #include <string>
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include "mlp.hpp"
+#include "attention.hpp"
+#include "block.hpp"
 
 /**
  * @brief Common Transformer class for token/chunk prediction and context 
@@ -57,6 +57,7 @@ public:
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
+    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& CASE);
 
     void setDims(int m, int x, int y, int n, int d, int h, int l);      // set dimension of transformer
     void setLearning(float learning);       // set learning rate for MLPs
@@ -81,8 +82,7 @@ public:
     void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void run();
 
-#ifdef USE_CUDA
-    // cuda implementation
+#ifdef USE_CUDA     // cuda implementation
     void cuComputeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
     void cuForward();
     void cuBackward(std::vector<float>& expectedH);
@@ -99,8 +99,8 @@ public:
     void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses);
     void cuComputeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);
     void cuRun();
-#elif USE_OPENCL
-    // opencl implementation
+#elif USE_OPENCL    // opencl implementation
+    void clComputeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
     void clForward();
     void clBackward(std::vector<float>& expectedH);
     void clBackward(std::vector<float>& expectedH, int& blockCount);

@@ -11,7 +11,8 @@
  * @param voc size of token vocabulary
  * @param index position of highest probability token embedding
  */
-void transformer::computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int & voc, int & index)
+void transformer::computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int & voc, 
+    int & index)
 {
     std::vector<float> pred(voc, 0.0f);     // predictions
     for(int i = 0; i < voc; i++) {
@@ -54,7 +55,8 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
                 // else increase epochs by 10
                 // If the similarity (dot product) between current output and expected is above threshold,
                 // consider it close enough to accept and stop training for this token
-                if((std::inner_product(t[0].EH.begin(), t[0].EH.end(), expected.begin(), 0.0f) > 0.01)) {
+                if((std::inner_product(t[0].EH.begin(), t[0].EH.end(), expected.begin(), 0.0f) > 0.01)) 
+                {
                     input[currentTokenCount] = t[0].EH;
                     break;
                 }
@@ -84,7 +86,8 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
                 // else increase epochs by 10
                 // If the similarity (dot product) between current output and expected is above threshold,
                 // consider it close enough to accept and stop training for this token
-                if((std::inner_product(t[blockCount-1].EH.begin(), t[blockCount-1].EH.end(), expected.begin(), 0.0f) > 0.01)) {
+                if((std::inner_product(t[blockCount-1].EH.begin(), t[blockCount-1].EH.end(), expected.begin(), 0.0f) > 0.01)) 
+                {
                     input[currentTokenCount] = t[blockCount-1].EH;
                     break;
                 }
