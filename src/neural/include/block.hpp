@@ -34,7 +34,7 @@ public:
     float error;            // error for block, mean of all incomplete attentions
     bool isSelfAttention;   // if its self (1) or cross (0) attention
     std::string str;        // to check whether new token is "@#O" or part of conversation
-    std::vector<float> EH;  // common horizontal vector for calculating probability of output
+    std::vector<float> EH;  // common horizontal retention for token prediction (summed or concatanted)
     // hold all vertical retention vector EVs from each attention heads
     std::vector<std::vector<std::vector<std::vector<float>>>> EV;
     std::vector<float> probability;             // probability space for next token
@@ -45,10 +45,6 @@ public:
     block(int x, int y, int n, int d, int h, int l, int vocab);
     block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
 
-    void computeKdotQforTrainParallel();
-    void computeKdotQforTrainLayer();
-    void computeKdotQforUseParallel();
-    void computeKdotQforUseLayer();
     // partial attention forprop
     void partialforprop(int& in, int& tokenCount, int i, int& layers);
     void partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
@@ -69,6 +65,8 @@ public:
     void backward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
     void backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void backward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+    // function for model operation
+    void runBlock(std::vector<std::vector<float>>& tokenEmbed, int& tokenCount, int& blockCount);
 
 #ifdef USE_CUDA     // cuda equivalent functions for block
     void cuPartialforprop(int& in, int& tokenCount, int i, int& layers);
@@ -85,6 +83,7 @@ public:
     void cubackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
     void cubackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void cubackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+    void curunBlock(std::vector<std::vector<float>>& tokenEmbed, int& tokenCount, int& blockCount);
 #elif USE_OPENCL    // opencl equivalent functions for block
     void clPartialforprop(int& in, int& tokenCount, int i, int& layers);
     void clPartialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
@@ -100,6 +99,7 @@ public:
     void clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
     void clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+    void clrunBlock(std::vector<std::vector<float>>& tokenEmbed, int& tokenCount, int& blockCount);
 #endif
 
     // default destructor

@@ -12,9 +12,8 @@
 #include "block.hpp"
 
 /**
- * @brief Common Transformer class for token/chunk prediction and context 
- * retention and grammatical restriction. This can be single block or multi-block
- * architecture.
+ * @brief Transformer (FULL CONTEXT) class for token/chunk prediction and context 
+ * retention. This can be single or multi-block architecture.
  */
 class transformer {
 public:
@@ -125,38 +124,35 @@ public:
 
 // compute functions for dot, KdotQ and other values
 
-void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
-void computeDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
-void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
-    int& promptCount, bool& attentionType);
+void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
-    int& currentTokenCount, int& promptCount, bool& attentionType);
-void computeKeys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& k);
-void computeQuerys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& q);
+    int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
+void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat M, int& currentTokenCount,
+    int& promptCount, bool& attentionType);
+void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp,
+    mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
 
 #ifdef USE_CUDA
     // cuda implementation
-    void cuComputeDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot);
     void cuComputeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
     void cuComputeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
-    void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
-        int& promptCount, bool& attentionType);
     void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
         int& currentTokenCount, int& promptCount, bool& attentionType);
-    void cuComputeKeys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& k);
-    void cuComputeQuerys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& q);
+    void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat M, int& currentTokenCount,
+        int& promptCount, bool& attentionType);
+    void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp,
+        mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
 #elif USE_OPENCL
     // opencl implementation
-    void clComputeDot(std::vector<float>& T, std::vector<std::vector<float>>& M, float& dot);
     void clComputeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
     void clComputeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
-    void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount, 
-        int& promptCount, bool& attentionType);
     void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
         int& currentTokenCount, int& promptCount, bool& attentionType);
-    void clComputeKeys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& k);
-    void clComputeQuerys(std::vector<float>& t, std::vector<std::vector<float>>& m, std::vector<float>& q);
+    void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat M, int& currentTokenCount,
+        int& promptCount, bool& attentionType);
+    void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp,
+        mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
 #endif
 
 #endif

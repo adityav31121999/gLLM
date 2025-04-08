@@ -65,11 +65,6 @@ public:
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void cuValidate(int in, int layers);
     void cuTest(int in, int layers);
-    float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
-    float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
-    float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
-    float cucomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
-    float cudropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 
 #elif USE_OPENCL
 
@@ -85,11 +80,6 @@ public:
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void clValidate(int in, int layers);
     void clTest(int in, int layers);
-    float clgetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
-    float clgetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
-    float clcomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
-    float clcomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
-    float cldropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 
 #endif
 
@@ -103,5 +93,21 @@ float getL2Penalty(std::vector<std::vector<std::vector<float>>>&);
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
+
+#ifdef USE_CUDA
+// cuda implementation
+    float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
+    float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
+    float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
+    float cucomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
+    float cudropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
+#elif USE_OPENCL
+// opencl implementation
+    float clgetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
+    float clgetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
+    float clcomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
+    float clcomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
+    float cldropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
+#endif
 
 #endif

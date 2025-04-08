@@ -43,3 +43,23 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attention
     EV = std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y,\
         std::vector<std::vector<float>>(CONTEXT_WIN, std::vector<float>(d, 0))));
 }
+
+
+/**
+ * @brief set vertical retention vectors of heads to blocks in single vector
+ * @param EV shared space for vertical retention vectors of all heads of single block
+ */
+void block::setVerticalRetention(std::vector<std::vector<std::vector<std::vector<float>>>> &EV)
+{
+    // complete block
+    for(int i = 0; i < x; i++) {
+        // layers of partial attention
+        for(int j = 0; j < y; j++) {
+            // attention heads of each partial attention
+            for(int k = 0; k < CONTEXT_WIN; k++) {
+                // each vertical retention vector of head
+                EV[i][j][k] = b[i][j].EV[k];
+            }
+        }
+    }
+}

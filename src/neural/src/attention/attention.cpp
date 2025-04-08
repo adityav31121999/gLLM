@@ -61,32 +61,3 @@ void attention::setAttentionType(bool isSelforCross) {
     isSelfAttention = isSelforCross;
 }
 
-
-/**
- * @brief compute KdotQ for training of model
- * @param Keys tokenEmbed x MK
- * @param Queries tokenEmbed x MQ
- * @param currentTokenCount current token count in full context
- * @param promptCount count of current prompt
- * @param blockCount current block in full context
- */
-void attention::computeKdotQforTrain(std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int&currentTokenCount, 
-    int& promptCount, int& blockCount)
-{
-    
-}
-
-
-/**
- * @brief compute KdotQ for training of model
- * @param tokenEmbed token embeddings
- * @param qkMat QK' cache
- * @param currentTokenCount current token count in full context
- * @param promptCount count of current prompt
- * @param blockCount current block in full context
- */
-void attention::computeKdotQforUse(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& qkMat, int&currentTokenCount, 
-    int& promptCount, int& blockCount) 
-{
-    
-}

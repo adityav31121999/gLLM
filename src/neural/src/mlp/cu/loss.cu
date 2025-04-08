@@ -1,0 +1,410 @@
+#include "include/mlp.hpp"
+
+// loss.cu: CUDA implementations for calculating losses and penalties for MLP
+#include "include/mlp.hpp"
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <vector>
+#include <numeric>
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+
+// Helper macro for CUDA error checking
+#define CUDA_CHECK(call) do { \
+    cudaError_t err = call; \
+    if (err != cudaSuccess) { \
+        fprintf(stderr, "CUDA Error in %s at line %d: %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
+        throw std::runtime_error(cudaGetErrorString(err)); \
+    } \
+} while (0)
+
+// --- Helper Functions ---
+
+// Flatten 3D weights vector into a 1D vector
+std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights) {
+    std::vector<float> flat_weights;
+    size_t total_weights = 0;
+    for (const auto& layer : weights) {
+        for (const auto& neuron : layer) {
+            total_weights += neuron.size();
+        }
+    }
+    flat_weights.reserve(total_weights);
+    for (const auto& layer : weights) {
+        for (const auto& neuron : layer) {
+            flat_weights.insert(flat_weights.end(), neuron.begin(), neuron.end());
+        }
+    }
+    return flat_weights;
+}
+
+// CUDA kernel for L1 penalty calculation
+__global__ void l1PenaltyKernel(float* weights, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes absolute value for its element
+    temp[tid] = (i < size) ? fabsf(weights[i]) : 0.0f;
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+// CUDA kernel for L2 penalty calculation
+__global__ void l2PenaltyKernel(float* weights, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes square for its element
+    temp[tid] = (i < size) ? weights[i] * weights[i] : 0.0f;
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+// CUDA kernel for absolute difference calculation
+__global__ void absDiffKernel(float* outputs, float* targets, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes absolute difference for its element
+    temp[tid] = (i < size) ? fabsf(outputs[i] - targets[i]) : 0.0f;
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+// CUDA kernel for squared difference calculation
+__global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes squared difference for its element
+    if (i < size) {
+        float diff = outputs[i] - targets[i];
+        temp[tid] = diff * diff;
+    } else {
+        temp[tid] = 0.0f;
+    }
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+// --- CUDA Penalty Functions ---
+
+float cugetL1Penalty(const std::vector<std::vector<std::vector<float>>>& weights) {
+    std::vector<float> flat_weights = flattenWeights(weights);
+    if (flat_weights.empty()) return 0.0f;
+    
+    int size = flat_weights.size();
+    float *d_weights, *d_result;
+    float result = 0.0f;
+    
+    try {
+        // Allocate device memory
+        CUDA_CHECK(cudaMalloc(&d_weights, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+        
+        // Initialize result to 0
+        CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+        
+        // Copy data to device
+        CUDA_CHECK(cudaMemcpy(d_weights, flat_weights.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        
+        // Launch kernel
+        int threadsPerBlock = 256;
+        int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+        l1PenaltyKernel<<<blocksPerGrid, threadsPerBlock>>>(d_weights, d_result, size);
+        
+        // Check for kernel launch errors
+        CUDA_CHECK(cudaGetLastError());
+        
+        // Copy result back to host
+        CUDA_CHECK(cudaMemcpy(&result, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+        
+        // Free device memory
+        CUDA_CHECK(cudaFree(d_weights));
+        CUDA_CHECK(cudaFree(d_result));
+        
+        return result;
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "CUDA Exception in getL1Penalty: " << e.what() << std::endl;
+        // Cleanup on error
+        cudaFree(d_weights);
+        cudaFree(d_result);
+        throw;
+    }
+}
+
+float cugetL2Penalty(const std::vector<std::vector<std::vector<float>>>& weights) {
+    std::vector<float> flat_weights = flattenWeights(weights);
+    if (flat_weights.empty()) return 0.0f;
+    
+    int size = flat_weights.size();
+    float *d_weights, *d_result;
+    float result = 0.0f;
+    
+    try {
+        // Allocate device memory
+        CUDA_CHECK(cudaMalloc(&d_weights, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+        
+        // Initialize result to 0
+        CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+        
+        // Copy data to device
+        CUDA_CHECK(cudaMemcpy(d_weights, flat_weights.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        
+        // Launch kernel
+        int threadsPerBlock = 256;
+        int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+        l2PenaltyKernel<<<blocksPerGrid, threadsPerBlock>>>(d_weights, d_result, size);
+        
+        // Check for kernel launch errors
+        CUDA_CHECK(cudaGetLastError());
+        
+        // Copy result back to host
+        CUDA_CHECK(cudaMemcpy(&result, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+        
+        // Free device memory
+        CUDA_CHECK(cudaFree(d_weights));
+        CUDA_CHECK(cudaFree(d_result));
+        
+        return result;
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "CUDA Exception in getL2Penalty: " << e.what() << std::endl;
+        // Cleanup on error
+        cudaFree(d_weights);
+        cudaFree(d_result);
+        throw;
+    }
+}
+
+// --- CUDA Loss Functions ---
+
+float cucomputeLossWithL1(const std::vector<float>& outputs, const std::vector<float>& targets, mlp& network, float lambda) {
+    if (outputs.size() != targets.size()) {
+        throw std::invalid_argument("Output and target vector sizes must match in computeLossWithL1.");
+    }
+    if (outputs.empty()) {
+        return 0.0f;
+    }
+    
+    int size = outputs.size();
+    float *d_outputs, *d_targets, *d_result;
+    float data_loss = 0.0f;
+    
+    try {
+        // Allocate device memory
+        CUDA_CHECK(cudaMalloc(&d_outputs, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_targets, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+        
+        // Initialize result to 0
+        CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+        
+        // Copy data to device
+        CUDA_CHECK(cudaMemcpy(d_outputs, outputs.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_targets, targets.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        
+        // Launch kernel
+        int threadsPerBlock = 256;
+        int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+        absDiffKernel<<<blocksPerGrid, threadsPerBlock>>>(d_outputs, d_targets, d_result, size);
+        
+        // Check for kernel launch errors
+        CUDA_CHECK(cudaGetLastError());
+        
+        // Copy result back to host
+        CUDA_CHECK(cudaMemcpy(&data_loss, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+        
+        // Free device memory
+        CUDA_CHECK(cudaFree(d_outputs));
+        CUDA_CHECK(cudaFree(d_targets));
+        CUDA_CHECK(cudaFree(d_result));
+        
+        float l1_penalty = cugetL1Penalty(network.weights);
+        
+        return data_loss + 0.5f * lambda * l1_penalty;
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "CUDA Exception in computeLossWithL1: " << e.what() << std::endl;
+        // Cleanup on error
+        cudaFree(d_outputs);
+        cudaFree(d_targets);
+        cudaFree(d_result);
+        throw;
+    }
+}
+
+float cucomputeLossWithL2(const std::vector<float>& outputs, const std::vector<float>& targets, mlp& network, float lambda) {
+    if (outputs.size() != targets.size()) {
+        throw std::invalid_argument("Output and target vector sizes must match in computeLossWithL2.");
+    }
+    if (outputs.empty()) {
+        return 0.0f;
+    }
+    
+    int size = outputs.size();
+    float *d_outputs, *d_targets, *d_result;
+    float sum_sq_diff = 0.0f;
+    
+    try {
+        // Allocate device memory
+        CUDA_CHECK(cudaMalloc(&d_outputs, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_targets, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+        
+        // Initialize result to 0
+        CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+        
+        // Copy data to device
+        CUDA_CHECK(cudaMemcpy(d_outputs, outputs.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_targets, targets.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        
+        // Launch kernel
+        int threadsPerBlock = 256;
+        int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+        squaredDiffKernel<<<blocksPerGrid, threadsPerBlock>>>(d_outputs, d_targets, d_result, size);
+        
+        // Check for kernel launch errors
+        CUDA_CHECK(cudaGetLastError());
+        
+        // Copy result back to host
+        CUDA_CHECK(cudaMemcpy(&sum_sq_diff, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+        
+        // Free device memory
+        CUDA_CHECK(cudaFree(d_outputs));
+        CUDA_CHECK(cudaFree(d_targets));
+        CUDA_CHECK(cudaFree(d_result));
+        
+        float l2_penalty = cugetL2Penalty(network.weights);
+        
+        return 0.5f * sum_sq_diff + 0.5f * lambda * l2_penalty;
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "CUDA Exception in computeLossWithL2: " << e.what() << std::endl;
+        // Cleanup on error
+        cudaFree(d_outputs);
+        cudaFree(d_targets);
+        cudaFree(d_result);
+        throw;
+    }
+}
+
+
+float cudropoutGeneralisation(const std::vector<float>& outputs, const std::vector<float>& targets, mlp& network, float p) {
+    if (outputs.size() != targets.size()) {
+        throw std::invalid_argument("Output and target vector sizes must match in dropoutGeneralisation.");
+    }
+    if (outputs.empty()) {
+        return 0.0f;
+    }
+    if (p >= 1.0f || p < 0.0f) {
+        throw std::invalid_argument("Dropout probability p must be in [0, 1).");
+    }
+    
+    int size = outputs.size();
+    float *d_outputs, *d_targets, *d_result;
+    float sum_sq_diff = 0.0f;
+    
+    try {
+        // Allocate device memory
+        CUDA_CHECK(cudaMalloc(&d_outputs, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_targets, size * sizeof(float)));
+        CUDA_CHECK(cudaMalloc(&d_result, sizeof(float)));
+        
+        // Initialize result to 0
+        CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+        
+        // Copy data to device
+        CUDA_CHECK(cudaMemcpy(d_outputs, outputs.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_targets, targets.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+        
+        // Launch kernel
+        int threadsPerBlock = 256;
+        int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+        squaredDiffKernel<<<blocksPerGrid, threadsPerBlock>>>(d_outputs, d_targets, d_result, size);
+        
+        // Check for kernel launch errors
+        CUDA_CHECK(cudaGetLastError());
+        
+        // Copy result back to host
+        CUDA_CHECK(cudaMemcpy(&sum_sq_diff, d_result, sizeof(float), cudaMemcpyDeviceToHost));
+        
+        // Free device memory
+        CUDA_CHECK(cudaFree(d_outputs));
+        CUDA_CHECK(cudaFree(d_targets));
+        CUDA_CHECK(cudaFree(d_result));
+        
+        // Apply dropout regularization - scale by (1-p) for each weight
+        float dropout_factor = 1.0f / (1.0f - p);
+        float dropout_penalty = dropout_factor * cugetL2Penalty(network.weights);
+        
+        return 0.5f * sum_sq_diff + 0.5f * dropout_penalty;
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "CUDA Exception in dropoutGeneralisation: " << e.what() << std::endl;
+        // Cleanup on error
+        cudaFree(d_outputs);
+        cudaFree(d_targets);
+        cudaFree(d_result);
+        throw;
+    }
+}

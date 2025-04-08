@@ -22,6 +22,7 @@ bool operator==(std::vector<float> a, std::vector<float> b) {
     return true;
 }
 
+
 /**
  * @brief Checks if two vectors are not equal.
  * This function takes two vectors of floats as an input and returns true if they are not equal and false otherwise.
@@ -32,6 +33,7 @@ bool operator==(std::vector<float> a, std::vector<float> b) {
 bool operator!=(std::vector<float> a, std::vector<float> b) {
     return !(a == b);
 }
+
 
 /**
  * @brief Overloaded addition operator for vectors. This function takes two vectors 
@@ -51,6 +53,7 @@ std::vector<float> operator+(std::vector<float>x, std::vector<float> y) {
     return result;
 }
 
+
 /**
  * @brief Overloaded subtraction operator for vectors. This function takes two vectors as 
  * an input and returns a vector where each element is the difference between the corresponding 
@@ -69,6 +72,7 @@ std::vector<float> operator-(std::vector<float>x, std::vector<float> y) {
     return result;
 }
 
+
 /**
  * @brief Overloaded multiplication operator for vectors. This function takes a vector and a number
  * as an input and returns a vector where each element is the product of the corresponding
@@ -83,6 +87,7 @@ std::vector<float> operator*(std::vector<float> x, float y) {
     std::transform(x.begin(), x.end(), result.begin(), [&y](const auto& i) { return i*y; });
     return result;
 }
+
 
 /**
  * @brief Overloaded multiplication operator for vectors. This function takes a vector and a number
@@ -101,6 +106,7 @@ std::vector<float> operator*(float a, std::vector<float> b) {
     return c;
 }
 
+
 /**
  * @brief Overloaded division operator for vectors. This function takes a vector and a number
  * as an input and returns a vector where each element is the division of the corresponding
@@ -111,6 +117,97 @@ std::vector<float> operator*(float a, std::vector<float> b) {
  * input vector and number
  */
 std::vector<float> operator/(std::vector<float> x, float y) {
+    if(y == 0) {
+        throw std::runtime_error("Division by zero is undefined");
+    }
+    std::vector<float> result(x.size());
+    std::transform(x.begin(), x.end(), result.begin(), [&y](const auto& i) { return i/y; });
+    return result;
+}
+
+
+/**
+ * @brief Overloaded addition operator for vectors. This function takes two vectors 
+ * as an input and returns a vector where each element is the sum of the corresponding 
+ * elements of the input vectors.
+ * @param x first vector
+ * @param y second vector
+ * @return a vector where each element is the sum of the corresponding elements of the 
+ * input vectors
+ */
+std::vector<float> operator+=(std::vector<float>x, std::vector<float> y) {
+    if(x.size() != y.size()) {
+        throw std::runtime_error("Vectors must be of the same size");
+    }
+    std::vector<float> result(x.size());
+    std::transform(x.begin(), x.end(), y.begin(), result.begin(), [](const auto& i, const auto& j) { return i+j; });
+    return result;
+}
+
+
+/**
+ * @brief Overloaded subtraction operator for vectors. This function takes two vectors as 
+ * an input and returns a vector where each element is the difference between the corresponding 
+ * elements of the input vectors.
+ * @param x first vector
+ * @param y second vector
+ * @return a vector where each element is the difference between the corresponding elements of 
+ * the input vectors
+ */
+std::vector<float> operator-=(std::vector<float>x, std::vector<float> y) {
+    if(x.size() != y.size()) {
+        throw std::runtime_error("Vectors must be of the same size");
+    }
+    std::vector<float> result(x.size());
+    std::transform(x.begin(), x.end(), y.begin(), result.begin(), [](const auto& i, const auto& j) { return i-j; });
+    return result;
+}
+
+
+/**
+ * @brief Overloaded multiplication operator for vectors. This function takes a vector and a number
+ * as an input and returns a vector where each element is the product of the corresponding
+ * elements of the input vector and number.
+ * @param x vector
+ * @param y number
+ * @return a vector where each element is the product of the corresponding elements of the
+ * input vector and number
+ */
+std::vector<float> operator*=(std::vector<float> x, float y) {
+    std::vector<float> result(x.size());
+    std::transform(x.begin(), x.end(), result.begin(), [&y](const auto& i) { return i*y; });
+    return result;
+}
+
+
+/**
+ * @brief Overloaded multiplication operator for vectors. This function takes a vector and a number
+ * as an input and returns a vector where each element is the product of the corresponding
+ * elements of the input vector and number.
+ * @param a number
+ * @param b vector
+ * @return a vector where each element is the product of the corresponding elements of the
+ * input vector and number
+ */
+std::vector<float> operator*=(float a, std::vector<float> b) {
+    std::vector<float> c(b.size(), 0.0);
+    for(int i = 0; i < b.size(); i++) {
+        c[i] = b[i] * a;
+    }
+    return c;
+}
+
+
+/**
+ * @brief Overloaded division operator for vectors. This function takes a vector and a number
+ * as an input and returns a vector where each element is the division of the corresponding
+ * elements of the input vector and number.
+ * @param x vector
+ * @param y number
+ * @return a vector where each element is the division of the corresponding elements of the
+ * input vector and number
+ */
+std::vector<float> operator/=(std::vector<float> x, float y) {
     if(y == 0) {
         throw std::runtime_error("Division by zero is undefined");
     }
@@ -161,6 +258,7 @@ std::vector<std::vector<float>> operator-(std::vector<std::vector<float>> x, std
     return a;
 }
 
+
 /**
  * @brief Overloaded multiplication operator for matrix. This function takes a matrix and a number as an
  * input and returns a matrix where each element is the product of the corresponding elements of
@@ -180,6 +278,7 @@ std::vector<std::vector<float>> operator*(std::vector<std::vector<float>> x, flo
     // Return the resulting matrix
     return a;
 }
+
 
 /**
  * @brief Overloaded division operator for matrix. This function takes a matrix and a number as an
@@ -201,6 +300,92 @@ std::vector<std::vector<float>> operator/(std::vector<std::vector<float>> x, flo
     // Return the resulting matrix
     return a;
 }
+
+
+/**
+ * @brief Overloaded addition operator for matrix. This function takes two matrices as an input 
+ * and returns a matrix where each element is the sum of the corresponding elements of the input 
+ * matrices.
+ * @param x first matrix
+ * @param y second matrix
+ * @return a matrix where each element is the sum of the corresponding elements of the input 
+ * matrices
+ */
+std::vector<std::vector<float>> operator+=(std::vector<std::vector<float>> x, std::vector<std::vector<float>> y) {
+    if(x.size() != y.size() && x[0].size() != y[0].size()) {
+        throw std::runtime_error("Matrices must be of the same size");
+    }
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
+    for(int i = 0; i < x.size(); ++i) {
+        std::transform(x[i].begin(), x[i].end(), y[i].begin(), a[i].begin(), [](const auto& j, const auto& k) { return j+k; });
+    }
+    // Return the resulting matrix
+    return a;
+}
+
+
+/**
+ * @brief Overloaded addition operator for matrix. This function takes two matrices as an input and 
+ * returns a matrix where each element is the sum of the corresponding elements of the input matrices.
+ * @param x first matrix
+ * @param y second matrix
+ * @return a matrix where each element is the sum of the corresponding elements of the input matrices
+ */
+std::vector<std::vector<float>> operator-=(std::vector<std::vector<float>> x, std::vector<std::vector<float>> y) {
+    if(x.size() != y.size() && x[0].size() != y[0].size()) {
+        throw std::runtime_error("Matrices must be of the same size");
+    }
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
+    for(int i = 0; i < x.size(); ++i) {
+        std::transform(x[i].begin(), x[i].end(), y[i].begin(), a[i].begin(), [](const auto& j, const auto& k) { return j-k; });
+    }
+    // Return the resulting matrix
+    return a;
+}
+
+
+/**
+ * @brief Overloaded multiplication operator for matrix. This function takes a matrix and a number as an
+ * input and returns a matrix where each element is the product of the corresponding elements of
+ * the input matrix and the number.
+ * @param x matrix
+ * @param y number
+ * @return a matrix where each element is the product of the corresponding elements of the input
+ * matrix and the number
+ */
+std::vector<std::vector<float>> operator*=(std::vector<std::vector<float>> x, float y) {
+    // Create a new matrix where each element is the product of the corresponding elements of the input matrix and the number
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
+    for(int i = 0; i < x.size(); ++i) {
+        // Use the std::transform algorithm to fill the matrix with the product of the corresponding elements of the input matrix and the number
+        std::transform(x[i].begin(), x[i].end(), a[i].begin(), [&y](const auto& j) { return j*y; });
+    }
+    // Return the resulting matrix
+    return a;
+}
+
+
+/**
+ * @brief Overloaded division operator for matrix. This function takes a matrix and a number as an
+ * input and returns a matrix where each element is the division of the corresponding elements of
+ * the input matrix by the number.
+ * @param x matrix
+ * @param y number
+ * @return a matrix where each element is the division of the corresponding elements of the input
+ * matrix by the number
+ */
+std::vector<std::vector<float>> operator/=(std::vector<std::vector<float>> x, float y) {
+    if(y == 0) {
+        throw std::runtime_error("Division by zero is undefined");
+    }
+    std::vector<std::vector<float>> a(x.size(), std::vector<float>(x[0].size()));
+    for(int i = 0; i < x.size(); ++i) {
+        std::transform(x[i].begin(), x[i].end(), a[i].begin(), [&y](const auto& j) { return j/y; });
+    }
+    // Return the resulting matrix
+    return a;
+}
+
 
 /**
  * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of floats 
@@ -228,6 +413,7 @@ std::vector<std::vector<float>> vec2mat(std::vector<float> vec, unsigned int row
     return m;
 }
 
+
 /**
  * @brief Convert a 1D vector to a 2D matrix. This function takes a 1D vector of floats 
  * and two unsigned integers as input and returns a 2D vector of floats. The two unsigned 
@@ -250,6 +436,7 @@ std::vector<float> mat2vec(std::vector<std::vector<float>> m) {
     return vec;
 }
 
+
 /**
  * @brief Calculates the sum of the elements in a vector.
  * This function takes a vector of floats as an input and returns the sum of all its elements.
@@ -259,6 +446,7 @@ std::vector<float> mat2vec(std::vector<std::vector<float>> m) {
 float sum(std::vector<float> a) {
     return std::accumulate(a.begin(), a.end(), 0.0);
 }
+
 
 /**
  * @brief Calculates the sum of all elements in a 2D vector.
@@ -272,6 +460,7 @@ float sum(std::vector<std::vector<float>> a) {
     return sum(sumofrow(a));
 }
 
+
 /**
  * @brief Calculates the product of the elements in a vector.
  * This function takes a vector of floats as an input and returns the product of all its elements.
@@ -281,6 +470,7 @@ float sum(std::vector<std::vector<float>> a) {
 float product(std::vector<float> a) {
     return static_cast<float>(std::accumulate(a.begin(), a.end(), 1.0f, std::multiplies<float>()));
 }
+
 
 /**
  * @brief Calculates the product of all elements in a 2D vector.
@@ -296,6 +486,7 @@ float product(std::vector<std::vector<float>> b) {
     }
     return a;
 }
+
 
 /**
  * @brief Calculate the inner product of a vector of vector with itself 
@@ -318,6 +509,7 @@ std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>> a) {
     
     return c;
 }
+
 
 /**
  * @brief Calculate the product of two vector of vectors and form a square 
@@ -342,6 +534,7 @@ std::vector<std::vector<float>> iproduct(std::vector<std::vector<float>> a, std:
     return c;
 }
 
+
 /**
  * @brief Calculates the power of each element in a vector.
  * This function takes a vector of floats as an input and returns a new vector where each element is the 
@@ -356,6 +549,7 @@ std::vector<float> power(std::vector<float> x, float y) {
                    [y](float value) { return std::pow(value, y); });
     return result;
 }
+
 
 /**
  * @brief Calculates the power of each element in a 2D vector.
@@ -372,6 +566,7 @@ std::vector<std::vector<float>> power(std::vector<std::vector<float>> x, float y
     return result;
 }
 
+
 /**
  * @brief Sum of each row in a 2D vector. This function takes a 2D vector as an input and returns 
  * a 1D vector where each element is the sum of each row in the input vector.
@@ -387,6 +582,7 @@ std::vector<float> sumofrow(std::vector<std::vector<float>> a) {
     // return the result
     return b;
 }
+
 
 /**
  * @brief Sum of each column in a 2D vector
@@ -408,7 +604,6 @@ std::vector<float> sumofcol(std::vector<std::vector<float>> a) {
     return b;
 }
 
-//----------------------//
 
 /**
  * @brief Calculate the error between two vectors

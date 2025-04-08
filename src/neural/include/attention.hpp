@@ -53,8 +53,8 @@ public:
     std::vector<std::vector<float>> K;          // keys = Tokens x MK
     std::vector<std::vector<float>> Q;          // Querys = Tokens x MQ
     std::vector<std::vector<float>> KdotQ;      // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar
-    std::vector<float> EH;      // Next Embedding in same block
-    std::vector<std::vector<float>> EV;         // Context retention for next block
+    std::vector<float> EH;      // horizontal retention vector (Next Embedding in same block)
+    std::vector<std::vector<float>> EV;         // vertical retention vectors (Context retention for next block)
     std::vector<float> dh;      // sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
     std::vector<float> dv;      // sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
 
@@ -64,10 +64,7 @@ public:
     attention(int n, int d, int h, int l);
     attention(int n, int d, int h, int l, bool attentionType);
     void setAttentionType(bool attentionType);
-    void computeKdotQforTrain(std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int&currentTokenCount, 
-                    int& promptCount, int& blockCount);
-    void computeKdotQforUse(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& matrix, int&currentTokenCount, 
-                    int& promptCount, int& blockCount);
+// cpp functions for cpu
     // forward propagation for both first and specific block's attention
     void forprop(int& in, int& layers, int& tokenCount);
     void forprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
@@ -78,11 +75,10 @@ public:
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void backward1stHead(std::vector<float>& expected, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     // functions for using model
-    void runAttention();
+    void runAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount, int& blockCount);
 
-#ifdef USE_CUDA     // cuda equivalent functions for attention
-    void cuComputeKdotQ(std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int&currentTokenCount, 
-                        int& promptCount, int& blockCount);
+#ifdef USE_CUDA
+// cuda equivalent functions for attention
     void cuforprop(int& in, int& layers, int& tokenCount);
     void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     void cubackward(std::vector<float>& expected, int& in, int& layers);
@@ -90,10 +86,9 @@ public:
     void cubackward1stHead(std::vector<float>& expected, int& in, int& layers);
     void cubackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void cubackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void curunAttention();
-#elif USE_OPENCL    // opencl equivalent functions for attention
-    void clComputeKdotQ(std::vector<std::vector<float>>& Keys, std::vector<std::vector<float>>& Queries, int&currentTokenCount, 
-                        int& promptCount, int& blockCount);
+    void curunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount, int& blockCount);
+#elif USE_OPENCL
+// opencl equivalent functions for attention
     void clforprop(int& in, int& layers, int& tokenCount);
     void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     void clbackward(std::vector<float>& expected, int& in, int& layers);
@@ -101,7 +96,7 @@ public:
     void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
     void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clrunAttention();
+    void clrunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount, int& blockCount);
 #endif
 
     // default destructor

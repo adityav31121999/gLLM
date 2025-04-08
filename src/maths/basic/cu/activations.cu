@@ -260,6 +260,9 @@ __global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool
         }
     }
 }
+
+// DERIVATIVES OF ACTIVATION FUNCTIONS
+
 /**
  * @brief cuda function for sigmoid derivative
  * @param[in] x input
