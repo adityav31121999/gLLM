@@ -26,9 +26,10 @@ public:
     int h;                  // height of MQ, MK and columns of MV, MH
     int l;                  // layers of mlp
     int epochs;             // number of epochs for MLPs and Blocks
+    int totalParams;        // total parameters of transformer
     float learning;         // learning rate for MLPs
     bool isSelf;            // if self attention or cross attention
-    int totalParams;        // total parameters of transformer
+    bool inTraining;        // = 1 for training, = 0 for in use
 
 // these are variables that change during training
     int blockCount;         // which block is working
@@ -37,8 +38,8 @@ public:
     int currentTokenCount;  // current count of tokens in full context
 
 // these are variables that change during runtime
-    int trainCount;         // total training count
     float error;            // error for transformer
+    int trainCount;         // total training count
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
 
     std::vector<block> t;               // attention block (1 or many)
@@ -46,6 +47,7 @@ public:
     std::vector<std::vector<float>> input;              // input embeddings
     std::vector<std::vector<float>> output;             // output embeddings
     std::vector<std::vector<float>> embeddings;         // all glove embeddings with 64D
+    std::vector<std::vector<float>> tokForBlock;        // tokens for kth block for KdotQ
     FILE* promptNresponse;  // prompt and response text file
     // when model is in use, hold EV of all the blocks here
     std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
@@ -53,10 +55,10 @@ public:
     // default constructor
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l, int vocab);
-    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
+    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
-    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& CASE);
+    transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
 
     void setDims(int m, int x, int y, int n, int d, int h, int l);      // set dimension of transformer
     void setLearning(float learning);       // set learning rate for MLPs
@@ -124,6 +126,7 @@ public:
 
 // compute functions for dot, KdotQ and other values
 
+void computeKQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
 void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
@@ -135,6 +138,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 
 #ifdef USE_CUDA
     // cuda implementation
+    void cuComputeKQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
     void cuComputeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
     void cuComputeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
     void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
@@ -145,6 +149,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
         mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
 #elif USE_OPENCL
     // opencl implementation
+    void clComputeKQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
     void clComputeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
     void clComputeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
     void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 

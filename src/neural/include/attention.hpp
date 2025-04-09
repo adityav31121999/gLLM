@@ -42,6 +42,7 @@
 class attention {
 public:
     bool isSelfAttention;   // = 0 if cross attention else = 1 for self attention
+    bool inTraining;        // = 1 for training, = 0 for in use
     int tokenCount;         // current token count for this head
     mlp ver;                // next block transfer
     mlp hor;                // horizontal transfer
@@ -49,6 +50,9 @@ public:
     mat MK;                 // key matrix
     mat MV;                 // vertical value for deltas
     mat MH;                 // horizontal value for deltas
+    mat qkCache;            // QK' cache
+    mat qhCache;            // QH' cache
+    mat kvCache;            // KV' cache
 // containers
     std::vector<std::vector<float>> K;          // keys = Tokens x MK
     std::vector<std::vector<float>> Q;          // Querys = Tokens x MQ
@@ -63,6 +67,7 @@ public:
     attention() = default;
     attention(int n, int d, int h, int l);
     attention(int n, int d, int h, int l, bool attentionType);
+    attention(int n, int d, int h, int l, bool attentionType, bool inTraining);
     void setAttentionType(bool attentionType);
 // cpp functions for cpu
     // forward propagation for both first and specific block's attention
@@ -75,7 +80,9 @@ public:
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void backward1stHead(std::vector<float>& expected, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     // functions for using model
-    void runAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount, int& blockCount);
+    void runAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount);
+    void runAttention(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& qkCache, mat& qvCache,
+        mat& khCache, int& tokenCount, int& blockCount);
 
 #ifdef USE_CUDA
 // cuda equivalent functions for attention
@@ -86,7 +93,9 @@ public:
     void cubackward1stHead(std::vector<float>& expected, int& in, int& layers);
     void cubackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void cubackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void curunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount, int& blockCount);
+    void cuRunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount);
+    void cuRunAttention(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& qkCache, mat& qvCache,
+        mat& khCache, int& tokenCount, int& blockCount);
 #elif USE_OPENCL
 // opencl equivalent functions for attention
     void clforprop(int& in, int& layers, int& tokenCount);
@@ -96,7 +105,9 @@ public:
     void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
     void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clrunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount, int& blockCount);
+    void clRunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount);
+    void clRunAttention(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& qkCache, mat& qvCache,
+        mat& khCache, int& tokenCount, int& blockCount);
 #endif
 
     // default destructor

@@ -57,7 +57,7 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
 transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType):
     m(1), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
 {
-    t = std::vector<block>(1, block(x, y, n, d, h, l, vocab));
+    t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType));
     // total permissible tokens = n
     tokenEmbed = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
@@ -77,7 +77,7 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bo
 transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType) :
     m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
 {
-    t = std::vector<block>(m, block(x, y, n, d, h, l, vocab));
+    t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType));
     // total permissible tokens = m * n
     tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
@@ -94,24 +94,23 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
  * @param l layer of MLPs
  * @param vocab vocabulary size
  * @param attentionType self (1) or cross (0) attention
- * @param CASE training (TRUE) or use (FALSE)
+ * @param inTraining training (TRUE) or use (FALSE)
  */
-transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& CASE) :
+transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining) :
     m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
 {
-    if(CASE == true || CASE == 1) {
+    if(inTraining == true || inTraining == 1) {
         // training
-        t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType));
+        t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
         tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
         totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
     }
     else {
-        t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType));
+        t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
         tokenEmbed = std::vector<std::vector<float>>(n * m, std::vector<float>(d, 0));
-        totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
+        EVs.resize(m, std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y, 
+            std::vector<std::vector<float>>(n, std::vector<float>(d, 0)))));
     }
-    EVs.resize(m, std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y, 
-                    std::vector<std::vector<float>>(n, std::vector<float>(d, 0)))));
 }
 
 
