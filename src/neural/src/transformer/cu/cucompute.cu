@@ -20,6 +20,38 @@
     } while (0)
 
 
+/**
+ * @brief CUDA kernel for computing key or query of token using token embedding and matrix for keys and queries
+ * @param[in] tokenEmbed Pointer to the token embeddings (device memory)
+ * @param[in] M Pointer to the matrix (device memory)
+ * @param[out] KorQ Pointer to the result (device memory)
+ * @param[in] size Size of the vectors (EMBEDDING)
+ */
+__global__ void cuComputeKQKernel(const float* tokenEmbed, const float* M, float* KorQ, int size) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= size) return;
+
+    float temp = 0.0f;
+    for (int i = 0; i < size; ++i) {
+        temp += tokenEmbed[i] * M[tid * size + i];
+    }
+    KorQ[tid] = temp;
+}
+
+/**
+ * @brief compute key or query of token using token embedding and matrix for keys and queries
+ * @param[in] tokenEmbed token embedding
+ * @param[in] m matrix for keys or queries
+ * @param[out] KorQ Key or query vector to be calculated and stored
+ */
+void cuComputeKQ(std::vector<float>& tokenEmbed, mat& m, std::vector<float>& KorQ) {
+    int size = tokenEmbed.size();
+    float* d_tokenEmbed, * d_M, * d_KorQ;
+
+    CUDA_CHECK(cudaMalloc((void**)&d_tokenEmbed, size * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)&d_M, size * size * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)&d_KorQ, size * sizeof(float)));
+}
 
 /**
  * @brief CUDA kernel for computing the dot product of T1 x M x T2'
@@ -390,3 +422,29 @@ void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vec
     CUDA_CHECK(cudaFree(d_M));
     CUDA_CHECK(cudaFree(d_KdotQ));
 }
+
+
+
+
+/**
+ * @brief CUDA kernel for computing the dot product of T1 x M x T2'
+ * @param[in] T1 Pointer to the first vector (device memory)
+ * @param[in] T2 Pointer to the second vector (device memory)
+ * @param[in] M Pointer to the matrix (device memory)
+ * @param[out] dot Pointer to the result (device memory)
+
+    CUDA_CHECK(cudaMemcpy(d_tokenEmbed, tokenEmbed.data(), size * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_M, m.a[0].data(), size * size * sizeof(float), cudaMemcpyHostToDevice));
+
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+
+    cuComputeKQKernel<<<blocksPerGrid, threadsPerBlock>>>(d_tokenEmbed, d_M, d_KorQ, size);
+    CUDA_CHECK(cudaGetLastError());
+
+    CUDA_CHECK(cudaMemcpy(KorQ.data(), d_KorQ, size * sizeof(float), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(d_tokenEmbed));
+    CUDA_CHECK(cudaFree(d_M));
+    CUDA_CHECK(cudaFree(d_KorQ));
+*/

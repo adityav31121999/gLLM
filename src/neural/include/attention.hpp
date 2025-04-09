@@ -44,23 +44,23 @@ public:
     bool isSelfAttention;   // = 0 if cross attention else = 1 for self attention
     bool inTraining;        // = 1 for training, = 0 for in use
     int tokenCount;         // current token count for this head
-    mlp ver;                // next block transfer
-    mlp hor;                // horizontal transfer
+    mlp ver;                // vertical propagation and next block transfer
+    mlp hor;                // horizontal transfer to next head
     mat MQ;                 // query matrix
     mat MK;                 // key matrix
-    mat MV;                 // vertical value for deltas
-    mat MH;                 // horizontal value for deltas
-    mat qkCache;            // QK' cache
-    mat qhCache;            // QH' cache
-    mat kvCache;            // KV' cache
+    mat MV;                 // vertical retention matrix
+    mat MH;                 // horizontal retention matrix
+    mat qkCache;            // QK' cache = MQ x MK'
+    mat qhCache;            // QH' cache = MQ x MH'
+    mat kvCache;            // KV' cache = MK x MV'
 // containers
     std::vector<std::vector<float>> K;          // keys = Tokens x MK
     std::vector<std::vector<float>> Q;          // Querys = Tokens x MQ
     std::vector<std::vector<float>> KdotQ;      // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar
     std::vector<float> EH;      // horizontal retention vector (Next Embedding in same block)
     std::vector<std::vector<float>> EV;         // vertical retention vectors (Context retention for next block)
-    std::vector<float> dh;      // sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
-    std::vector<float> dv;      // sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
+    std::vector<float> dh;      // delta for EH: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
+    std::vector<float> dv;      // delta for EV[i]: sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
 
 // functions
     // default constructor
