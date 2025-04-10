@@ -3,6 +3,52 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
+/* ******************************************** Transformer ********************************************
+                :--------------------------------------------------------------------------------------:
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+BLOCK 1 ->      :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                :--------------------------------------------------------------------------------------:
+                                                        V
+                :--------------------------------------------------------------------------------------:
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+BLOCK 1 ->      :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                :--------------------------------------------------------------------------------------:
+                                                        V
+    :               :           :           :           :       :           :           :           :
+    :               :           :           :           V       :           :           :           :
+    :               :           :           :           :       :           :           :           :
+                                                        V
+                :--------------------------------------------------------------------------------------:
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+BLOCK (N-1) ->  :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                :--------------------------------------------------------------------------------------:
+                                                        V
+                :--------------------------------------------------------------------------------------:
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+BLOCK N ->      :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                :      |                   |                   |             |             |           :
+                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
+                :--------------------------------------------------------------------------------------:
+*/
+
 #include <string>
 #include <cmath>
 #include <vector>
@@ -13,11 +59,14 @@
 
 /**
  * @brief Transformer (FULL CONTEXT) class for token/chunk prediction and context 
- * retention. This can be single or multi-block architecture.
+ * retention. This can be single or multi-block architecture based on use case i.e.,
+ * single block for operation or application or use and multi-block for training.
  */
 class transformer {
 public:
 // these are constant values, once constructor is called, they cannot be changed
+    bool isSelf;            // if self attention or cross attention
+    bool inTraining;        // = 1 for training, = 0 for in use
     int m;                  // number of blocks
     int y;                  // number of incomplete attentions in each partial attention
     int x;                  // number of layers of partial attention for complete attention block
@@ -28,8 +77,6 @@ public:
     int epochs;             // number of epochs for MLPs and Blocks
     int totalParams;        // total parameters of transformer
     float learning;         // learning rate for MLPs
-    bool isSelf;            // if self attention or cross attention
-    bool inTraining;        // = 1 for training, = 0 for in use
 
 // these are variables that change during training
     int blockCount;         // which block is working
@@ -84,7 +131,7 @@ public:
     void run();
 
 #ifdef USE_CUDA     // cuda implementation
-    void cuComputeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
+    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
     void cuForward();
     void cuBackward(std::vector<float>& expectedH);
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
@@ -101,7 +148,7 @@ public:
     void cuComputeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);
     void cuRun();
 #elif USE_OPENCL    // opencl implementation
-    void clComputeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
+    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
     void clForward();
     void clBackward(std::vector<float>& expectedH);
     void clBackward(std::vector<float>& expectedH, int& blockCount);

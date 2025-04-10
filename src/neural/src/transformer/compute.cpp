@@ -72,7 +72,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
             currentTokenCount += promptCount;
         }
         // new prompt within first block
-        else {
+        else if (currentTokenCount > 0){
             for(int i = 0; i < promptCount; i++) {
                 KdotQ[i][i] = std::inner_product(Q[i].begin(), Q[i].end(), K[i].begin(), 0.0f) / SCALING;
                 for(int j = 0; j < currentTokenCount; j++) {
@@ -181,10 +181,12 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 /**
  * @brief KdotQ via tokens (TxMxEVp') where M = MQ x MK' for use cases (for 2nd to last blocks)
  * @param[out] KdotQ dot product
- * @param[in] tokenEmbed token embeddings
+ * @param[in] tokForBlock token embeddings for this block, in context window of head
+ * @param[in] EVp vertical retention vectors of previous block's head of same location
  * @param[in] M QK' cache
  * @param[in] currentTokenCount number of tokens in full context
  * @param[in] promptCount tokens in prompt 
+ * @param[in] blockCount current block in the transformer
  * @param[in] attentionType attention type, 1 for self, 0 for cross
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokForBlock, std::vector<std::vector<float>>& EVp,
@@ -233,9 +235,4 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
         }
         return;
     }
-}
-
-
-void transformer::computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf) {
-    
 }

@@ -36,8 +36,9 @@
 
 /**
  * @brief ATTENTION CLASS for calculating attention head and Embeddings.
- * An array of incomplete attention is Partial Attention (LAYER) and an 
- * array of partial attention (BLOCK) is complete attention.
+ * An array of attention head is Partial Attention (LAYER) and an array 
+ * of partial attention (BLOCK) is complete attention. Attention head in 
+ * complete attention working in parallel are referred as PARALLELs.
  */
 class attention {
 public:

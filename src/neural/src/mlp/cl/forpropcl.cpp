@@ -1,9 +1,8 @@
 
 #include "include/mlp.hpp"
 
-/**
- * @brief OpenCL kernel for forward propagation of mlp
- */
+/*
+
 __kernel void forwardcl(__global const float* input, __global float* output, __global const float* weights, 
                        __global float* hlayers, __global float* activations, int in, int layers, int input_size,
                        __global const int* layer_offsets, __global const int* weight_offsets) 
@@ -44,3 +43,5 @@ __kernel void forwardcl(__global const float* input, __global float* output, __g
         output[idx] = sum;
     }
 }
+
+*/

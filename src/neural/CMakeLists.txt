@@ -19,8 +19,6 @@ add_library(neural STATIC
     src/mlp/cu/forprop.cu
     src/mlp/cu/train.cu
 
-    src/mlp/cl/forprop.cl
-
     # src/mlp/cu/forprop.cu
 
     # attention
@@ -35,6 +33,8 @@ add_library(neural STATIC
     src/block/partialback.cpp
     src/block/backward.cpp
     src/block/run.cpp
+
+    src/block/cu/kdotq.cu
 
     # transformer
     src/transformer/compute.cpp
