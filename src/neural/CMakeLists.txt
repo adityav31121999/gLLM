@@ -46,6 +46,8 @@ add_library(neural STATIC
     src/transformer/run.cpp
 
     src/transformer/cu/cucompute.cu
+
+    src/transformer/cl/clcompute.cpp
 )
 
 # link libraries to this library

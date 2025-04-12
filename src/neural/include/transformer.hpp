@@ -3,52 +3,6 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
-/* ******************************************** Transformer ********************************************
-                :--------------------------------------------------------------------------------------:
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-BLOCK 1 ->      :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                :--------------------------------------------------------------------------------------:
-                                                        V
-                :--------------------------------------------------------------------------------------:
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-BLOCK 1 ->      :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                :--------------------------------------------------------------------------------------:
-                                                        V
-    :               :           :           :           :       :           :           :           :
-    :               :           :           :           V       :           :           :           :
-    :               :           :           :           :       :           :           :           :
-                                                        V
-                :--------------------------------------------------------------------------------------:
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-BLOCK (N-1) ->  :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                :--------------------------------------------------------------------------------------:
-                                                        V
-                :--------------------------------------------------------------------------------------:
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-BLOCK N ->      :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                :      |                   |                   |             |             |           :
-                : (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention :
-                :--------------------------------------------------------------------------------------:
-*/
-
 #include <string>
 #include <cmath>
 #include <vector>
@@ -96,8 +50,10 @@ public:
     std::vector<std::vector<float>> embeddings;         // all glove embeddings with 64D
     std::vector<std::vector<float>> tokForBlock;        // tokens for kth block for KdotQ
     FILE* promptNresponse;  // prompt and response text file
-    // when model is in use, hold EV of all the blocks here
+    // when model is in training, hold EV of all the blocks here
     std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
+    // for use in calculating next tokens via next block
+    std::vector<std::vector<std::vector<std::vector<float>>>> EVUse;
 
     // default constructor
     transformer() = default;
@@ -145,7 +101,7 @@ public:
     void cuTrain(std::vector<std::vector<std::vector<float>>>& sentences);
     void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response);
     void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses);
-    void cuComputeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);
+    void cuComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void cuRun();
 #elif USE_OPENCL    // opencl implementation
     void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
@@ -162,7 +118,7 @@ public:
     void clTrain(std::vector<std::vector<std::vector<float>>>& sentences);
     void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response);
     void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses);
-    void clComputeOutput(std::vector<float>& output, std::vector<float>& prediction, int voc);
+    void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void clRun();
 #endif
 
@@ -185,26 +141,45 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 
 #ifdef USE_CUDA
     // cuda implementation
-    void cuComputeKQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
-    void cuComputeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
-    void cuComputeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
-    void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
-        int& currentTokenCount, int& promptCount, bool& attentionType);
-    void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat M, int& currentTokenCount,
-        int& promptCount, bool& attentionType);
-    void cuComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp,
-        mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
+    __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
+    __device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim);
+    __device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc);
+    __global__ void kernelKdotQforSelf_train(float* d_kdotq, const float* d_keys, const float* d_querys,
+                int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, const float* d_querys,
+                int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M, 
+                int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, 
+                float inv_scaling);
+    __global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M, 
+                int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, 
+                float inv_scaling);
+    __global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
+                const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, 
+                int kdotq_width, int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
+                const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, 
+                int kdotq_width, int embedding_dim, float inv_scaling);    
 #elif USE_OPENCL
     // opencl implementation
-    void clComputeKQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
-    void clComputeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
-    void clComputeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);
-    void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
-        int& currentTokenCount, int& promptCount, bool& attentionType);
-    void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat M, int& currentTokenCount,
-        int& promptCount, bool& attentionType);
-    void clComputeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp,
-        mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
+    float compute_dot_product(__global const float* vec1, __global const float* vec2, int dim);
+    float compute_dot_product(__global const float* vec1, __global const float* vec2, __global const float* matrix, int dim);
+    int compute_prediction(__global const float* EH, __global const float* embeddings, int dim, int voc);
+    __kernel void kernelKdotQforSelf_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys,
+        int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    __kernel void kernelKdotQforCross_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys, 
+        int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    __kernel void kernelKdotQBlock1Self_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
+        int prompt_start_index, int prompt_len, int context_len, int kdotq_width,int embedding_dim, float inv_scaling);
+    __kernel void kernelKdotQBlock1Cross_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
+        int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);
+    __kernel void kernelKdotQBlockNSelf_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
+        __global const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block,
+        int kdotq_width, int embedding_dim, float inv_scaling);
+    __kernel void kernelKdotQBlockNCross_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
+        __global const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block,
+        int kdotq_width, int embedding_dim, float inv_scaling);
+
 #endif
 
 #endif

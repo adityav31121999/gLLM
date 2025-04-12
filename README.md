@@ -13,7 +13,7 @@
   - *OpenCL VERSION*: 300
   - *CUDA*: 12.6
 - **PROJECT BUILD SYSTEM**: CMake
-- **Model Architecture**: Shady Attention Mechanism
+- **Model Architecture**: Shady Attention Mechanism (DENSE)
 
 ## Project Structure
 - **maths**: Mathematical Library for AI/ML
@@ -76,7 +76,7 @@
 - EH: combined or concatanated value of partial attention for token prediction
 - EV: collection of all Head EVs
 - probability: probability vector for token prediction
-- b: 2d vector of Heads of dimension x row and y columns
+- b: 2d vector of Heads (attention class) of dimension 'x' rows (Partial Attentions) and 'y' columns (Parallels)
 
 **TRANSFORMER**:
 - m: number of blocks
@@ -143,7 +143,8 @@
 |  QV  |   d    |    d   |   1    |x * y * m |      d.d.x.y.m     |       d*d       |    d.d.x.y     |
 |  KH  |   d    |    d   |   1    |x * y * m |      d.d.x.y.m     |       d*d       |    d.d.x.y     |
 ------------------------------------------------------------------------------------------------------
-
+- Here single offset refers to total number of values in single object i.e., Matrix, MLP or cache
+- Block Offset refers to total number of values of specific object in the single block i.e., number of object (matrix or mlp or cache) * single offset = x * y * single offset
 - Following is the serialisation of MQ.bin file as example:
   - Q[i][j][k] represent MQ of kth head of jth row of ith block
 ```

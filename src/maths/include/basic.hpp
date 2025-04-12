@@ -198,6 +198,8 @@ __global__ void sum_2d(const float* a, float* result, int rows, int cols);
 __global__ void product(const float* a, float* result, int size);
 __global__ void product_2d(const float* a, float* result, int rows, int cols);
 
+__device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
+
 #endif
 
 #endif
