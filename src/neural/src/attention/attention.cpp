@@ -18,11 +18,11 @@ attention::attention(int n, int d, int h, int l) {
     MK = mat(h, d);     // hxd
     MV = mat(d, h);     // dxh
     MH = mat(d, h);     // dxh
-    dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
-    dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
-    EH = std::vector<float>(d, 0);      // EH = EH + dH
+    dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
+    dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
+    EH.resize(d, 0.0f);      // EH = EH + dH
     // vertical retention vectors
-    EV = std::vector<std::vector<float>>(CONTEXT_WIN, std::vector<float>(d, 0));
+    EV.resize(CONTEXT_WIN, std::vector<float>(d, 0));
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     isSelfAttention = 1;                // default
@@ -45,11 +45,11 @@ attention::attention(int n, int d, int h, int l, bool isSelf) {
     MK = mat(h, d);     // hxd
     MV = mat(d, h);     // dxh
     MH = mat(d, h);     // dxh
-    dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
-    dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
-    EH = std::vector<float>(d, 0);      // EH = EH + dH
+    dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
+    dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
+    EH.resize(d, 0.0f);      // EH = EH + dH
     // vertical retention vectors
-    EV = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
+    EV.resize(n, std::vector<float>(d, 0));
     hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
     ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
     isSelfAttention = isSelf;           // default attention: Self
@@ -74,11 +74,11 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool inTraining) {
         MK = mat(h, d);     // hxd
         MV = mat(d, h);     // dxh
         MH = mat(d, h);     // dxh
-        dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
-        dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
-        EH = std::vector<float>(d, 0);      // EH = EH + dH
+        dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
+        dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
+        EH.resize(d, 0.0f);      // EH = EH + dH
         // vertical retention vectors
-        EV = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
+        EV.resize(n, std::vector<float>(d, 0));
         hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
         ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
         isSelfAttention = isSelf;           // default attention: Self
@@ -90,11 +90,11 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool inTraining) {
         qkCache = mat(d, d);     // dxd
         qhCache = mat(d, d);     // dxd
         kvCache = mat(d, d);     // dxd
-        dh = std::vector<float>(d, 0);      // dh = sum(head[ith row])xK[i]
-        dv = std::vector<float>(d, 0);      // dv = sum(head[ith col])xQ[i]
-        EH = std::vector<float>(d, 0);      // EH = EH + dH
+        dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
+        dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
+        EH.resize(d, 0.0f);      // EH = EH + dH
         // vertical retention vectors
-        EV = std::vector<std::vector<float>>(n, std::vector<float>(d, 0));
+        EV.resize(n, std::vector<float>(d, 0));
         hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
         ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
         isSelfAttention = isSelf;           // default attention: Self

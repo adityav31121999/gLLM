@@ -130,19 +130,19 @@
   - Caches: QK.bin, QV.bin, KH.bin (For Use only)
 - To access them head offset and block offset must be known
 - This table gives the total values, dimension, single offset and block offset of each file
-------------------------------------------------------------------------------------------------------
-| NAME |  DIM1  |  DIM2  |  DIM3  | QUANTITY |  TOTAL PARAMETERS  |  SINGLE OFFSET  |  BLOCK OFFSET  |
-|------|--------|--------|--------|----------|--------------------|-----------------|----------------|
-|  MQ  |   h    |    d   |   1    |x * y * m |      h.d.x.y.m     |       h*d       |    h.d.x.y     |
-|  MK  |   h    |    d   |   1    |x * y * m |      h.d.x.y.m     |       h*d       |    h.d.x.y     |
-|  MV  |   d    |    h   |   1    |x * y * m |      d.h.x.y.m     |       d*h       |    d.h.x.y     |
-|  MH  |   d    |    h   |   1    |x * y * m |      d.h.x.y.m     |       d*h       |    d.h.x.y     |
-|  hor |   d    |    d   |   l    |x * y * m |     d.d.l.x.y.m    |     d * l * d   |   d.d.l.x.y    |
-|  ver |   d    |    d   |   l    |x * y * m |     d.d.l.x.y.m    |     d * l * d   |   d.d.l.x.y    |
-|  QK  |   d    |    d   |   1    |x * y * m |      d.d.x.y.m     |       d*d       |    d.d.x.y     |
-|  QV  |   d    |    d   |   1    |x * y * m |      d.d.x.y.m     |       d*d       |    d.d.x.y     |
-|  KH  |   d    |    d   |   1    |x * y * m |      d.d.x.y.m     |       d*d       |    d.d.x.y     |
-------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------
+|NAME|DIM1|DIM2|DIM3|QUANTITY|TOTAL PARAMETERS|SINGLE OFFSET|BLOCK OFFSET|
+|----|----|----|----|--------|----------------|-------------|------------|
+|MQ  |h   |d   |1   |x.y.m   |h.d.x.y.m       |h*d          |h.d.x.y     |
+|MK  |h   |d   |1   |x.y.m   |h.d.x.y.m       |h*d          |h.d.x.y     |
+|MV  |d   |h   |1   |x.y.m   |d.h.x.y.m       |d*h          |d.h.x.y     |
+|MH  |d   |h   |1   |x.y.m   |d.h.x.y.m       |d*h          |d.h.x.y     |
+|hor |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d * l * d    |d.d.l.x.y   |
+|ver |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d * l * d    |d.d.l.x.y   |
+|QK  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
+|QV  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
+|KH  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
+--------------------------------------------------------------------------
 - Here single offset refers to total number of values in single object i.e., Matrix, MLP or cache
 - Block Offset refers to total number of values of specific object in the single block i.e., number of object (matrix or mlp or cache) * single offset = x * y * single offset
 - Following is the serialisation of MQ.bin file as example:

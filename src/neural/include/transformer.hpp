@@ -37,18 +37,23 @@ public:
     int epochCount;         // epoch counter
     int promptCount;        // number of tokens in the prompt
     int currentTokenCount;  // current count of tokens in full context
+    int indexForToken;      // this is to set token index from embedding list
 
 // these are variables that change during runtime
     float error;            // error for transformer
     int trainCount;         // total training count
+    int vocabsize;          // size of vocabulary
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
 
     std::vector<block> t;               // attention block (1 or many)
-    std::vector<std::vector<float>> tokenEmbed;         // token embedding
-    std::vector<std::vector<float>> input;              // input embeddings
-    std::vector<std::vector<float>> output;             // output embeddings
+    std::string expString;              // expected token
+    std::vector<std::string> tokens;    // tokens in vocabulary
     std::vector<std::vector<float>> embeddings;         // all glove embeddings with 64D
+    std::vector<std::vector<float>> tokenEmbed;         // token embedding (prommpt + response)
+    std::vector<std::vector<float>> input;              // input embeddings (prompt)
+    std::vector<std::vector<float>> output;             // output embeddings (response)
     std::vector<std::vector<float>> tokForBlock;        // tokens for kth block for KdotQ
+    std::vector<float> otok;            // output token
     FILE* promptNresponse;  // prompt and response text file
     // when model is in training, hold EV of all the blocks here
     std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
@@ -63,31 +68,29 @@ public:
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
 
-    void setDims(int m, int x, int y, int n, int d, int h, int l);      // set dimension of transformer
-    void setLearning(float learning);       // set learning rate for MLPs
-    void setEpochs(int epochs);             // set epochs for MLPs
-    void setAttention(bool attentionType);  // set self attention (1) or cross attention (0)
-    void setInput(std::vector<std::vector<float>>& input);      // set input embeddings for running transformer
-    void setOutput(std::vector<std::vector<float>>& output);    // set output embeddings for instructing and finetuning
-    void setEmbedding(std::string& embedding);      // set token embeddings
+    void setDims(int m, int x, int y, int n, int d, int h, int l);  // set dimension of transformer
+    void setInput(std::vector<std::vector<float>>& input);          // set input embeddings for running transformer
+    void setOutput(std::vector<std::vector<float>>& output);        // set output embeddings for instructing and finetuning
+    void setTokensForBlock(int blockCount);     // set tokens for each block for ith block
+    void setEmbedding(std::string& embedding);  // set token embeddings
+    void setLearning(float learning);           // set learning rate for MLPs
+    void setEpochs(int epochs);                 // set epochs for MLPs
+    void setAttention(bool attentionType);      // set self attention (1) or cross attention (0)
 
-    void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
+    void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& promptCount);
     void backward(std::vector<float>& expectedH);
     void backward(std::vector<float>& expectedH, int& blockCount);
     void backward(std::vector<std::vector<float>>& expectedH);
     void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void train(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, std::vector<float>& expected);
-    void train(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, std::vector<std::vector<float>>& expected);
+    void train(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected);
     void train(std::vector<std::vector<float>>& sentence);
-    void train(std::vector<std::vector<std::vector<float>>>& sentences);
     void train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response);
-    void train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses);
     void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void run();
 
 #ifdef USE_CUDA     // cuda implementation
-    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
+    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void cuForward();
     void cuBackward(std::vector<float>& expectedH);
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
@@ -104,7 +107,7 @@ public:
     void cuComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void cuRun();
 #elif USE_OPENCL    // opencl implementation
-    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf);
+    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void clForward();
     void clBackward(std::vector<float>& expectedH);
     void clBackward(std::vector<float>& expectedH, int& blockCount);

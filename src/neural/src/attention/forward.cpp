@@ -7,10 +7,10 @@
 
 /**
  * IMP: keep keys and queries so that multiple times can be used from same place, 
- * and less calculation is needed, if not used then multiple times the keys and 
+ * and less calculation is needed, if not saved then multiple times the keys and 
  * queries need to be calculated. Also, memory used is low. Initiate all the 
- * memory for this keys and queries so that continuous resizing and pushback can 
- * be ignored for fast operations.
+ * memory based on the deimensions for this keys and queries so that continuous
+ * resizing and pushback can be ignored for fast operations.
  */
 
 /**

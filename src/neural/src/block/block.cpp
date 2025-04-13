@@ -14,12 +14,11 @@
  */
 block::block(int x, int y, int n, int d, int h, int l, int vocab) : x(x), y(y) {
     // initialize attention block (complete attention)
-    b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l)));
+    b.resize(x, std::vector<attention>(y, attention(n, d, h, l)));
     // probabiltiy vector
-    probability = std::vector<float>(vocab, 0.0f);
+    probability.resize(vocab, 0.0f);
     // collection of vertical retention vectors from all heads
-    EV = std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y,\
-        std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
+    EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
     isSelfAttention = 1;    // default
     inTraining = 1;         // default
 }
@@ -38,12 +37,11 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab) : x(x), y(y) {
  */
 block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType) {
     // initialize attention block (complete attention)
-    b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l, attentionType)));
+    b.resize(x, std::vector<attention>(y, attention(n, d, h, l, attentionType)));
     // probabiltiy vector
-    probability = std::vector<float>(vocab, 0.0f);
+    probability.resize(vocab, 0.0f);
     // collection of vertical retention vectors from all heads
-    EV = std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y,\
-        std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
+    EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
     isSelfAttention = attentionType;
     inTraining = 1;     // default
 }
@@ -62,12 +60,11 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attention
  */
 block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool inTraining) {
     // initialize attention block (complete attention)
-    b = std::vector<std::vector<attention>>(x, std::vector<attention>(y, attention(n, d, h, l, attentionType, inTraining)));
+    b.resize(x, std::vector<attention>(y, attention(n, d, h, l, attentionType, inTraining)));
     // probabiltiy vector
-    probability = std::vector<float>(vocab, 0.0f);
+    probability.resize(vocab, 0.0f);
     // collection of vertical retention vectors from all heads
-    EV = std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y,\
-        std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
+    EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
 }
 
 

@@ -31,7 +31,7 @@
 #define NUMBER_OF_PA 8                  // number of Partial Attentions in one Block
 #define NUMBER_OF_HEADS 32              // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 8              // number of blocks in transformer
-#define MAX_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS    // maximum tokens for full context
+#define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS    // maximum tokens for full context
 
 
 /**

@@ -1,4 +1,5 @@
 
+// transformer training
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include "include/transformer.hpp"
@@ -6,36 +7,29 @@
 
 
 /**
- * @brief train the transformer (single token training)
+ * @brief train the transformer for next token prediction (single token training)
  * @param promptCount number of tokens in the prompt
  * @param currentTokenCount number of tokens in the full context
- * @param blockCount current block index
+ * @param blockCount current block in full context
  * @param isSelf attention type
  * @param expected expected token embedding
  */
-void transformer::train(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, std::vector<float>& expected) 
+void transformer::train(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected) 
 {
-    if(blockCount == 0) {
+    // for first block
+    if(blockCount == 1 && (currentTokenCount < CONTEXT_WIN-1)) {
         // compute the kdotQ for each head of the block
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
+        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         int i = 0;
         forward(blockCount, currentTokenCount, promptCount);
         while (i <= epochs) {
-            if(errorofv(t[0].EH, expected) < 0.01) {
+            computeOutput(otok, embeddings, vocabsize, indexForToken);
+            if((errorofv(t[0].EH, expected) < 0.01) || tokens[indexForToken] == expString) {
                 input[currentTokenCount] = t[0].EH;
                 break;
             }
             // if error is not corrected even after epochs, then increase epochs
             if(errorofv(t[0].EH, expected) > 0.01 && i == epochs) {
-                // check token: if its is similar to expected then break the loop and set it to input vector
-                // else increase epochs by 10
-                // If the similarity (dot product) between current output and expected is above threshold,
-                // consider it close enough to accept and stop training for this token
-                if((std::inner_product(t[0].EH.begin(), t[0].EH.end(), expected.begin(), 0.0f) > 0.01)) 
-                {
-                    input[currentTokenCount] = t[0].EH;
-                    break;
-                }
                 epochs += 10;
             }
             backward(expected);
@@ -45,28 +39,24 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
         trainCount++;
         epochCount += i;
         error += errorofv(t[0].EH, expected);
+        currentTokenCount += 1;
+        if(currentTokenCount == CONTEXT_WIN) {
+            blockCount += 1;
+        }
     }
-    else {
+    // for next blocks
+    if(blockCount > 1 && currentTokenCount > CONTEXT_WIN) {
         // compute the KdotQ for each head of block using EVs of previous blocks
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
+        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         forward(blockCount, currentTokenCount, promptCount);
         int i = 0;
         while (i < epochs) {
-            if(errorofv(t[blockCount-1].EH, expected) < 0.01) {
+            if(errorofv(t[blockCount-1].EH, expected) < 0.01 || tokens[indexForToken] == expString) {
                 input[currentTokenCount] = t[blockCount-1].EH;
                 break;
             }
             // if error is not corrected even after epochs, then increase epochs
             if(errorofv(t[blockCount-1].EH, expected) > 0.01 && i == epochs) {
-                // check token: if its is similar to expected then break the loop and set it to input vector
-                // else increase epochs by 10
-                // If the similarity (dot product) between current output and expected is above threshold,
-                // consider it close enough to accept and stop training for this token
-                if((std::inner_product(t[blockCount-1].EH.begin(), t[blockCount-1].EH.end(), expected.begin(), 0.0f) > 0.01)) 
-                {
-                    input[currentTokenCount] = t[blockCount-1].EH;
-                    break;
-                }
                 epochs += 10;
             }
             i++;
@@ -76,148 +66,167 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
         trainCount++;
         epochCount += i;
         error += errorofv(t[blockCount-1].EH, expected);
+        currentTokenCount += 1;
+        if(currentTokenCount % CONTEXT_WIN == 0) {
+            blockCount += 1;
+        }
     }
 }
 
 
 /**
- * @brief train the transformer (multi-token training, for chunk of tokens)
- * @param promptCount number of tokens in the prompt
- * @param currentTokenCount number of tokens in the full context
- * @param blockCount current block index
- * @param isSelf attention type
- * @param expected expected token embedding
- */
-void transformer::train(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, std::vector<std::vector<float>>& expected) {
-    if(blockCount == 0) {
-        // compute the kdotQ for each head of the block
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-        int i = 0;
-        float err = 0.0f;
-        while (i < epochs) {
-            backward(expected);
-            forward(blockCount, currentTokenCount, promptCount);
-            for(int j = 0; j < x; j++) {
-                err += errorofv(t[0].b[j][y-1].EH, expected[i]);
-            }
-            err /= x;
-            // if error is not corrected even after epochs, then increase epochs
-            if(err > 0.01 && i == epochs) {
-                // check token: if its is similar to expected then break the loop and set it to input vector
-                // else increase epochs by 10
-                // If the similarity (dot product) between current output and expected is above threshold,
-                // consider it close enough to accept and stop training for this token
-                epochs += 10;
-            }
-            i++;
-        }
-        trainCount++;
-        epochCount += i;
-        error += err;
-    }
-    else {
-        // compute the KdotQ for each head of block using EVs of previous blocks
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-        int i = 0;
-        float err = 0.0f;
-        while (i < epochs) {
-            backward(expected, blockCount);
-            forward(blockCount, currentTokenCount, promptCount);
-            for(int j = 0; j < x; j++) {
-                err += errorofv(t[0].b[j][y-1].EH, expected[i]);
-            }
-            err /= x;
-            // if error is not corrected even after epochs, then increase epochs
-            if(err > 0.01 && i == epochs) {
-                // check token: if its is similar to expected then break the loop and set it to input vector
-                // else increase epochs by 10
-                // If the similarity (dot product) between current output and expected is above threshold,
-                // consider it close enough to accept and stop training for this token
-                epochs += 10;
-            }
-            i++;
-        }
-        trainCount++;
-        epochCount += i;
-        error += err;
-    }
-}
-
-
-/**
- * @brief train the transformer (single sentences/long paragraphs)
- * @param sentence sentence/para to train
+ * @brief train the transformer (single continuous sentece, paragraphs and passages)
+ * @param sentence sentence to train
  */
 void transformer::train(std::vector<std::vector<float>>& sentence) {
     // compute KdotQ for first element
     input[0] = sentence[0];
     promptCount = 1;
     blockCount = 1;
-    computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-    // keep this in a loop and train for each token in the sentence
-    for(int i = 0; i < sentence.size(); i++) {
-        train(promptCount, currentTokenCount, blockCount, isSelf, sentence[i]);
-    }
-}
-
-/**
- * @brief train the transformer (multi-sentences/long paragraphs)
- * @param sentences sentences/paras to train
- */
-void transformer::train(std::vector<std::vector<std::vector<float>>>& sentences) {
-    // compute KdotQ for first sentence
-    for(int i = 0; i < sentences[0].size(); i++) {
-        input[i] = sentences[0][i];
-    }
-    promptCount = sentences[0].size();
-    currentTokenCount = 0;
-    blockCount = 1;
-    computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-    // keep this in a loop and train for each token in the sentence
-    for(int i = 1; i < sentences.size(); i++) {
-        for(int j = 0; j < sentences[i].size(); j++) {
-            train(promptCount, currentTokenCount, blockCount, isSelf, sentences[i][j]);
+    // keep this in a loop and train for each token in the sentence starting from second token
+    for(int i = 1; i < sentence.size(); i++) {
+        // 
+        if(blockCount == 1 && (currentTokenCount < CONTEXT_WIN-1)) {
+            // compute the kdotQ for each head of the block
+            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+            int i = 0;
+            forward(blockCount, currentTokenCount, promptCount);
+            while (i <= epochs) {
+                computeOutput(otok, embeddings, vocabsize, indexForToken);
+                if((errorofv(t[0].EH, sentence[i]) < 0.01) || tokens[indexForToken] == expString) {
+                    input[currentTokenCount] = t[0].EH;
+                    break;
+                }
+                // if error is not corrected even after epochs, then increase epochs
+                if(errorofv(t[0].EH, sentence[i]) > 0.01 && i == epochs) {
+                    epochs += 10;
+                }
+                backward(sentence[i]);
+                forward(blockCount, currentTokenCount, promptCount);
+                i++;
+            }
+            trainCount++;
+            epochCount += i;
+            error += errorofv(t[0].EH, sentence[i]);
+            currentTokenCount += 1;
+            if(currentTokenCount == CONTEXT_WIN) {
+                blockCount += 1;
+            }
+        }
+        if(blockCount > 1 && currentTokenCount > CONTEXT_WIN) {
+            // compute the KdotQ for each head of block using EVs of previous blocks
+            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+            forward(blockCount, currentTokenCount, promptCount);
+            int i = 0;
+            while (i < epochs) {
+                if(errorofv(t[blockCount-1].EH, sentence[i]) < 0.01 || tokens[indexForToken] == expString) {
+                    input[currentTokenCount] = t[blockCount-1].EH;
+                    break;
+                }
+                // if error is not corrected even after epochs, then increase epochs
+                if(errorofv(t[blockCount-1].EH, sentence[i]) > 0.01 && i == epochs) {
+                    epochs += 10;
+                }
+                i++;
+                backward(sentence[i], blockCount);
+                forward(blockCount, currentTokenCount, promptCount);
+            }
+            trainCount++;
+            epochCount += i;
+            error += errorofv(t[blockCount-1].EH, sentence[i]);
+            currentTokenCount += 1;
+            if(currentTokenCount % CONTEXT_WIN == 0) {
+                blockCount += 1;
+            }
         }
     }
 }
 
+
 /**
- * @brief train the transformer (single prompt and response)
+ * @brief train the transformer for prompt and response (single prompt and response)
  * @param prompt prompt to model
  * @param response response from model
  */
 void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response) {
-    for(int i = 0; i < prompt[0].size(); i++) {
-        input[i] = prompt[i];
-    }
-    promptCount = prompt[0].size();
-    computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-    // keep this in a loop and train for each token in the sentence
-    for(int i = 0; i < response.size(); i++) {
-        train(promptCount, currentTokenCount, blockCount, isSelf, response[i]);
-    }
-}
-
-/**
- * @brief train the transformer (multiple prompts and responses)
- * @param prompts prompts to model
- * @param responses responses from model
- */
-void transformer::train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses) {
-    if(prompts.size() == responses.size()) {
-        for(int i = 0; i < prompts.size(); i++) {
-            for(int j = 0; j < prompts[i].size(); j++) {
-                input[j] = prompts[i][j];
+    // for first prompt
+    if(currentTokenCount == 0) {
+        // token embedding should be divided for specific sizes
+        // for smaller prompts
+        if(prompt.size() < CONTEXT_WIN) {
+            for(int i = 0; i < prompt.size(); i++) {
+                // add excess to tokForBlock
+                tokenEmbed[i] = prompt[i];
             }
-            promptCount = prompts[i].size();
-            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-            // keep this in a loop and train for each token in the sentence
-            for(int j = 0; j < responses[i].size(); j++) {
-                train(promptCount, currentTokenCount, blockCount, isSelf, responses[i][j]);
+            for(int i = 0; i < x; i++) {
+                for(int j = 0; j < y; j++) {
+                    for(int k = 0; k < prompt.size(); k++) {
+                        t[0].b[i][j].EV[k] = tokenEmbed[k];
+                    }
+                }
+            }
+        }
+        promptCount = prompt[0].size();
+        for(int i = 0; i < response.size(); i++) {
+            // for first block
+            if(blockCount == 1 && (currentTokenCount < CONTEXT_WIN)) {
+                // compute the kdotQ for each head of the block
+                computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+                int j = 0;
+                forward(blockCount, currentTokenCount, promptCount);
+                while (j <= epochs) {
+                    computeOutput(otok, embeddings, vocabsize, indexForToken);
+                    if((errorofv(t[0].EH, response[i]) < 0.01) || tokens[indexForToken] == expString) {
+                        input[currentTokenCount] = t[0].EH;
+                        break;
+                    }
+                    // if error is not corrected even after epochs, then increase epochs
+                    if(errorofv(t[0].EH, response[i]) > 0.01 && j == epochs) {
+                        epochs += 10;
+                    }
+                    backward(response[i]);
+                    forward(blockCount, currentTokenCount, promptCount);
+                    j++;
+                }
+                trainCount++;
+                epochCount += j;
+                error += errorofv(t[0].EH, response[i]);
+                currentTokenCount += 1;
+                if(currentTokenCount == CONTEXT_WIN) {
+                    blockCount += 1;
+                }
+            }
+            // for next blocks
+            if(blockCount > 1 && currentTokenCount > CONTEXT_WIN) {
+                // compute the KdotQ for each head of block using EVs of previous blocks
+                computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+                forward(blockCount, currentTokenCount, promptCount);
+                int j = 0;
+                while (j < epochs) {
+                    if(errorofv(t[blockCount-1].EH, response[i]) < 0.01 || tokens[indexForToken] == expString) {
+                        input[currentTokenCount] = t[blockCount-1].EH;
+                        break;
+                    }
+                    // if error is not corrected even after epochs, then increase epochs
+                    if(errorofv(t[blockCount-1].EH, response[i]) > 0.01 && j == epochs) {
+                        epochs += 10;
+                    }
+                    j++;
+                    backward(response[i], blockCount);
+                    forward(blockCount, currentTokenCount, promptCount);
+                }
+                trainCount++;
+                epochCount += j;
+                error += errorofv(t[blockCount-1].EH, response[i]);
+                currentTokenCount += 1;
+                if(currentTokenCount % CONTEXT_WIN == 0) {
+                    blockCount += 1;
+                }
             }
         }
     }
+    // for next prompts
     else {
-        std::cout << "Error: each prompt should have a response :<" << std::endl;
+        //
     }
 }

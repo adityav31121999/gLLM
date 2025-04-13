@@ -12,20 +12,33 @@
  */
 void transformer::forward(int& blockCount, int& currentTokenCount, int& promptCount)
 {
-    // perform forward propagation for blocks
+    // compute the KdotQ
+    computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+    // perform forward propagation for first blocks
     if(blockCount == 0) {
-        // first block
-        if(currentTokenCount == 0) {
-            // compute the KdotQ
-            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
-            // forward propagation to start conversation
-            t[0].forprop(d, currentTokenCount, l);
+        t[0].forprop(d, currentTokenCount, l);
+        for(int i = 0; i < d; i++) {
+            for(int j = 0; j < x; j++) {
+                otok[i] += t[0].b[j][y-1].EH[i];
+            }  
         }
+        // int index = 0;
+        computeOutput(otok, embeddings, vocabsize, indexForToken);
+        // tokenEmbed[currentTokenCount] = ;    // extract the token at 'index' and add it to token
     }
+    // for ith block
     else {
         // compute the KdotQ
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf);
+        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         //second to last block
-        t[blockCount].forprop(t[blockCount-1].EV, d, currentTokenCount, blockCount, l, n);
+        t[blockCount-1].forprop(t[blockCount-2].EV, d, currentTokenCount, blockCount, l, n);
+        for(int i = 0; i < d; i++) {
+            for(int j = 0; j < x; j++) {
+                otok[i] += t[0].b[j][y-1].EH[i];
+            }  
+        }
+        // int index = 0;
+        computeOutput(otok, embeddings, vocabsize, indexForToken);
+        // tokenEmbed[currentTokenCount] = ;    // extract the token at 'index' and add it to token
     }
 }

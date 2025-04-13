@@ -42,6 +42,7 @@ public:
     // hold all vertical retention vector EVs from each attention heads
     std::vector<std::vector<std::vector<std::vector<float>>>> EV;
     std::vector<float> probability;             // probability space for next token
+    std::vector<std::vector<float>> tokForBlock;        // tokens for block
     std::vector<std::vector<attention>> b;      // block complete attention
 
     // default constructor
