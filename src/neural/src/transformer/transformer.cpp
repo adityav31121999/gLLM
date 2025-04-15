@@ -46,6 +46,10 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
     tokenEmbed.resize(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
     isSelf = 1;
+    currentTokenCount = 0;
+    blockCount = 1;
+    promptCount = 0;
+    indexForToken = 0;
 }
 
 
@@ -65,6 +69,11 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bo
     // total permissible tokens = n
     tokenEmbed.resize(n, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
+    isSelf = 1;
+    currentTokenCount = 0;
+    blockCount = 1;
+    promptCount = 0;
+    indexForToken = 0;
 }
 
 
@@ -85,6 +94,11 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
     // total permissible tokens = m * n
     tokenEmbed.resize(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
+    isSelf = 1;
+    currentTokenCount = 0;
+    blockCount = 1;
+    promptCount = 0;
+    indexForToken = 0;
 }
 
 
@@ -108,12 +122,22 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
         t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
         tokenEmbed.resize(n * m, std::vector<float>(d, 0));
         totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
+        isSelf = attentionType;
+        currentTokenCount = 0;
+        blockCount = 1;
+        promptCount = 0;
+        indexForToken = 0;
     }
     else {
         t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
         tokenEmbed.resize(n * m, std::vector<float>(d, 0));
         EVs.resize(m, std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y, 
             std::vector<std::vector<float>>(n, std::vector<float>(d, 0)))));
+        isSelf = attentionType;
+        currentTokenCount = 0;
+        blockCount = 1;
+        promptCount = 0;
+        indexForToken = 0;
     }
 }
 

@@ -2,22 +2,18 @@
 #include "include/transformer.hpp"
 
 /**
- * @brief program to run transformer using model parameters of cache and MLPs for inference
+ * @brief Run transformer using model parameters of cache and MLPs for inference, use
+ * cache QK' for calculation of KdotQ and then use caches QV' and KH' for EV and EH 
+ * calculation.
  */
 void transformer::run() {
-    while(1) {
-        // get token embedding for prompts and provide it to block for KdotQs
-        // inTraining = 0 for inference
+    // set for inference
+    inTraining = 0;
+    while (1) {
+        // get prompt
+        // compute kdotq
         computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
-        // forward(promptCount, currentTokenCount, blockCount);
-        if(blockCount == 1) {
-            t[0].forprop(d, currentTokenCount, l);
-        }
-        else {
-            t[blockCount-1].forprop(t[blockCount-2].EV, d, currentTokenCount, blockCount, l, n);
-        }
-        // compute output
-        computeOutput(otok, embeddings, vocabsize, indexForToken);
-        
+        // caculate response
+        // redo
     }
 }

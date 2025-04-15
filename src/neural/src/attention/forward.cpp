@@ -55,7 +55,7 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
  * @param EVp EV vector from previous block
  * @param in input token count
  * @param layers layers of MLPs
- * @param tokenCount which token is being processed in current context window
+ * @param tokenCount number of tokens in full context
  * @param blockCount which block is being processed in full context
  * @param n number of tokens for each attention head (context window)
  */
@@ -68,10 +68,10 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
         return;
     }
     // number of tokens in context window of this block
-    int count = std::abs(tokenCount - n * blockCount);
+    int count = std::abs(tokenCount - n * (blockCount-1));
     // probability distribution
     int k, l;
-    std::vector<std::vector<float>> head(tokenCount, std::vector<float>(tokenCount, 0.0f));
+    std::vector<std::vector<float>> head(count, std::vector<float>(count, 0.0f));
     // self attention (ReLU masking) or cross attention
     head = LOTA(KdotQ, tokenCount, isSelfAttention);
     // get weighted sums

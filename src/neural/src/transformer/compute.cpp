@@ -10,7 +10,7 @@
  * @param[in] m matrix for keys or queries
  * @param[out] KorQ Key or query vector to be calculated and stored
  */
-void computeKQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ) {
+void computeKorQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ) {
     for(int i = 0; i < tokenEmmbed.size(); i++) {
         KorQ[i] = std::inner_product(tokenEmmbed.begin(), tokenEmmbed.end(), m.a[i].begin(), 0.0f);
     }
@@ -219,7 +219,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokForBlock, std::vector<std::vector<float>>& EVp,
     mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType)
 {
-    // tokens in current context
+    // tokens in local context
     int c = currentTokenCount - (blockCount - 1)*CONTEXT_WIN;
     // first single word prompt like 'hi', 'hello', 'hey', etc.
     if (c == 0 && promptCount == 1) {

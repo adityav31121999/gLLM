@@ -16,6 +16,25 @@
 #define THREADS_PER_BLOCK_Y 16
 
 /**
+ * @brief compute key or query vector
+ * @param[in] tokenEmbed embedding of token for which key or query vector need to be calculated
+ * @param[in] matrix key or query matrix
+ * @param[out] KorQ Key or Query vector
+ * @param[in] dim embedding dimension
+ * @param[in] height key and query matrix rows
+ */
+__device__ void cuComputeKorQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height) {
+    for (int i = 0; i < height; ++i) {
+        // ith row of matrix
+        const float* matrix_row_i = matrix + i * dim;
+        for (int j = 0; j < dim; ++j) {
+            // dot product of vec1 with ith row of matrix
+            KorQ[i] += tokenEmbed[j] * matrix_row_i[j];
+        }
+    }
+}
+
+/**
  * @brief Computes the dot product of two vectors residing in global memory.
  * @param vec1 Pointer to the first vector.
  * @param vec2 Pointer to the second vector.

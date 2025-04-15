@@ -20,18 +20,19 @@
 #include "mlp.hpp"
 
 // macros for models
-#define TERMINATE "@#O"                 // end of conversation (And Its Over)
-#define LEARNING 0.01                   // learning rate for MLPs
-#define MATHEIGHTS 4096                 // weight matrix heights
-#define CONTEXT_WIN 4096                // context window or number of tokens for each head
-#define EMBEDDING 64                    // embedding dimension for each token
-#define SCALING std::sqrt(EMBEDDING)    // SCALING FACTOR for ATTENTION HEAD
-#define LAYERS_MLP 16                   // layers of mlp
-#define EPOCHS 10                       // number of epochs for MLPs
-#define NUMBER_OF_PA 8                  // number of Partial Attentions in one Block
-#define NUMBER_OF_HEADS 32              // number of heads in each layer (partial attention)
-#define NUMBER_OF_BLOCKS 8              // number of blocks in transformer
-#define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS    // maximum tokens for full context
+#define TERMINATE "@#O"                     // end of conversation (And Its Over)
+#define LEARNING 0.01                       // learning rate for MLPs
+#define MATHEIGHTS 4096                     // weight matrix heights
+#define CONTEXT_WIN 4096                    // context window or number of tokens for each head
+#define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt
+#define EMBEDDING 64                        // embedding dimension for each token
+#define SCALING std::sqrt(EMBEDDING)        // SCALING FACTOR for ATTENTION HEAD
+#define LAYERS_MLP 16                       // layers of mlp
+#define EPOCHS 10                           // number of epochs for MLPs
+#define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
+#define NUMBER_OF_HEADS 32                  // number of heads in each layer (partial attention)
+#define NUMBER_OF_BLOCKS 8                  // number of blocks in transformer
+#define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS       // maximum tokens for full context
 
 
 /**

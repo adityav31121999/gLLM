@@ -85,9 +85,9 @@ void block::forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& E
     int& layers, int& n)
 {
     // y partial attention in x layers => x parallel processes
-    int tokenCount = std::abs(currentTokenCount - (n * k));
+    // int tokenCount = std::abs(currentTokenCount - (n * k));
     // forward propagation for all layers
     for(int i = 0; i < x; i++) {
-        partialforprop(EVp[i], in, tokenCount, k, i, layers, n);
+        partialforprop(EVp[i], in, currentTokenCount, k, i, layers, n);
     }
 }

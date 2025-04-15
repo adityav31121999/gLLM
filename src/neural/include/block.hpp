@@ -29,7 +29,7 @@
 
 
 /**
- * @brief block for complete attention
+ * @brief block for complete attention (local context)
  */
 class block {
 public:
