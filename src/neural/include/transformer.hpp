@@ -31,12 +31,15 @@ public:
     int epochs;             // number of epochs for MLPs and Blocks
     int totalParams;        // total parameters of transformer
     float learning;         // learning rate for MLPs
+    
+    int cacheOffset;        // for extracting caches
+    int matOffset;          // for extracting matrices
+    int mlpOffset;          // for extracting MLPs
 
 // these are variables that change during training
     int blockCount;         // which block is working
     int epochCount;         // epoch counter
     int promptCount;        // number of tokens in the prompt
-    int rcount;             // response count
     int currentTokenCount;  // current count of tokens in full context
     int indexForToken;      // this is to set token index from embedding list
 
@@ -60,7 +63,8 @@ public:
     // when model is in training, hold EV of all the blocks here
     std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
     // for use in calculating next tokens via next block
-    std::vector<std::vector<std::vector<std::vector<float>>>> EVUse;
+    std::vector<std::vector<std::vector<std::vector<float>>>> EVuse;
+    std::vector<std::vector<float>> tokForBlock;        // token embeddings for local context for inference
 
     // default constructor
     transformer() = default;
@@ -78,6 +82,17 @@ public:
     void setLearning(float learning);           // set learning rate for MLPs
     void setEpochs(int epochs);                 // set epochs for MLPs
     void setAttention(bool attentionType);      // set self attention (1) or cross attention (0)
+
+    void getMatQ(int blockCount, int i, int j);
+    void getMatK(int blockCount, int i, int j);
+    void getMatV(int blockCount, int i, int j);
+    void getMatH(int blockCount, int i, int j);
+    void getQKcache(int blockCount, int i, int j);
+    void getQVcache(int blockCount, int i, int j);
+    void getKHcache(int blockCount, int i, int j);
+    void getMLPhor(int blockCount, int i, int j);
+    void getMLPver(int blockCount, int i, int j);
+    void tokenise(std::string& words);
 
     void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& promptCount);

@@ -147,7 +147,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
     }
 }
 
-///////////////////------------------FOR USE------------------///////////////////
+///////////////////------------------FOR INFERENCE------------------///////////////////
 
 /**
  * @brief KdotQ via tokens (TxMxT') where M = MQ x MK' for inference for first block

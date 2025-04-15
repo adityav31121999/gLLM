@@ -53,8 +53,8 @@ public:
     mat MV;                 // vertical retention matrix
     mat MH;                 // horizontal retention matrix
     mat qkCache;            // QK' cache = MQ x MK'
-    mat qhCache;            // QH' cache = MQ x MH'
-    mat kvCache;            // KV' cache = MK x MV'
+    mat qvCache;            // QH' cache = MQ x MV'
+    mat khCache;            // KV' cache = MK x MH'
 // containers
     std::vector<std::vector<float>> K;          // keys = Tokens x MK
     std::vector<std::vector<float>> Q;          // Querys = Tokens x MQ

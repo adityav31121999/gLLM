@@ -88,8 +88,8 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool inTraining) {
     else {
         KdotQ = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));   // KEYS
         qkCache = mat(d, d);     // dxd
-        qhCache = mat(d, d);     // dxd
-        kvCache = mat(d, d);     // dxd
+        qvCache = mat(d, d);     // dxd
+        khCache = mat(d, d);     // dxd
         dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
         dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
         EH.resize(d, 0.0f);      // EH = EH + dH
