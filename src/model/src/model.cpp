@@ -69,9 +69,6 @@ model::model(int m, int x, int y, int n, int d, int h, int l, int vocab, bool is
     }
     else {
         T = transformer(x, y, n, d, h, l, vocab);
-        T.EVs = std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> (m,\
-                std::vector<std::vector<std::vector<std::vector<float>>>> (x,std::vector<std::vector<std::vector<float>>>(y,\
-                std::vector<std::vector<float>>(n, std::vector<float>(d, 0.0f)))));
     }
     // allocate float value block of size totalParams to file
     allocateMemory();
@@ -98,23 +95,3 @@ model::model(int m, int x, int y, int n, int d, int h, int l, float learning, in
     // allocate float value block of size totalParams to file
     allocateMemory();
 }
-
-
-/**
- * @brief allocate block of memory for given number of float values
-void model::allocateMemory() {
-    // allocate float value block of size totalParams to file
-    std::filesystem::path p = "model.bin";
-    std::ofstream ofs(p, std::ios::binary | std::ios::out);
-    if (!ofs) {
-        throw std::runtime_error("Failed to open file for writing.");
-    }
-    std::vector<float> buffer(totalParams, 0.0f);
-    ofs.write(reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(float));
-    if (!ofs) {
-        throw std::runtime_error("Failed to write to file.");
-    }
-    ofs.close();
-    std::cout << "Float values written to file in binary format successfully." << std::endl;
-}
-*/

@@ -1,8 +1,8 @@
 
+// transformer class constructor
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include "include/transformer.hpp"
-
 
 /**
  * @brief Constructor for single-block transformer for use
@@ -131,8 +131,6 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
     else {
         t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
         tokenEmbed.resize(n * m, std::vector<float>(d, 0));
-        EVs.resize(m, std::vector<std::vector<std::vector<std::vector<float>>>>(x, std::vector<std::vector<std::vector<float>>>(y,\
-            std::vector<std::vector<float>>(n, std::vector<float>(d, 0)))));
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
         isSelf = attentionType;
         currentTokenCount = 0;

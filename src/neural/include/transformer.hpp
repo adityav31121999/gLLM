@@ -52,16 +52,17 @@ public:
 // containers
     std::vector<block> t;               // attention block (1 or many)
     std::vector<std::string> tokens;    // tokens in vocabulary
-    std::vector<std::string> sInput;    // tokens in vocabulary
-    std::vector<std::string> sOutput;   // tokens in vocabulary
+    std::vector<std::string> mTokens;   // prompts and response tokens
+    // std::vector<std::string> sInput;    // tokens in vocabulary
+    // std::vector<std::string> sOutput;   // tokens in vocabulary
     std::vector<float> otok;            // output token
     std::vector<std::vector<float>> embeddings;         // all glove embeddings with 64D
     std::vector<std::vector<float>> tokenEmbed;         // token embedding (prommpt + response)
-    std::vector<std::vector<float>> input;              // input embeddings (prompt)
-    std::vector<std::vector<float>> output;             // output embeddings (response)
+    // std::vector<std::vector<float>> input;              // input embeddings (prompt)
+    // std::vector<std::vector<float>> output;             // output embeddings (response)
     FILE* promptNresponse;              // prompt and response text file
     // when model is in training, hold EV of all the blocks here
-    std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
+    // std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
     // for use in calculating next tokens via next block
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse;
     std::vector<std::vector<float>> tokForBlock;        // token embeddings for local context for inference
@@ -92,8 +93,9 @@ public:
     void getKHcache(int blockCount, int i, int j);
     void getMLPhor(int blockCount, int i, int j);
     void getMLPver(int blockCount, int i, int j);
-    void tokenise(std::string& words);
-
+    
+    int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
+    void getEmbedding(std::string& word, std::vector<float>& embed);
     void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& promptCount);
     void backward(std::vector<float>& expectedH);

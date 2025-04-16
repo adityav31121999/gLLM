@@ -78,7 +78,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
         while (i < epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
             if(errorofv(t[blockCount-1].EH, expected) < 0.01 || tokens[indexForToken] == expString) {
-                input[currentTokenCount] = t[blockCount-1].EH;
+                tokenEmbed[currentTokenCount] = t[blockCount-1].EH;
                 break;
             }
             // if error is not corrected even after epochs, then increase epochs
