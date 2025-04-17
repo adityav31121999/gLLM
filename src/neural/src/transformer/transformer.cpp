@@ -17,8 +17,11 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab):
     m(1), x(x), y(y), n(n), d(d), h(h), l(l) 
 {
     t = std::vector<block>(1, block(x, y, n, d, h, l, vocab));
-    // total permissible tokens = n
-    tokenEmbed.resize(n, std::vector<float>(d, 0));
+    tokens.resize(n*m, std::string(0));
+    mTokens.resize(vocabsize, std::string(0));
+    otok.resize(d, 0);
+    embeddings.resize(vocabsize, std::vector<float>(d, 0));
+    tokenEmbed.resize(n * m, std::vector<float>(d, 0));
     totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
     isSelf = true;
     currentTokenCount = 0;
@@ -43,13 +46,17 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
 {
     t = std::vector<block>(m, block(x, y, n, d, h, l, vocab));
     // total permissible tokens = m * n
+    tokens.resize(n*m, std::string(0));
+    mTokens.resize(vocabsize, std::string(0));
+    otok.resize(d, 0);
+    embeddings.resize(vocabsize, std::vector<float>(d, 0));
     tokenEmbed.resize(n * m, std::vector<float>(d, 0));
-    totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
     isSelf = 1;
     currentTokenCount = 0;
     blockCount = 1;
     promptCount = 0;
     indexForToken = 0;
+    isTerminate = 0;
 }
 
 
@@ -67,13 +74,17 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bo
 {
     t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType));
     // total permissible tokens = n
+    tokens.resize(n, std::string(0));
+    mTokens.resize(vocabsize, std::string(0));
+    otok.resize(d, 0);
+    embeddings.resize(vocabsize, std::vector<float>(d, 0));
     tokenEmbed.resize(n, std::vector<float>(d, 0));
-    totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * n;
-    isSelf = 1;
+    isSelf = attentionType;
     currentTokenCount = 0;
     blockCount = 1;
     promptCount = 0;
     indexForToken = 0;
+    isTerminate = 0;
 }
 
 
@@ -90,15 +101,18 @@ transformer::transformer(int x, int y, int n, int d, int h, int l, int vocab, bo
 transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType) :
     m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
 {
-    t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType));
-    // total permissible tokens = m * n
+    t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
+    tokens.resize(n*m, std::string(0));
+    mTokens.resize(vocabsize, std::string(0));
+    otok.resize(d, 0);
+    embeddings.resize(vocabsize, std::vector<float>(d, 0));
     tokenEmbed.resize(n * m, std::vector<float>(d, 0));
-    totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
-    isSelf = 1;
+    isSelf = attentionType;
     currentTokenCount = 0;
     blockCount = 1;
     promptCount = 0;
     indexForToken = 0;
+    isTerminate = 0;
 }
 
 
@@ -115,28 +129,39 @@ transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vo
  * @param inTraining training (TRUE) or use (FALSE)
  */
 transformer::transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining) :
-    m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(attentionType) 
+    m(m), x(x), y(y), n(n), d(d), h(h), l(l), vocabsize(vocab), isSelf(attentionType) 
 {
     if(inTraining == true || inTraining == 1) {
         // training
         t = std::vector<block>(m, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
+        tokens.resize(n*m, std::string(0));
+        mTokens.resize(vocabsize, std::string(0));
+        otok.resize(d, 0);
+        embeddings.resize(vocabsize, std::vector<float>(d, 0));
         tokenEmbed.resize(n * m, std::vector<float>(d, 0));
-        totalParams = ((2 * h) + (l * d)) * 2 * d * x * y * m * n;
         isSelf = attentionType;
         currentTokenCount = 0;
         blockCount = 1;
         promptCount = 0;
         indexForToken = 0;
+        isTerminate = 0;
     }
     else {
+        // for inference
         t = std::vector<block>(1, block(x, y, n, d, h, l, vocab, attentionType, inTraining));
+        tokens.resize(n*m, std::string(0));
+        mTokens.resize(vocabsize, std::string(0));
+        otok.resize(d, 0);
+        embeddings.resize(vocabsize, std::vector<float>(d, 0));
         tokenEmbed.resize(n * m, std::vector<float>(d, 0));
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
+        tokForBlock.resize(CONTEXT_WIN, std::vector<float>(d, 0));
         isSelf = attentionType;
         currentTokenCount = 0;
         blockCount = 1;
         promptCount = 0;
         indexForToken = 0;
+        isTerminate = 0;
     }
 }
 

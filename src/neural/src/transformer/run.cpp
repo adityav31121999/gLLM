@@ -1,5 +1,7 @@
 
 #include "include/transformer.hpp"
+#include <chrono>
+#include <iostream>
 
 /**
  * @brief Run transformer using model parameters of cache and MLPs for inference, use
@@ -15,6 +17,11 @@ void transformer::run() {
         std::cout << "ENTER PROMPT (LIMIT" << CONTEXT_WIN/4 << " TOKENS): ";
         std::cin >> userPrompt;
         promptCount = tokenise(userPrompt, mTokens, currentTokenCount) + 1;
+        for(int i = 0; i < promptCount; i++) { 
+            // get token embeddings from 'embeddings' vector in transformer class
+            // tokenEmbed[currentTokenCount+i] = embeddings[];
+            getEmbedding(mTokens[currentTokenCount+i], tokenEmbed[currentTokenCount+i]);
+        }
         if(currentTokenCount+promptCount >= FULL_CONTEXT) {
             throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT!");
             break;
@@ -22,6 +29,7 @@ void transformer::run() {
         int c = std::abs(currentTokenCount - (blockCount-1)*CONTEXT_WIN);
         // under local context
         if(c + promptCount <= CONTEXT_WIN) {
+            // when first block, tokenEmbed is directly utilised
             if(blockCount > 1) {
                 for(int k = 0; k < promptCount; k++) {
                     tokForBlock[c + k] = tokenEmbed[currentTokenCount + k];
@@ -35,44 +43,42 @@ void transformer::run() {
                 }
             }
         }
-        // if it goes over context window increment to next block
+        // if it goes over context window, increment to next block
         if(c + promptCount > CONTEXT_WIN) {
-            int m1 = c + promptCount - CONTEXT_WIN;
-            int m2 = CONTEXT_WIN - c;   // available token count
-            if(blockCount == 1) {
-                // fix the prompts
-                for(int i = 0; i < x; i++) {
-                    for(int j = 0; j < y; j++) {
-                        for(int k = 0; k < m2; k++) {
-                            t[0].b[i][j].EV[c-1+k] = tokenEmbed[currentTokenCount + k];
-                        }
+            int m1 = c + promptCount - CONTEXT_WIN;     // part of prompt in next block
+            int m2 = CONTEXT_WIN - c;   // available space in this block
+            // add prompt to EVs and tokforblock
+            for(int i = 0; i < x; i++) {
+                for(int j = 0; j < y; j++) {
+                    for(int k = 0; k < m2; k++) {
+                        t[0].b[i][j].EV[c-1+k] = tokenEmbed[currentTokenCount + k];
                     }
                 }
-                for(int i = 0; i < m2; i++) {
-                    tokForBlock[i] = tokenEmbed[currentTokenCount + i];
-                }
-                currentTokenCount += m2;
-                // set vertical retention vectors
-                for(int i = 0; i < x; i++) {
-                    for(int j = 0; j < y; j++) {
-                        for(int k = 0; k < CONTEXT_WIN; k++) {
-                            EVuse[i][j][k] = t[0].b[i][j].EV[k];
-                        }
+            }
+            for(int i = 0; i < m2; i++) {
+                tokForBlock[i] = tokenEmbed[currentTokenCount + i];
+            }
+            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+            // token limit reached for first block
+            currentTokenCount += m1;
+            // set vertical retention vectors
+            for(int i = 0; i < x; i++) {
+                for(int j = 0; j < y; j++) {
+                    for(int k = 0; k < CONTEXT_WIN; k++) {
+                        EVuse[i][j][k] = t[0].b[i][j].EV[k];
                     }
-                }
-                blockCount += 1;
-                for(int i = 0; i < CONTEXT_WIN; i++) {
-                    tokForBlock[i] = tokenEmbed[currentTokenCount - CONTEXT_WIN + i];
                 }
             }
             blockCount += 1;
-        }
-        for(int i = 0; i < promptCount; i++) { 
-            // get token embeddings from 'embeddings' vector in transformer class
-            // tokenEmbed[currentTokenCount+i] = embeddings[];
-            // getEmbeddings(mToken[currentTokenCount+i], tokenEmbed[currentTokenCount+i]);
+            for(int i = 0; i < CONTEXT_WIN; i++) {
+                tokForBlock[i] = tokenEmbed[currentTokenCount - CONTEXT_WIN + i];
+            }
+            currentTokenCount += m2;
+            blockCount += 1;
         }
         // caculate response
+        int rCount = 0;
+        auto start_time = std::chrono::high_resolution_clock::now();
         while (1) {
             int k, l;   // for row and column sum
             // forprop for EH and EV
@@ -119,7 +125,7 @@ void transformer::run() {
             computeOutput(t[0].EH, embeddings, vocabsize, indexForToken);
             tokenEmbed[currentTokenCount] = embeddings[indexForToken];
             mTokens[currentTokenCount] = tokens[indexForToken];
-            std::cout << mTokens[currentTokenCount-1] << " ";
+            std::cout << mTokens[currentTokenCount] << " ";
             currentTokenCount += 1;
             // check for local context
             if(currentTokenCount%CONTEXT_WIN == 0) {
@@ -142,7 +148,12 @@ void transformer::run() {
             if(tokens[indexForToken] == TERMINATE) {
                 break;
             }
+            rCount += 1;
         }
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+        std::cout << "Time taken to predict tokens of response: "<< duration.count()/1000000.0 << " seconds" << std::endl;
+        std::cout << "Token Rate: " << static_cast<float>(rCount/(duration.count()/1000000.0)) << " tokens/second" << std::endl;
         std::cout << std::endl;
         // redo
     }

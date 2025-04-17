@@ -41,7 +41,6 @@ public:
     std::vector<float> EH;  // common horizontal retention for token prediction (summed or concatanted)
     // hold all vertical retention vector EVs from each attention heads
     std::vector<std::vector<std::vector<std::vector<float>>>> EV;
-    std::vector<float> probability;             // probability space for next token
     std::vector<std::vector<float>> tokForBlock;        // tokens for block
     std::vector<std::vector<attention>> b;      // block complete attention
 
@@ -71,8 +70,6 @@ public:
     void backward(std::vector<float>& expectedH, int& in, int& layers);
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-    // function for model operation
-    void runBlock(std::vector<std::vector<float>>& tokenEmbed, int& tokenCount, int& blockCount);
 
 #ifdef USE_CUDA
 // cuda equivalent functions for block (for parallels in loop)
@@ -97,7 +94,6 @@ public:
     void cuBackward(std::vector<float>& expectedH, int& in, int& layers);
     void cuBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void cuBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-    void curunBlock(std::vector<std::vector<float>>& tokenEmbed, int& tokenCount, int& blockCount);
 #elif USE_OPENCL
 // opencl equivalent functions for block (for parallels in loop)
     void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount);
@@ -119,7 +115,6 @@ public:
     void clBackward(std::vector<float>& expectedH, int& in, int& layers);
     void clBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void clBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-    void clrunBlock(std::vector<std::vector<float>>& tokenEmbed, int& tokenCount, int& blockCount);
 #endif
 
     // default destructor

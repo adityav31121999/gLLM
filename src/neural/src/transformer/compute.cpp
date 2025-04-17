@@ -55,8 +55,7 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void transformer::computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int & voc, 
-    int & index)
+void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int & voc, int & index)
 {
     std::vector<float> pred(voc, 0.0f);     // predictions
     for(int i = 0; i < voc; i++) {

@@ -25,15 +25,12 @@ add_library(neural STATIC
     src/attention/attention.cpp
     src/attention/forward.cpp
     src/attention/backward.cpp
-    src/attention/run.cpp
 
     # block
     src/block/block.cpp
     src/block/forward.cpp
     src/block/partialback.cpp
     src/block/backward.cpp
-    src/block/run.cpp
-
     src/block/cu/kdotq.cu
 
     # transformer
@@ -44,6 +41,7 @@ add_library(neural STATIC
     src/transformer/backward.cpp
     src/transformer/train.cpp
     src/transformer/run.cpp
+    src/transformer/getVal.cpp
 
     src/transformer/cu/cucompute.cu
 

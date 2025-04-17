@@ -7,8 +7,6 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
-#include "mlp.hpp"
-#include "attention.hpp"
 #include "block.hpp"
 
 /**
@@ -53,17 +51,11 @@ public:
     std::vector<block> t;               // attention block (1 or many)
     std::vector<std::string> tokens;    // tokens in vocabulary
     std::vector<std::string> mTokens;   // prompts and response tokens
-    // std::vector<std::string> sInput;    // tokens in vocabulary
-    // std::vector<std::string> sOutput;   // tokens in vocabulary
     std::vector<float> otok;            // output token
     std::vector<std::vector<float>> embeddings;         // all glove embeddings with 64D
     std::vector<std::vector<float>> tokenEmbed;         // token embedding (prommpt + response)
-    // std::vector<std::vector<float>> input;              // input embeddings (prompt)
-    // std::vector<std::vector<float>> output;             // output embeddings (response)
     FILE* promptNresponse;              // prompt and response text file
-    // when model is in training, hold EV of all the blocks here
-    // std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> EVs;
-    // for use in calculating next tokens via next block
+    // when model is in inference, hold EV of ith block here
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse;
     std::vector<std::vector<float>> tokForBlock;        // token embeddings for local context for inference
 
@@ -76,24 +68,15 @@ public:
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
 
     void setDims(int m, int x, int y, int n, int d, int h, int l);  // set dimension of transformer
-    void setInput(std::vector<std::vector<float>>& input);          // set input embeddings for running transformer
-    void setOutput(std::vector<std::vector<float>>& output);        // set output embeddings for instructing and finetuning
-    void setTokensForBlock(int blockCount);     // set tokens for each block for ith block
-    void setEmbedding(std::string& embedding);  // set token embeddings
     void setLearning(float learning);           // set learning rate for MLPs
     void setEpochs(int epochs);                 // set epochs for MLPs
     void setAttention(bool attentionType);      // set self attention (1) or cross attention (0)
 
-    void getMatQ(int blockCount, int i, int j);
-    void getMatK(int blockCount, int i, int j);
-    void getMatV(int blockCount, int i, int j);
-    void getMatH(int blockCount, int i, int j);
-    void getQKcache(int blockCount, int i, int j);
-    void getQVcache(int blockCount, int i, int j);
-    void getKHcache(int blockCount, int i, int j);
-    void getMLPhor(int blockCount, int i, int j);
-    void getMLPver(int blockCount, int i, int j);
-    
+    void getAllValues(int blockCount, std::string path2folderOfAllBins, bool& inTraining);
+    void getcache(int blockCount, int i, int j, std::vector<std::vector<float>>& q, std::string path2file);
+    void getmat(int blockCount, int i, int j, std::vector<std::vector<float>>& q, std::string path2file, int& row, int& column);
+    void getmlp(int blockCount, int i, int j, std::vector<std::vector<std::vector<float>>>& m, std::string path2file);
+
     int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
     void getEmbedding(std::string& word, std::vector<float>& embed);
     void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
@@ -107,7 +90,6 @@ public:
     void train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void run();
 
 #ifdef USE_CUDA     // cuda implementation
@@ -148,9 +130,9 @@ public:
     ~transformer() = default;
 };
 
-
 // compute functions for dot, KdotQ and other values
 
+void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
 void computeKorQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
 void computeDot(std::vector<float>& Ti, mat M, std::vector<float>& Tj, float& dot);

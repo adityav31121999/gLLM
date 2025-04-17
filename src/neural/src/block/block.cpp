@@ -16,8 +16,7 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab) : x(x), y(y)
 {
     // initialize attention block (complete attention)
     b.resize(x, std::vector<attention>(y, attention(n, d, h, l)));
-    // probabiltiy vector
-    probability.resize(vocab, 0.0f);
+    EH.resize(d, 0.0f);     // horizontal retention vectors
     // collection of vertical retention vectors from all heads
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0.0f))));
     isSelfAttention = 1;    // default
@@ -41,8 +40,7 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attention
 {
     // initialize attention block (complete attention)
     b.resize(x, std::vector<attention>(y, attention(n, d, h, l, attentionType)));
-    // probabiltiy vector
-    probability.resize(vocab, 0.0f);
+    EH.resize(d, 0.0f);     // horizontal retention vectors
     // collection of vertical retention vectors from all heads
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0.0f))));
     isSelfAttention = attentionType;
@@ -64,15 +62,23 @@ block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attention
  */
 block::block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool inTraining) : x(x), y(y) 
 {
-    // initialize attention block (complete attention)
-    b.resize(x, std::vector<attention>(y, attention(n, d, h, l, attentionType, inTraining)));
-    // probabiltiy vector
-    probability.resize(vocab, 0.0f);
-    // collection of vertical retention vectors from all heads
-    EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0.0f))));
-    isSelfAttention = attentionType;
-    this->inTraining = inTraining;
-    tokForBlock.resize(n, std::vector<float>(d, 0.0f));
+    if(inTraining == 1) {
+        // initialize attention block (complete attention)
+        b.resize(x, std::vector<attention>(y, attention(n, d, h, l, attentionType, inTraining)));
+        EH.resize(d, 0.0f);     // horizontal retention vectors
+        // collection of vertical retention vectors from all heads
+        EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0.0f))));
+        isSelfAttention = attentionType;
+        this->inTraining = inTraining;
+        tokForBlock.resize(n, std::vector<float>(d, 0.0f));
+    }
+    else {
+        // initialize attention block (complete attention)
+        b.resize(x, std::vector<attention>(y, attention(n, d, h, l, attentionType, inTraining)));
+        EH.resize(d, 0.0f);     // horizontal retention vectors
+        isSelfAttention = attentionType;
+        this->inTraining = inTraining;
+    }
 }
 
 

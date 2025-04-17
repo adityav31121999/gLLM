@@ -81,10 +81,6 @@ public:
     void backward1stHead(std::vector<float>& expected, int& in, int& layers, bool& first);
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void backward1stHead(std::vector<float>& expected, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    // functions for using model
-    void runAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount);
-    void runAttention(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& qkCache, mat& qvCache,
-        mat& khCache, int& tokenCount, int& blockCount);
 
 #ifdef USE_CUDA
 // cuda equivalent functions for attention
@@ -95,9 +91,6 @@ public:
     void cubackward1stHead(std::vector<float>& expected, int& in, int& layers);
     void cubackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void cubackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cuRunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount);
-    void cuRunAttention(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& qkCache, mat& qvCache,
-        mat& khCache, int& tokenCount, int& blockCount);
 #elif USE_OPENCL
 // opencl equivalent functions for attention
     void clforprop(int& in, int& layers, int& tokenCount);
@@ -107,9 +100,6 @@ public:
     void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
     void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clRunAttention(std::vector<std::vector<float>>& tokenEmbed, mat& qkCace, mat& qvCache, mat& khCache, int& tokenCount);
-    void clRunAttention(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& qkCache, mat& qvCache,
-        mat& khCache, int& tokenCount, int& blockCount);
 #endif
 
     // default destructor
