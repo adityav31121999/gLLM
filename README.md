@@ -13,7 +13,9 @@
   - *OpenCL VERSION*: 300
   - *CUDA*: 12.6
 - **PROJECT BUILD SYSTEM**: CMake
-- **Model Architecture**: Shady Attention Mechanism (DENSE)
+- **Model Architecture**:
+  - Shady Attention Mechanism
+  - Divided context (DENSE)
 
 ## Project Structure
 - **maths**: Mathematical Library for AI/ML
@@ -52,7 +54,12 @@
 - Transformer is referred as FULL context since it comprises of all blocks with equal context window.
 
 ### Components
+**MLP**:
+- Multilayer Perceptron defined in mlp.hpp
+- 
+
 **HEAD**:
+- Attention class defined in attention.hpp
 - MQ, MK: Query and Key matrices
 - MV, MH: Vertical and Horizontal retention matrices
 - hor, ver: MLPs for horizontal and vertical propagation
@@ -68,17 +75,21 @@
 - tokenCount: current tokenCount in the context window of head
 
 **BLOCK**:
+- Attention block defined in block.hpp
+- Refered as LOCAL CONTEXT in function comments
 - x, y: number of rows and columns
 - error: error for block
 - isSelfattention: boolean to check attention type (1 for self, 0 for cross)
 - inTraining: boolean to check training (1) or use (0)
-- str: string to hold the token to compare with TERMINATE ('@#0')
 - EH: combined or concatanated value of partial attention for token prediction
 - EV: collection of all Head EVs
+- tokForBlock: local context specific token embeddings for KdotQ calculation while training
 - probability: probability vector for token prediction
 - b: 2d vector of Heads (attention class) of dimension 'x' rows (Partial Attentions) and 'y' columns (Parallels)
 
 **TRANSFORMER**:
+- Transformer defined in transformer.hpp
+- Refered as FULL CONTEXT in function comments
 - m: number of blocks
 - x: number of rows
 - y: number of columns
@@ -93,14 +104,15 @@
 - isSelf: boolean to check attention type (1 for self, 0 for cross)
 - inTraining: boolean to check training (1) or use (0)
 - isTerminate: 1 for terminate ('@#0') and 0 for continuation
-- blockCount: number of block which is in use
+- blockCount: position of block which is in use in Full Context
 - epochCount: epoch counter for training
 - promptCount: tokens in user prompt
 - currentTokenCount: number of tokens generated or in use in full context
 
+
 ### Training
 
-### OPERATION
+### Inference
 
 ## MODEL STRUCTURE
  
@@ -206,3 +218,7 @@ target_link_libraries(gLLM
   - MISTRAL
   - ChatGPT
   - COPILOT
+
+## Refernce
+
+- 

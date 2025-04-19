@@ -31,6 +31,7 @@ add_library(neural STATIC
     src/block/forward.cpp
     src/block/partialback.cpp
     src/block/backward.cpp
+    
     src/block/cu/kdotq.cu
 
     # transformer
@@ -45,7 +46,7 @@ add_library(neural STATIC
 
     src/transformer/cu/cucompute.cu
 
-    src/transformer/cl/clcompute.cpp
+    src/transformer/cl/clcompute.cl
 )
 
 # link libraries to this library

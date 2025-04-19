@@ -57,7 +57,7 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
  */
 void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int & voc, int & index)
 {
-    std::vector<float> pred(voc, 0.0f);     // predictions
+    std::vector<float> pred(voc, 0.0f);     // hold predictions
     for(int i = 0; i < voc; i++) {
         pred[i] = std::inner_product(output.begin(), output.end(), embeddings[i].begin(), 0.0f); // dot product
     }
@@ -263,6 +263,56 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
     }
 }
 
+/**
+ * @brief compute parallel KdotQs of column of a block
+ * @param promptCount number of tokens in prompt
+ * @param currentTokenCount number of tokens in full context
+ * @param blockCount current position of block in full context
+ * @param column current column in local context or block
+ * @param isSelf attention type (self or cross)
+ * @param inTraining training or inference
+ */
+void transformer::parallelKdotQs(int &promptCount, int &currentTokenCount, int &blockCount, int &column, bool &isSelf, bool &inTraining)
+{
+    // first block
+    if(blockCount == 1) {
+        if(inTraining == 1) {
+            // in training
+            for(int i = 0; i < x; i++) {
+                // compute KdotQ of (i, j) head of first block
+                computeKdotQ(t[0].b[i][column].KdotQ, t[0].b[i][column].K, t[0].b[i][column].Q, currentTokenCount, 
+                    promptCount, blockCount, isSelf);
+            }
+        }
+        else {
+            // for inference
+            for(int i = 0; i < x; i++) {
+                // compute KdotQ of (i, j) head of first block
+                computeKdotQ(t[0].b[i][column].KdotQ, tokenEmbed, t[0].b[i][column].qkCache, currentTokenCount,
+                    promptCount, isSelf);
+            }
+        }
+    }
+    // for ith block
+    else {
+        if(inTraining == 1) {
+            // in training
+            for(int i = 0; i < x; i++) {
+                computeKdotQ(t[blockCount-1].b[i][column].KdotQ, t[blockCount-1].b[i][column].K, t[blockCount-1].b[i][column].Q, 
+                    currentTokenCount, promptCount, blockCount, isSelf);
+            }
+        }
+        else {
+            // for inference
+            for(int i = 0; i < x; i++) {
+                // compute KdotQ of (i, j) head of first block
+                computeKdotQ(t[blockCount-1].b[i][column].KdotQ, t[blockCount-1].tokForBlock, t[blockCount-2].b[i][column].EV, 
+                    t[blockCount-1].b[i][column].qkCache, currentTokenCount, promptCount, blockCount, isSelf);
+            }
+        }
+    }
+}
+
 
 /**
  * @brief compute KdotQ of each head in the block
@@ -281,7 +331,7 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
                 for(int j = 0; j < y; j++) {
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(t[0].b[i][j].KdotQ, t[0].b[i][j].K, t[0].b[i][j].Q, currentTokenCount,
-                        promptCount, blockCount, isSelf);
+                                    promptCount, blockCount, isSelf);
                 }
             }
         }
@@ -291,7 +341,7 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
                 for(int j = 0; j < y; j++) {
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(t[0].b[i][j].KdotQ, tokenEmbed, t[0].b[i][j].qkCache, currentTokenCount,
-                        promptCount, isSelf);
+                                    promptCount, isSelf);
                 }
             }
         }
@@ -304,7 +354,7 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
                 for(int j = 0; j < y; j++) {
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(t[blockCount-1].b[i][j].KdotQ, t[blockCount-1].b[i][j].K, t[blockCount-1].b[i][j].Q, 
-                        currentTokenCount, promptCount, blockCount, isSelf);
+                                    currentTokenCount, promptCount, blockCount, isSelf);
                 }
             }
         }
@@ -314,7 +364,7 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
                 for(int j = 0; j < y; j++) {
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(t[blockCount-1].b[i][j].KdotQ, t[blockCount-1].tokForBlock, t[blockCount-2].b[i][j].EV, 
-                        t[blockCount-1].b[i][j].qkCache, currentTokenCount, promptCount, blockCount, isSelf);
+                                    t[blockCount-1].b[i][j].qkCache, currentTokenCount, promptCount, blockCount, isSelf);
                 }
             }
         }

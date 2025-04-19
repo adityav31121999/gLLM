@@ -7,7 +7,16 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <fstream>
+#include <maths.hpp>
+#include "mlp.hpp"
+#include "attention.hpp"
 #include "block.hpp"
+
+#ifdef USE_OPENCL
+    #include <CL/cl.hpp>
+    #include <map>
+#endif
 
 /**
  * @brief Transformer (FULL CONTEXT) class for token/chunk prediction and context 
@@ -48,7 +57,7 @@ public:
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
 
 // containers
-    std::vector<block> t;               // attention block (1 or many)
+    std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
     std::vector<std::string> mTokens;   // prompts and response tokens
     std::vector<float> otok;            // output token
@@ -79,6 +88,7 @@ public:
 
     int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
     void getEmbedding(std::string& word, std::vector<float>& embed);
+    void parallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& promptCount);
     void backward(std::vector<float>& expectedH);
@@ -93,7 +103,7 @@ public:
     void run();
 
 #ifdef USE_CUDA     // cuda implementation
-    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
+    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void cuForward();
     void cuBackward(std::vector<float>& expectedH);
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
@@ -109,7 +119,19 @@ public:
     void cuComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
     void cuRun();
 #elif USE_OPENCL    // opencl implementation
-    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
+    // === OpenCL Specific Members ===
+    cl::Context cl_context;
+    cl::CommandQueue cl_queue;
+    std::vector<cl::Device> cl_devices;
+    cl::Program cl_program; // Holds the compiled program from clcompute.cl
+    std::map<std::string, cl::Kernel> cl_kernels; // Map to store kernel objects by name
+
+    // === Host-side functions that USE OpenCL ===
+    // Declaration of the function that sets up OpenCL and compiles kernels
+    void setupOpenCL(const std::string& kernelFilePath = "clcompute.cl"); // Example name
+    // Helper to get kernel, maybe with error checking
+    cl::Kernel& getKernel(const std::string& name);
+    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void clForward();
     void clBackward(std::vector<float>& expectedH);
     void clBackward(std::vector<float>& expectedH, int& blockCount);
@@ -161,26 +183,6 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
         int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling);
     __global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, const float* d_M,
         int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling);    
-#elif USE_OPENCL
-    // opencl implementation
-    float compute_dot_product(__global const float* vec1, __global const float* vec2, int dim);
-    float compute_dot_product(__global const float* vec1, __global const float* vec2, __global const float* matrix, int dim);
-    int compute_prediction(__global const float* EH, __global const float* embeddings, int dim, int voc);
-    __kernel void kernelKdotQforSelf_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys,
-        int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
-    __kernel void kernelKdotQforCross_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys, 
-        int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
-    __kernel void kernelKdotQBlock1Self_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
-        int prompt_start_index, int prompt_len, int context_len, int kdotq_width,int embedding_dim, float inv_scaling);
-    __kernel void kernelKdotQBlock1Cross_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
-        int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);
-    __kernel void kernelKdotQBlockNSelf_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
-        __global const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block,
-        int kdotq_width, int embedding_dim, float inv_scaling);
-    __kernel void kernelKdotQBlockNCross_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
-        __global const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block,
-        int kdotq_width, int embedding_dim, float inv_scaling);
-
 #endif
 
 #endif

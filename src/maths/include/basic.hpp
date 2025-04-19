@@ -126,27 +126,6 @@ extern const char* lota1DDerKernelSource;
 extern const char* lota2DDerKernelSource;
 extern const char* lota2DDerWithLimitKernelSource;
 
-__kernel void operator_eq(__global float* a, __global float* b, __global float* result, int size);
-__kernel void operator_add(__global float* a, __global float* b, __global float* result, int size);
-__kernel void operator_sub(__global float* a, __global float* b, __global float* result, int size);
-__kernel void operator_mul_scalar(__global float* a, float scalar, __global float* result, int size);
-__kernel void operator_mul_scalar_reverse(float scalar, __global float* a, __global float* result, int size);
-__kernel void operator_div_scalar(__global float* a, float scalar, __global float* result, int size);
-__kernel void operator_add_2d(__global float* a, __global float* b, __global float* result, int rows, int cols);
-__kernel void operator_sub_2d(__global float* a, __global float* b, __global float* result, int rows, int cols);
-__kernel void operator_mul_2d_scalar(__global float* a, float scalar, __global float* result, int rows, int cols);
-__kernel void operator_div_2d_scalar(__global float* a, float scalar, __global float* result, int rows, int cols);
-
-__kernel void errorofv(__global float* a, __global float* b, __global float* result, int size);
-__kernel void gradientdesc(__global float* a, __global float* b, __global float* result, int size);
-__kernel void vdotv2val(__global float* a, __global float* b, __global float* result, int size);
-__kernel void vdotv2scal(__global float* a, __global float* b, __global float* result, int size);
-__kernel void MSE(__global float* a, __global float* b, __global float* result, int size);
-__kernel void sum(__global float* a, __global float* result, int size);
-__kernel void sum_2d(__global float* a, __global float* result, int rows, int cols);
-__kernel void product(__global float* a, __global float* result, int size);
-__kernel void product_2d(__global float* a, __global float* result, int rows, int cols);
-
 
 #elif USE_CUDA
 
