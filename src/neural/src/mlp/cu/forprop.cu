@@ -1,6 +1,4 @@
 
-#include "include/mlp.hpp"
-
 // forprop.cu: CUDA implementations for forward propagation in MLP
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -8,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <maths.hpp>  // Include for activation functions like cuSigmoid
+#include "include/mlp.hpp"
 
 // Helper macro for CUDA error checking
 #define CUDA_CHECK(call) do { \
@@ -20,7 +19,7 @@
 
 
 /**
- * @brief CUDA kernel for matrix-vector multiplication
+ * @brief CUDA kernel for MLP forward propagation
  * @param inputs Input data
  * @param weights Weights for the current layer
  * @param biases Biases for the current layer
@@ -29,14 +28,15 @@
  * @param output_size Size of the output layer
  */
 // CUDA kernel for matrix-vector multiplication
-__global__ void layerForwardKernel(float* inputs, float* weights, float* biases, float* outputs, 
-                                  int input_size, int output_size) {
+__global__ void layerForwardKernel(float* inputs, float* weights, float* outputs, 
+    int input_size, int output_size)
+{
     int neuron_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
+
     if (neuron_idx < output_size) {
         // Initialize sum to 0 or bias value if biases are provided
-        float sum = (biases != nullptr) ? biases[neuron_idx] : 0.0f;
-        
+        float sum = 0.0f;
+
         // Perform matrix-vector multiplication
         for (int i = 0; i < input_size; i++) {
             sum += inputs[i] * weights[neuron_idx * input_size + i];
@@ -53,7 +53,6 @@ __global__ void layerForwardKernel(float* inputs, float* weights, float* biases,
  * @param network The network to be used for forward propagation. This will be modified to store layer outputs and activations.
  * @return std::vector<float> The activations of the last layer.
  */
-std::vector<float> cuforwardPropagate(const std::vector<float>& inputs, mlp& network);
 std::vector<float> cuforwardPropagate(const std::vector<float>& inputs, mlp& network) {
     if (inputs.size() != network.hlayers[0].size()) {
         throw std::invalid_argument("Input size does not match network input layer size");
@@ -119,7 +118,7 @@ std::vector<float> cuforwardPropagate(const std::vector<float>& inputs, mlp& net
             
             // Calculate layer outputs (pre-activation)
             layerForwardKernel<<<blocksPerGrid, threadsPerBlock>>>(
-                d_inputs, d_weights, nullptr, d_layer_output, input_size, output_size);
+                d_inputs, d_weights, d_layer_output, input_size, output_size);
 
             // Copy pre-activation values to host (hlayers)
             CUDA_CHECK(cudaMemcpy(network.hlayers[layer].data(), d_layer_output, 

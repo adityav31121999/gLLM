@@ -11,6 +11,8 @@
  * queries need to be calculated. Also, memory used is low. Initiate all the 
  * memory based on the deimensions for this keys and queries so that continuous
  * resizing and pushback can be ignored for fast operations.
+ * Only thing that takes large memory is KdotQ 2D vector which can take upto 99%
+ * of memory in attention class.
  */
 
 /**

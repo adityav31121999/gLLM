@@ -92,42 +92,7 @@ void ijbasedwbs(std::vector<std::vector<float>>);
 void Random(std::vector<std::vector<float>>);
 
 
-#ifdef USE_OPENCL
-
-#include <CL/cl.hpp>
-
-// Sigmoid kernel sources
-extern const char* sigmoidKernelSource;
-extern const char* sigmoidderKernelSource;
-extern const char* sigmoid1DKernelSource;
-extern const char* sigmoid2DKernelSource;
-extern const char* sigmoid1DderKernelSource;
-extern const char* sigmoidDer2DKernelSource;
-
-// Softmax kernel sources
-extern const char* softmax1DKernelSource;
-extern const char* softmax2DKernelSource;
-extern const char* softmax1DderKernelSource;
-extern const char* softmax2DderKernelSource;
-
-// ReLU kernel sources
-extern const char* reluKernelSource;
-extern const char* relu1DKernelSource;
-extern const char* relu2DKernelSource;
-extern const char* reluDerKernelSource;
-extern const char* relu1DderKernelSource;
-extern const char* relu2DDerKernelSource;
-
-// LOTA kernel sources
-extern const char* lota1DKernelSource;
-extern const char* lota2DKernelSource;
-extern const char* lota2DWithLimitKernelSource;
-extern const char* lota1DDerKernelSource;
-extern const char* lota2DDerKernelSource;
-extern const char* lota2DDerWithLimitKernelSource;
-
-
-#elif USE_CUDA
+#ifdef USE_CUDA
 
 #include <cuda_runtime.h>
 
@@ -142,7 +107,7 @@ __global__ void cuSeLU(float x, float* result);
 __global__ void cuSeLU(float* x, float* out, int size);
 __global__ void cuLOTA(float* y, float* out, int size);
 __global__ void cuLOTA(float* y, float* out, int rows, int cols);
-__global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit);
+__global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool attentionType);
 
 __global__ void cuSigmoidder(float x, float* result);
 __global__ void cuSigmoidder(float* x, float* out, int rows, int cols);
@@ -154,7 +119,7 @@ __global__ void cuSeLUder(float x, float* result);
 __global__ void cuSeLUder(float* x, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int rows, int cols);
-__global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit);
+__global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, bool attentionType);
 
 
 __global__ void operator_add(const float* a, const float* b, float* result, int size);
@@ -178,6 +143,8 @@ __global__ void product(const float* a, float* result, int size);
 __global__ void product_2d(const float* a, float* result, int rows, int cols);
 
 __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
+__global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
+__global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
 
 #endif
 

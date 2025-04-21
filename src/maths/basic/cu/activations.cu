@@ -123,6 +123,31 @@ __global__ void cuReLU(float* x, float* out, int size) {
     }
 }
 
+/**
+ * @brief cuda function for SeLU
+ * @param[in] x input
+ * @param[out] result output
+ */
+__global__ void cuSeLU(float x, float* result) {
+    float alpha = 1.67326f;
+    float lambda = 1.0507f;
+    *result = (x > 0.0f) ? lambda * x : lambda * alpha * (expf(x) - 1.0f);
+}
+
+/**
+ * @brief cuda function for SeLU
+ * @param[in] x input array
+ * @param[out] out output array
+ * @param[in] size size of array
+ */
+__global__ void cuSeLU(float* x, float* out, int size) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < size) {
+        float alpha = 1.67326f;
+        float lambda = 1.0507f;
+        out[i] = (x[i] > 0.0f) ? lambda * x[i] : lambda * alpha * (expf(x[i]) - 1.0f);
+    }
+}
 
 /**
  * @brief cuda function for LOTA
@@ -366,6 +391,32 @@ __global__ void cuReLUder(float* x, float* out, int size) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < size) {
         out[i] = (x[i] > 0.0f) ? 1.0f : 0.0f;
+    }
+}
+
+/**
+ * @brief cuda function for SeLU derivative
+ * @param[in] x input
+ * @param[out] result output
+ */
+__global__ void cuSeLUder(float x, float* result) {
+    float alpha = 1.67326f;
+    float lambda = 1.0507f;
+    *result = (x > 0.0f) ? lambda : lambda * alpha * expf(x);
+}
+
+/**
+ * @brief cuda function for SeLU derivative
+ * @param[in] x input array
+ * @param[out] out output array
+ * @param[in] size size of array
+ */
+__global__ void cuSeLUder(float* x, float* out, int size) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < size) {
+        float alpha = 1.67326f;
+        float lambda = 1.0507f;
+        out[i] = (x[i] > 0.0f) ? lambda : lambda * alpha * expf(x[i]);
     }
 }
 

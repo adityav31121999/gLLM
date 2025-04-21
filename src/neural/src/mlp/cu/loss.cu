@@ -1,7 +1,7 @@
-#include "include/mlp.hpp"
 
 // loss.cu: CUDA implementations for calculating losses and penalties for MLP
 #include "include/mlp.hpp"
+#include <maths.hpp>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
@@ -21,7 +21,11 @@
 
 // --- Helper Functions ---
 
-// Flatten 3D weights vector into a 1D vector
+/**
+ * @brief flatten the 3D vector into 1D vector
+ * @param weights 3D vector
+ * @return 1D vector
+ */
 std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights) {
     std::vector<float> flat_weights;
     size_t total_weights = 0;
@@ -39,7 +43,12 @@ std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<floa
     return flat_weights;
 }
 
-// CUDA kernel for L1 penalty calculation
+/**
+ * @brief kernel for calculating L1 penalty
+ * @param[in] weights 3D vector whose penalty to be calculated
+ * @param[out] result L1 penalty
+ * @param[in] size size of weights
+ */
 __global__ void l1PenaltyKernel(float* weights, float* result, int size) {
     __shared__ float temp[256];
     int tid = threadIdx.x;
@@ -64,7 +73,12 @@ __global__ void l1PenaltyKernel(float* weights, float* result, int size) {
     }
 }
 
-// CUDA kernel for L2 penalty calculation
+/**
+ * @brief kernel for calculating L2 penalty
+ * @param[in] weights 3D vector whose penalty to be calculated
+ * @param[out] result L2 penalty
+ * @param[in] size size of weights
+ */
 __global__ void l2PenaltyKernel(float* weights, float* result, int size) {
     __shared__ float temp[256];
     int tid = threadIdx.x;
@@ -89,7 +103,13 @@ __global__ void l2PenaltyKernel(float* weights, float* result, int size) {
     }
 }
 
-// CUDA kernel for absolute difference calculation
+/**
+ * @brief kernel to calculate absolute difference
+ * @param[in] output original output vector from a process
+ * @param[in] targets expected output vector from same process
+ * @param[out] result absolute[output[i] - target[i]]
+ * @param[in] size size of each vector
+ */
 __global__ void absDiffKernel(float* outputs, float* targets, float* result, int size) {
     __shared__ float temp[256];
     int tid = threadIdx.x;
@@ -114,7 +134,13 @@ __global__ void absDiffKernel(float* outputs, float* targets, float* result, int
     }
 }
 
-// CUDA kernel for squared difference calculation
+/**
+ * @brief kernel to calculate squared difference
+ * @param[in] output original output vector from a process
+ * @param[in] targets expected output vector from same process
+ * @param[out] result absolute(output[i]^2 - target[i]^2)
+ * @param[in] size size of each vector
+ */
 __global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size) {
     __shared__ float temp[256];
     int tid = threadIdx.x;
@@ -146,6 +172,12 @@ __global__ void squaredDiffKernel(float* outputs, float* targets, float* result,
 
 // --- CUDA Penalty Functions ---
 
+
+/**
+ * @brief calculate L1 penalty with cuda kernel
+ * @param weights 3D vector of whose penalty is to be calculated
+ * @return L1 penalty
+ */
 float cugetL1Penalty(const std::vector<std::vector<std::vector<float>>>& weights) {
     std::vector<float> flat_weights = flattenWeights(weights);
     if (flat_weights.empty()) return 0.0f;
@@ -191,6 +223,11 @@ float cugetL1Penalty(const std::vector<std::vector<std::vector<float>>>& weights
     }
 }
 
+/**
+ * @brief calculate L2 penalty with cuda kernel
+ * @param weights 3D vector of whose penalty is to be calculated
+ * @return L2 penalty
+ */
 float cugetL2Penalty(const std::vector<std::vector<std::vector<float>>>& weights) {
     std::vector<float> flat_weights = flattenWeights(weights);
     if (flat_weights.empty()) return 0.0f;
@@ -238,6 +275,14 @@ float cugetL2Penalty(const std::vector<std::vector<std::vector<float>>>& weights
 
 // --- CUDA Loss Functions ---
 
+/**
+ * @brief calculate loss via L1 penalty with cuda kernel
+ * @param outputs output obtained from process
+ * @param expected expected output from process
+ * @param mlp network which performs process
+ * @param lambda L1 regularization parameter
+ * @return loss
+ */
 float cucomputeLossWithL1(const std::vector<float>& outputs, const std::vector<float>& targets, mlp& network, float lambda) {
     if (outputs.size() != targets.size()) {
         throw std::invalid_argument("Output and target vector sizes must match in computeLossWithL1.");
@@ -293,6 +338,14 @@ float cucomputeLossWithL1(const std::vector<float>& outputs, const std::vector<f
     }
 }
 
+/**
+ * @brief calculate loss via L2 penalty with cuda kernel
+ * @param outputs output obtained from process
+ * @param expected expected output from process
+ * @param mlp network which performs process
+ * @param lambda L2 regularization parameter
+ * @return loss
+ */
 float cucomputeLossWithL2(const std::vector<float>& outputs, const std::vector<float>& targets, mlp& network, float lambda) {
     if (outputs.size() != targets.size()) {
         throw std::invalid_argument("Output and target vector sizes must match in computeLossWithL2.");
@@ -348,7 +401,14 @@ float cucomputeLossWithL2(const std::vector<float>& outputs, const std::vector<f
     }
 }
 
-
+/**
+ * @brief calculate loss via dropout generalisation
+ * @param outputs output obtained from process
+ * @param expected expected output from process
+ * @param mlp network which performs process
+ * @param p dropout probability
+ * @return loss
+ */
 float cudropoutGeneralisation(const std::vector<float>& outputs, const std::vector<float>& targets, mlp& network, float p) {
     if (outputs.size() != targets.size()) {
         throw std::invalid_argument("Output and target vector sizes must match in dropoutGeneralisation.");

@@ -33,19 +33,20 @@ find_package(CUDAToolkit REQUIRED)
 
 if(CUDAToolkit_FOUND AND OpenCL_FOUND)
     set(USE_CUDA ON)
-    set(USE_OPENCL OFF)
-    set(USE_CPU OFF)
+    set(USE_OPENCL ON) # not for nvidia
+    set(USE_CPU OFF)    # gpu available
     message(STATUS "Using CUDA for compilation.")
 elseif(OpenCL_FOUND AND NOT CUDAToolkit_FOUND)
     set(USE_OPENCL ON)
-    set(USE_CUDA OFF)
+    set(USE_CUDA OFF)   # for non-nvidia
     set(USE_CPU OFF)
     message(STATUS "Using OpenCL for compilation.")
 else()
     set(USE_CUDA OFF)
     set(USE_OPENCL OFF)
-    set(USE_CPU ON)
-    message(FATAL_ERROR "Neither CUDA nor OpenCL found, provide CUDA/OPENCL.")
+    set(USE_CPU ON)     # cpu available
+    message(FATAL_ERROR "Neither CUDA nor OpenCL found, provide CUDA/OPENCL, 
+                        or use core C++ code with cpu.")
 endif()
 
 if(USE_CUDA)
@@ -53,24 +54,26 @@ if(USE_CUDA)
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-    set(CMAKE_CUDA_ARCHITECTURES 86)  # Ampere (RTX 30 series)
-    add_definitions(-DUSE_CUDA)
+    # Ampere (RTX 30 series)
+    set(MY_CUDA_ARCH "86" CACHE STRING "Target CUDA Architecture(s) e.g., 75, 86, 90")
+    set(CMAKE_CUDA_ARCHITECTURES ${MY_CUDA_ARCH})
+    add_compile_definitions(USE_CUDA)
     include_directories(${CUDAToolkit_INCLUDE_DIRS}) # Ensure CUDA headers are available
 elseif(USE_OPENCL)
     message(STATUS "Found OpenCL version ${OpenCL_CL_VERSION}")
     include_directories(${OpenCL_INCLUDE_DIRS})
-    add_definitions(-DUSE_OPENCL)
+    add_compile_definitions(USE_OPENCL)
 else(USE_CPU)
   message(STATUS "Using CPU Compilation")
-  add_definitions(-DUSE_CPU)
+  add_compile_definitions(USE_CPU)
 endif()
 
 # Set all subdirectories as subProjects
 set(subProjects
-    src/maths
-    src/neural
-    src/model
-    # src/script
+    src/maths       # math functions
+    src/neural      # neural network and mechanism
+    src/model       # model files
+    # src/script      # script for CLI
 )
 
 # Include each subdirectory
@@ -80,12 +83,3 @@ foreach(projects IN LISTS subProjects)
         add_subdirectory(${projects})
     endif()
 endforeach()
-
-# Add a global compile definitions
-if(USE_CUDA)
-  add_compile_definitions(USE_CUDA)
-elseif(USE_OPENCL)
-  add_compile_definitions(USE_OPENCL)
-else()
-    add_compile_definitions(USE_CPU)
-endif()

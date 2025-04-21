@@ -44,7 +44,7 @@
 class attention {
 public:
     bool isSelfAttention;   // = 0 if cross attention else = 1 for self attention
-    bool inTraining;        // = 1 for training, = 0 for in use
+    bool inTraining;        // = 1 for training, = 0 for inference
     int tokenCount;         // current token count for this head
     mlp ver;                // vertical propagation and next block transfer
     mlp hor;                // horizontal transfer to next head
@@ -86,11 +86,11 @@ public:
 // cuda equivalent functions for attention
     void cuforprop(int& in, int& layers, int& tokenCount);
     void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void cubackward(std::vector<float>& expected, int& in, int& layers);
-    void cubackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cubackward1stHead(std::vector<float>& expected, int& in, int& layers);
-    void cubackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cubackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cuBackward(std::vector<float>& expected, int& in, int& layers);
+    void cuBackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers);
+    void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cuBackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
 #elif USE_OPENCL
 // opencl equivalent functions for attention
     void clforprop(int& in, int& layers, int& tokenCount);
@@ -105,5 +105,18 @@ public:
     // default destructor
     ~attention() = default;
 };
+
+#ifdef USE_CUDA
+    __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
+    __device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim);
+    __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_sums, float* d_col_sums, 
+        int num_tokens, bool isSelfAttention);
+    __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
+        const float* d_K, const float* d_Q, float* d_dh_accum, float* d_dv_accum, int num_tokens, int h_dim);
+    __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
+        const float* d_K, const float* d_Q, float* d_dh_accum, float* d_dv_accum, int num_tokens, int h_dim);
+#elif
+
+#endif
 
 #endif

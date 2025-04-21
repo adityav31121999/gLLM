@@ -96,6 +96,10 @@ float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, floa
 
 #ifdef USE_CUDA
 // cuda implementation
+    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs, 
+    int input_size, int output_size);
+    __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
+    __global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
     float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);

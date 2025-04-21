@@ -30,8 +30,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers)
     }
 
     // Set MLP inputs for backprop
-    hor.output = grad_hor_input;
-    ver.output = grad_ver_input;
+    hor.expected = grad_hor_input;
+    ver.expected = grad_ver_input;
     hor.backward(in, layers, LEARNING);
     ver.backward(in, layers, LEARNING);
 
@@ -39,8 +39,10 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers)
     std::vector<float> grad_dh(EMBEDDING, 0.0f);
     std::vector<float> grad_dv(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_dh[i] = hor.gweights[0][i][0]; // Gradient from first layer of hor MLP
-        grad_dv[i] = ver.gweights[0][i][0]; // Gradient from first layer of ver MLP
+        for(int j = 0; j < EMBEDDING; j++) {
+            grad_dh[i] += hor.gweights[0][j][i]; // Gradient from first layer of hor MLP
+            grad_dv[i] += ver.gweights[0][j][i]; // Gradient from first layer of ver MLP
+        }
     }
 
     // Step 4: Compute gradients w.r.t. MH and MV
@@ -91,7 +93,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers)
 
     // Step 6: Backprop through LOTA
     std::vector<std::vector<float>> grad_KdotQ(tokenCount, std::vector<float>(tokenCount, 0.0f));
-    std::vector<std::vector<float>> lota_output = LOTA(KdotQ, tokenCount, isSelfAttention);lota_output = LOTA(KdotQ, tokenCount, isSelfAttention);
+    std::vector<std::vector<float>> lota_output = LOTA(KdotQ, tokenCount, isSelfAttention);
     float sum_lota = 0.0f;
     for (int i = 0; i < tokenCount; i++) {
         for (int j = 0; j < tokenCount; j++) {
@@ -326,7 +328,6 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& in, in
 
 
 // BACKWARD Propagations specifically for first head of blocks
-
 
 /**
  * @brief Backward Propagation (for first head) for the attention class using gradients from expected 
@@ -776,7 +777,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
             for (int h = 0; h < MATHEIGHTS; h++) {
                 for (int d = 0; d < EMBEDDING; d++) {
                     // grad_MQ
-                    grad_MQ[h][d] += grad_Q[j][h] * Q[j][d];
+                    grad_MQ[h][d] += grad_Q[h][d] * Q[j][d];
                     // grad_MK_correction
                     grad_MK_correction[h][d] += -grad_MQ[h][d] * Q[j][h] * K[i][h];
                 }
@@ -794,3 +795,17 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
         }
     }
 }
+
+
+/** CUDA
+ * kernel to calculate delta
+ * kernel to apply ReLU-derivative based gradient to expected vector of mlp
+ * use backprop kernel for mlp backpropagation
+ * get column-wise sum from first gradient weights and use it for dh, dv gradients
+ * compute gradients for MH and MV
+ * compute gradients w.r.t. head
+ * compute accumulated gradient w.r.t. Keys and Queries
+ * compute accumulated gradient w.r.t. MQ and MK
+ * update MQ, MK, MV and MH
+ * update EH and EV
+ */

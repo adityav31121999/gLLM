@@ -7,6 +7,9 @@
 /**
  * @brief The backward propagation function. This function performs the
  * backward propagation and calculates the error.
+ * @param in dimension of input, output and size of weight layers
+ * @param layers number of weight layers
+ * @param learning learning rate for mlp
  */
 void mlp::backward(int in, int layers, float learning) {
     // Initialize vectors
