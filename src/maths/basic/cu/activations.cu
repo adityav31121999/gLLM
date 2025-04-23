@@ -450,6 +450,7 @@ __global__ void cuLOTAder(float* y, float* out, int size) {
         }
     }
 }
+
 /**
  * @brief cuda function for LOTA derivative
  * @param[in] y input array
@@ -499,6 +500,7 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols) {
         }
     }
 }
+
 /**
  * @brief cuda function for LOTA derivative
  * @param[in] y input array

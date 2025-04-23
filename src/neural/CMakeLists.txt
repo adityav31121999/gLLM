@@ -15,6 +15,10 @@ add_library(neural STATIC
     src/mlp/train.cpp
 
     src/mlp/cu/backprop.cu
+    src/mlp/cu/backward.cu
+    src/mlp/cu/backwithL1.cu
+    src/mlp/cu/backwithL2.cu
+    src/mlp/cu/rprop.cu
     src/mlp/cu/loss.cu
     src/mlp/cu/forprop.cu
     src/mlp/cu/train.cu
@@ -28,8 +32,11 @@ add_library(neural STATIC
     src/attention/attention.cpp
     src/attention/forward.cpp
     src/attention/backward.cpp
+    src/attention/backward1sthead.cpp
+
     src/attention/cu/forward.cu
     src/attention/cu/backward.cu
+    src/attention/cu/backward1sthead.cu
     src/attention/cu/kernels.cu
 
     # block

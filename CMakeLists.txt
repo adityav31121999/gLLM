@@ -31,9 +31,10 @@ find_package(OpenCL REQUIRED)
 # CUDA setup
 find_package(CUDAToolkit REQUIRED)
 
+# Check for which dependency to use
 if(CUDAToolkit_FOUND AND OpenCL_FOUND)
     set(USE_CUDA ON)
-    set(USE_OPENCL ON) # not for nvidia
+    set(USE_OPENCL OFF) # not for nvidia
     set(USE_CPU OFF)    # gpu available
     message(STATUS "Using CUDA for compilation.")
 elseif(OpenCL_FOUND AND NOT CUDAToolkit_FOUND)
@@ -49,8 +50,10 @@ else()
                         or use core C++ code with cpu.")
 endif()
 
+# set compile definitions
 if(USE_CUDA)
     message(STATUS "Found CUDA version ${CUDAToolkit_VERSION}")
+    message(STATUS "Using CUDA for better efficiency on CUDA-based GPUs :)")
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
@@ -61,10 +64,12 @@ if(USE_CUDA)
     include_directories(${CUDAToolkit_INCLUDE_DIRS}) # Ensure CUDA headers are available
 elseif(USE_OPENCL)
     message(STATUS "Found OpenCL version ${OpenCL_CL_VERSION}")
+    message(STATUS "Using OpenCL for better efficiency on non-CUDA CL-conformant GPUs :)")
     include_directories(${OpenCL_INCLUDE_DIRS})
     add_compile_definitions(USE_OPENCL)
 else(USE_CPU)
   message(STATUS "Using CPU Compilation")
+  message(STATUS "Using C++ for CPU based operations :)")
   add_compile_definitions(USE_CPU)
 endif()
 

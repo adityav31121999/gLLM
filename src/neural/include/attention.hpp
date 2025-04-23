@@ -107,15 +107,90 @@ public:
 };
 
 #ifdef USE_CUDA
+
+    std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
+    std::vector<float> flatten(mat&);
+    void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
+    // dot product and multiplication
+    __device__ void cuComputeKorQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height);
+    __device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc);
     __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
     __device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim);
+    __global__ void kernelElementwiseMultiply(float* target_and_output, const float* factor, int size);
+    // forward propagation
     __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_sums, float* d_col_sums, 
         int num_tokens, bool isSelfAttention);
     __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
         const float* d_K, const float* d_Q, float* d_dh_accum, float* d_dv_accum, int num_tokens, int h_dim);
-    __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
-        const float* d_K, const float* d_Q, float* d_dh_accum, float* d_dv_accum, int num_tokens, int h_dim);
-#elif
+    // training with forward propagation
+    __global__ void kernelKdotQforSelf_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff, 
+                int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff,
+                int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    // backprop
+    __global__ void kernelComputeGradDhDv_1stHead(const float* d_hor_gweights0, const float* d_ver_gweights0,
+        float* grad_dh, float* grad_dv, int embedding_dim);
+    __global__ void kernelComputeGradientsEH_EV(const float* eh, const float* expected_h,
+        float* grad_eh, float* grad_ev_scaled, int embedding_dim);
+    __global__ void kernelComputeGradDhDv(const float* d_hor_gweights0, const float* d_ver_gweights0,
+        float* grad_dh, float* grad_dv, int embedding_dim);
+    __global__ void kernelComputePreMH_MV(const float* head, const float* k, const float* q,
+        float* pre_mh, float* pre_mv, int token_count, int mat_heights);
+    __global__ void kernelComputeGradMH_MV(const float* pre_mh, const float* pre_mv, const float* grad_dh, 
+        const float* grad_dv, float* grad_mh, float* grad_mv, int mat_heights, int embedding_dim);
+    __global__ void kernelComputeGradHead(const float* k, const float* q, const float* mh_a, const float* mv_a,
+        const float* grad_dh, const float* grad_dv, float* grad_head, int token_count, int mat_heights, 
+        int embedding_dim);
+    __global__ void kernelComputeGradKdotQ_LOTA(const float* grad_head, const float* lota_derivative,
+        float* grad_kdotq, float scaling_factor, int size);
+    __global__ void kernelComputeGradK_Q(const float* grad_kdotq, const float* k, const float* q,
+        float* grad_k, float* grad_q, int token_count, int mat_heights);
+    __global__ void kernelComputeGradMK_MQ(const float* grad_k, const float* grad_q, const float* k, 
+        const float* q, float* grad_mk, float* grad_mq, int token_count, int mat_heights, int embedding_dim);
+    __global__ void kernelUpdateWeights_EH_EV(float* mh_a, float* mv_a, float* mq_a, float* mk_a, float* eh, 
+        float* ev, const float* grad_mh, const float* grad_mv, const float* grad_mq, const float* grad_mk,
+        const float* grad_eh, const float* grad_ev_scaled, float learning_rate, int mat_heights, int embedding_dim, 
+        int context_win);
+    __global__ void kernelComputeGradientsEV_V(const float* ev, const float* expected_v, float* grad_ev_full, 
+        float* grad_ev_summed, float* grad_ev_scaled, float learning_rate, int context_win, int embedding_dim);
+    __global__ void kernelComputeGradDv_V(const float* d_ver_gweights0, float* grad_dv, int embedding_dim);
+    __global__ void kernelComputePreMV_V(const float* head, const float* q, float* pre_mv, int token_count, int mat_heights);
+    __global__ void kernelComputeGradMV_V(const float* pre_mv, const float* grad_dv, float* grad_mv, int mat_heights, 
+        int embedding_dim);
+    __global__ void kernelComputeGradHead_V(const float* q, const float* mv_a, const float* grad_dv, float* grad_head,
+        int token_count, int mat_heights, int embedding_dim);
+    __global__ void kernelComputeGradQ_V(const float* grad_kdotq, const float* k, float* grad_q, int token_count, 
+        int mat_heights);
+    __global__ void kernelComputeGradMQ_V(const float* grad_q, const float* q, float* grad_mq, int token_count, int mat_heights, 
+        int embedding_dim);
+    __global__ void kernelComputeGradMKCorrection(const float* grad_mq, const float* q, const float* k, float* grad_mk_correction,
+        int token_count, int mat_heights, int embedding_dim);
+    __global__ void kernelUpdateWeights_EV_V(float* mv_a, float* mq_a, float* mk_a, float* ev, const float* grad_mv, const float* grad_mq,
+        const float* grad_mk_correction, const float* grad_ev_full, float learning_rate, int mat_heights, int embedding_dim, 
+        int context_win);
+    __global__ void kernelComputeGradMK_MQ_Simplified(const float* grad_k, const float* grad_q, const float* k_embed, const float* q_embed,
+        float* grad_mk, float* grad_mq, int token_count, int mat_heights, int embedding_dim);
+    __global__ void kernelUpdateWeights_1stHead_H(float* mh_a, float* mv_a, float* mq_a, float* mk_a, float* eh, const float* grad_mh, 
+        const float* grad_mv, const float* grad_mq, const float* grad_mk, const float* grad_eh, float learning_rate, bool update_eh,
+        int mat_heights, int embedding_dim);    
+    __global__ void kernelUpdateWeights_1stHead_V(float* mv_a, float* mq_a, float* mk_a, const float* grad_mv, const float* grad_mq,
+        const float* grad_mk_correction, float learning_rate, int mat_heights, int embedding_dim);
+    __global__ void kernelUpdateWeights_1stHead_HV(float* mh_a, float* mv_a, float* mq_a, float* mk_a, const float* grad_mh, 
+        const float* grad_mv, const float* grad_mq, const float* grad_mk, float learning_rate, int mat_heights, int embedding_dim);
+    // inference 
+    __global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M, 
+                int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);            
+    __global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
+                int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
+                const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width, 
+                int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
+                const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width, 
+                int embedding_dim, float inv_scaling);
+    __global__ void kernelComputeGradDhDv_1stHead(const float* d_hor_gweights0, const float* d_ver_gweights0,
+                float* grad_dh, float* grad_dv, int embedding_dim);
+    __global__ void kernelUpdateSimple(float* weights_to_update, const float* gradients, float lr, size_t n_elements);
 
 #endif
 

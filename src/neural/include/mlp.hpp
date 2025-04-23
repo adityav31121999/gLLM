@@ -96,6 +96,21 @@ float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, floa
 
 #ifdef USE_CUDA
 // cuda implementation
+    __global__ void kernelOutputDelta(float* output, float* expected, float* delta, int size);
+    __global__ void hiddenDeltaKernel(float* next_layer_deltas, float* weights, float* activations, 
+    float* deltas, int current_layer_size, int next_layer_size);
+    __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
+        int current_layer_size, int input_size);
+    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size);
+    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights,
+        float learning_rate, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights,
+        float* gradients, float learning_rate, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL1Kernel(float* weights, float* deltas, float* prev_activations,
+        float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL2Kernel(float* weights, float* deltas, float* prev_activations,
+        float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
+    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size);
     __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs, 
     int input_size, int output_size);
     __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
