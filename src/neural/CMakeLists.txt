@@ -46,6 +46,9 @@ add_library(neural STATIC
     src/block/backward.cpp
     
     src/block/cu/kdotq.cu
+    src/block/cu/forward.cu
+    src/block/cu/partialback.cu
+    src/block/cu/backward.cu
 
     # transformer
     src/transformer/compute.cpp
@@ -58,6 +61,10 @@ add_library(neural STATIC
     src/transformer/getVal.cpp
 
     src/transformer/cu/cucompute.cu
+    src/transformer/cu/feedfor.cu
+    src/transformer/cu/backward.cu
+    src/transformer/cu/train.cu
+    src/transformer/cu/run.cu
 
     src/transformer/cl/clcompute.cl
 )

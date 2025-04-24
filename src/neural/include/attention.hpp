@@ -116,6 +116,7 @@ public:
     __device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc);
     __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
     __device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim);
+    __global__ void computeAllDotsKernel(const float* vector, const float* matrix, float* results, int num_rows, int vector_dim);
     __global__ void kernelElementwiseMultiply(float* target_and_output, const float* factor, int size);
     // forward propagation
     __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_sums, float* d_col_sums, 

@@ -1,9 +1,4 @@
 
-// cl/loss.cl
-// OpenCL kernels for MLP loss and penalty calculations
-
-#include <CL/cl.hpp>
-#include <cmath>
 
 /*
  * Kernel to calculate the L1 penalty (sum of absolute values) using parallel reduction.

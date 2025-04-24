@@ -6,7 +6,8 @@
 /**
  * @brief Run transformer using model parameters of cache and MLPs for inference, use
  * cache QK' for calculation of KdotQ and then use caches QV' and KH' for EV and EH 
- * calculation.
+ * calculation. Uses KdotQ[i][j] = Ti x qkCache x Tj for kdotq calculation and 
+ * qvCache and khCache for EV and EH calculation.
  */
 void transformer::run() {
     // set for inference

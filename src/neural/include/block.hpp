@@ -50,6 +50,8 @@ public:
     block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     block(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool inTraining);
 
+    // KdotQ for parallels
+    void parallelKdotQ(int& columnNumber, int& tokenCount);
     // partial attention forprop
     void partialforprop(int& in, int& tokenCount, int i, int& layers);
     void partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
@@ -73,9 +75,9 @@ public:
 
 #ifdef USE_CUDA
 // cuda equivalent functions for block (for parallels in loop)
-    void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount);
-    void cuParallelUseKdotQ(std::vector<std::vector<float>>& tokenEmbed, mat& m, int& columnNumber, int& tokenCount);
-    void cuParallelUseKdotQ(std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp, mat& m, int& columnNumber, int& blockNumber, int& tokenCount);
+    void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& promptCount, int& tokenCount, bool isSelfAttention);
+    void cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed, int& columnNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
+    void cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>>& EVp, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
     // for single parallel
     void cu1parallelForprop(int& in, int& tokenCount, int i, int& layers);
     void cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);

@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(gLLM C CXX)
 set(VERSION 0.0.0.1)
 
+message("Project Name: ${PROJECT_NAME} ${VERSION}")
+
 # language settings
 enable_language(C CXX)
 set(CMAKE_C_STANDARD 17)
@@ -68,8 +70,9 @@ elseif(USE_OPENCL)
     include_directories(${OpenCL_INCLUDE_DIRS})
     add_compile_definitions(USE_OPENCL)
 else(USE_CPU)
+    message(STATUS "OpenCL and CUDA not found.")
   message(STATUS "Using CPU Compilation")
-  message(STATUS "Using C++ for CPU based operations :)")
+  message(STATUS "Using C++ on CPU for operations :)")
   add_compile_definitions(USE_CPU)
 endif()
 
