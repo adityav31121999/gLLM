@@ -9,7 +9,7 @@
  * @param x Input value
  * @return Sigmoid of x
  */
-float sigmoid(float& x) {
+float sigmoid(const float& x) {
     // The sigmoid function is defined as 1 / (1 + exp(-x)).
     return (1 / (1 + std::exp(-x)));
 }
@@ -20,7 +20,7 @@ float sigmoid(float& x) {
  * @param x Input value
  * @return The derivative of sigmoid(x)
  */
-float sigmoidder(float& x) {
+float sigmoidder(const float& x) {
     // Calculate the sigmoid of x
     float s = sigmoid(x);
     // Calculate the derivative of sigmoid(x)
@@ -33,7 +33,7 @@ float sigmoidder(float& x) {
  * vector in-place.
  * @return Sigmoid of vector: element-wise
  */
-std::vector<float> sigmoid(std::vector<float>& x) {
+std::vector<float> sigmoid(const std::vector<float>& x) {
     std::vector<float> y(x);
     std::transform(x.begin(), x.end(), y.begin(), [](float& i){ return sigmoid(i); });
     return y;
@@ -46,7 +46,7 @@ std::vector<float> sigmoid(std::vector<float>& x) {
  * @return A vector where each element is the derivative of the corresponding 
  *      element in the input vector.
  */
-std::vector<float> sigmoidder(std::vector<float> x) {
+std::vector<float> sigmoidder(const std::vector<float>& x) {
     // Create a copy of the input vector
     std::vector<float> y(x);
     // Apply the derivative of sigmoid function to each element of the input vector
@@ -59,7 +59,7 @@ std::vector<float> sigmoidder(std::vector<float> x) {
  * @param x A reference to the input matrix. 
  * @return Sigmoid of matrix: element-wise
  */
-std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>>& x) {
+std::vector<std::vector<float>> sigmoid(const std::vector<std::vector<float>>& x) {
     std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     for (size_t i = 0; i < x.size(); ++i) {
         for(size_t j = 0; j < x[0].size(); ++j) {
@@ -76,7 +76,7 @@ std::vector<std::vector<float>> sigmoid(std::vector<std::vector<float>>& x) {
  * @return A matrix where each element is the derivative of the corresponding 
  *      element in the input matrix.
  */
-std::vector<std::vector<float>> sigmoidder(std::vector<std::vector<float>>& x) {
+std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>& x) {
     std::vector<std::vector<float>> result(x.size(), std::vector<float>(x[0].size()));
     for (size_t i = 0; i < x.size(); ++i) {
         for(size_t j = 0; j < x[0].size(); ++j) {
@@ -98,21 +98,26 @@ std::vector<std::vector<float>> sigmoidder(std::vector<std::vector<float>>& x) {
  *          uniform distribution.
  * @return Vector of softmax values
  */
-std::vector<float> softmax(std::vector<float> x, float temp = 1.0) {
-    // Create a copy of the input vector
-    std::vector<float> y(x);
-    // Calculate the sum of the exponentials of the vector elements
-    float sum = 0;
-    // Calculate the sum of the exponentials of the vector elements
-    std::transform(y.begin(), y.end(), y.begin(), [temp](float& val) { return exp(val / temp); });
-    sum = std::accumulate(y.begin(), y.end(), 0.0);
-    // Normalize the exponentials by dividing each by the sum
-    std::transform(y.begin(), y.end(), y.begin(), [sum](float val) {
-        return val / sum;
-    });
-    // Return the normalized vector
-    return y;
+std::vector<float> softmax(const std::vector<float>& x, float& temp) {
+    if (x.empty()) return {};
+    
+    float inv_temp = 1.0f / temp;
+    float max_val = *std::max_element(x.begin(), x.end());
+    
+    std::vector<float> exps(x.size());
+    float sum = 0.0f;
+    for (size_t i = 0; i < x.size(); ++i) {
+        exps[i] = std::exp((x[i] - max_val) * inv_temp);
+        sum += exps[i];
+    }
+
+    if (sum == 0.0f) return std::vector<float>(x.size(), 1.0f / x.size());
+
+    for (float& val : exps) val /= sum;
+    return exps;
 }
+
+
 
 /**
  * @brief Derivative of softmax activation function This function calculates the derivative of 
@@ -126,30 +131,17 @@ std::vector<float> softmax(std::vector<float> x, float temp = 1.0) {
  *          uniform distribution.
  * @return The derivative of softmax(x) for each input value
  */
-std::vector<float> softmaxder(std::vector<float> x, float temp = 1.0) {
-    // Create a copy of the input vector
-    std::vector<float> y(x);
-    // Calculate the sum of exponential of each element of the input vector
-    float sum = 0;
-    std::for_each(y.begin(), y.end(), [&sum, temp](float& val) { sum += exp(val/temp); });
-    // Calculate the softmax of each element of the input vector
-    std::for_each(y.begin(), y.end(), [&sum](float& val) { val = exp(val) / sum; });
-    // Calculate the derivative of softmax(x) for each input value
-    std::vector<float> result(y.size(), 0.0);
-    for (size_t i = 0; i < y.size(); ++i) {
-        // Calculate the derivative of softmax(x) using the formula: softmax_derivative(x) = softmax(x) * (1 - softmax(x))
-        result[i] = y[i] * (1 - y[i]);
-        // Subtract the softmax of each other element from the derivative of softmax(x)
-        for (size_t j = 0; j < y.size(); ++j) {
-            if (i == j) {
-                continue;
-            }
-            result[i] -= y[j];
-        }
-    }
-    // Return the vector of derivatives
-    return result;
+std::vector<float> softmaxder(const std::vector<float>& x, float& temp) {
+    auto s = softmax(x, temp);
+    std::vector<float> grad(s.size());
+
+    for (size_t i = 0; i < s.size(); ++i)
+        grad[i] = s[i] * (1.0f - s[i]);
+
+    return grad;
+
 }
+
 
 /**
  * @brief Softmax activation function. Applies the softmax function to each element of a 2D vector.
@@ -161,21 +153,16 @@ std::vector<float> softmaxder(std::vector<float> x, float temp = 1.0) {
  *          uniform distribution.
  * @return Vector of softmax values
  */
-std::vector<std::vector<float>> softmax(std::vector<std::vector<float>> x, float temp = 1.0) {
-    // Create a copy of the input vector
-    std::vector<std::vector<float>> y(x);
-    // Calculate the sum of the exponentials of the vector elements
-    float sum = 0.0;
-    for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&temp](float& i){ return exp(i/temp); });
-        sum += std::accumulate(v.begin(), v.end(), 0.0);
-    }
-    // Normalize each element by dividing it by the total sum
-    for (auto& v: x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return i / sum; });
-    }
-    return y;
+std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float temp) {
+    std::vector<std::vector<float>> result;
+    result.reserve(x.size());
+
+    for (const auto& row : x)
+        result.push_back(softmax(row, temp));
+
+    return result;
 }
+
 
 /**
  * @brief Derivative of softmax activation function. Calculates the derivative of the softmax function for each element of a 2D vector.
@@ -188,38 +175,14 @@ std::vector<std::vector<float>> softmax(std::vector<std::vector<float>> x, float
  *          uniform distribution.
  * @return The derivative of softmax(x) for each input value
  */
-std::vector<std::vector<float>> softmaxder(std::vector<std::vector<float>> x, float temp = 1.0) {
-    // Create a copy of the input vector
-    std::vector<std::vector<float>> y(x);
-    // Calculate the sum of the exponentials of the vector elements
-    float sum = 0.0;
-    for (auto& v : x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&temp](float& i){ return exp(i/temp); });
-        sum += std::accumulate(v.begin(), v.end(), 0.0);
-    }
-    // Normalize each element by dividing it by the total sum
-    for (auto& v: x) {
-        std::transform(v.begin(), v.end(), v.begin(), [&sum](float& i){ return i / sum; });
-    }
-    std::vector<std::vector<float>> result(y.size(), std::vector<float>(y[0].size()));       // Initialize the result vector
-    // Calculate the derivative of softmax(x) for each input value
-    for (size_t i = 0; i < y.size(); ++i) {
-        for (size_t j = 0; j < y[0].size(); ++j) {
-            result[i][j] = y[i][j] * (1 - y[i][j]);
-            // Subtract the softmax of each other element from the derivative of softmax(x)
-            std::transform(y[i].begin(), y[i].end(), result[i].begin(), [i, &y](float val){ 
-                float sum = 0.0;
-                for (size_t k = 0; k < y[0].size(); ++k) {
-                    if (k == i) {
-                        continue;
-                    }
-                    sum += y[i][k];
-                }
-                return val * (1 - val) - sum;
-            });
-        }
-    }
-    return y;
+std::vector<std::vector<float>> softmaxder(const std::vector<std::vector<float>>& x, float temp) {
+    std::vector<std::vector<float>> result;
+    result.reserve(x.size());
+
+    for (const auto& row : x)
+        result.push_back(softmaxder(row, temp));
+
+    return result;
 }
 
 //----------------ReLU----------------//
@@ -229,7 +192,7 @@ std::vector<std::vector<float>> softmaxder(std::vector<std::vector<float>> x, fl
  * @param x Input value
  * @return The ReLU of x, which is the maximum of 0 and x
  */
-float ReLU(float& x) {
+float ReLU(const float& x) {
     // The ReLU function is defined as max(0, x)
     return std::max(float(0), x); // Return the maximum of 0 and x
 }
@@ -241,7 +204,7 @@ float ReLU(float& x) {
  * @param x Input value
  * @return 0 if x < 0, 1 otherwise
  */
-float ReLUder(float& x) {
+float ReLUder(const float& x) {
     // The derivative of the ReLU function is 0 if the input value is less than 0, and 1 otherwise.
     return (x > 0) ? 1 : 0; // Return 1 if x > 0, 0 otherwise
 }
@@ -251,7 +214,7 @@ float ReLUder(float& x) {
  * @param x Input vector
  * @return A vector where each element is the ReLU of the corresponding element in the input vector.
  */
-std::vector<float> ReLU(std::vector<float> x) {
+std::vector<float> ReLU(const std::vector<float>& x) {
     // Create a copy of the input vector
     std::vector<float> y(x);
     // Apply the ReLU function to each element of the input vector
@@ -264,7 +227,7 @@ std::vector<float> ReLU(std::vector<float> x) {
  * @param x Input vector
  * @return A vector where each element is the ReLU of the corresponding element in the input vector.
  */
-std::vector<float> ReLUder(std::vector<float> x) {
+std::vector<float> ReLUder(const std::vector<float>& x) {
     // Create a copy of the input vector
     std::vector<float> y(x);
     // Apply the ReLU function to each element of the input vector
@@ -277,7 +240,7 @@ std::vector<float> ReLUder(std::vector<float> x) {
  * @param x input matrix
  * @param t allowable terms
  */
-std::vector<std::vector<float>> ReLU(std::vector<std::vector<float>>& x, int& t) {
+std::vector<std::vector<float>> ReLU(const std::vector<std::vector<float>>& x, int& t) {
     std::vector<std::vector<float>> result(t, std::vector<float>(t, 0.0f));
     for (int i = 0; i < t; i++) {
         for(int j = 0; j < t; j++) {
@@ -293,7 +256,7 @@ std::vector<std::vector<float>> ReLU(std::vector<std::vector<float>>& x, int& t)
  *      This function applies the derivative of the ReLU function to each element in the input matrix.
  * @param x input matrix
  */
-std::vector<std::vector<float>> ReLUder(std::vector<std::vector<float>>& x, int& t) {
+std::vector<std::vector<float>> ReLUder(const std::vector<std::vector<float>>& x, int& t) {
     std::vector<std::vector<float>> result(t, std::vector<float>(t, 0.0f));
     for (int i = 0; i < t; i++) {
         for(int j = 0; j < t; j++) {
@@ -313,7 +276,7 @@ std::vector<std::vector<float>> ReLUder(std::vector<std::vector<float>>& x, int&
  * @param y Input 2D vector
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
-std::vector<float> LOTA(std::vector<float>& y) {
+std::vector<float> LOTA(const std::vector<float>& y) {
     if(y.empty()) {
         return {0};
     }
@@ -344,7 +307,7 @@ std::vector<float> LOTA(std::vector<float>& y) {
  * @param y Input vector
  * @return A vector where each element is the derivative of the LOTA function applied to the corresponding element in the input vector.
  */
-std::vector<float> LOTAder(std::vector<float>& y) {
+std::vector<float> LOTAder(const std::vector<float>& y) {
     // Create a copy of the input vector
     std::vector<float> v(y);
     // Find the minimum value in the entire vector
@@ -369,48 +332,81 @@ std::vector<float> LOTAder(std::vector<float>& y) {
  * @param t allowable terms
  * @return A 2D vector where each vector is the result of the LOTA function applied to the corresponding vector in the input.
  */
-std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>>& y, int& t, bool& attentionType) {
+std::vector<std::vector<float>> LOTA(const std::vector<std::vector<float>>& y, int& t, bool& attentionType) {
     // Create a copy of the input 2D vector
-    std::vector<std::vector<float>> x(y);
-    // Create a copy of the input 2D vector
-    if(y.size() == 1 && y[0].size() == 1) {
-        x[0][0] = 1;
+    std::vector<std::vector<float>> x = y; // Operate on copy
+    if (y.empty() || y[0].empty()) return {{}};
+
+    if(y.size() == 1 && y[0].size() == 1 && t == 1) {
+        x[0][0] = 1.0f; // Ensure float
         return x;
     }
-    // set all the values of x which are above diagonal and right side of diagonal to 0
-    if(attentionType == 1) {
-        for (int i = 0; i < t; i++) {
-            for(int j = i+1; j < t; j++) {
-                x[i][j] = 0;
+
+    // Find the minimum value in the relevant region
+    float min_val = std::numeric_limits<float>::max(); // Initialize with max float
+    bool found_value = false;
+    for (int i = 0; i < t; ++i) {
+        int limit_j = attentionType ? (i + 1) : t; // Corrected limit for attentionType=1
+        limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+        for (int j = 0; j < limit_j; ++j) {
+             if (i < x.size()) { // Boundary check
+                min_val = std::min(min_val, x[i][j]);
+                found_value = true;
+             }
+        }
+    }
+     if (!found_value) min_val = 0.0f; // Handle empty relevant region
+
+    float abs_min_val = std::abs(min_val);
+
+    // Transform relevant elements: element + abs(min_val)
+    float sum = 0.0f;
+    int relevant_count = 0;
+    for (int i = 0; i < t; ++i) {
+        int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+        limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+         if (i < x.size()) { // Boundary check
+            for (int j = 0; j < limit_j; ++j) {
+                x[i][j] = x[i][j] + abs_min_val;
+                sum += x[i][j];
+                relevant_count++;
+            }
+            // Zero out non-relevant elements if attentionType=1
+             if (attentionType) {
+                 for (int j = limit_j; j < x[i].size(); ++j) {
+                     x[i][j] = 0.0f;
+                 }
+             }
+        }
+    }
+
+    // Normalize relevant elements by the global sum
+    if (sum > 0.0f) {
+        for (int i = 0; i < t; ++i) {
+            int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+            limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+             if (i < x.size()) { // Boundary check
+                for (int j = 0; j < limit_j; ++j) {
+                    x[i][j] /= sum;
+                }
+            }
+        }
+    } 
+    else if (relevant_count > 0) {
+        // Handle sum=0 case (e.g., all relevant elements were -abs_min_val)
+        float uniform_val = 1.0f / relevant_count;
+         for (int i = 0; i < t; ++i) {
+            int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+            limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+             if (i < x.size()) { // Boundary check
+                for (int j = 0; j < limit_j; ++j) {
+                    x[i][j] = uniform_val; // Assign uniform probability
+                }
             }
         }
     }
-    // Find the minimum value in the entire 2D vector
-    float min_val = 0.0;
-    for (int i = 0; i < t; i++) {
-        for(int j = 0; j < (attentionType ? i : t); j++) {
-            if (x[i][j] < min_val)
-                min_val = x[i][j];
-        }
-    }
-    min_val = std::abs(min_val);
-    // Subtract the minimum value from each element in the 2D vector
-    for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + (attentionType ? i : t), x[i].begin(), [&min_val](float& j){ 
-            return (j + min_val); 
-        });
-    }
-    float sum = 0.0;        // Variable to store the sum of all elements
-    // Calculate the sum of all elements in the 2D vector
-    for (int i = 0; i < t; i++) {
-        sum += std::accumulate(x[i].begin(), x[i].begin() + (attentionType ? i : t), 0.0);
-    }
-    // Normalize each element by dividing it by the total sum
-    for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + (attentionType ? i : t), x[i].begin(), [&sum](float& j){ 
-            return j / sum;
-        });
-    }
+    // Non-relevant elements remain 0 (or their original value if not attentionType=1 and j>=t)
+
     return x; // Return the normalized 2D vector
 }
 
@@ -425,32 +421,82 @@ std::vector<std::vector<float>> LOTA(std::vector<std::vector<float>>& y, int& t,
  * @return A 2D vector where each element is the derivative of the LOTA function applied 
  *         to the corresponding element in the input vector.
  */
-std::vector<std::vector<float>> LOTAder(std::vector<std::vector<float>>& y, int& t, bool& attentionType) {
-    // Create a copy of the input 2D vector
-    std::vector<std::vector<float>> x(y);
-    // Find the minimum value in the entire 2D vector
-    float min_val = 0.0; 
-    for (int i = 0; i < t; i++) {
-        for(int j = 0; j < t; j++) {
-            if (x[i][j] < min_val)
-                min_val = x[i][j];
+std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y, int& t, bool& attentionType) {
+    if (y.empty() || y[0].empty()) return {{}};
+    std::vector<std::vector<float>> x = y; // Create a copy
+
+    // Find the minimum value *in the relevant region*
+    float min_val = std::numeric_limits<float>::max();
+    bool found_value = false;
+    for (int i = 0; i < t; ++i) {
+        int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+        limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+         if (i < x.size()) { // Boundary check
+            for (int j = 0; j < limit_j; ++j) {
+                min_val = std::min(min_val, x[i][j]);
+                found_value = true;
+            }
         }
     }
-    min_val = std::abs(min_val);
-    // Subtract the minimum value from each element in the 2D vector
-    for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&min_val](float& i){ return (i + min_val); });
+    if (!found_value) min_val = 0.0f;
+
+    float abs_min_val = std::abs(min_val);
+
+    // Calculate the sum of (element + abs(min_val)) *in the relevant region*
+    float sum = 0.0f;
+    int relevant_count = 0;
+    std::vector<std::vector<float>> transformed_x = x; // Store transformed values temporarily
+    for (int i = 0; i < t; ++i) {
+        int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+        limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+         if (i < x.size()) { // Boundary check
+            for (int j = 0; j < limit_j; ++j) {
+                transformed_x[i][j] = x[i][j] + abs_min_val;
+                sum += transformed_x[i][j];
+                relevant_count++;
+            }
+        }
     }
-    float sum = 0.0; // Variable to store the sum of all elements
-    // Calculate the sum of all elements in the 2D vector
-    for (int i = 0; i < t; i++) {
-        sum += std::accumulate(x[i].begin(), x[i].begin() + t, 0.0);
+
+    // Calculate the derivative for each element *in the relevant region*
+    float sum_sq = sum * sum; // Use float for pow(sum, 2)
+    if (sum > 0.0f) { // Avoid division by zero in derivative
+        for (int i = 0; i < t; ++i) {
+            int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+            limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+             if (i < x.size()) { // Boundary check
+                for (int j = 0; j < limit_j; ++j) {
+                    // Derivative: (sum - transformed_element) / sum^2
+                    x[i][j] = (sum - transformed_x[i][j]) / sum_sq;
+                }
+                // Zero out non-relevant elements if attentionType=1
+                 if (attentionType) {
+                     for (int j = limit_j; j < x[i].size(); ++j) {
+                         x[i][j] = 0.0f;
+                     }
+                 }
+            }
+        }
+    } 
+    else {
+         // Handle sum=0 case for derivative (derivative is likely 0 or undefined)
+         for (int i = 0; i < t; ++i) {
+            int limit_j = attentionType ? (i + 1) : t; // Corrected limit
+            limit_j = std::min(limit_j, (int)x[i].size()); // Boundary check
+             if (i < x.size()) { // Boundary check
+                for (int j = 0; j < limit_j; ++j) {
+                    x[i][j] = 0.0f; // Set derivative to 0
+                }
+                 // Zero out non-relevant elements if attentionType=1
+                 if (attentionType) {
+                     for (int j = limit_j; j < x[i].size(); ++j) {
+                         x[i][j] = 0.0f;
+                     }
+                 }
+            }
+        }
     }
-    // Calculate the derivative of the LOTA function for each element
-    for (int i = 0; i < t; i++) {
-        std::transform(x[i].begin(), x[i].begin() + t, x[i].begin(), [&sum](float& i) {
-            return ((sum - i) / static_cast<float>(std::pow(sum, 2)));
-        });
-    }
+    // Non-relevant elements remain 0 (or their original value if not attentionType=1 and j>=t)
+
     return x; // Return the derived 2D vector
 }

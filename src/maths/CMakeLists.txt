@@ -14,8 +14,8 @@ add_library(maths STATIC
     basic/cu/activations.cu
     basic/cu/vect.cu
 
-    basic/cl/clactivations.cl
-    basic/cl/clvect.cl
+    basic/cl/activations.cl
+    basic/cl/vect.cl
 
     # mat files
     mat/det.cpp

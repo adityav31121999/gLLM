@@ -29,7 +29,6 @@ __global__ void cuSigmoid(float* x, float* out, int size) {
     }
 }
 
-
 /**
  * @brief cuda function for sigmoid
  * @param[in] x input array
@@ -46,37 +45,39 @@ __global__ void cuSigmoid(float* x, float* out, int rows, int cols) {
 }
 
 
-/**
- * @brief cuda function for softmax
- * @param[in] x input array
- * @param[out] out output array
- * @param[in] temp temperature
- * @param[in] size number of elements
- */
-__global__ void cuSoftmax(float* x, float* out, float temp, int size) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size) {
-        // First thread computes the sum of exponentials
-        if (i == 0) {
-            float sum = 0.0f;
-            for (int j = 0; j < size; j++) {
-                out[j] = expf(x[j] / temp); // Store exp values temporarily
-                sum += out[j];
-            }
-            // Store sum in the last element (temporary storage)
-            atomicExch((int*)&out[size-1], *((int*)&sum));
-        }
-        __syncthreads();
-        
-        // Get the sum computed by the first thread
-        float sum = out[size-1];
-        
-        // Normalize by the sum
-        if (sum > 0.0f) {
-            out[i] = out[i] / sum; // out[i] already contains exp(x[i]/temp)
-        } else {
-            out[i] = 1.0f / size; // Equal distribution if all values are the same
-        }
+__global__ void cuSoftmax(const float* __restrict__ x, float* __restrict__ out, float temp, int size) 
+{
+    extern __shared__ float shmem[];
+    int tid = threadIdx.x;
+
+    // Load values into shared memory with numerical stability
+    float max_val = -FLT_MAX;
+    if (tid < size) {
+        float val = x[tid];
+        shmem[tid] = val;
+        max_val = fmaxf(max_val, val);
+    }
+    __syncthreads();
+
+    // Compute exponentials
+    float sum = 0.0f;
+    if (tid < size) {
+        float expval = expf((shmem[tid] - max_val) / temp);
+        shmem[tid] = expval;
+        sum += expval;
+    }
+    __syncthreads();
+
+    // Accumulate sum across block (basic reduce)
+    __shared__ float total_sum;
+    if (tid == 0) {
+        total_sum = 0.0f;
+        for (int i = 0; i < size; ++i) total_sum += shmem[i];
+    }
+    __syncthreads();
+
+    if (tid < size) {
+        out[tid] = shmem[tid] / total_sum;
     }
 }
 
@@ -89,17 +90,51 @@ __global__ void cuSoftmax(float* x, float* out, float temp, int size) {
  * @param[in] rows number of rows
  * @param[in] cols number of cols
  */
-__global__ void cuSoftmax(float* x, float* out, float temp, int rows, int cols) {
+__global__ void cuSoftmax(const float* __restrict__ x, float* __restrict__ out, float temp, int rows, int cols) 
+{
+    extern __shared__ float shared[]; // Shared memory: holds one row of `x` and its softmax values
+    float* row_vals = shared;         // Temporary buffer for exp values
+    float* row_exp  = &shared[cols];  // Separate buffer for final exp values if needed
+
     int row = blockIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row < rows && col < cols) {
-        float sum = 0.0f;
-        for (int j = 0; j < cols; j++) {
-            sum += expf(x[row * cols + j] / temp);
+    int tid = threadIdx.x;
+
+    if (row < rows && tid < cols) {
+        int idx = row * cols + tid;
+
+        // Step 1: Load row into shared memory (x values)
+        row_vals[tid] = x[idx];
+    }
+
+    __syncthreads();
+
+    // Step 2: Compute max for numerical stability (single thread, or parallel reduce if needed)
+    float max_val = -FLT_MAX;
+    if (row < rows && tid < cols) {
+        max_val = row_vals[tid];
+        for (int i = 0; i < cols; ++i) {
+            max_val = fmaxf(max_val, row_vals[i]);
         }
-        out[row * cols + col] = expf(x[row * cols + col] / temp) / sum;
+
+        // Step 3: Compute exp((x - max) / temp)
+        float exp_val = expf((row_vals[tid] - max_val) / temp);
+        row_exp[tid] = exp_val;
+    }
+
+    __syncthreads();
+
+    // Step 4: Compute sum of exp
+    float sum_exp = 0.0f;
+    if (row < rows && tid < cols) {
+        for (int i = 0; i < cols; ++i) {
+            sum_exp += row_exp[i];
+        }
+
+        // Step 5: Normalize
+        out[row * cols + tid] = row_exp[tid] / sum_exp;
     }
 }
+
 
 /**
  * @brief cuda function for ReLU
@@ -124,60 +159,48 @@ __global__ void cuReLU(float* x, float* out, int size) {
 }
 
 /**
- * @brief cuda function for SeLU
- * @param[in] x input
- * @param[out] result output
- */
-__global__ void cuSeLU(float x, float* result) {
-    float alpha = 1.67326f;
-    float lambda = 1.0507f;
-    *result = (x > 0.0f) ? lambda * x : lambda * alpha * (expf(x) - 1.0f);
-}
-
-/**
- * @brief cuda function for SeLU
- * @param[in] x input array
- * @param[out] out output array
- * @param[in] size size of array
- */
-__global__ void cuSeLU(float* x, float* out, int size) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size) {
-        float alpha = 1.67326f;
-        float lambda = 1.0507f;
-        out[i] = (x[i] > 0.0f) ? lambda * x[i] : lambda * alpha * (expf(x[i]) - 1.0f);
-    }
-}
-
-/**
  * @brief cuda function for LOTA
  * @param[in] y input array
  * @param[out] out output array
  * @param[in] size size of array
  */
 __global__ void cuLOTA(float* y, float* out, int size) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size) {
-        // Find minimum value in the array
+    __shared__ float shared_min;
+    __shared__ float shared_sum;
+
+    // Step 1: Compute global min using thread 0
+    if (threadIdx.x == 0) {
         float min_val = y[0];
-        for (int j = 1; j < size; j++) {
-            min_val = fminf(min_val, y[j]);
+        for (int i = 1; i < size; i++) {
+            min_val = fminf(min_val, y[i]);
         }
-        
-        // Subtract min value and compute sum
+        shared_min = min_val;
+
+        // Step 2: Compute global sum after min shift
         float sum = 0.0f;
-        for (int j = 0; j < size; j++) {
-            sum += (y[j] - min_val);
+        for (int i = 0; i < size; i++) {
+            sum += (y[i] - min_val);
         }
-        
-        // Normalize if sum is not zero
+        shared_sum = sum;
+    }
+    __syncthreads();
+
+    // Step 3: Apply LOTA formula
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        float min_val = shared_min;
+        float sum = shared_sum;
+
         if (sum > 0.0f) {
-            out[i] = (y[i] - min_val) / sum;
-        } else {
-            out[i] = 1.0f / size; // Equal distribution if all values are the same
+            out[idx] = (y[idx] - min_val) / sum;
+        } 
+        else {
+            out[idx] = 1.0f / size;
         }
     }
 }
+
+
 /**
  * @brief cuda function for LOTA
  * @param[in] y input array
@@ -186,46 +209,44 @@ __global__ void cuLOTA(float* y, float* out, int size) {
  * @param[in] cols number of cols
  */
 __global__ void cuLOTA(float* y, float* out, int rows, int cols) {
-    int row = blockIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if (row < rows && col < cols) {
-        // Process each row independently
-        if (col == 0) { // First thread in each row computes min and sum
-            float min_val = y[row * cols];
-            // Find minimum value in this row
-            for (int j = 1; j < cols; j++) {
-                min_val = fminf(min_val, y[row * cols + j]);
-            }
-            
-            // Store min value in the first element of the output row (temporary)
-            out[row * cols] = min_val;
-            
-            // Compute sum of (y - min) for normalization
-            float sum = 0.0f;
-            for (int j = 0; j < cols; j++) {
-                sum += (y[row * cols + j] - min_val);
-            }
-            
-            // Store sum in the second element of the output row (temporary)
-            if (cols > 1) {
-                out[row * cols + 1] = sum;
-            }
+    extern __shared__ float shared[];
+
+    float* shared_min = shared;
+    float* shared_sum = shared + 1;
+
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    int size = rows * cols;
+
+    // One thread computes min and sum
+    if (tid == 0) {
+        float min_val = y[0];
+        for (int i = 1; i < size; i++) {
+            min_val = fminf(min_val, y[i]);
         }
-        __syncthreads(); // Make sure min and sum are computed before proceeding
-        
-        // Get the min and sum values computed by the first thread
-        float min_val = out[row * cols];
-        float sum = (cols > 1) ? out[row * cols + 1] : 0.0f;
-        
-        // Apply LOTA transformation
+        *shared_min = min_val;
+
+        float sum = 0.0f;
+        for (int i = 0; i < size; i++) {
+            sum += (y[i] - min_val);
+        }
+        *shared_sum = sum;
+    }
+    __syncthreads();
+
+    // All threads apply the LOTA transformation
+    if (tid < size) {
+        float min_val = *shared_min;
+        float sum = *shared_sum;
+
         if (sum > 0.0f) {
-            out[row * cols + col] = (y[row * cols + col] - min_val) / sum;
-        } else {
-            out[row * cols + col] = 1.0f / cols; // Equal distribution if all values are the same
+            out[tid] = (y[tid] - min_val) / sum;
+        } 
+        else {
+            out[tid] = 1.0f / size;
         }
     }
 }
+
 
 /**
  * @brief cuda function for LOTA
@@ -236,52 +257,56 @@ __global__ void cuLOTA(float* y, float* out, int rows, int cols) {
  * @param[in] limit limit of LOTA
  * @param[in] attentionType boolean flag for attention type
  */
-__global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool attentionType) {
-    int row = blockIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Determine processing boundary based on attentionType
-    bool process = attentionType ? (col < row) : (col < cols);
-    
-    if (row < rows && process && col < cols) {
-        // Apply limit constraint first
-        float val = (y[row * cols + col] > 0.0f && y[row * cols + col] < limit) ? y[row * cols + col] : 0.0f;
-        out[row * cols + col] = val;
-        
-        // First thread in each row computes min and sum for normalization
-        if (col == 0) {
-            float min_val = FLT_MAX;
-            // Find minimum non-zero value in this row
-            for (int j = 0; j < cols; j++) {
-                if (attentionType && j >= row) continue; // Skip if using triangular attention
-                if (out[row * cols + j] > 0.0f) {
-                    min_val = fminf(min_val, out[row * cols + j]);
+__global__ void cuLOTA(float* y, float* out, int rows, int cols, bool attentionType) {
+    extern __shared__ float shared[];
+    float* shared_min = shared;
+    float* shared_sum = shared + 1;
+
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    int size = rows * cols;
+
+    if (tid == 0) {
+        float min_val = FLT_MAX;
+        float sum = 0.0f;
+
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                int idx = row * cols + col;
+                if (!attentionType || col < row) {
+                    float val = y[idx];
+                    min_val = fminf(min_val, val);
                 }
             }
-            
-            if (min_val == FLT_MAX) min_val = 0.0f; // No positive values found
-            
-            // Compute sum for normalization
-            float sum = 0.0f;
-            for (int j = 0; j < cols; j++) {
-                if (attentionType && j >= row) continue; // Skip if using triangular attention
-                if (out[row * cols + j] > 0.0f) {
-                    out[row * cols + j] -= min_val;
-                    sum += out[row * cols + j];
-                }
-            }
-            
-            // Store sum for other threads
-            atomicExch((int*)&out[row * cols + cols - 1], *((int*)&sum));
         }
-        __syncthreads();
-        
-        // Get the sum computed by the first thread
-        float sum = out[row * cols + cols - 1];
-        
-        // Normalize if sum is not zero
-        if (sum > 0.0f && out[row * cols + col] > 0.0f) {
-            out[row * cols + col] /= sum;
+
+        if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries found
+
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                int idx = row * cols + col;
+                if (!attentionType || col < row) {
+                    sum += (y[idx] - min_val);
+                }
+            }
+        }
+
+        *shared_min = min_val;
+        *shared_sum = sum;
+    }
+    __syncthreads();
+
+    if (tid < size) {
+        int row = tid / cols;
+        int col = tid % cols;
+
+        float min_val = *shared_min;
+        float sum = *shared_sum;
+
+        if (!attentionType || col < row) {
+            out[tid] = (sum > 0.0f) ? (y[tid] - min_val) / sum : 0.0f;
+        } 
+        else {
+            out[tid] = 0.0f;
         }
     }
 }
@@ -321,34 +346,37 @@ __global__ void cuSigmoidder(float* x, float* out, int rows, int cols) {
  * @param[in] temp temperature
  * @param[in] size size of array
  */
-__global__ void cuSoftmaxder(float* x, float* out, float temp, int size) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size) {
-        // First compute softmax values (or reuse if available)
-        float* softmax_vals = new float[size];
-        float sum = 0.0f;
-        for (int j = 0; j < size; j++) {
-            softmax_vals[j] = expf(x[j] / temp);
-            sum += softmax_vals[j];
-        }
-        for (int j = 0; j < size; j++) {
-            softmax_vals[j] /= sum;
-        }
-        
-        // Calculate the derivative
-        float result = softmax_vals[i] * (1.0f - softmax_vals[i]);
-        
-        // Subtract the softmax of each other element
-        for (int j = 0; j < size; j++) {
-            if (i != j) {
-                result -= softmax_vals[j];
-            }
-        }
-        
-        out[i] = result;
-        delete[] softmax_vals;
+__global__ void cuSoftmaxder(const float* x, float* out, float temp, int size) {
+    extern __shared__ float shmem[];
+    int tid = threadIdx.x;
+
+    float max_val = -FLT_MAX;
+    if (tid < size) {
+        shmem[tid] = x[tid];
+        max_val = fmaxf(max_val, x[tid]);
+    }
+    __syncthreads();
+
+    float sum = 0.0f;
+    if (tid < size) {
+        shmem[tid] = expf((shmem[tid] - max_val) / temp);
+        sum += shmem[tid];
+    }
+    __syncthreads();
+
+    __shared__ float total_sum;
+    if (tid == 0) {
+        total_sum = 0.0f;
+        for (int i = 0; i < size; ++i) total_sum += shmem[i];
+    }
+    __syncthreads();
+
+    if (tid < size) {
+        float s = shmem[tid] / total_sum;
+        out[tid] = s * (1.0f - s);
     }
 }
+
 
 /**
  * @brief cuda function for softmax derivative
@@ -358,19 +386,37 @@ __global__ void cuSoftmaxder(float* x, float* out, float temp, int size) {
  * @param[in] rows number of rows
  * @param[in] cols number of cols
  */
-__global__ void cuSoftmaxder(float* x, float* out, float temp, int rows, int cols) {
+__global__ void cuSoftmaxder(const float* x, float* out, float temp, int rows, int cols) {
+    extern __shared__ float shared[];
+    float* row_vals = shared;
+    float* row_exp  = &shared[cols];
+
     int row = blockIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    if (row < rows && col < cols) {
-        float softmax_x = 0.0f;
-        float sum = 0.0f;
-        for (int j = 0; j < cols; j++) {
-            sum += expf(x[row * cols + j] / temp);
-        }
-        softmax_x = expf(x[row * cols + col] / temp) / sum;
-        out[row * cols + col] = softmax_x * (1.0f - softmax_x);
+    int tid = threadIdx.x;
+
+    if (row < rows && tid < cols) {
+        int idx = row * cols + tid;
+        row_vals[tid] = x[idx];
     }
+    __syncthreads();
+
+    float max_val = -FLT_MAX;
+    for (int i = 0; i < cols; ++i)
+        max_val = fmaxf(max_val, row_vals[i]);
+    
+    float exp_val = expf((row_vals[tid] - max_val) / temp);
+    row_exp[tid] = exp_val;
+    __syncthreads();
+
+    float sum = 0.0f;
+    for (int i = 0; i < cols; ++i)
+        sum += row_exp[i];
+    __syncthreads();
+
+    float s = row_exp[tid] / sum;
+    out[row * cols + tid] = s * (1.0f - s);
 }
+
 
 /**
  * @brief cuda function for ReLU derivative
@@ -395,58 +441,40 @@ __global__ void cuReLUder(float* x, float* out, int size) {
 }
 
 /**
- * @brief cuda function for SeLU derivative
- * @param[in] x input
- * @param[out] result output
- */
-__global__ void cuSeLUder(float x, float* result) {
-    float alpha = 1.67326f;
-    float lambda = 1.0507f;
-    *result = (x > 0.0f) ? lambda : lambda * alpha * expf(x);
-}
-
-/**
- * @brief cuda function for SeLU derivative
- * @param[in] x input array
- * @param[out] out output array
- * @param[in] size size of array
- */
-__global__ void cuSeLUder(float* x, float* out, int size) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size) {
-        float alpha = 1.67326f;
-        float lambda = 1.0507f;
-        out[i] = (x[i] > 0.0f) ? lambda : lambda * alpha * expf(x[i]);
-    }
-}
-
-/**
  * @brief cuda function for LOTA derivative
  * @param[in] y input array
  * @param[out] out output array
  * @param[in] size size of array
  */
 __global__ void cuLOTAder(float* y, float* out, int size) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < size) {
-        // Find minimum value in the array
+    __shared__ float shared_min;
+    __shared__ float shared_sum;
+
+    if (threadIdx.x == 0) {
         float min_val = y[0];
-        for (int j = 1; j < size; j++) {
-            min_val = fminf(min_val, y[j]);
+        for (int i = 1; i < size; i++) {
+            min_val = fminf(min_val, y[i]);
         }
-        
-        // Compute sum for normalization
+        shared_min = min_val;
+
         float sum = 0.0f;
-        for (int j = 0; j < size; j++) {
-            sum += (y[j] - min_val);
+        for (int i = 0; i < size; i++) {
+            sum += (y[i] - min_val);
         }
-        
-        // Compute derivative
+        shared_sum = sum;
+    }
+    __syncthreads();
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        float min_val = shared_min;
+        float sum = shared_sum;
+
         if (sum > 0.0f) {
-            // The derivative is (sum - (y[i] - min_val)) / sum^2 = (sum - y[i] + min_val) / sum^2
-            out[i] = (sum - y[i] + min_val) / (sum * sum);
-        } else {
-            out[i] = 0.0f;
+            out[idx] = (sum - y[idx] + min_val) / (sum * sum);
+        }
+        else {
+            out[idx] = 0.0f;
         }
     }
 }
@@ -459,44 +487,39 @@ __global__ void cuLOTAder(float* y, float* out, int size) {
  * @param[in] cols number of cols
  */
 __global__ void cuLOTAder(float* y, float* out, int rows, int cols) {
-    int row = blockIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if (row < rows && col < cols) {
-        // First thread in each row computes min and sum
-        if (col == 0) {
-            float min_val = y[row * cols];
-            // Find minimum value in this row
-            for (int j = 1; j < cols; j++) {
-                min_val = fminf(min_val, y[row * cols + j]);
-            }
-            
-            // Store min value in shared memory or temporary location
-            out[row * cols] = min_val;
-            
-            // Compute sum for normalization
-            float sum = 0.0f;
-            for (int j = 0; j < cols; j++) {
-                sum += (y[row * cols + j] - min_val);
-            }
-            
-            // Store sum in shared memory or temporary location
-            if (cols > 1) {
-                out[row * cols + 1] = sum;
-            }
+    extern __shared__ float shared[];
+
+    float* shared_min = shared;
+    float* shared_sum = shared + 1;
+
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    int size = rows * cols;
+
+    // Thread 0 computes global min and sum
+    if (tid == 0) {
+        float min_val = y[0];
+        for (int i = 1; i < size; i++) {
+            min_val = fminf(min_val, y[i]);
         }
-        __syncthreads(); // Make sure min and sum are computed before proceeding
-        
-        // Get the min and sum values computed by the first thread
-        float min_val = out[row * cols];
-        float sum = (cols > 1) ? out[row * cols + 1] : 0.0f;
-        
-        // Compute derivative
+        *shared_min = min_val;
+
+        float sum = 0.0f;
+        for (int i = 0; i < size; i++) {
+            sum += (y[i] - min_val);
+        }
+        *shared_sum = sum;
+    }
+    __syncthreads();
+
+    if (tid < size) {
+        float min_val = *shared_min;
+        float sum = *shared_sum;
+
         if (sum > 0.0f) {
-            // The derivative is (sum - (y[i] - min_val)) / sum^2 = (sum - y[i] + min_val) / sum^2
-            out[row * cols + col] = (sum - y[row * cols + col] + min_val) / (sum * sum);
-        } else {
-            out[row * cols + col] = 0.0f;
+            out[tid] = (sum - y[tid] + min_val) / (sum * sum);
+        }
+        else {
+            out[tid] = 0.0f;
         }
     }
 }
@@ -507,59 +530,58 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols) {
  * @param[out] out output array
  * @param[in] rows number of rows
  * @param[in] cols number of cols
- * @param[in] limit limit of LOTA
  * @param[in] attentionType boolean flag for attention type
  */
-__global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, bool attentionType) {
-    int row = blockIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Determine processing boundary based on attentionType
-    bool process = attentionType ? (col < row) : (col < cols);
-    
-    if (row < rows && process && col < cols) {
-        // First apply limit constraint
-        bool valid = (y[row * cols + col] > 0.0f && y[row * cols + col] < limit);
-        
-        if (col == 0) {
-            // First thread computes min and sum for the row
-            float min_val = FLT_MAX;
-            
-            // Find minimum non-zero value that meets the limit constraint
-            for (int j = 0; j < cols; j++) {
-                if (attentionType && j >= row) continue; // Skip if using triangular attention
-                if (y[row * cols + j] > 0.0f && y[row * cols + j] < limit) {
-                    min_val = fminf(min_val, y[row * cols + j]);
+__global__ void cuLOTAder(float* y, float* out, int rows, int cols, bool attentionType) {
+    extern __shared__ float shared[];
+    float* shared_min = shared;
+    float* shared_sum = shared + 1;
+
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    int size = rows * cols;
+
+    if (tid == 0) {
+        float min_val = FLT_MAX;
+        float sum = 0.0f;
+
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                int idx = row * cols + col;
+                if (!attentionType || col < row) {
+                    float val = y[idx];
+                    min_val = fminf(min_val, val);
                 }
             }
-            
-            if (min_val == FLT_MAX) min_val = 0.0f; // No valid values found
-            
-            // Compute sum for normalization
-            float sum = 0.0f;
-            for (int j = 0; j < cols; j++) {
-                if (attentionType && j >= row) continue; // Skip if using triangular attention
-                if (y[row * cols + j] > 0.0f && y[row * cols + j] < limit) {
-                    sum += (y[row * cols + j] - min_val);
-                }
-            }
-            
-            // Store min and sum for other threads
-            atomicExch((int*)&out[row * cols], *((int*)&min_val));
-            atomicExch((int*)&out[row * cols + 1], *((int*)&sum));
         }
-        __syncthreads();
-        
-        // Get the min and sum values computed by the first thread
-        float min_val = out[row * cols];
-        float sum = out[row * cols + 1];
-        
-        // Compute derivative
-        if (valid && sum > 0.0f) {
-            // The derivative is (sum - (y[i] - min_val)) / sum^2 = (sum - y[i] + min_val) / sum^2
-            out[row * cols + col] = (sum - y[row * cols + col] + min_val) / (sum * sum);
-        } else {
-            out[row * cols + col] = 0.0f;
+
+        if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries
+
+        for (int row = 0; row < rows; ++row) {
+            for (int col = 0; col < cols; ++col) {
+                int idx = row * cols + col;
+                if (!attentionType || col < row) {
+                    sum += (y[idx] - min_val);
+                }
+            }
+        }
+
+        *shared_min = min_val;
+        *shared_sum = sum;
+    }
+    __syncthreads();
+
+    if (tid < size) {
+        int row = tid / cols;
+        int col = tid % cols;
+
+        float min_val = *shared_min;
+        float sum = *shared_sum;
+
+        if (!attentionType || col < row) {
+            out[tid] = (sum > 0.0f) ? (sum - y[tid] + min_val) / (sum * sum) : 0.0f;
+        }
+        else {
+            out[tid] = 0.0f;
         }
     }
 }

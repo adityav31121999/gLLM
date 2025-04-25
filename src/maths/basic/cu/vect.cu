@@ -1,17 +1,8 @@
 
 // vector operations in cuda programs
 #include "include/basic.hpp"
+#include <cuda.h>
 #include <cuda_runtime.h>
-
-// Helper macro for CUDA error checking
-#define CUDA_CHECK(call) do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-        fprintf(stderr, "CUDA Error in %s at line %d: %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
-        throw std::runtime_error(cudaGetErrorString(err)); \
-    } \
-} while (0)
-
 
 /**
  * @brief CUDA kernel for matrix multiplication C = A * B (Row-Major)

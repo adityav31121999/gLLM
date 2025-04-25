@@ -69,7 +69,6 @@ public:
         a = b.a;       // copy coefficient matrix
     }
 
-    
     /**
      * @brief Move constructor for matrix
      * @param b matrix to be moved from
@@ -82,7 +81,7 @@ public:
         // Move the coefficient matrix from the input matrix
         a = std::move(b.a);
     }
-    
+
     /**
      * @brief Copy constructor for matrix.
      * @param b The matrix to be copied from.
@@ -161,5 +160,25 @@ mat minor(std::vector<std::vector<float>>);
 std::vector<float> dot(mat a, std::vector<float> b);
 std::vector<float> dot(std::vector<float> a, mat b);
 
+#ifdef USE_CUDA
+
+__global__ void det2(float*, float, int);
+__global__ void det3(float*, float, int);
+__global__ void det4(float*, float, int);
+__global__ void detn(float*, float, int);
+__global__ void trace(float*, float, int);
+
+__global__ void rowechelon(float*, float*, int, int);                   // row echelon form of matrix
+__global__ void inva(float*, float*, int, int);                         // additive inverse of matrix
+__global__ void inverse(float*, float*, int, int);                      // inverse of matrix using adjoint of matrix
+__global__ void adjoint(float*, float*, int, int);                      // adjoint of matrix
+__global__ void gaussjordan(float*, float*, int, int);                  // inverse of matrix using gauss jordan elimination method
+__global__ void cofac(float*, float*, int, int);                        // cofactor of matrix
+__global__ void mult(float*, float*, float*, int, int, int, int);       // multiplication of two matrices
+
+__global__ void dot(float*, float*, float*, int, int, int);             // product (dot) of vector and matrix
+__global__ void dot(float*, float*, float*, float, int, int, int, int); // product (dot) of vector, matrix and vector
+
+#endif
 
 #endif
