@@ -262,3 +262,222 @@ __global__ void updateInputVectorKernel(float* input, float* weights, float* del
         input[idx] -= learning_rate * update;
     }
 }
+
+/**
+ * @brief CUDA kernel for MLP forward propagation
+ * @param inputs Input data
+ * @param weights Weights for the current layer
+ * @param biases Biases for the current layer
+ * @param outputs Output data
+ * @param input_size Size of the input layer
+ * @param output_size Size of the output layer
+ */
+// CUDA kernel for matrix-vector multiplication
+__global__ void layerForwardKernel(float* inputs, float* weights, float* outputs, 
+    int input_size, int output_size)
+{
+    int neuron_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (neuron_idx < output_size) {
+        // Initialize sum to 0 or bias value if biases are provided
+        float sum = 0.0f;
+
+        // Perform matrix-vector multiplication
+        for (int i = 0; i < input_size; i++) {
+            sum += inputs[i] * weights[neuron_idx * input_size + i];
+        }
+        outputs[neuron_idx] = sum;
+    }
+}
+
+
+/**
+ * @brief kernel for calculating L1 penalty
+ * @param[in] weights 3D vector whose penalty to be calculated
+ * @param[out] result L1 penalty
+ * @param[in] size size of weights
+ */
+__global__ void l1PenaltyKernel(float* weights, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes absolute value for its element
+    temp[tid] = (i < size) ? fabsf(weights[i]) : 0.0f;
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+/**
+ * @brief kernel for calculating L2 penalty
+ * @param[in] weights 3D vector whose penalty to be calculated
+ * @param[out] result L2 penalty
+ * @param[in] size size of weights
+ */
+__global__ void l2PenaltyKernel(float* weights, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes square for its element
+    temp[tid] = (i < size) ? weights[i] * weights[i] : 0.0f;
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+/**
+ * @brief kernel to calculate absolute difference
+ * @param[in] output original output vector from a process
+ * @param[in] targets expected output vector from same process
+ * @param[out] result absolute[output[i] - target[i]]
+ * @param[in] size size of each vector
+ */
+__global__ void absDiffKernel(float* outputs, float* targets, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes absolute difference for its element
+    temp[tid] = (i < size) ? fabsf(outputs[i] - targets[i]) : 0.0f;
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+/**
+ * @brief kernel to calculate squared difference
+ * @param[in] output original output vector from a process
+ * @param[in] targets expected output vector from same process
+ * @param[out] result absolute(output[i]^2 - target[i]^2)
+ * @param[in] size size of each vector
+ */
+__global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size) {
+    __shared__ float temp[256];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Each thread computes squared difference for its element
+    if (i < size) {
+        float diff = outputs[i] - targets[i];
+        temp[tid] = diff * diff;
+    } else {
+        temp[tid] = 0.0f;
+    }
+    
+    __syncthreads();
+    
+    // Reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            temp[tid] += temp[tid + stride];
+        }
+        __syncthreads();
+    }
+    
+    // Write the result for this block to global memory
+    if (tid == 0) {
+        atomicAdd(result, temp[0]);
+    }
+}
+
+/**
+ * @brief CUDA kernel for calculating the Mean Squared Error (MSE).
+ * This kernel computes the squared difference between the expected and actual output for each neuron
+ * and accumulates the sum using atomic operations.
+ * @param expected Pointer to the expected output data on the device.
+ * @param output Pointer to the output data on the device.
+ * @param mse Pointer to the MSE value on the device (will be updated).
+ * @param size The number of output neurons.
+ */
+__global__ void cuMSEKernel(float* expected, float* output, float* mse, int size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= size) return;
+    atomicAdd(mse, powf(expected[idx] - output[idx], 2));
+}
+
+
+/**
+ * @brief CUDA kernel for Rprop weight update
+ * @param weights Weights to be updated
+ * @param gradients Current gradients
+ * @param prev_gradients Previous gradients
+ * @param delta_weights Step sizes for each weight
+ * @param eta_plus Increase factor
+ * @param eta_minus Decrease factor
+ * @param delta_max Maximum step size
+ * @param delta_min Minimum step size
+ * @param size Size of the arrays
+ */
+__global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, 
+    float* delta_weights, float eta_plus, float eta_minus, 
+    float delta_max, float delta_min, int size) 
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < size) {
+        float grad = gradients[idx];
+        float prev_grad = prev_gradients[idx];
+        float delta = delta_weights[idx];
+
+        // Apply Rprop update rule
+        if (grad * prev_grad > 0) {
+            // Same sign - increase step size
+            delta = fminf(delta * eta_plus, delta_max);
+            weights[idx] -= copysignf(delta, grad);
+            prev_gradients[idx] = grad;
+        } 
+        else if (grad * prev_grad < 0) {
+            // Sign changed - decrease step size
+            delta = fmaxf(delta * eta_minus, delta_min);
+            // Revert previous step
+            weights[idx] += copysignf(delta, prev_grad);
+            prev_gradients[idx] = 0; // Set to zero to avoid oscillation
+        } 
+        else {
+            // First iteration or zero gradient
+            weights[idx] -= copysignf(delta, grad);
+            prev_gradients[idx] = grad;
+        }
+
+        // Store updated delta
+        delta_weights[idx] = delta;
+    }
+}

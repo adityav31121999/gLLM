@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <map>
 #include <maths.hpp>
 #include "mlp.hpp"
 #include "attention.hpp"
@@ -102,51 +103,45 @@ public:
                 std::vector<std::vector<std::string>>& rString);
     void run();
 
-#ifdef USE_CUDA     // cuda implementation
-    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
-    void cuForward(int& blockCount, int& currentTokenCount, int& promptCount);
-    void cuBackward(std::vector<float>& expectedH);
-    void cuBackward(std::vector<float>& expectedH, int& blockCount);
-    void cuBackward(std::vector<std::vector<float>>& expectedH);
-    void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void cuTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
-    void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
-    void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-    void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                std::vector<std::vector<std::string>>& rString);
-    void cuRun();
-#elif USE_OPENCL    // opencl implementation
-    // === OpenCL Specific Members ===
-    cl::Context cl_context;
-    cl::CommandQueue cl_queue;
-    std::vector<cl::Device> cl_devices;
-    cl::Program cl_program; // Holds the compiled program from clcompute.cl
-    std::map<std::string, cl::Kernel> cl_kernels; // Map to store kernel objects by name
+    #ifdef USE_CUDA     // cuda implementation
+        void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
+        void cuForward(int& blockCount, int& currentTokenCount, int& promptCount);
+        void cuBackward(std::vector<float>& expectedH);
+        void cuBackward(std::vector<float>& expectedH, int& blockCount);
+        void cuBackward(std::vector<std::vector<float>>& expectedH);
+        void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+        void cuTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+        void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+        void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+        void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                    std::vector<std::vector<std::string>>& rString);
+        void cuRun();
+    #elif USE_OPENCL    // opencl implementation
+        cl::Context context;
+        cl::CommandQueue queue;
+        cl::Program program; // Holds the compiled program from clcompute.cl and others
+        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        cl::Device default_device; // Store the device being used
 
-    // === Host-side functions that USE OpenCL ===
-    // Declaration of the function that sets up OpenCL and compiles kernels
-    void setupOpenCL(const std::string& kernelFilePath = "clcompute.cl"); // Example name
-    // Helper to get kernel, maybe with error checking
-    cl::Kernel& getKernel(const std::string& name);
-    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
-    void clForward();
-    void clBackward(std::vector<float>& expectedH);
-    void clBackward(std::vector<float>& expectedH, int& blockCount);
-    void clBackward(std::vector<std::vector<float>>& expectedH);
-    void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void clTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
-    void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
-    void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-    void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                std::vector<std::vector<std::string>>& rString);
-    void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
-    void clRun();
-#endif
+        cl::Kernel& getKernel(const std::string& name);     // Helper to get kernel, maybe with error checking
+        void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
+        void clForward(int &blockCount, int &currentTokenCount, int &promptCount);
+        void clBackward(std::vector<float>& expectedH);
+        void clBackward(std::vector<float>& expectedH, int& blockCount);
+        void clBackward(std::vector<std::vector<float>>& expectedH);
+        void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+        void clTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+        void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+        void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+        void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                    std::vector<std::vector<std::string>>& rString);
+        void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
+        void clRun();
+    #endif
 
     // default destructor
     ~transformer() = default;
 };
-
 
 std::string toLower(const std::string& str);
 
@@ -163,6 +158,11 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, std::vector<std::vector<float>>& EVp,
     mat M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
 
+#ifdef USE_CUDA
+    __global__ void accumulateEH(float** d_eh_pointers, float* d_otok, int num_layers, int embedding_dim);
+    __global__ void computeAllDotsKernel(const float* vector, const float* matrix, float* results, int num_rows, int vector_dim);
+#endif
+
 #endif
 
 /*
@@ -174,4 +174,15 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
         }
         return *instance;
     }
+
+// === OpenCL Specific Members ===
+cl::Context cl_context;
+cl::CommandQueue cl_queue;
+std::vector<cl::Device> cl_devices;
+cl::Program cl_program; // Holds the compiled program from clcompute.cl
+std::map<std::string, cl::Kernel> cl_kernels; // Map to store kernel objects by name
+
+// === Host-side functions that USE OpenCL ===
+// Declaration of the function that sets up OpenCL and compiles kernels
+void setupOpenCL(const std::string& kernelFilePath = "clcompute.cl"); // Example name
 */

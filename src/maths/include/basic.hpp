@@ -12,6 +12,11 @@
 #include <atomic>
 #include <random>
 
+// Define MAXFLOAT if not implicitly available
+#ifndef MAXFLOAT
+    #define MAXFLOAT 3.402823466e+38F
+#endif
+
 // vect.cpp
 
 bool operator==(std::vector<float>, std::vector<float>);
@@ -69,10 +74,10 @@ std::vector<float> sigmoid(const std::vector<float>& x);
 std::vector<float> sigmoidder(const std::vector<float>& x);
 std::vector<std::vector<float>> sigmoid(const std::vector<std::vector<float>>& x);
 std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>& x);
-std::vector<float> softmax(const std::vector<float>& x, float& temp);
-std::vector<float> softmaxder(const std::vector<float>& x, float& temp);
-std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float& temp);
-std::vector<std::vector<float>> softmaxder(const std::vector<std::vector<float>>& x, float& temp);
+std::vector<float> softmax(const std::vector<float>& x, float temp);
+std::vector<float> softmaxder(const std::vector<float>& x, float temp);
+std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float temp);
+std::vector<std::vector<float>> softmaxder(const std::vector<std::vector<float>>& x, float temp);
 float ReLU(const float& x);
 float ReLUder(const float& x);
 std::vector<float> ReLU(const std::vector<float>& x);
@@ -105,7 +110,7 @@ __global__ void cuReLU(float x, float* result);
 __global__ void cuReLU(float* x, float* out, int size);
 __global__ void cuLOTA(float* y, float* out, int size);
 __global__ void cuLOTA(float* y, float* out, int rows, int cols);
-__global__ void cuLOTA(float* y, float* out, int rows, int cols, bool attentionType);
+__global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool attentionType);
 
 __global__ void cuSigmoidder(float x, float* result);
 __global__ void cuSigmoidder(float* x, float* out, int rows, int cols);
@@ -115,7 +120,7 @@ __global__ void cuReLUder(float x, float* result);
 __global__ void cuReLUder(float* x, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int rows, int cols);
-__global__ void cuLOTAder(float* y, float* out, int rows, int cols, bool attentionType);
+__global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, bool attentionType);
 
 
 __global__ void operator_add(const float* a, const float* b, float* result, int size);

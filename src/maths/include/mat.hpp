@@ -161,28 +161,26 @@ std::vector<float> dot(mat a, std::vector<float> b);
 std::vector<float> dot(std::vector<float> a, mat b);
 
 #ifdef USE_CUDA
-
-__global__ void det2(float*, float*, int);
-__global__ void det3(float*, float*, int);
-__global__ void det4(float*, float*, int);
-__global__ void detn(float*, float*, int);
-__global__ void trace(float*, float*, int);
-
-__device__ void swap_rows_gj(float* matA, float* matB, int row1, int row2, int n);
-
-__global__ void inva(float*, float*, int, int);                         // additive inverse of matrix
-__global__ void gaussjordan(float*, float*, int, int);                  // inverse of matrix using gauss jordan elimination method
-__global__ void mult(float*, float*, float*, int, int, int, int);       // multiplication of two matrices
-__global__ void dot(float*, float*, float*, int, int, int);             // product (dot) of vector and matrix
-__global__ void dot(float*, float*, float*, float, int, int, int, int); // product (dot) of vector, matrix and vector
-
-std::vector<float> host_additive_inverse(const std::vector<float>& h_matrix, int rows, int cols);
-std::vector<float> host_inverse_gauss_jordan(const std::vector<float>& h_matrix, int n);
-std::vector<float> host_dot(const std::vector<float>& h_vec, const std::vector<std::vector<float>>& h_matrix_2d);
-float host_dot(const std::vector<float>& h_vec1, const std::vector<std::vector<float>>& h_matrix_2d,
-    const std::vector<float>& h_vec2);
-
-
+// device
+    __device__ void swap_rows_gj(float* matA, float* matB, int row1, int row2, int n);      // row swap in matrix
+// global
+    __global__ void det2(float*, float*, int);
+    __global__ void det3(float*, float*, int);
+    __global__ void det4(float*, float*, int);
+    __global__ void detn(float*, float*, int);
+    __global__ void trace(float*, float*, int);
+    __global__ void inva(float*, float*, int, int);                         // additive inverse of matrix
+    __global__ void gaussjordan(float*, float*, int, int);                  // inverse of matrix using gauss jordan elimination method
+    __global__ void dot(float*, float*, float*, int, int, int);             // product (dot) of vector and matrix
+    __global__ void dot(float*, float*, float*, float*, int, int, int, int);    // product (dot) of vector, matrix and vector
+    __global__ void strassen2x2(float*, float*, float*);                    // kernel for strassen algorithm for 2x2 matrix
+    __global__ void mult(float*, float*, float*, int, int, int, int);       // multiplication of two matrices
+// host backed
+    std::vector<float> host_additive_inverse(const std::vector<float>& h_matrix, int rows, int cols);
+    std::vector<float> host_inverse_gauss_jordan(const std::vector<float>& h_matrix, int n);
+    std::vector<float> host_dot(const std::vector<float>& h_vec, const std::vector<std::vector<float>>& h_matrix_2d);
+    float host_dot(const std::vector<float>& h_vec1, const std::vector<std::vector<float>>& h_matrix_2d,
+                    const std::vector<float>& h_vec2);
 #endif
 
 #endif

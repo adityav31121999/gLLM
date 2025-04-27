@@ -8,6 +8,8 @@
 #include <maths.hpp>
 #include <neural.hpp>
 
+#include "include/opencl_setup.hpp"
+
 #define ARCH "SHADY-ATTENTION"
 #define EXTENSION ".llm"
 

@@ -1,4 +1,3 @@
-
 /**
  * @file mlp.hpp
  * Header file for the Multi-layer Perceptron (MLP) class and its related functions.
@@ -16,6 +15,7 @@
 
 #include <vector>
 #include <maths.hpp>
+#include <map>
 
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
@@ -52,8 +52,7 @@ public:
     void initializeWeights(int in, int layers);
 
 #ifdef USE_CUDA
-
-    // cuda implementation for mlp
+// cuda implementation for mlp
     void cuForward(int in, int layers);
     void cuBackward(int layers, int in, float learning);
     void cuBackprop(int layers, int in, float learning);
@@ -65,10 +64,15 @@ public:
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void cuValidate(int in, int layers);
     void cuTest(int in, int layers);
-
 #elif USE_OPENCL
-
-    // opencl implementation for mlp
+    #include <CL/cl.hpp>
+    cl::Context context;
+    cl::CommandQueue queue;
+    cl::Program program; // Holds the compiled program from clcompute.cl and others
+    std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+    cl::Device default_device; // Store the device being used
+// opencl implementation for mlp
+    float clMSE(const std::vector<float>& expected_vec, const std::vector<float>& output_vec, int in);
     void clForward(int in, int layers);
     void clBackward(int layers, int in, float learning);
     void clBackprop(int layers, int in, float learning);
@@ -80,7 +84,6 @@ public:
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void clValidate(int in, int layers);
     void clTest(int in, int layers);
-
 #endif
 
     // default destructor
@@ -93,28 +96,41 @@ float getL2Penalty(std::vector<std::vector<std::vector<float>>>&);
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
+std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights);
+std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
+std::vector<float> flatten(mat&);
+void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
+void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
 
 #ifdef USE_CUDA
 // cuda implementation
-    __global__ void kernelOutputDelta(float* output, float* expected, float* delta, int size);
-    __global__ void hiddenDeltaKernel(float* next_layer_deltas, float* weights, float* activations, 
-    float* deltas, int current_layer_size, int next_layer_size);
-    __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
-        int current_layer_size, int input_size);
-    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size);
-    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights,
-        float learning_rate, int current_layer_size, int prev_layer_size);
-    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights,
-        float* gradients, float learning_rate, int current_layer_size, int prev_layer_size);
-    __global__ void updateWeightsL1Kernel(float* weights, float* deltas, float* prev_activations,
-        float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
-    __global__ void updateWeightsL2Kernel(float* weights, float* deltas, float* prev_activations,
-        float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
-    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size);
-    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs, 
-    int input_size, int output_size);
     __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
     __global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
+    __global__ void l1PenaltyKernel(float* weights, float* result, int size);
+    __global__ void l2PenaltyKernel(float* weights, float* result, int size);
+    __global__ void absDiffKernel(float* outputs, float* targets, float* result, int size);
+    __global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size);
+    __global__ void cuMSEKernel(float* expected, float* output, float* mse, int size);
+    __global__ void kernelOutputDelta(float* output, float* expected, float* delta, int size);
+    __global__ void hiddenDeltaKernel(float* next_layer_deltas, float* weights, float* activations, 
+            float* deltas, int current_layer_size, int next_layer_size);
+    __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
+            int current_layer_size, int input_size);
+    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size);
+    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float learning_rate, 
+            int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float* gradients, 
+            float learning_rate, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL1Kernel(float* weights, float* deltas, float* prev_activations, float learning_rate, 
+            float lambda, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL2Kernel(float* weights, float* deltas, float* prev_activations, float learning_rate, 
+            float lambda, int current_layer_size, int prev_layer_size);
+    __global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, float* delta_weights, 
+            float eta_plus, float eta_minus, float delta_max, float delta_min, int size);
+    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size);
+    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size);
+    __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
+            int current_layer_size, int input_size);
     float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);

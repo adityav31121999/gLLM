@@ -63,9 +63,11 @@ void block::cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
 
         // Resize/Zero host KdotQ buffer
         if (head.KdotQ.size() != kdotq_rows || (kdotq_rows > 0 && head.KdotQ[0].size() != kdotq_cols)) {
-             head.KdotQ.assign(kdotq_rows, std::vector<float>(kdotq_cols, 0.0f));
-        } else {
-             for(auto& row : head.KdotQ) std::fill(row.begin(), row.end(), 0.0f);
+            head.KdotQ.assign(kdotq_rows, std::vector<float>(kdotq_cols, 0.0f));
+        } 
+        else {
+            for(auto& row : head.KdotQ) 
+                std::fill(row.begin(), row.end(), 0.0f);
         }
 
         kdotq_total_sizes[i] = (size_t)kdotq_rows * kdotq_cols;
@@ -98,9 +100,9 @@ void block::cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
         // Add size checks for flattened data if flatten doesn't guarantee size
         if (flat_K.size() * sizeof(float) < keys_size_bytes || flat_Q.size() * sizeof(float) < querys_size_bytes) 
         {
-             fprintf(stderr, "Error: Flattened K/Q size insufficient for head (%d, %d).\n", i, columnNumber);
-             cudaFreeAsync(d_keys, current_stream); cudaFreeAsync(d_querys, current_stream); cudaFreeAsync(d_kdotq, current_stream);
-             continue;
+            fprintf(stderr, "Error: Flattened K/Q size insufficient for head (%d, %d).\n", i, columnNumber);
+            cudaFreeAsync(d_keys, current_stream); cudaFreeAsync(d_querys, current_stream); cudaFreeAsync(d_kdotq, current_stream);
+            continue;
         }
 
         CUDA_CHECK(cudaMemcpyAsync(d_keys, flat_K.data(), keys_size_bytes, cudaMemcpyHostToDevice, current_stream));
@@ -163,10 +165,11 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
     // This overload is specifically for Block 1 Inference
     // const int blockNumber = 1; // Implicitly Block 1
 
-    if (promptCount <= 0) return;
-     if (columnNumber < 0 || columnNumber >= this->y) {
-         throw std::out_of_range("cuParallelUseKdotQ (Block 1): columnNumber out of range.");
-     }
+    if (promptCount <= 0) 
+        return;
+    if (columnNumber < 0 || columnNumber >= this->y) {
+        throw std::out_of_range("cuParallelUseKdotQ (Block 1): columnNumber out of range.");
+    }
 
     const int embedding_dim = EMBEDDING;
     const float inv_scaling = 1.0f / std::sqrt(static_cast<float>(embedding_dim));
@@ -218,9 +221,9 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
 
         // Resize/Zero host KdotQ buffer
         if (head.KdotQ.size() != kdotq_rows || (kdotq_rows > 0 && head.KdotQ[0].size() != kdotq_cols)) {
-             head.KdotQ.assign(kdotq_rows, std::vector<float>(kdotq_cols, 0.0f));
+            head.KdotQ.assign(kdotq_rows, std::vector<float>(kdotq_cols, 0.0f));
         } else {
-             for(auto& row : head.KdotQ) std::fill(row.begin(), row.end(), 0.0f);
+            for(auto& row : head.KdotQ) std::fill(row.begin(), row.end(), 0.0f);
         }
 
         kdotq_total_sizes[i] = (size_t)kdotq_rows * kdotq_cols;
@@ -236,9 +239,9 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
         std::vector<float> flat_M = flatten(head.qkCache);
         size_t M_size_bytes = (size_t)embedding_dim * embedding_dim * sizeof(float);
          if (flat_M.size() * sizeof(float) != M_size_bytes) {
-             fprintf(stderr, "Error: Flattened qkCache size mismatch head (%d, %d) Block 1.\n", i, columnNumber);
-             continue;
-         }
+            fprintf(stderr, "Error: Flattened qkCache size mismatch head (%d, %d) Block 1.\n", i, columnNumber);
+            continue;
+        }
 
         // --- GPU Allocation & Copy ---
         float *d_kdotq = nullptr, *d_tokenEmbed = nullptr, *d_M = nullptr;
@@ -262,7 +265,8 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
                 prompt_start_index_global, promptCount, context_len_total,
                 kdotq_cols, // Width of the output buffer (window size)
                 embedding_dim, inv_scaling);
-        } else {
+        }
+        else {
             kernelKdotQ_Block1_Cross_Inference<<<gridDim, blockDim, 0, current_stream>>>(
                 d_kdotq, d_tokenEmbed, d_M,
                 prompt_start_index_global, promptCount, context_len_total,
@@ -314,10 +318,11 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
     if (blockNumber <= 1) {
          throw std::invalid_argument("cuParallelUseKdotQ (Block N): blockNumber must be > 1.");
     }
-    if (promptCount <= 0) return;
-     if (columnNumber < 0 || columnNumber >= this->y) {
-         throw std::out_of_range("cuParallelUseKdotQ (Block N): columnNumber out of range.");
-     }
+    if (promptCount <= 0) 
+        return;
+    if (columnNumber < 0 || columnNumber >= this->y) {
+        throw std::out_of_range("cuParallelUseKdotQ (Block N): columnNumber out of range.");
+    }
 
     const int embedding_dim = EMBEDDING;
     const float inv_scaling = 1.0f / std::sqrt(static_cast<float>(embedding_dim));
@@ -351,18 +356,18 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
     }
     std::vector<float> flat_tokForBlock = flatten(this->tokForBlock);
     size_t tok_size_bytes = (size_t)context_len_block * embedding_dim * sizeof(float);
-     if (flat_tokForBlock.size() * sizeof(float) < tok_size_bytes) {
-         fprintf(stderr, "Error: Flattened tokForBlock size insufficient Block %d.\n", blockNumber);
-         for (int i = 0; i < num_heads_in_column; ++i) cudaStreamDestroy(streams[i]);
-         throw std::runtime_error("Flattened tokForBlock size error.");
-     }
+    if (flat_tokForBlock.size() * sizeof(float) < tok_size_bytes) {
+        fprintf(stderr, "Error: Flattened tokForBlock size insufficient Block %d.\n", blockNumber);
+        for (int i = 0; i < num_heads_in_column; ++i) cudaStreamDestroy(streams[i]);
+        throw std::runtime_error("Flattened tokForBlock size error.");
+    }
 
     // Validate EVp structure minimally (more checks inside loop)
     if (EVp.size() < num_heads_in_column) {
-         fprintf(stderr, "Error: EVp has insufficient heads for Block %d inference. Need %d, Have %zu\n",
-                 blockNumber, num_heads_in_column, EVp.size());
-         for (int i = 0; i < num_heads_in_column; ++i) cudaStreamDestroy(streams[i]);
-         throw std::runtime_error("Invalid EVp structure for Block N inference.");
+        fprintf(stderr, "Error: EVp has insufficient heads for Block %d inference. Need %d, Have %zu\n",
+                blockNumber, num_heads_in_column, EVp.size());
+        for (int i = 0; i < num_heads_in_column; ++i) cudaStreamDestroy(streams[i]);
+        throw std::runtime_error("Invalid EVp structure for Block N inference.");
     }
 
 
@@ -380,8 +385,9 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
         // Resize/Zero host KdotQ buffer
         if (head.KdotQ.size() != kdotq_rows || (kdotq_rows > 0 && head.KdotQ[0].size() != kdotq_cols)) {
              head.KdotQ.assign(kdotq_rows, std::vector<float>(kdotq_cols, 0.0f));
-        } else {
-             for(auto& row : head.KdotQ) std::fill(row.begin(), row.end(), 0.0f);
+        }
+        else {
+            for(auto& row : head.KdotQ) std::fill(row.begin(), row.end(), 0.0f);
         }
 
         kdotq_total_sizes[i] = (size_t)kdotq_rows * kdotq_cols;
@@ -394,21 +400,21 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
             fprintf(stderr, "Error: Invalid qkCache dimensions for head (%d, %d) in Block %d.\n", i, columnNumber, blockNumber);
             continue; // Skip this head
         }
-         if (EVp[i].empty() || EVp[i].size() < context_len_block || (context_len_block > 0 && EVp[i][0].size() != embedding_dim)) {
-             fprintf(stderr, "Error: Invalid EVp data for head (%d, %d) in Block %d. Need %d rows, %d emb; Have %zu rows\n",
-                     i, columnNumber, blockNumber, context_len_block, embedding_dim, EVp[i].size());
-             continue; // Skip this head
-         }
+        if (EVp[i].empty() || EVp[i].size() < context_len_block || (context_len_block > 0 && EVp[i][0].size() != embedding_dim)) {
+            fprintf(stderr, "Error: Invalid EVp data for head (%d, %d) in Block %d. Need %d rows, %d emb; Have %zu rows\n",
+                    i, columnNumber, blockNumber, context_len_block, embedding_dim, EVp[i].size());
+            continue; // Skip this head
+        }
 
         std::vector<float> flat_M = flatten(head.qkCache);
         std::vector<float> flat_EVp = flatten(EVp[i]); // Flatten EV for this specific head
         size_t M_size_bytes = (size_t)embedding_dim * embedding_dim * sizeof(float);
         size_t evp_size_bytes = (size_t)context_len_block * embedding_dim * sizeof(float);
 
-         if (flat_M.size() * sizeof(float) != M_size_bytes || flat_EVp.size() * sizeof(float) < evp_size_bytes) {
-             fprintf(stderr, "Error: Flattened qkCache/EVp size mismatch head (%d, %d) Block %d.\n", i, columnNumber, blockNumber);
-             continue;
-         }
+        if (flat_M.size() * sizeof(float) != M_size_bytes || flat_EVp.size() * sizeof(float) < evp_size_bytes) {
+            fprintf(stderr, "Error: Flattened qkCache/EVp size mismatch head (%d, %d) Block %d.\n", i, columnNumber, blockNumber);
+            continue;
+        }
 
         // --- GPU Allocation & Copy ---
         float *d_kdotq = nullptr, *d_tokForBlock = nullptr, *d_EVp = nullptr, *d_M = nullptr;
@@ -434,7 +440,8 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
                 prompt_start_index_in_block, promptCount, context_len_block,
                 kdotq_cols, // Width of the output buffer
                 embedding_dim, inv_scaling);
-        } else {
+        } 
+        else {
             kernelKdotQ_BlockN_Cross_Inference<<<gridDim, blockDim, 0, current_stream>>>(
                 d_kdotq, d_tokForBlock, d_EVp, d_M,
                 prompt_start_index_in_block, promptCount, context_len_block,

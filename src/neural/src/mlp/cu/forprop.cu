@@ -19,34 +19,6 @@
 
 
 /**
- * @brief CUDA kernel for MLP forward propagation
- * @param inputs Input data
- * @param weights Weights for the current layer
- * @param biases Biases for the current layer
- * @param outputs Output data
- * @param input_size Size of the input layer
- * @param output_size Size of the output layer
- */
-// CUDA kernel for matrix-vector multiplication
-__global__ void layerForwardKernel(float* inputs, float* weights, float* outputs, 
-    int input_size, int output_size)
-{
-    int neuron_idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (neuron_idx < output_size) {
-        // Initialize sum to 0 or bias value if biases are provided
-        float sum = 0.0f;
-
-        // Perform matrix-vector multiplication
-        for (int i = 0; i < input_size; i++) {
-            sum += inputs[i] * weights[neuron_idx * input_size + i];
-        }
-        outputs[neuron_idx] = sum;
-    }
-}
-
-
-/**
  * @brief The forward propagation function for MLP in CUDA. This function performs the forward 
  * propagation and calculates the activations of each layer.
  * @param inputs The input data.

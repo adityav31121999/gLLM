@@ -307,7 +307,7 @@ void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& la
         CUDA_CHECK(cudaGetLastError());
 
         // --- Step 6: Backprop through LOTA (Simple Derivative) ---
-        cuLOTAder<<<gridDimHead2D, blockDim2D>>>(d_head, d_lota_deriv, context_win, context_win, token_count, isSelfAttention); // Use d_head as input? Check kernel def. Original used KdotQ.
+        cuLOTAder<<<gridDimHead2D, blockDim2D>>>(d_KdotQ, d_lota_deriv, context_win, context_win, token_count, isSelfAttention); // Use d_head as input? Check kernel def. Original used KdotQ.
         // Assuming cuLOTAder takes KdotQ as input based on mlp::cuBackward modification:
         // cuLOTAder<<<gridDimHead2D, blockDim2D>>>(d_KdotQ, d_lota_deriv, context_win, context_win, token_count, isSelfAttention);
         CUDA_CHECK(cudaGetLastError());

@@ -82,36 +82,40 @@ public:
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void backward1stHead(std::vector<float>& expected, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
 
-#ifdef USE_CUDA
-// cuda equivalent functions for attention
-    void cuforprop(int& in, int& layers, int& tokenCount);
-    void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void cuBackward(std::vector<float>& expected, int& in, int& layers);
-    void cuBackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers);
-    void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cuBackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-#elif USE_OPENCL
-// opencl equivalent functions for attention
-    void clforprop(int& in, int& layers, int& tokenCount);
-    void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void clbackward(std::vector<float>& expected, int& in, int& layers);
-    void clbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
-    void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-#endif
+    #ifdef USE_CUDA
+    // cuda equivalent functions for attention
+        void cuforprop(int& in, int& layers, int& tokenCount);
+        void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
+        void cuBackward(std::vector<float>& expected, int& in, int& layers);
+        void cuBackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+        void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers);
+        void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+        void cuBackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    #elif USE_OPENCL
+    #include <CL/cl.hpp>
+        cl::Context context;
+        cl::CommandQueue queue;
+        cl::Program program; // Holds the compiled program from clcompute.cl and others
+        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        cl::Device default_device; // Store the device being used
+    // opencl equivalent functions for attention
+        void clforprop(int& in, int& layers, int& tokenCount);
+        void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
+        void clbackward(std::vector<float>& expected, int& in, int& layers);
+        void clbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+        void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
+        void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+        void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    #endif
 
     // default destructor
     ~attention() = default;
 };
 
-#ifdef USE_CUDA
+void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
 
-    std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
-    std::vector<float> flatten(mat&);
-    void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
-    // dot product and multiplication
+#ifdef USE_CUDA
+// dot product and multiplication
     __device__ void cuComputeKorQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height);
     __device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc);
     __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);

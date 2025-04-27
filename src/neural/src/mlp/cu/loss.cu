@@ -11,167 +11,17 @@
 #include <stdexcept>
 
 // Helper macro for CUDA error checking
-#define CUDA_CHECK(call) do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-        fprintf(stderr, "CUDA Error in %s at line %d: %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
-        throw std::runtime_error(cudaGetErrorString(err)); \
-    } \
+#define CUDA_CHECK(call) do {           \
+    cudaError_t err = call;             \
+    if (err != cudaSuccess) {           \
+        fprintf(stderr, "CUDA Error in %s at line %d: %s\n",    \
+             __FILE__, __LINE__, cudaGetErrorString(err));      \
+        throw std::runtime_error(cudaGetErrorString(err));      \
+    }                                   \
 } while (0)
 
-// --- Helper Functions ---
-
-/**
- * @brief flatten the 3D vector into 1D vector
- * @param weights 3D vector
- * @return 1D vector
- */
-std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights) {
-    std::vector<float> flat_weights;
-    size_t total_weights = 0;
-    for (const auto& layer : weights) {
-        for (const auto& neuron : layer) {
-            total_weights += neuron.size();
-        }
-    }
-    flat_weights.reserve(total_weights);
-    for (const auto& layer : weights) {
-        for (const auto& neuron : layer) {
-            flat_weights.insert(flat_weights.end(), neuron.begin(), neuron.end());
-        }
-    }
-    return flat_weights;
-}
-
-/**
- * @brief kernel for calculating L1 penalty
- * @param[in] weights 3D vector whose penalty to be calculated
- * @param[out] result L1 penalty
- * @param[in] size size of weights
- */
-__global__ void l1PenaltyKernel(float* weights, float* result, int size) {
-    __shared__ float temp[256];
-    int tid = threadIdx.x;
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Each thread computes absolute value for its element
-    temp[tid] = (i < size) ? fabsf(weights[i]) : 0.0f;
-    
-    __syncthreads();
-    
-    // Reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride) {
-            temp[tid] += temp[tid + stride];
-        }
-        __syncthreads();
-    }
-    
-    // Write the result for this block to global memory
-    if (tid == 0) {
-        atomicAdd(result, temp[0]);
-    }
-}
-
-/**
- * @brief kernel for calculating L2 penalty
- * @param[in] weights 3D vector whose penalty to be calculated
- * @param[out] result L2 penalty
- * @param[in] size size of weights
- */
-__global__ void l2PenaltyKernel(float* weights, float* result, int size) {
-    __shared__ float temp[256];
-    int tid = threadIdx.x;
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Each thread computes square for its element
-    temp[tid] = (i < size) ? weights[i] * weights[i] : 0.0f;
-    
-    __syncthreads();
-    
-    // Reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride) {
-            temp[tid] += temp[tid + stride];
-        }
-        __syncthreads();
-    }
-    
-    // Write the result for this block to global memory
-    if (tid == 0) {
-        atomicAdd(result, temp[0]);
-    }
-}
-
-/**
- * @brief kernel to calculate absolute difference
- * @param[in] output original output vector from a process
- * @param[in] targets expected output vector from same process
- * @param[out] result absolute[output[i] - target[i]]
- * @param[in] size size of each vector
- */
-__global__ void absDiffKernel(float* outputs, float* targets, float* result, int size) {
-    __shared__ float temp[256];
-    int tid = threadIdx.x;
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Each thread computes absolute difference for its element
-    temp[tid] = (i < size) ? fabsf(outputs[i] - targets[i]) : 0.0f;
-    
-    __syncthreads();
-    
-    // Reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride) {
-            temp[tid] += temp[tid + stride];
-        }
-        __syncthreads();
-    }
-    
-    // Write the result for this block to global memory
-    if (tid == 0) {
-        atomicAdd(result, temp[0]);
-    }
-}
-
-/**
- * @brief kernel to calculate squared difference
- * @param[in] output original output vector from a process
- * @param[in] targets expected output vector from same process
- * @param[out] result absolute(output[i]^2 - target[i]^2)
- * @param[in] size size of each vector
- */
-__global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size) {
-    __shared__ float temp[256];
-    int tid = threadIdx.x;
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Each thread computes squared difference for its element
-    if (i < size) {
-        float diff = outputs[i] - targets[i];
-        temp[tid] = diff * diff;
-    } else {
-        temp[tid] = 0.0f;
-    }
-    
-    __syncthreads();
-    
-    // Reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride) {
-            temp[tid] += temp[tid + stride];
-        }
-        __syncthreads();
-    }
-    
-    // Write the result for this block to global memory
-    if (tid == 0) {
-        atomicAdd(result, temp[0]);
-    }
-}
 
 // --- CUDA Penalty Functions ---
-
 
 /**
  * @brief calculate L1 penalty with cuda kernel

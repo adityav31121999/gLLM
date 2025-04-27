@@ -1,22 +1,7 @@
-#pragma OPENCL EXTENSION cl_khr_fp32 : enable // For float precision
-// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // Uncomment for double precision
-#pragma OPENCL EXTENSION cl_khr_int32_base_atomics : enable // For atomic operations if used
-
-// Define MAXFLOAT if not implicitly available
-#ifndef MAXFLOAT
-#define MAXFLOAT 3.402823466e+38F
-#endif
-
-// ========================================================================== //
-//                                  Sigmoid                                   //
-// ========================================================================== //
-
-// Sigmoid of single value (Inefficient on GPU, consider moving to CPU)
 __kernel void clSigmoid(float x, __global float* result) {
     *result = 1.0f / (1.0f + exp(-x));
 }
 
-// Sigmoid of vector (Element-wise)
 __kernel void clSigmoid1d(__global float* x, __global float* out, int size)
 {
     int i = get_global_id(0);
@@ -25,7 +10,6 @@ __kernel void clSigmoid1d(__global float* x, __global float* out, int size)
     }
 }
 
-// Sigmoid of 2d vector / matrix (Element-wise)
 __kernel void clSigmoid2d(__global float* x, __global float* out, int rows, int cols)
 {
     int row = get_global_id(0);
@@ -36,13 +20,11 @@ __kernel void clSigmoid2d(__global float* x, __global float* out, int rows, int 
     }
 }
 
-// Sigmoid derivative of single value (Inefficient on GPU, consider moving to CPU)
 __kernel void clSigmoidder(float x, __global float* result) {
     float sigmoid_x = 1.0f / (1.0f + exp(-x));
     *result = sigmoid_x * (1.0f - sigmoid_x);
 }
 
-// Sigmoid derivative of vector (Element-wise)
 __kernel void clSigmoid1dder(__global float* x, __global float* out, int size)
 {
     int i = get_global_id(0);
@@ -52,7 +34,6 @@ __kernel void clSigmoid1dder(__global float* x, __global float* out, int size)
     }
 }
 
-// Sigmoid derivative of 2d vector / matrix (Element-wise)
 __kernel void clSigmoid2dder(__global float* x, __global float* out, int rows, int cols)
 {
     int row = get_global_id(0);
@@ -64,12 +45,6 @@ __kernel void clSigmoid2dder(__global float* x, __global float* out, int rows, i
     }
 }
 
-
-// ========================================================================== //
-//                                 Softmax                                    //
-// ========================================================================== //
-
-// Helper for parallel max reduction within a work-group
 void parallel_reduce_max(__local float* buffer, size_t local_size) {
     size_t local_id = get_local_id(0);
     for (size_t stride = local_size / 2; stride > 0; stride /= 2) {
@@ -80,7 +55,6 @@ void parallel_reduce_max(__local float* buffer, size_t local_size) {
     }
 }
 
-// Helper for parallel sum reduction within a work-group
 void parallel_reduce_sum(__local float* buffer, size_t local_size) {
     size_t local_id = get_local_id(0);
     for (size_t stride = local_size / 2; stride > 0; stride /= 2) {
@@ -91,9 +65,6 @@ void parallel_reduce_sum(__local float* buffer, size_t local_size) {
     }
 }
 
-// Softmax of vector (using parallel reduction within a single work-group)
-// NOTE: This kernel is efficient only when launched as a single work-group covering the entire size.
-// For very large 'size' exceeding max work-group size or local memory, a multi-pass reduction is needed.
 __kernel void clSoftmax1d(__global float* x, __global float* out, float temp, int size)
 {
     int global_id = get_global_id(0); // Used for global data access
@@ -145,9 +116,6 @@ __kernel void clSoftmax1d(__global float* x, __global float* out, float temp, in
     }
 }
 
-// Softmax of 2d vector / matrix (row-wise, using parallel reduction per row work-group)
-// NOTE: Assumes NDRange is launched with global_size={rows, cols_launch_size}, local_size={1, local_size_cols}
-// where local_size_cols is the work-group size for column reduction and cols_launch_size is a multiple of it.
 __kernel void clSoftmax2d(__global float* x, __global float* out, float temp, int rows, int cols)
 {
     int row = get_global_id(0); // Global row index
@@ -228,10 +196,6 @@ __kernel void clSoftmax2d(__global float* x, __global float* out, float temp, in
     }
 }
 
-
-// Softmax derivative of vector (diagonal Jacobian, s_i*(1-s_i)),
-// CALCULATING SOFTMAX INTERNALLY using parallel reduction.
-// NOTE: Efficient only when launched as a single work-group covering 'size'.
 __kernel void clSoftmax1dder(__global float* x, __global float* out, float temp, int size)
 {
     int global_id = get_global_id(0);
@@ -274,9 +238,6 @@ __kernel void clSoftmax1dder(__global float* x, __global float* out, float temp,
     }
 }
 
-// Softmax derivative of 2d vector / matrix (diagonal Jacobian, s_ij*(1-s_ij)),
-// CALCULATING SOFTMAX INTERNALLY per row using parallel reduction.
-// NOTE: Assumes NDRange is launched with global_size={rows, cols_launch_size}, local_size={1, local_size_cols}.
 __kernel void clSoftmax2dder(__global float* x, __global float* out, float temp, int rows, int cols)
 {
     int row = get_global_id(0); // Global row index
@@ -347,8 +308,6 @@ __kernel void clSoftmax2dder(__global float* x, __global float* out, float temp,
     }
 }
 
-// Softmax derivative of vector (diagonal Jacobian, s_i*(1-s_i)),
-// TAKING SOFTMAX OUTPUT 's' AS INPUT (alternative, potentially more efficient if 's' is already computed)
 __kernel void clSoftmaxd1dder_from_s(__global float* s, __global float* out, int size)
 {
     int i = get_global_id(0);
@@ -359,8 +318,6 @@ __kernel void clSoftmaxd1dder_from_s(__global float* s, __global float* out, int
     }
 }
 
-// Softmax derivative of 2d vector / matrix (diagonal Jacobian, s_ij*(1-s_ij)),
-// TAKING SOFTMAX OUTPUT 's' AS INPUT (alternative)
 __kernel void clSoftmaxd2dder_from_s(__global float* s, __global float* out, int rows, int cols)
 {
     int row = get_global_id(0);
@@ -374,17 +331,10 @@ __kernel void clSoftmaxd2dder_from_s(__global float* s, __global float* out, int
     }
 }
 
-
-// ========================================================================== //
-//                                   ReLU                                     //
-// ========================================================================== //
-
-// ReLU of single value (Inefficient on GPU, consider moving to CPU)
 __kernel void clReLU(float x, __global float* result) {
     *result = fmax(0.0f, x);
 }
 
-// ReLU of vector (Element-wise)
 __kernel void clReLU1d(__global float* x, __global float* out, int size)
 {
     int i = get_global_id(0);
@@ -393,7 +343,6 @@ __kernel void clReLU1d(__global float* x, __global float* out, int size)
     }
 }
 
-// ReLU of 2d vector/matrix (Element-wise)
 __kernel void clReLU2d(__global float* x, __global float* out, int rows, int cols)
 {
     int row = get_global_id(0);
@@ -404,12 +353,10 @@ __kernel void clReLU2d(__global float* x, __global float* out, int rows, int col
     }
 }
 
-// ReLU derivative of single value (Inefficient on GPU, consider moving to CPU)
 __kernel void clReLUder(float x, __global float* result) {
     *result = (x > 0.0f) ? 1.0f : 0.0f;
 }
 
-// ReLU derivative of vector (Element-wise)
 __kernel void clReLUder1d(__global float* x, __global float* out, int size)
 {
     int i = get_global_id(0);
@@ -418,7 +365,6 @@ __kernel void clReLUder1d(__global float* x, __global float* out, int size)
     }
 }
 
-// ReLU derivative of 2d vector/matrix (Element-wise)
 __kernel void clReLUder2d(__global float* x, __global float* out, int rows, int cols)
 {
     int row = get_global_id(0);
@@ -429,11 +375,6 @@ __kernel void clReLUder2d(__global float* x, __global float* out, int rows, int 
     }
 }
 
-// ========================================================================== //
-//                                   LOTA                                     //
-// ========================================================================== //
-
-// Helper for parallel min reduction within a work-group
 void parallel_reduce_min(__local float* buffer, size_t local_size) {
     size_t local_id = get_local_id(0);
     for (size_t stride = local_size / 2; stride > 0; stride /= 2) {
@@ -444,8 +385,6 @@ void parallel_reduce_min(__local float* buffer, size_t local_size) {
     }
 }
 
-// LOTA of vector (using parallel reduction within a single work-group)
-// NOTE: Efficient only when launched as a single work-group covering 'size'.
 __kernel void clLOTA1d(__global float* y, __global float* out, int size) {
     int global_id = get_global_id(0);
     int local_id = get_local_id(0);
@@ -484,8 +423,6 @@ __kernel void clLOTA1d(__global float* y, __global float* out, int size) {
     }
 }
 
-// LOTA of 2d vector / matrix (using parallel reduction within a single work-group covering rows*cols)
-// NOTE: Efficient only when launched as a single work-group covering rows*cols.
 __kernel void clLOTA2d(__global float* y, __global float* out, int rows, int cols) {
     int global_id = get_global_id(0); // Flat index over rows*cols
     int local_id = get_local_id(0);
@@ -523,77 +460,82 @@ __kernel void clLOTA2d(__global float* y, __global float* out, int rows, int col
     }
 }
 
+__kernel void clLOTA2dmasking(__global float* y, __global float* out, int rows, int cols, int limit, int attentionType) {
+    // Get global ID
+    size_t gid = get_global_id(0);
+    int size = rows * cols; // Total elements in the *original* matrix buffers
 
-// LOTA of 2d vector / matrix with masking (using parallel reduction over masked elements in a single work-group)
-// NOTE: Efficient only when launched as a single work-group covering rows*cols.
-__kernel void clLOTA2dmasking(__global float* y, __global float* out, int rows, int cols, int attentionType) {
-    int global_id = get_global_id(0);
-    int local_id = get_local_id(0);
-    size_t local_size = get_local_size(0);
-    int size = rows * cols;
+    // Check if work-item is within the bounds of the output buffer
+    if (gid < size) {
 
-    __local float local_buffer[256]; // Max possible local_size
+        // --- Recalculate min and sum within EACH work-item ---
+        // This section replaces the `if (tid == 0)` block and shared memory usage.
+        float min_val = MAXFLOAT; // Initialize with max float
+        float sum = 0.0f;
+        bool found_value = false; // Track if any relevant value was found
 
-    // Step 1: Find min value over masked elements using parallel reduction
-    float my_val = MAXFLOAT; // Identity for min
-    if (global_id < size) {
-        int row = global_id / cols;
-        int col = global_id % cols;
-        if (attentionType == 0 || col < row) { // Mask condition
-             my_val = y[global_id];
+        // Iterate only up to the limit to find min
+        for (int row_idx = 0; row_idx < limit; ++row_idx) {
+            // Ensure row_idx is within actual matrix bounds
+            if (row_idx >= rows) break;
+            for (int col_idx = 0; col_idx < limit; ++col_idx) {
+                // Ensure col_idx is within actual matrix bounds
+                if (col_idx >= cols) break;
+
+                // Check if element is relevant based on attentionType
+                // attentionType == 0 means process square (col_idx < limit is enough)
+                // attentionType == 1 means process lower triangle (col_idx < row_idx)
+                if (attentionType == 0 || col_idx < row_idx) {
+                    int idx = row_idx * cols + col_idx;
+                    float val = y[idx];
+                    min_val = fmin(min_val, val); // Use OpenCL fmin
+                    found_value = true;
+                }
+            }
         }
-    }
-    local_buffer[local_id] = my_val;
 
-    barrier(CLK_LOCAL_MEM_FENCE);
-    parallel_reduce_min(local_buffer, local_size); // Use custom min reduction
-    float min_val = local_buffer[0];
-
-    // Handle case where no valid entries were found (min_val is still MAXFLOAT)
-    if (min_val == MAXFLOAT) {
-         min_val = 0.0f; // Match original CUDA logic
-    }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    // Step 2: Compute sum of shifted masked values using parallel reduction
-    float shifted_val = 0.0f; // Identity for sum
-     if (global_id < size) {
-        int row = global_id / cols;
-        int col = global_id % cols;
-        if (attentionType == 0 || col < row) { // Mask condition
-            shifted_val = y[global_id] - min_val;
+        // If no relevant values found, set min_val to 0
+        if (!found_value) {
+            min_val = 0.0f;
         }
-    }
-    local_buffer[local_id] = shifted_val;
 
-    barrier(CLK_LOCAL_MEM_FENCE);
-    parallel_reduce_sum(local_buffer, local_size);
-    float sum_val = local_buffer[0];
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-
-    // Step 3: Apply LOTA formula to masked elements, set others to 0
-    if (global_id < size) {
-        int row = global_id / cols;
-        int col = global_id % cols;
-
-        if (attentionType == 0 || col < row) { // Mask condition
-             out[global_id] = (sum_val > 0.0f) ? (y[global_id] - min_val) / sum_val : 0.0f; // Original used 0.0f
+        // Iterate again to calculate sum using the found min_val
+        for (int row_idx = 0; row_idx < limit; ++row_idx) {
+             if (row_idx >= rows) break;
+            for (int col_idx = 0; col_idx < limit; ++col_idx) {
+                 if (col_idx >= cols) break;
+                // Check relevance again
+                if (attentionType == 0 || col_idx < row_idx) {
+                    int idx = row_idx * cols + col_idx;
+                    // Ensure sum calculation uses the determined min_val
+                    sum += (y[idx] - min_val);
+                }
+            }
         }
-        else {
-            out[global_id] = 0.0f; // Elements not included in calculation are set to 0.0f
+        // --- End of recalculation ---
+
+        // --- Apply LOTA formula (specific to this work-item gid) ---
+
+        // Calculate row and col for the current work-item
+        int current_row = gid / cols;
+        int current_col = gid % cols;
+
+        // Determine if the current element (gid) is within the relevant region
+        // Check current_row < limit, current_col < limit, and attentionType condition
+        bool is_relevant = (current_row < limit && current_col < limit && (attentionType == 0 || current_col < current_row));
+
+        if (is_relevant) {
+            // Apply LOTA formula, handle sum <= 0
+            // Ensure sum is checked for > 0.0f before division
+            // Use a small epsilon for robust float comparison
+            out[gid] = (sum > 1e-9f) ? (y[gid] - min_val) / sum : 0.0f;
+        } else {
+            // Element is outside the relevant region, set output to 0
+            out[gid] = 0.0f;
         }
     }
 }
 
-/**
- * @brief OpenCL kernel function for LOTA derivative (using size, parallel reduction)
- * NOTE: Efficient only when launched as a single work-group covering 'size'.
- * @param[in] y input array in global memory
- * @param[out] out output array in global memory
- * @param[in] size size of array
- */
 __kernel void clLOTA1dder(__global float* y, __global float* out, int size) {
     int global_id = get_global_id(0);
     int local_id = get_local_id(0);
@@ -630,14 +572,6 @@ __kernel void clLOTA1dder(__global float* y, __global float* out, int size) {
     }
 }
 
-/**
- * @brief OpenCL kernel function for LOTA derivative (using rows/cols, parallel reduction)
- * NOTE: Efficient only when launched as a single work-group covering rows*cols.
- * @param[in] y input array in global memory
- * @param[out] out output array in global memory
- * @param[in] rows number of rows
- * @param[in] cols number of cols
- */
 __kernel void clLOTA2dder(__global float* y, __global float* out, int rows, int cols) {
     int global_id = get_global_id(0);
     int local_id = get_local_id(0);
@@ -675,35 +609,51 @@ __kernel void clLOTA2dder(__global float* y, __global float* out, int rows, int 
     }
 }
 
-/**
- * @brief OpenCL kernel function for LOTA derivative (using rows/cols and attentionType, parallel reduction)
- * NOTE: Efficient only when launched as a single work-group covering rows*cols.
- * @param[in] y input array in global memory
- * @param[out] out output array in global memory
- * @param[in] rows number of rows
- * @param[in] cols number of cols
- * @param[in] attentionType flag for attention type (0 for false, non-zero for true)
- */
-__kernel void clLOTA2ddermasking(__global float* y, __global float* out, int rows, int cols, int attentionType) {
+__kernel void clLOTA2ddermasking(__global float* y, __global float* out, int rows, int cols, int limit, int attentionType) {
     int global_id = get_global_id(0);
     int local_id = get_local_id(0);
     size_t local_size = get_local_size(0);
-    int size = rows * cols;
+    int size = rows * cols; // Total elements in the *original* matrix buffers
 
-    __local float local_buffer[256]; // Max possible local_size
+    // Allocate local buffer INTERNALLY. Size must be >= local_size.
+    // 256 is an example; adjust if larger work-groups are used.
+    __local float local_buffer[256];
 
-    // Step 1: Find min value over masked elements using parallel reduction
+    // Ensure local_buffer size is sufficient (Host should ensure local_size <= 256)
+    // if (local_size > 256) return; // Optional safety check
+
+    // Step 1: Find min value over masked elements using parallel reduction (INLINED)
     float my_val = MAXFLOAT; // Identity for min
     if (global_id < size) {
         int row = global_id / cols;
         int col = global_id % cols;
-        if (attentionType == 0 || col < row) { // Mask condition
+        // Check if element is within limit and relevant based on attentionType
+        if (row < limit && col < limit && (attentionType == 0 || col < row)) {
              my_val = y[global_id];
         }
     }
-    local_buffer[local_id] = my_val;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    parallel_reduce_min(local_buffer, local_size);
+    // Check local_id boundary before writing to local_buffer
+    if (local_id < 256) { // Or use local_size if guaranteed <= 256
+        local_buffer[local_id] = my_val;
+    }
+
+
+    barrier(CLK_LOCAL_MEM_FENCE); // Ensure all values loaded
+
+    // --- Inlined Min Reduction ---
+    // Ensure loop bounds respect the actual local_size, not just the buffer size
+    for (size_t stride = local_size / 2; stride > 0; stride /= 2) {
+        if (local_id < stride) {
+            // Check bounds before reading/writing
+            if ((local_id + stride) < local_size) { // Check read index
+                 local_buffer[local_id] = fmin(local_buffer[local_id], local_buffer[local_id + stride]);
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    // --- End Inlined Min Reduction ---
+
+    // Only work-item 0 reads the final result, so no bounds check needed here
     float min_val = local_buffer[0];
 
      // Handle case where no valid entries were found (min_val is still MAXFLOAT)
@@ -711,23 +661,43 @@ __kernel void clLOTA2ddermasking(__global float* y, __global float* out, int row
          min_val = 0.0f; // Match original CUDA logic
     }
 
-    barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE); // Ensure min_val is visible to all
 
 
-    // Step 2: Compute sum of shifted masked values using parallel reduction
+    // Step 2: Compute sum of shifted masked values using parallel reduction (INLINED)
     float shifted_val_for_sum = 0.0f; // Identity for sum
      if (global_id < size) {
         int row = global_id / cols;
         int col = global_id % cols;
-        if (attentionType == 0 || col < row) { // Mask condition
-            shifted_val_for_sum = y[global_id] - min_val;
+        // Check if element is within limit and relevant based on attentionType
+        if (row < limit && col < limit && (attentionType == 0 || col < row)) {
+            shifted_val_for_sum = y[global_id] - min_val; // Use the calculated min_val
         }
     }
-    local_buffer[local_id] = shifted_val_for_sum;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    parallel_reduce_sum(local_buffer, local_size);
+    // Check local_id boundary before writing to local_buffer
+    if (local_id < 256) { // Or use local_size if guaranteed <= 256
+        local_buffer[local_id] = shifted_val_for_sum;
+    }
+
+
+    barrier(CLK_LOCAL_MEM_FENCE); // Ensure all shifted values loaded
+
+    // --- Inlined Sum Reduction ---
+    // Ensure loop bounds respect the actual local_size
+    for (size_t stride = local_size / 2; stride > 0; stride /= 2) {
+        if (local_id < stride) {
+             // Check bounds before reading/writing
+            if ((local_id + stride) < local_size) { // Check read index
+                local_buffer[local_id] += local_buffer[local_id + stride];
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    // --- End Inlined Sum Reduction ---
+
+    // Only work-item 0 reads the final result
     float sum_val = local_buffer[0];
-    barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE); // Ensure sum_val is visible to all
 
 
     // Step 3: Apply LOTA derivative formula to masked elements, set others to 0
@@ -735,11 +705,15 @@ __kernel void clLOTA2ddermasking(__global float* y, __global float* out, int row
         int row = global_id / cols;
         int col = global_id % cols;
 
-        if (attentionType == 0 || col < row) { // Mask condition
-             out[global_id] = (sum_val > 0.0f) ? (sum_val - y[global_id] + min_val) / (sum_val * sum_val) : 0.0f; // Original used 0.0f
+        // Check if element is within limit and relevant based on attentionType
+        if (row < limit && col < limit && (attentionType == 0 || col < row)) {
+             // Apply derivative formula: (sum - y_i + min) / (sum * sum)
+             // Use small epsilon for float comparison robustness
+             out[global_id] = (sum_val > 1e-9f) ? (sum_val - y[global_id] + min_val) / (sum_val * sum_val) : 0.0f;
         }
         else {
-            out[global_id] = 0.0f; // Elements not included in calculation are set to 0.0f
+            // Elements not included in calculation are set to 0.0f
+            out[global_id] = 0.0f;
         }
     }
 }

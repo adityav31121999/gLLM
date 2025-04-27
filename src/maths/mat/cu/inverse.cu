@@ -120,40 +120,40 @@ __global__ void gaussjordan(float* matrixCopyToReduce, float* inverseResult, int
             // `d.a[i+1][j] -= d.a[k+1][k+1] * d.a[i][j]` seem incorrect for standard elimination.
             // Standard elimination targets column 'k' in row 'i+1' using row 'k'.
             // Replicating the C++ formula structure as closely as possible:
-            float elimination_factor_d = d[IDX(i + 1, k, n)]; // Element to zero out in d (standard approach)
+            // float elimination_factor_d = d[IDX(i + 1, k, n)]; // Element to zero out in d (standard approach)
             // However, the C++ update uses d[k+1][k+1] * d[i][j] which is very strange.
             // Let's try to interpret the *intent* while using the *indices* from C++.
             // It seems it might be trying to use row 'k' (or k+1?) to modify row 'i+1'.
 
             // If we strictly follow `d.a[i+1][j] -= d.a[k+1][k+1] * d.a[i][j]` for j=0..n-2:
             if (k + 1 < n) { // Check bounds for k+1 index
-                 float multiplier = d[IDX(k + 1, k + 1, n)]; // The strange multiplier from C++
-                 for (int j = 0; j < n; j++) { // Iterate through columns (assuming full row update needed)
-                     // Check bounds for i+1 index
-                     if (i + 1 < n) {
-                         // Apply the C++ formula structure
-                         // Note: d[i][j] is used, which means using row 'i' to update row 'i+1' based on a value from row 'k+1'??
-                         // This seems highly unlikely to be correct Gauss-Jordan logic.
-                         // Applying it directly:
-                         // d[IDX(i + 1, j, n)] -= multiplier * d[IDX(i, j, n)]; // Original matrix update
-                         // b[IDX(i + 1, j, n)] -= multiplier * b[IDX(i, j, n)]; // Inverse matrix update
+                // float multiplier = d[IDX(k + 1, k + 1, n)]; // The strange multiplier from C++
+                for (int j = 0; j < n; j++) { // Iterate through columns (assuming full row update needed)
+                    // Check bounds for i+1 index
+                    if (i + 1 < n) {
+                        // Apply the C++ formula structure
+                        // Note: d[i][j] is used, which means using row 'i' to update row 'i+1' based on a value from row 'k+1'??
+                        // This seems highly unlikely to be correct Gauss-Jordan logic.
+                        // Applying it directly:
+                        // d[IDX(i + 1, j, n)] -= multiplier * d[IDX(i, j, n)]; // Original matrix update
+                        // b[IDX(i + 1, j, n)] -= multiplier * b[IDX(i, j, n)]; // Inverse matrix update
 
-                         // --- Alternative Interpretation (More likely intent, but still not standard GJ): ---
-                         // Maybe it meant to use row k to eliminate element at [i+1][k]?
-                         // factor = d[IDX(i+1, k, n)] / d[IDX(k, k, n)]; // d[k,k] is 1 after normalization
-                         factor = d[IDX(i + 1, k, n)]; // Since d[k,k] is 1
-                         if (fabsf(factor) > 1e-9f) { // Only update if needed
-                             for(int col_idx = 0; col_idx < n; ++col_idx) { // Update across the entire row
-                                 d[IDX(i + 1, col_idx, n)] -= factor * d[IDX(k, col_idx, n)];
-                                 b[IDX(i + 1, col_idx, n)] -= factor * b[IDX(k, col_idx, n)];
-                             }
-                         }
-                     }
-                 }
-                 // Explicitly set the target element to zero after row operation for numerical stability
-                 if (i + 1 < n) {
+                        // --- Alternative Interpretation (More likely intent, but still not standard GJ): ---
+                        // Maybe it meant to use row k to eliminate element at [i+1][k]?
+                        // factor = d[IDX(i+1, k, n)] / d[IDX(k, k, n)]; // d[k,k] is 1 after normalization
+                        factor = d[IDX(i + 1, k, n)]; // Since d[k,k] is 1
+                        if (fabsf(factor) > 1e-9f) { // Only update if needed
+                            for(int col_idx = 0; col_idx < n; ++col_idx) { // Update across the entire row
+                                d[IDX(i + 1, col_idx, n)] -= factor * d[IDX(k, col_idx, n)];
+                                b[IDX(i + 1, col_idx, n)] -= factor * b[IDX(k, col_idx, n)];
+                            }
+                        }
+                    }
+                }
+                // Explicitly set the target element to zero after row operation for numerical stability
+                if (i + 1 < n) {
                     d[IDX(i + 1, k, n)] = 0.0f;
-                 }
+                }
             }
         }
         k++;

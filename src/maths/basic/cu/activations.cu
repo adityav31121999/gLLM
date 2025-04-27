@@ -254,61 +254,63 @@ __global__ void cuLOTA(float* y, float* out, int rows, int cols) {
  * @param[out] out output array
  * @param[in] rows number of rows
  * @param[in] cols number of cols
- * @param[in] limit limit of LOTA
+ * @param[in] limit limit of LOTA (<= rows, <= cols)
  * @param[in] attentionType boolean flag for attention type
  */
-__global__ void cuLOTA(float* y, float* out, int rows, int cols, bool attentionType) {
-    extern __shared__ float shared[];
-    float* shared_min = shared;
-    float* shared_sum = shared + 1;
+__global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool attentionType) {
+   extern __shared__ float shared[];
+   float* shared_min = shared;
+   float* shared_sum = shared + 1;
 
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    int size = rows * cols;
+   int tid = threadIdx.x + blockIdx.x * blockDim.x;
+   int size = rows * cols;
 
-    if (tid == 0) {
-        float min_val = FLT_MAX;
-        float sum = 0.0f;
+   if (tid == 0) {
+       float min_val = FLT_MAX;
+       float sum = 0.0f;
 
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
-                int idx = row * cols + col;
-                if (!attentionType || col < row) {
-                    float val = y[idx];
-                    min_val = fminf(min_val, val);
-                }
-            }
-        }
+       // Iterate only up to the limit
+       for (int row = 0; row < limit; ++row) {
+           for (int col = 0; col < limit; ++col) {
+               int idx = row * cols + col; // Correct index calculation
+               if (!attentionType || col < row) {
+                   float val = y[idx];
+                   min_val = fminf(min_val, val);
+               }
+           }
+       }
 
-        if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries found
+       if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries found
 
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
-                int idx = row * cols + col;
-                if (!attentionType || col < row) {
-                    sum += (y[idx] - min_val);
-                }
-            }
-        }
+       // Iterate only up to the limit
+       for (int row = 0; row < limit; ++row) {
+           for (int col = 0; col < limit; ++col) {
+               int idx = row * cols + col; // Correct index calculation
+               if (!attentionType || col < row) {
+                   sum += (y[idx] - min_val);
+               }
+           }
+       }
 
-        *shared_min = min_val;
-        *shared_sum = sum;
-    }
-    __syncthreads();
+       *shared_min = min_val;
+       *shared_sum = sum;
+   }
+   __syncthreads();
 
-    if (tid < size) {
-        int row = tid / cols;
-        int col = tid % cols;
+   if (tid < size) {
+       int row = tid / cols;
+       int col = tid % cols;
 
-        float min_val = *shared_min;
-        float sum = *shared_sum;
+       float min_val = *shared_min;
+       float sum = *shared_sum;
 
-        if (!attentionType || col < row) {
-            out[tid] = (sum > 0.0f) ? (y[tid] - min_val) / sum : 0.0f;
-        } 
-        else {
-            out[tid] = 0.0f;
-        }
-    }
+       if (row < limit && col < limit && (!attentionType || col < row)) {
+           out[tid] = (sum > 0.0f) ? (y[tid] - min_val) / sum : 0.0f;
+       } 
+       else {
+           out[tid] = 0.0f;
+       }
+   }
 }
 
 // DERIVATIVES OF ACTIVATION FUNCTIONS
@@ -530,9 +532,10 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols) {
  * @param[out] out output array
  * @param[in] rows number of rows
  * @param[in] cols number of cols
+ * @param[in] limit limit of LOTA (<= rows, <= cols)
  * @param[in] attentionType boolean flag for attention type
  */
-__global__ void cuLOTAder(float* y, float* out, int rows, int cols, bool attentionType) {
+__global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, bool attentionType) {
     extern __shared__ float shared[];
     float* shared_min = shared;
     float* shared_sum = shared + 1;
@@ -544,20 +547,20 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols, bool attenti
         float min_val = FLT_MAX;
         float sum = 0.0f;
 
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
+        for (int row = 0; row < limit; ++row) {
+            for (int col = 0; col < limit; ++col) {
                 int idx = row * cols + col;
                 if (!attentionType || col < row) {
                     float val = y[idx];
                     min_val = fminf(min_val, val);
                 }
             }
-        }
+       }
 
         if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries
 
-        for (int row = 0; row < rows; ++row) {
-            for (int col = 0; col < cols; ++col) {
+        for (int row = 0; row < limit; ++row) {
+            for (int col = 0; col < limit; ++col) {
                 int idx = row * cols + col;
                 if (!attentionType || col < row) {
                     sum += (y[idx] - min_val);
@@ -577,7 +580,7 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols, bool attenti
         float min_val = *shared_min;
         float sum = *shared_sum;
 
-        if (!attentionType || col < row) {
+        if (row < limit && col < limit && (!attentionType || col < row)) {
             out[tid] = (sum > 0.0f) ? (sum - y[tid] + min_val) / (sum * sum) : 0.0f;
         }
         else {

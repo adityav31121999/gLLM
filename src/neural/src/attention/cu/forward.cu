@@ -23,38 +23,6 @@
 
 
 /**
- * @brief make transpose of a flatten matrix
- * @param[in] input matrix
- * @param[out] output_flat flattened transpose of input
- * @param[in] rows number of rows
- * @param[in] cols number of columns
- */
-void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols) {
-    if (input.empty()) { // Allow empty input (e.g., if d or h is 0)
-        output_flat.clear();
-        return;
-    }
-     if (input[0].empty() && cols != 0) { // Rows exist but are empty, cols expected
-        throw std::runtime_error("Transpose input has empty rows but non-zero columns expected.");
-    }
-     if (input[0].empty() && cols == 0) { // Empty rows and zero cols expected is valid
-         output_flat.clear();
-         return;
-     }
-    if (static_cast<int>(input.size()) != rows || static_cast<int>(input[0].size()) != cols) {
-        throw std::runtime_error("Transpose dimension mismatch.");
-    }
-    output_flat.resize(static_cast<size_t>(cols) * rows); // Transposed dimensions
-    for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < cols; ++j) {
-            // output[j][i] = input[i][j] -> output_flat[j * rows + i]
-            output_flat[static_cast<size_t>(j) * rows + i] = input[i][j];
-        }
-    }
-}
-
-
-/**
  * @brief CUDA forward propagation for first block's attention class (incomplete attention)
  * @param d_embedding embedding dimension (in)
  * @param layers_mlp layers of hidden weights in mlp (layers) - NOTE: This seems unused in the logic, mlp.hlayers.size() is used instead.

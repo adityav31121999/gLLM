@@ -24,6 +24,7 @@
 
 #include <vector>
 #include <maths.hpp>
+#include <map>
 #include "mlp.hpp"
 #include "attention.hpp"
 
@@ -73,51 +74,59 @@ public:
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
     void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
 
-#ifdef USE_CUDA
-// cuda equivalent functions for block (for parallels in loop)
-    void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& promptCount, int& tokenCount, bool isSelfAttention);
-    void cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed, int& columnNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
-    void cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>>& EVp, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
-    // for single parallel
-    void cu1parallelForprop(int& in, int& tokenCount, int i, int& layers);
-    void cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
-    // for complete block
-    void cuForprop(int& in, int& tokenCount, int& layers);
-    void cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
-    // for single parallel
-    void cu1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno);
-    void cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
-    void cu1ParallelBackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
-    void cu1ParallelBackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
-    // for complete block
-    void cuBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
-    void cuBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
-    void cuBackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-    void cuBackward(std::vector<float>& expectedH, int& in, int& layers);
-    void cuBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
-    void cuBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-#elif USE_OPENCL
-// opencl equivalent functions for block (for parallels in loop)
-    void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount);
-    // for single parallel
-    void cl1parallelForprop(int& in, int& tokenCount, int i, int& layers);
-    void cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
-    // for complete block
-    void clForprop(int& in, int& tokenCount, int& layers);
-    void clForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
-    // for single parallel
-    void cl1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno);
-    void cl1ParallelBackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
-    void cl1ParallelBackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
-    void cl1ParallelBackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
-    // for complete block
-    void clBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
-    void clBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
-    void clBackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-    void clBackward(std::vector<float>& expectedH, int& in, int& layers);
-    void clBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
-    void clBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
-#endif
+    #ifdef USE_CUDA
+    // cuda equivalent functions for block (for parallels in loop)
+        void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& promptCount, int& tokenCount, bool isSelfAttention);
+        void cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed, int& columnNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
+        void cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>>& EVp, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
+        // for single parallel
+        void cu1parallelForprop(int& in, int& tokenCount, int i, int& layers);
+        void cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
+        // for complete block
+        void cuForprop(int& in, int& tokenCount, int& layers);
+        void cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
+        // for single parallel
+        void cu1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno);
+        void cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
+        void cu1ParallelBackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
+        void cu1ParallelBackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
+        // for complete block
+        void cuBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
+        void cuBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
+        void cuBackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+        void cuBackward(std::vector<float>& expectedH, int& in, int& layers);
+        void cuBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
+        void cuBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+    #elif USE_OPENCL
+    #include <CL/cl.hpp>
+        cl::Context context;
+        cl::CommandQueue queue;
+        cl::Program program; // Holds the compiled program from clcompute.cl and others
+        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+        cl::Device default_device; // Store the device being used
+        // opencl equivalent functions for block (for parallels in loop)
+        void clParallelKdotQ(int& columnNumber, int& blockNumber, int& promptCount, int& tokenCount, bool isSelfAttention);
+        void clParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed, int& columnNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
+        void clParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>>& EVp, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
+        // for single parallel
+        void cl1parallelForprop(int& in, int& tokenCount, int i, int& layers);
+        void cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
+        // for complete block
+        void clForprop(int& in, int& tokenCount, int& layers);
+        void clForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
+        // for single parallel
+        void cl1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno);
+        void cl1ParallelBackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
+        void cl1ParallelBackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
+        void cl1ParallelBackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
+        // for complete block
+        void clBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);
+        void clBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
+        void clBackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+        void clBackward(std::vector<float>& expectedH, int& in, int& layers);
+        void clBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
+        void clBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+    #endif
 
     // default destructor
     ~block() = default;

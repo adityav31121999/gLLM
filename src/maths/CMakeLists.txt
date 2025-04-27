@@ -24,8 +24,20 @@ add_library(maths STATIC
     mat/prop.cpp
     mat/submat.cpp
 
+    mat/cl/det.cl
+    mat/cl/operators.cl
+    mat/cl/inverse.cl
+
+    mat/cu/det.cu
+    mat/cu/operators.cu
+    mat/cu/inverse.cu
+
     # stats files
     stats/basic.cpp
+
+    stats/cl/basic.cl
+
+    stats/cu/basic.cu
 )
 
 target_link_libraries(maths

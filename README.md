@@ -14,13 +14,14 @@
   - *CUDA*: 12.6
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
-  - Shady Attention Mechanism
-  - Divided context (DENSE)
+  - Attention Mechanism: Shady
+  - Architecture: Divided context
+  - Neural Connections: Dense
 
 ## Project Structure
-- **maths**: Mathematical Library for AI/ML
-- **neural**: Neural Network Library
-- **model**: Model Library
+- **maths**: Mathematical Library for LLM
+- **neural**: Neural Network Library for LLM
+- **model**: Model Library for LLM
 
 ### src/maths
 - *basic*: Basic Mathematical Functions
@@ -39,11 +40,11 @@
 - *model.hpp*: Main Header
 
 ### bin
-- Output directory for compiled binaries: .lib and .dll
+- Output directory for compiled binaries: .lib (static) and .dll (dynamic)
 
 ## Mechanism
 - This mechanism is a modification to Attention Mechanism defined in paper "Attention Is All You Need" by VASWANI et. al. (2017).
-- Also, I would direct all the readers to 3BLUE1BROWN YouTube channel where the Deep Learning Playlist is created and the inspiration has been drawn from there.
+- Also, I would direct all the readers to 3BLUE1BROWN YouTube channel where the Deep Learning Playlist is available and the main inspiration about the idea came from there.
 
 ### Main IDEA:
 - The main idea is to break long context into various small equal parts (Context Window) and introduce two new matrices for Horizontal and Vertical retention in place of Value matrix, having horizontal retention vector for token prediction and vertical retention vectors for context retention in next block.
@@ -56,7 +57,11 @@
 ### Components
 **MLP**:
 - Multilayer Perceptron defined in mlp.hpp
-- 
+- Specifically for this architecture
+- weights: hold hidden layer weights of mlp
+- hlayers: hidden layer results
+- activations: activated hlayers
+- gweights: gradient weights
 
 **HEAD**:
 - Attention class defined in attention.hpp
@@ -109,13 +114,12 @@
 - promptCount: tokens in user prompt
 - currentTokenCount: number of tokens generated or in use in full context
 
-
 ### Training
 
 ### Inference
 
 ## MODEL STRUCTURE
- 
+
 **MODEL METADATA**:
 ```
 {

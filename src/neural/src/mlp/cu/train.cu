@@ -17,22 +17,6 @@
 
 
 /**
- * @brief CUDA kernel for calculating the Mean Squared Error (MSE).
- * This kernel computes the squared difference between the expected and actual output for each neuron
- * and accumulates the sum using atomic operations.
- * @param expected Pointer to the expected output data on the device.
- * @param output Pointer to the output data on the device.
- * @param mse Pointer to the MSE value on the device (will be updated).
- * @param size The number of output neurons.
- */
-__global__ void cuMSEKernel(float* expected, float* output, float* mse, int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size) return;
-    atomicAdd(mse, powf(expected[idx] - output[idx], 2));
-}
-
-
-/**
  * @brief Trains the MLP using CUDA for a single input-output pair.
  * This function performs forward and backward propagation on the GPU to train the MLP.
  * It calculates the MSE and continues training until the MSE is below a threshold.

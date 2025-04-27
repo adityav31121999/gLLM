@@ -7,7 +7,6 @@
 #include <maths.hpp>
 #include "include/mlp.hpp"
 
-
 // Helper macro for CUDA error checking
 #define CUDA_CHECK(call) do { \
     cudaError_t err = call; \
@@ -16,55 +15,6 @@
         throw std::runtime_error(cudaGetErrorString(err)); \
     } \
 } while (0)
-
-
-/**
- * @brief CUDA kernel for Rprop weight update
- * @param weights Weights to be updated
- * @param gradients Current gradients
- * @param prev_gradients Previous gradients
- * @param delta_weights Step sizes for each weight
- * @param eta_plus Increase factor
- * @param eta_minus Decrease factor
- * @param delta_max Maximum step size
- * @param delta_min Minimum step size
- * @param size Size of the arrays
- */
-__global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, 
-    float* delta_weights, float eta_plus, float eta_minus, 
-    float delta_max, float delta_min, int size) 
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx < size) {
-        float grad = gradients[idx];
-        float prev_grad = prev_gradients[idx];
-        float delta = delta_weights[idx];
-
-        // Apply Rprop update rule
-        if (grad * prev_grad > 0) {
-            // Same sign - increase step size
-            delta = fminf(delta * eta_plus, delta_max);
-            weights[idx] -= copysignf(delta, grad);
-            prev_gradients[idx] = grad;
-        } 
-        else if (grad * prev_grad < 0) {
-            // Sign changed - decrease step size
-            delta = fmaxf(delta * eta_minus, delta_min);
-            // Revert previous step
-            weights[idx] += copysignf(delta, prev_grad);
-            prev_gradients[idx] = 0; // Set to zero to avoid oscillation
-        } 
-        else {
-            // First iteration or zero gradient
-            weights[idx] -= copysignf(delta, grad);
-            prev_gradients[idx] = grad;
-        }
-
-        // Store updated delta
-        delta_weights[idx] = delta;
-    }
-}
 
 /**
  * @brief CUDA implementation of Rprop algorithm for MLP

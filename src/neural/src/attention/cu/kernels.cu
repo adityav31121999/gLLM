@@ -9,60 +9,6 @@
 #include <maths.hpp>
 #include <string>
 
-// --- Helper Kernels ---
-
-/**
- * @brief Converts a 2D std::vector into a flattened 1D std::vector.
- * @param[in] vec2d The 2D vector to be flattened. Assumes consistent column sizes.
- * @return A 1D vector containing the elements of vec2d in row-major order.
- * @throw std::runtime_error If the input 2D vector has inconsistent column sizes.
- */
-std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d) {
-    if (vec2d.empty()) return {};
-    size_t rows = vec2d.size();
-    size_t cols = vec2d[0].size();
-    std::vector<float> flat(rows * cols);
-    for (size_t i = 0; i < rows; ++i) {
-        if (vec2d[i].size() != cols) {
-            throw std::runtime_error("Inconsistent column size in flatten");
-        }
-        // Use memcpy for potentially faster copying of contiguous memory blocks
-        memcpy(flat.data() + i * cols, vec2d[i].data(), cols * sizeof(float));
-    }
-    return flat;
-}
-
-
-/**
- * @brief Flattens a mat object into a 1D vector (row-major).
- * @param matrix The input mat object. Assumes mat has member `a` which is std::vector<std::vector<float>>.
- * @return A 1D vector containing the flattened data.
- */
-std::vector<float> flatten(const mat& matrix) {
-    // Assuming mat class has a member 'a' of type std::vector<std::vector<float>>
-    return flatten(matrix.a);
-}
-
-
-/**
- * @brief Converts a 1D std::vector into a 2D std::vector with specified dimensions.
- * @param[in] flat The 1D vector to be unflattened.
- * @param[out] vec2d The resulting 2D vector. Will be resized.
- * @param[in] rows The desired number of rows for the 2D vector.
- * @param[in] cols The desired number of columns for the 2D vector.
- * @throw std::runtime_error If the number of elements in flat is not equal to rows * cols.
- */
-void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols) {
-    if (flat.size() != rows * cols) {
-        throw std::runtime_error("Size mismatch in unflatten: flat size " + std::to_string(flat.size()) + " != rows*cols " + std::to_string(rows*cols));
-    }
-    vec2d.resize(rows);
-    for (size_t i = 0; i < rows; ++i) {
-        vec2d[i].resize(cols);
-        // Use memcpy for potentially faster copying of contiguous memory blocks
-        memcpy(vec2d[i].data(), flat.data() + i * cols, cols * sizeof(float));
-    }
-}
 
 /**------------------------------------MULTIPLICATION------------------------------------**/
 
