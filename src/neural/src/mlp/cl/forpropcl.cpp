@@ -1,12 +1,4 @@
-
 #ifdef USE_OPENCL
-
-#include <vector>
-#include <stdexcept>
-#include <iostream>
-#include <numeric> // For std::inner_product (if needed for verification, though not in CL path)
-#include "include/mlp.hpp" // Adjusted path relative to forpropcl.cpp location
-#include <maths.hpp>          // For flatten function declaration
 
 #ifndef CL_HPP_ENABLE_EXCEPTIONS
     #define CL_HPP_ENABLE_EXCEPTIONS
@@ -17,6 +9,13 @@
 #ifndef CL_HPP_MINIMUM_OPENCL_VERSION
     #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Match setup
 #endif
+
+#include <vector>
+#include <stdexcept>
+#include <iostream>
+#include <numeric> // For std::inner_product (if needed for verification, though not in CL path)
+#include "include/mlp.hpp" // Adjusted path relative to forpropcl.cpp location
+#include <maths.hpp>          // For flatten function declaration
 
 #include <CL/cl.hpp> // Use C++ bindings
 

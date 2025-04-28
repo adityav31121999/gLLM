@@ -1,5 +1,13 @@
 
 #ifdef USE_OPENCL
+
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 // Add these includes at the top of clcompute.cpp if not already present
 #include "include/transformer.hpp" // Should already be there
 #include "include/block.hpp"       // For block class definition

@@ -157,21 +157,46 @@ void transformer::cuRun() {
                 }
 
                 // --- Transition to the next block ---
-                // Copy the EV state from the completed block (t[0]) to d_EVuse
-                // This requires device-to-device copies. Assuming t[0] can provide device pointers.
-                // TODO: Implement mechanism to get device EV pointers from t[0] and copy to d_EVuse.
-                // Placeholder: Need a function like t[0].getDeviceEVPointers() -> float** (device pointers)
-                // Then loop and copy:
-                // float** d_src_ev_ptrs = t[0].getDeviceEVPointers(); // Hypothetical
-                // for (int i = 0; i < x; ++i) {
-                //     for (int j = 0; j < y; ++j) {
-                //         size_t src_offset = ???; // Offset within the source block's EV structure
-                //         size_t dest_offset = (i * y + j) * CONTEXT_WIN * d;
-                //         CUDA_CHECK(cudaMemcpy(d_EVuse + dest_offset, d_src_ev_ptrs[i*y+j], context_win_bytes, cudaMemcpyDeviceToDevice));
-                //     }
-                // }
-                 std::cerr << "Warning: Device-to-device copy for EV->EVuse not implemented yet in cuRun." << std::endl;
+                // Copy the EV state from the completed block (t[0]) to d_EVuse (D->D)
+                size_t head_ev_bytes = static_cast<size_t>(CONTEXT_WIN) * d * sizeof(float);
 
+                // Check if the total size matches the allocated buffer size
+                if (static_cast<size_t>(x) * y * head_ev_bytes != ev_use_bytes) {
+                    throw std::runtime_error("Mismatch between calculated EVuse size and allocated buffer size during block transition.");
+                }
+
+                // Loop through each attention head in the completed block (t[0])
+                for (int i = 0; i < x; ++i) { // Iterate through layers (rows)
+                    for (int j = 0; j < y; ++j) { // Iterate through parallels (columns)
+                        try {
+                            // Get the device pointer for the EV state of the current head (i, j)
+                            float* d_src_ev_ptr = t[0].b[i][j].getDeviceEVPointer(); // Use the getter
+
+                            // Calculate the destination offset in the flattened d_EVuse buffer
+                            size_t dest_offset_elements = (static_cast<size_t>(i) * y + j) * CONTEXT_WIN * d;
+
+                            // Boundary check (optional but good practice)
+                            if (dest_offset_elements * sizeof(float) + head_ev_bytes > ev_use_bytes) {
+                                throw std::out_of_range("EVuse destination offset out of bounds for head [" +
+                                                         std::to_string(i) + "][" + std::to_string(j) + "].");
+                            }
+
+                            // Enqueue the device-to-device memory copy
+                            CUDA_CHECK(cudaMemcpy(d_EVuse + dest_offset_elements, // Destination pointer
+                                                  d_src_ev_ptr,                  // Source pointer
+                                                  head_ev_bytes,                 // Size in bytes
+                                                  cudaMemcpyDeviceToDevice));    // Type of copy
+
+                        } catch (const std::exception& e) {
+                             // Catch potential errors from getDeviceEVPointer() or other issues
+                             std::cerr << "Error getting/copying EV pointer for head [" << i << "][" << j << "]: " << e.what() << std::endl;
+                             throw; // Re-throw standard exceptions
+                        }
+                    } // End loop columns (j)
+                } // End loop rows (i)
+
+                // Ensure all copy operations are completed before proceeding
+                CUDA_CHECK(cudaDeviceSynchronize());
 
                 blockCount += 1; // Increment block count *once*
 

@@ -83,7 +83,9 @@ public:
     void backward1stHead(std::vector<float>& expected, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
 
     #ifdef USE_CUDA
+        float* d_EV; // Device pointer for Vertical Retention
     // cuda equivalent functions for attention
+        float* getDeviceEVPointer();
         void cuforprop(int& in, int& layers, int& tokenCount);
         void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
         void cuBackward(std::vector<float>& expected, int& in, int& layers);
@@ -92,13 +94,15 @@ public:
         void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
         void cuBackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     #elif USE_OPENCL
-    #include <CL/cl.hpp>
+        #include <CL/cl.hpp>
         cl::Context context;
         cl::CommandQueue queue;
         cl::Program program; // Holds the compiled program from clcompute.cl and others
         std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
         cl::Device default_device; // Store the device being used
+        cl::Buffer d_EV; // Device buffer for Vertical Retention
     // opencl equivalent functions for attention
+        cl::Buffer& getDeviceEVBuffer(); 
         void clforprop(int& in, int& layers, int& tokenCount);
         void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
         void clbackward(std::vector<float>& expected, int& in, int& layers);
@@ -106,6 +110,15 @@ public:
         void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
         void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
         void clbackward1stHead(std::vector<float>& expectedH, std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+        cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
+        void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
+        void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
+        void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
+        void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
+        void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
+        void cl_finish(cl_command_queue queue);
+        void cl_release_mem_object(cl_mem memobj);
+        #define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)    
     #endif
 
     // default destructor

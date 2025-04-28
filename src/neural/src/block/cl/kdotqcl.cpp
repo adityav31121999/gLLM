@@ -1,6 +1,13 @@
 // Add this to a new file, e.g., block/cl/kdotqcl.cpp
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 #include "include/block.hpp" // Includes attention.hpp -> mlp.hpp -> maths.hpp
 #include <vector>
 #include <string>
@@ -12,24 +19,11 @@
 #include <map>
 #include <CL/cl.hpp> // Or <CL/cl.h>
 
-// Assume these OpenCL utilities are defined elsewhere (as provided previously)
-extern void CL_CHECK(cl_int err, const char* file, int line);
-#define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)
-extern cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
-extern void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
-extern void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
-extern void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
-extern void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
-extern void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
-extern void cl_finish(cl_command_queue queue);
-extern void cl_release_mem_object(cl_mem memobj);
-
 
 /**
  * @brief OpenCL: Computes KdotQ in parallel for a column during TRAINING using K and Q matrices.
  *        Uses kernelKdotQforSelf_train or kernelKdotQforCross_train.
  *        Matches signature: void block::clParallelKdotQ(cl_context context, cl_command_queue queue, std::map<std::string, cl_kernel>& kernels, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
- *
  * @param context OpenCL context.
  * @param queue OpenCL command queue.
  * @param kernels Map of compiled OpenCL kernels.
@@ -191,7 +185,8 @@ void block::clParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
             }
             cl_release_mem_object(d_kdotq_buffers[i]); // Release the kdotq buffer now
         }
-    } catch (const std::exception& e) {
+    } 
+    catch (const std::exception& e) {
         std::cerr << "OpenCL Exception in clParallelKdotQ (Training): " << e.what() << std::endl;
         // Cleanup any remaining valid buffer handles
         for (int i = 0; i < num_heads_in_column; ++i) {
@@ -517,9 +512,9 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
             // --- Kernel Launch ---
             cl_kernel kdotq_kernel = nullptr;
             if (isSelfAttention) {
-                kdotq_kernel = this->kernels.at("kernelKdotQ_BlockN_Self_Inference");
+                kdotq_kernel = this->kernels.at(cl_Kernel, "kernelKdotQ_BlockN_Self_Inference");
             } else {
-                kdotq_kernel = this->kernels.at("kernelKdotQ_BlockN_Cross_Inference");
+                kdotq_kernel = this->kernels.at(cl_Kernel,"kernelKdotQ_BlockN_Cross_Inference");
             }
 
             size_t local_work_size[2] = { 16, 16 };

@@ -9,15 +9,16 @@
 #include <iostream>
 #include <fstream>
 #include <map>
-#include <maths.hpp>
-#include "mlp.hpp"
-#include "attention.hpp"
-#include "block.hpp"
 
 #ifdef USE_OPENCL
     #include <CL/cl.hpp>
     #include <map>
 #endif
+
+#include <maths.hpp>
+#include "mlp.hpp"
+#include "attention.hpp"
+#include "block.hpp"
 
 /**
  * @brief Transformer (FULL CONTEXT) class for token/chunk prediction and context 
@@ -137,6 +138,15 @@ public:
                     std::vector<std::vector<std::string>>& rString);
         void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
         void clRun();
+        cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
+        void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
+        void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
+        void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
+        void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
+        void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
+        void cl_finish(cl_command_queue queue);
+        void cl_release_mem_object(cl_mem memobj);
+        #define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)    
     #endif
 
     // default destructor
@@ -174,15 +184,4 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
         }
         return *instance;
     }
-
-// === OpenCL Specific Members ===
-cl::Context cl_context;
-cl::CommandQueue cl_queue;
-std::vector<cl::Device> cl_devices;
-cl::Program cl_program; // Holds the compiled program from clcompute.cl
-std::map<std::string, cl::Kernel> cl_kernels; // Map to store kernel objects by name
-
-// === Host-side functions that USE OpenCL ===
-// Declaration of the function that sets up OpenCL and compiles kernels
-void setupOpenCL(const std::string& kernelFilePath = "clcompute.cl"); // Example name
 */

@@ -126,6 +126,15 @@ public:
         void clBackward(std::vector<float>& expectedH, int& in, int& layers);
         void clBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers);
         void clBackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers);
+        cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
+        void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
+        void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
+        void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
+        void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
+        void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
+        void cl_finish(cl_command_queue queue);
+        void cl_release_mem_object(cl_mem memobj);
+        #define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)
     #endif
 
     // default destructor

@@ -1,6 +1,13 @@
 // transformer_cl_forward.cpp (or add to an existing transformer_cl.cpp)
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 #include "include/transformer.hpp" // Includes block.hpp, attention.hpp, mlp.hpp
 #include <vector>
 #include <numeric>   // std::accumulate

@@ -1,5 +1,15 @@
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
+    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Or the minimum version you support
+#endif
+
 #include "include/mlp.hpp" // Includes OpenCL headers, getOpenCLErrorString, etc.
 #include <vector>
 #include <stdexcept>
@@ -27,10 +37,10 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
     float mse = 0.0f;
 
     try {
-        cl::Kernel kernelMse(cl_program, "kernelMseReduction"); // Use the specific kernel name
+        cl::Kernel kernelMse(program, "kernelMseReduction"); // Use the specific kernel name
 
         // --- NDRange Configuration for Reduction ---
-        // Choose a suitable local work-group size (power of 2 often good, check device limits)
+        // Choose a suitable local work-group size (power of 2 often good, check device limits)        
         size_t local_size = 64; // Example: 64 work-items per group. Tune this based on device.
         // Ensure local_size doesn't exceed device capabilities for this kernel
         // size_t max_work_group_size = kernelMse.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(cl::Device::getDefault());
@@ -45,25 +55,25 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
 
         // Create buffers and copy host data
         // Using CL_MEM_COPY_HOST_PTR can be efficient if supported well by the driver
-        cl::Buffer d_expected(cl_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(expected_vec.data()));
-        cl::Buffer d_output(cl_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(output_vec.data()));
-        cl::Buffer d_partial_mse(cl_context, CL_MEM_WRITE_ONLY, partial_mse_size_bytes);
+        cl::Buffer d_expected(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(expected_vec.data()));
+        cl::Buffer d_output(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(output_vec.data()));
+        cl::Buffer d_partial_mse(context, CL_MEM_WRITE_ONLY, partial_mse_size_bytes);
 
         // --- Kernel Execution ---
         kernelMse.setArg(0, d_expected);
         kernelMse.setArg(1, d_output);
         kernelMse.setArg(2, d_partial_mse);
         // Argument 3 is the local memory buffer, specified using cl::Local
-        kernelMse.setArg(3, cl::Local(sizeof(float) * local_size));
-        kernelMse.setArg(4, static_cast<cl_int>(in)); // size
+        kernelMse.setArg(3, cl::Local(sizeof(float) * local_size)); // local memory
+        kernelMse.setArg(4, static_cast<cl_int>(in));             // Pass total size
 
         // Enqueue the kernel
-        cl_queue.enqueueNDRangeKernel(kernelMse, cl::NullRange, cl::NDRange(global_size), cl::NDRange(local_size));
+        queue.enqueueNDRangeKernel(kernelMse, cl::NullRange, cl::NDRange(global_size), cl::NDRange(local_size));
 
         // --- Read Partial Results and Sum on Host ---
         std::vector<float> h_partial_mse(num_groups);
         // Blocking read to ensure kernel is finished and data is available
-        cl_queue.enqueueReadBuffer(d_partial_mse, CL_TRUE, 0, partial_mse_size_bytes, h_partial_mse.data());
+        queue.enqueueReadBuffer(d_partial_mse, CL_TRUE, 0, partial_mse_size_bytes, h_partial_mse.data());
 
         // Sum the partial results from each work-group on the host
         float total_squared_error = std::accumulate(h_partial_mse.begin(), h_partial_mse.end(), 0.0f);
@@ -73,9 +83,9 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
 
         // Buffers are released automatically by RAII destructors
 
-    } catch (const cl::Error& err) {
-        std::cerr << "OpenCL Error during MSE calculation: "
-                  << err.what() << " (" << getOpenCLErrorString(err.err()) << ")" << std::endl;
+    }
+    catch (const cl::Error& err) {        
+        std::cerr << "OpenCL Error during training epoch "<< err.what();
         throw std::runtime_error("OpenCL error during MSE calculation."); // Re-throw
     }
 
@@ -93,6 +103,7 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
  */
 void mlp::clTrain(float& mse, int in, int layers, float learning) {
     unsigned int e = 0;
+    
     const unsigned int max_epochs = 10000; // Add a max epoch limit to prevent infinite loops
     const float convergence_threshold = 1e-6f;
 
@@ -133,8 +144,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
             e++;
 
         } catch (const cl::Error& err) {
-            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "
-                      << err.what() << " (" << getOpenCLErrorString(err.err()) << ")" << std::endl;
+            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "<< err.what();
             throw; // Re-throw after logging
         } catch (const std::exception& ex) {
             std::cerr << "Standard Exception during training epoch " << e + 1 << ": " << ex.what() << std::endl;
@@ -225,8 +235,7 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
             }
 
         } catch (const cl::Error& err) {
-            std::cerr << "OpenCL Error during training epoch " << e << ": "
-                      << err.what() << " (" << getOpenCLErrorString(err.err()) << ")" << std::endl;
+            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "<< err.what();
             throw; // Re-throw after logging
         } catch (const std::exception& ex) {
             std::cerr << "Standard Exception during training epoch " << e << ": " << ex.what() << std::endl;
@@ -273,11 +282,12 @@ void mlp::clValidate(int in, int layers) {
         // Output the validation MSE
         std::cout << "Validation MSE: " << mse << std::endl;
 
-    } catch (const cl::Error& err) {
-        std::cerr << "OpenCL Error during validation: "
-                  << err.what() << " (" << getOpenCLErrorString(err.err()) << ")" << std::endl;
+    }
+    catch (const cl::Error& err) {
+        std::cerr << "OpenCL Error during validation: "<< err.what();
         throw; // Re-throw after logging
-    } catch (const std::exception& ex) {
+    }
+    catch (const std::exception& ex) {
         std::cerr << "Standard Exception during validation: " << ex.what() << std::endl;
         throw; // Re-throw
     }
@@ -324,11 +334,12 @@ void mlp::clTest(int in, int layers) {
         }
 
 
-    } catch (const cl::Error& err) {
-        std::cerr << "OpenCL Error during testing: "
-                  << err.what() << " (" << getOpenCLErrorString(err.err()) << ")" << std::endl;
+    }
+    catch (const cl::Error& err) {
+        std::cerr << "OpenCL Error during testing: "<< err.what();
         throw; // Re-throw after logging
-    } catch (const std::exception& ex) {
+    } 
+    catch (const std::exception& ex) {
         std::cerr << "Standard Exception during testing: " << ex.what() << std::endl;
         throw; // Re-throw
     }

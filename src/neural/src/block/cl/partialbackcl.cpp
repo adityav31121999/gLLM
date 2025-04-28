@@ -1,6 +1,13 @@
 // Add this to a new file, e.g., block/cl/partialbackcl.cpp
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 #include "include/block.hpp"     // Provides block class declaration and attention.hpp
 #include <vector>                // For std::vector
 #include <stdexcept>             // For std::out_of_range, std::runtime_error

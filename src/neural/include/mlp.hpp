@@ -17,6 +17,18 @@
 #include <maths.hpp>
 #include <map>
 
+#include <string>
+#include <cmath>
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <map>
+
+#ifdef USE_OPENCL
+    #include <CL/cl.hpp>
+    #include <map>
+#endif
+
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
  */
@@ -65,7 +77,6 @@ public:
     void cuValidate(int in, int layers);
     void cuTest(int in, int layers);
 #elif USE_OPENCL
-    #include <CL/cl.hpp>
     cl::Context context;
     cl::CommandQueue queue;
     cl::Program program; // Holds the compiled program from clcompute.cl and others
@@ -84,6 +95,16 @@ public:
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void clValidate(int in, int layers);
     void clTest(int in, int layers);
+    void CL_CHECK(cl_int err, const char* file, int line);
+    cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
+    void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
+    void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
+    void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
+    void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
+    void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
+    void cl_finish(cl_command_queue queue);
+    void cl_release_mem_object(cl_mem memobj);
+    #define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)
 #endif
 
     // default destructor
@@ -137,6 +158,11 @@ void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& 
     float cucomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
     float cudropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 #elif USE_OPENCL
+    cl::Context context;
+    cl::CommandQueue queue;
+    cl::Program program; // Holds the compiled program from clcompute.cl and others
+    std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+    cl::Device default_device; // Store the device being used
 // opencl implementation
     float clgetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
     float clgetL2Penalty(std::vector<std::vector<std::vector<float>>>&);

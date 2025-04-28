@@ -1,16 +1,19 @@
 // Add this to a new file, e.g., block/cl/backwardcl.cpp
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 #include "include/block.hpp"     // Provides block class declaration and attention.hpp
 #include <vector>                // For std::vector
 #include <stdexcept>             // For std::out_of_range, std::runtime_error
 #include <string>                // For std::to_string in error messages
 #include <map>                   // For kernel map
 #include <CL/cl.hpp>             // Or <CL/cl.h>
-
-// Note: No OpenCL helper functions (cl_create_buffer etc.) are needed directly
-// in these block functions, as they delegate the work to cl1ParallelBackward...
-
 
 /**
  * @brief OpenCL backward propagation for the FIRST block, driven by a single horizontal error vector (EH).

@@ -1,6 +1,14 @@
-// d:\gLLM\src\neural\src\mlp\cl\losscl.cpp
-
 #ifdef USE_OPENCL
+
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
+    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Or the minimum version you support
+#endif
 
 #include <stdexcept>
 #include <iostream>
@@ -9,19 +17,7 @@
 #include "include/mlp.hpp"  // Adjusted path relative to losscl.cpp location
 #include <maths.hpp>        // Assumed accessible via include paths
 
-// OpenCL Headers - Use C++ bindings
-// Ensure these defines are present before including cl.hpp (ideally globally or in opencl_setup.hpp)
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Match setup
-#endif
-#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
-    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Match setup
-#endif
 #include <CL/cl.hpp> // Use C++ bindings
-
 
 /**
  * @brief Calculate Mean Squared Error (MSE) using the 'kernelMseReduction' OpenCL kernel.
@@ -138,10 +134,12 @@ float clgetL1Penalty(const std::vector<std::vector<std::vector<float>>>& weights
 
         // queue.finish(); // Not strictly needed
 
-    } catch (const cl::Error& err) {
+    } 
+    catch (const cl::Error& err) {
         std::cerr << "OpenCL Error in clgetL1Penalty: " << err.what() << " (" << err.err() << ")" << std::endl;
         throw;
-    } catch (const std::exception& e) {
+    } 
+    catch (const std::exception& e) {
         std::cerr << "Standard Exception in clgetL1Penalty: " << e.what() << std::endl;
         throw;
     }

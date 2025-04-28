@@ -1,5 +1,12 @@
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 #include "include/attention.hpp" // Includes mlp.hpp and maths.hpp indirectly or directly
 #include <vector>
 #include <string>
@@ -10,22 +17,6 @@
 #include <cmath>
 #include <map>
 #include <CL/cl.hpp> // Or <CL/cl.h>
-
-// Assume these OpenCL utilities are defined elsewhere
-extern void CL_CHECK(cl_int err, const char* file, int line);
-#define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)
-extern cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
-extern void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
-extern void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
-extern void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
-extern void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
-extern void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
-extern void cl_finish(cl_command_queue queue);
-extern void cl_release_mem_object(cl_mem memobj);
-// Assume flatten and unflatten are available
-extern std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
-extern void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
-
 
 /**
  * @brief OpenCL Backward Propagation using gradients from expected Horizontal output.

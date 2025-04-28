@@ -1,5 +1,15 @@
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
+    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Or the minimum version you support
+#endif
+
 #include "include/mlp.hpp"
 #include <vector>
 #include <stdexcept>
@@ -140,10 +150,12 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         // queue.finish(); // Optional
         // Buffers are released automatically by RAII destructors
 
-    } catch (const cl::Error& err) {
+    }
+    catch (const cl::Error& err) {
         std::cerr << "OpenCL Error in mlp::clBackwithL1: " << err.what() << " (" << err.err() << ")" << std::endl;
         throw std::runtime_error("OpenCL error during L1 backpropagation.");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         std::cerr << "Standard Exception in mlp::clBackwithL1: " << e.what() << std::endl;
         throw; // Re-throw standard exceptions
     }

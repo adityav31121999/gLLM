@@ -1,5 +1,15 @@
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
+    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Or the minimum version you support
+#endif
+
 #include "include/mlp.hpp"
 #include <vector>
 #include <stdexcept>

@@ -1,5 +1,12 @@
 #ifdef USE_OPENCL
 
+#ifndef CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_ENABLE_EXCEPTIONS
+#endif
+#ifndef CL_HPP_TARGET_OPENCL_VERSION
+    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
+#endif
+
 #include "include/attention.hpp" // Includes mlp.hpp and maths.hpp indirectly or directly
 #include <vector>
 #include <string>
@@ -11,32 +18,14 @@
 #include <map>          // For kernel map
 #include <CL/cl.hpp>
 
-// Assume these OpenCL utilities are defined elsewhere (e.g., in maths.hpp or a dedicated cl_utils.hpp)
-// extern cl_context context; // Or passed as argument
-// extern cl_command_queue queue; // Or passed as argument
-// extern std::map<std::string, cl_kernel> kernels; // Or passed as argument
-extern void CL_CHECK(cl_int err, const char* file, int line);
-#define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)
-extern cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
-extern void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
-extern void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
-extern void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
-extern void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
-extern void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
-extern void cl_finish(cl_command_queue queue);
-extern void cl_release_mem_object(cl_mem memobj);
 
 /**
  * @brief OpenCL forward propagation for first block's attention class (incomplete attention)
- * @param context OpenCL context
- * @param queue OpenCL command queue
- * @param kernels Map of compiled OpenCL kernels
  * @param d_embedding embedding dimension (in)
  * @param layers_mlp layers of hidden weights in mlp (layers) - NOTE: Unused, mlp object sizes used.
  * @param currentTokenCount token count for this attention head (tokenCount)
  */
-void attention::clforprop(cl_context context, cl_command_queue queue, std::map<std::string, cl_kernel>& kernels,
-                          int& d_embedding, int& /* layers_mlp */, int& currentTokenCount)
+void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCount)
 {
     // Use constants defined in attention.hpp for clarity
     const int d = EMBEDDING;        // Embedding dimension
@@ -465,13 +454,12 @@ void attention::clforprop(cl_context context, cl_command_queue queue, std::map<s
  * @param blockIdx which block is being processed (blockCount in C++)
  * @param contextWindowSize number of tokens for each attention head (n in C++)
  */
-void attention::clforprop(cl_context context, cl_command_queue queue, std::map<std::string, cl_kernel>& kernels,
-                          std::vector<std::vector<float>> /* EVp */, int& d_embedding, int& layers_mlp, int& totalTokenCount,
+void attention::clforprop(std::vector<std::vector<float>> /* EVp */, int& d_embedding, int& layers_mlp, int& totalTokenCount,
                           int& blockIdx, int& contextWindowSize)
 {
     // Handle first block case by calling the other overload
     if (blockIdx == 0) {
-        clforprop(context, queue, kernels, d_embedding, layers_mlp, totalTokenCount);
+        clforprop(d_embedding, layers_mlp, totalTokenCount);
         return;
     }
 
