@@ -45,8 +45,8 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
-    mlp(OpenCLContext& context, unsigned int in, unsigned int layers, unsigned int epochs = 10, float learning = 0.01);
-#else
+    mlp(OpenCLContext& context, unsigned int in, unsigned int layers, unsigned int epochs = 10, float learning = 0.01)
+#elif USE_CUDA || USE_CPU
     // Constructor when OpenCL is disabled
     mlp(unsigned int in, unsigned int layers, unsigned int epochs = 10, float learning = 0.01);
 #endif

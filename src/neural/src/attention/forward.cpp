@@ -1,10 +1,4 @@
 
-// This file contains the forward propagation for the attention class
-#include <numeric>
-#include <algorithm>
-#include "include/attention.hpp"
-#include <maths.hpp>
-
 /**
  * IMP: keep keys and queries so that multiple times can be used from same place, 
  * and less calculation is needed, if not saved then multiple times the keys and 
@@ -16,6 +10,11 @@
  */
 
 #ifdef USE_CPU
+
+#include <numeric>
+#include <algorithm>
+#include "include/attention.hpp"
+#include <maths.hpp>
 
 /**
  * @brief forward propagation for first block's attention class (incomplete attention)

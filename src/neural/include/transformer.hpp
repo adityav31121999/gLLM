@@ -72,7 +72,7 @@ public:
     transformer(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab);
     transformer(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     transformer(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
-#else
+#elif USE_CUDA || USE_CPU
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);

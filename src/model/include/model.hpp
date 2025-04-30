@@ -86,7 +86,7 @@ public:
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, bool toTrainModel);
-#else 
+#elif USE_CUDA || USE_CPU
     model(int m, int x, int y, int n, int d, int h, int l, int vocab);
     model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
     model(int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);

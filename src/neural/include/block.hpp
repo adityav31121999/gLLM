@@ -53,7 +53,7 @@ public:
     block(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab);
     block(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     block(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool inTraining);
-#else
+#elif USE_CUDA || USE_CPU
     // Default constructor available when OpenCL is not used.
     block() = default;
     // Constructors without OpenCLContext
