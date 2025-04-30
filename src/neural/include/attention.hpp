@@ -75,9 +75,8 @@ public:
     attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType);
     attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining);
 #elif USE_CUDA || USE_CPU
-    // Default constructor available when OpenCL is not used.
-    attention() = default;
     // Constructors without OpenCLContext
+    attention() = default;
     attention(int n, int d, int h, int l);
     attention(int n, int d, int h, int l, bool attentionType);
     attention(int n, int d, int h, int l, bool attentionType, bool inTraining);
