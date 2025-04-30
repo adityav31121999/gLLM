@@ -2,8 +2,7 @@
 // backward propagation for attention class
 #include "include/attention.hpp"
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief Backward Propagation for the attention class using gradients from expected Horizontal output.

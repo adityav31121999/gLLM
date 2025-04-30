@@ -2,8 +2,7 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief forward propagation for partial attention (layer of block)

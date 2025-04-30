@@ -5,8 +5,7 @@
 #include <vector>
 #include <maths.hpp>
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)

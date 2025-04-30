@@ -15,8 +15,7 @@
  * of memory in attention class.
  */
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief forward propagation for first block's attention class (incomplete attention)

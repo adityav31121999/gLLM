@@ -35,8 +35,8 @@ find_package(CUDAToolkit REQUIRED)
 
 # Check for which dependency to use
 if(CUDAToolkit_FOUND AND OpenCL_FOUND)
-    set(USE_CUDA ON)
-    set(USE_OPENCL OFF) # not for nvidia
+    set(USE_CUDA OFF)
+    set(USE_OPENCL ON) # not for nvidia
     set(USE_CPU OFF)    # gpu available
 elseif(OpenCL_FOUND AND NOT CUDAToolkit_FOUND)
     set(USE_OPENCL ON)

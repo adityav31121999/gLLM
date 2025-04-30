@@ -4,7 +4,7 @@
 #include <numeric>
 #include <maths.hpp>
 
-#ifndef USE_CUDA && USE_OPENCL
+#ifdef USE_CPU
 
 /**
  * @brief The forward propagation function. This function performs the

@@ -3,7 +3,7 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
-#ifndef USE_CUDA && USE_OPENCL
+#ifdef USE_CPU
 
 /**
  * @brief backward propagation for kth layer (when expected EV is not known, for block where backprop begins)

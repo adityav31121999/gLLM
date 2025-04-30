@@ -1,17 +1,11 @@
 
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 // Add these includes at the top of clcompute.cpp if not already present
 #include "include/transformer.hpp" // Should already be there
 #include "include/block.hpp"       // For block class definition
 #include "include/attention.hpp"   // For attention class definition and constants
+#include <maths.hpp>
 #include <vector>
 #include <string>
 #include <stdexcept> // For std::runtime_error, std::out_of_range
@@ -21,21 +15,6 @@
 
 #include <CL/cl.hpp>
 #include <cfloat>
-
-
-#define CL_CHECK(call)                                                      \
-do {                                                                        \
-    cl_int err = call;                                                      \
-    if (err != CL_SUCCESS) {                                                \
-        fprintf(stderr, "OpenCL Error in %s at line %d: %s (%d)\n",         \
-                __FILE__, __LINE__, oclErrorString(err), err);              \
-        /* Consider throwing an exception or returning an error code */     \
-        /* For now, just print and potentially return */                    \
-        /* Adjust behavior as needed (e.g., throw cl::Error(err)) */        \
-        return; /* Or throw cl::Error(err, "OpenCL Error occurred"); */     \
-    }                                                                       \
-} while (0)
-
 
 // Define thread block dimensions (tune these based on your GPU architecture)
 // These correspond to OpenCL local work group sizes

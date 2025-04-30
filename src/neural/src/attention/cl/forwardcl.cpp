@@ -1,13 +1,7 @@
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/attention.hpp" // Includes mlp.hpp and maths.hpp indirectly or directly
+#include <maths.hpp>
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -85,6 +79,7 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
     cl_int err;
 
     try {
+        OpenCLContext& context_obj = this->clcontext; // Use the member reference
         // --- Allocate Device Memory ---
         size_t k_bytes = static_cast<size_t>(n) * h * sizeof(float);
         size_t q_bytes = static_cast<size_t>(n) * h * sizeof(float);
@@ -95,33 +90,33 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
         size_t proj_mat_bytes = static_cast<size_t>(h) * d * sizeof(float); // h x d
         size_t embed_bytes = static_cast<size_t>(d) * sizeof(float);        // d
 
-        d_K = cl_create_buffer(context, CL_MEM_READ_ONLY, k_bytes, nullptr, err); CL_CHECK(err);
-        d_Q = cl_create_buffer(context, CL_MEM_READ_ONLY, q_bytes, nullptr, err); CL_CHECK(err);
-        d_KdotQ = cl_create_buffer(context, CL_MEM_READ_ONLY, kdotq_bytes, nullptr, err); CL_CHECK(err);
-        d_head = cl_create_buffer(context, CL_MEM_READ_WRITE, head_bytes, nullptr, err); CL_CHECK(err); // LOTA output
-        d_row_sums = cl_create_buffer(context, CL_MEM_READ_WRITE, sums_bytes, nullptr, err); CL_CHECK(err);
-        d_col_sums = cl_create_buffer(context, CL_MEM_READ_WRITE, sums_bytes, nullptr, err); CL_CHECK(err);
-        d_dh_accum = cl_create_buffer(context, CL_MEM_READ_WRITE, accum_bytes, nullptr, err); CL_CHECK(err);
-        d_dv_accum = cl_create_buffer(context, CL_MEM_READ_WRITE, accum_bytes, nullptr, err); CL_CHECK(err);
-        d_MH_hxd = cl_create_buffer(context, CL_MEM_READ_ONLY, proj_mat_bytes, nullptr, err); CL_CHECK(err);
-        d_MV_hxd = cl_create_buffer(context, CL_MEM_READ_ONLY, proj_mat_bytes, nullptr, err); CL_CHECK(err);
-        d_dh = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // Projection output
-        d_dv = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // Projection output
-        d_EH = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // Read for add, write final result
-        d_EV_current = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // Read for add, write final result
-        d_hor_inputs = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // MLP input after add
-        d_ver_inputs = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // MLP input after add
-        d_hor_output = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // MLP final output (pre-ReLU)
-        d_ver_output = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // MLP final output (pre-ReLU)
-        d_relu_hor_output = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // After ReLU
-        d_relu_ver_output = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // After ReLU
+        cl::Buffer d_K(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, k_bytes, const_cast<float*>(K.data()));
+        cl::Buffer d_Q(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, q_bytes, const_cast<float*>(Q.data()));
+        cl::Buffer d_KdotQ(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, kdotq_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_head(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, head_bytes, nullptr, err); CL_CHECK(err); // LOTA output
+        cl::Buffer d_row_sums(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sums_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_col_sums(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sums_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_dh_accum(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, accum_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_dv_accum(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, accum_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_MH_hxd(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, proj_mat_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_MV_hxd(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, proj_mat_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_dh (context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // Projection output
+        cl::Buffer d_dv(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // Projection output
+        cl::Buffer d_EH(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // Read for add, write final result
+        cl::Buffer d_EV_current(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // Read for add, write final result
+        cl::Buffer d_hor_inputs(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // MLP input after add
+        cl::Buffer d_ver_inputs(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err); // MLP final output (pre-ReLU)
+        cl::Buffer d_ver_output(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // MLP final output (pre-ReLU)
+        cl::Buffer d_relu_hor_output(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // After ReLU
+        cl::Buffer d_relu_ver_output(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err); // After ReLU
 
         // Allocate MLP Intermediate Buffers
-        d_mlp_bufferA_hor = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err);
-        d_mlp_bufferB_hor = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err);
-        d_mlp_bufferA_ver = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err);
-        d_mlp_bufferB_ver = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err);
-        d_mlp_pre_activation = cl_create_buffer(context, CL_MEM_READ_WRITE, embed_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_mlp_bufferA_hor(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_mlp_bufferB_hor(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_mlp_bufferA_ver(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_mlp_bufferB_ver(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_mlp_pre_activation(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err);
+        cl::Buffer d_mlp_weights(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_bytes, nullptr, err); CL_CHECK(err);
 
         // Initialize accumulators to zero
         float zero = 0.0f;
@@ -136,7 +131,7 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
         transposeFlattenMatrix(MH.a, flat_MH_hxd, d, h);
         transposeFlattenMatrix(MV.a, flat_MV_hxd, d, h);
 
-        cl_write_buffer(queue, d_K, k_bytes, flat_K.data());
+        context_obj.queue(d_K, k_bytes, flat_K.data());
         cl_write_buffer(queue, d_Q, q_bytes, flat_Q.data());
         cl_write_buffer(queue, d_KdotQ, kdotq_bytes, flat_KdotQ.data());
         cl_write_buffer(queue, d_MH_hxd, proj_mat_bytes, flat_MH_hxd.data());
@@ -165,10 +160,10 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
                  global_work_size_lota[0] = totalElementsLOTA;
                  local_work_size_lota[0] = totalElementsLOTA;
              }
-            cl_set_kernel_arg(lota_kernel, 0, sizeof(cl_mem), &d_KdotQ);
-            cl_set_kernel_arg(lota_kernel, 1, sizeof(cl_mem), &d_head);
-            cl_set_kernel_arg(lota_kernel, 2, sizeof(cl_int), &n); // rows
-            cl_set_kernel_arg(lota_kernel, 3, sizeof(cl_int), &n); // cols
+             lota_kernel.setArg(0, sizeof(cl_mem), &d_KdotQ);
+             lota_kernel.setArg(1, sizeof(cl_mem), &d_head);
+             lota_kernel.setArg(2, sizeof(cl_int), &n); // rows
+             lota_kernel.setArg(3, sizeof(cl_int), &n); // cols
             cl_enqueue_nd_range_kernel(queue, lota_kernel, 1, nullptr, global_work_size_lota, local_work_size_lota);
         }
 

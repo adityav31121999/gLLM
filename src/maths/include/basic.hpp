@@ -12,6 +12,19 @@
 #include <atomic>
 #include <random>
 
+#define CL_CHECK(call)                                                      \
+do {                                                                        \
+    cl_int err = call;                                                      \
+    if (err != CL_SUCCESS) {                                                \
+        fprintf(stderr, "OpenCL Error in %s at line %d: %s (%d)\n",         \
+                __FILE__, __LINE__, oclErrorString(err), err);              \
+        /* Consider throwing an exception or returning an error code */     \
+        /* For now, just print and potentially return */                    \
+        /* Adjust behavior as needed (e.g., throw cl::Error(err)) */        \
+        return; /* Or throw cl::Error(err, "OpenCL Error occurred"); */     \
+    }                                                                       \
+} while (0)
+
 // Define MAXFLOAT if not implicitly available
 #ifndef MAXFLOAT
     #define MAXFLOAT 3.402823466e+38F

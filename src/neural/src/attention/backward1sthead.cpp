@@ -3,8 +3,7 @@
 
 // BACKWARD Propagations specifically for first head of blocks
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief Backward Propagation (for first head) for the attention class using gradients from expected 
