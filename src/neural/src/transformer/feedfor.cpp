@@ -3,6 +3,7 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
 
 /**
  * @brief forward propagation for transformers
@@ -42,3 +43,5 @@ void transformer::forward(int& blockCount, int& currentTokenCount, int& promptCo
         // tokenEmbed[currentTokenCount] = ;    // extract the token at 'index' and add it to token
     }
 }
+
+#endif

@@ -3,6 +3,9 @@
 
 // BACKWARD Propagations specifically for first head of blocks
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief Backward Propagation (for first head) for the attention class using gradients from expected 
  *      Horizontal output. Use for first (when sentence ends in first block itself) and last block only
@@ -469,3 +472,5 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
         }
     }
 }
+
+#endif

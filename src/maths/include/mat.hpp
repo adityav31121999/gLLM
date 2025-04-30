@@ -4,12 +4,7 @@
 #define MAT_HPP 1
 
 #include <vector>
-#ifdef USE_OPENCL
-    #include <CL/cl.h>
-#elif USE_CUDA
-    #include <cuda_runtime.h>
-#endif
-
+#include "include/basic.hpp"
 
 /**
  * @brief CLASS: Matrix class

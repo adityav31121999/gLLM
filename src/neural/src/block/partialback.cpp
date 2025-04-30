@@ -3,6 +3,7 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
 
 /**
  * @brief backward propagation for kth layer (when expected EV is not known, for block where backprop begins)
@@ -68,3 +69,5 @@ void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>
         b[k][i].backward1stHead(expectedV[i], in, layers);
     }
 }
+
+#endif

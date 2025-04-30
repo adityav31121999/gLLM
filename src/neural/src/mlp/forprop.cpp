@@ -4,6 +4,7 @@
 #include <numeric>
 #include <maths.hpp>
 
+#ifndef USE_CUDA && USE_OPENCL
 
 /**
  * @brief The forward propagation function. This function performs the
@@ -40,3 +41,5 @@ void mlp::forward(int in, int layers) {
         // No activation function applied to the output layer
     }
 }
+
+#endif

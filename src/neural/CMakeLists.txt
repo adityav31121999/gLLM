@@ -29,7 +29,6 @@ add_library(neural STATIC
     src/mlp/cu/train.cu
     # OpenCL
     src/mlp/cl/kernel.cl
-    src/mlp/cl/losscl.cpp
     src/mlp/cl/forpropcl.cpp
     src/mlp/cl/backpropcl.cpp
     src/mlp/cl/backwardcl.cpp

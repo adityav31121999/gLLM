@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(model C CXX)
 
 add_library(model STATIC
-    src/initiateOpencl.cpp
     src/model.cpp
     src/create.cpp
     src/run.cpp

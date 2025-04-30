@@ -15,6 +15,9 @@
  * of memory in attention class.
  */
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief forward propagation for first block's attention class (incomplete attention)
  * @param in embedding dimension
@@ -98,3 +101,5 @@ void attention::forprop(std::vector<std::vector<float>> EVp, int& in, int& layer
     EH = EH + ReLU(hor.output);
     EV[count] = EV[count] + ReLU(ver.output);
 }
+
+#endif

@@ -5,6 +5,9 @@
 #include <vector>
 #include <maths.hpp>
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)
  */
@@ -96,3 +99,5 @@ void mlp::test(int in, int layers) {
         std::cout << expected[i] << " <-> " << output[i] << std::endl;
     }
 }
+
+#endif

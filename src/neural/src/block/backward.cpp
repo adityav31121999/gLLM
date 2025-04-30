@@ -3,6 +3,9 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 
 /**
  * @brief backward propagation for block (when only EV need to be corrected)
@@ -94,3 +97,5 @@ void block::backward1stBlock(std::vector<float>& expectedH, int& in, int& layers
         partialbackward1stBlock(expectedH, in, layers, i);
     }
 }
+
+#endif

@@ -10,11 +10,6 @@
 #include <fstream>
 #include <map>
 
-#ifdef USE_OPENCL
-    #include <CL/cl.hpp>
-    #include <map>
-#endif
-
 #include <maths.hpp>
 #include "mlp.hpp"
 #include "attention.hpp"
@@ -70,26 +65,58 @@ public:
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse;
     std::vector<std::vector<float>> tokForBlock;        // token embeddings for local context for inference
 
-    // default constructor
+#ifdef USE_OPENCL
+    // If transformer owns the context, declare the object here.
+    // The OpenCLContext class itself needs a default constructor or
+    // the transformer constructors need to initialize it in their
+    // initializer list or body.
+    OpenCLContext& clcontext;
+    transformer(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab);
+    transformer(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
+    transformer(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab);
+    transformer(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
+    transformer(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
+#else
     transformer() = default;
     transformer(int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
+#endif
 
-    void setDims(int m, int x, int y, int n, int d, int h, int l);  // set dimension of transformer
-    void setLearning(float learning);           // set learning rate for MLPs
-    void setEpochs(int epochs);                 // set epochs for MLPs
-    void setAttention(bool attentionType);      // set self attention (1) or cross attention (0)
+#ifdef USE_CUDA     // cuda implementation
 
-    void getAllValues(int blockCount, std::string path2folderOfAllBins, bool& inTraining);
-    void getcache(int blockCount, int i, int j, std::vector<std::vector<float>>& q, std::string path2file);
-    void getmat(int blockCount, int i, int j, std::vector<std::vector<float>>& q, std::string path2file, int& row, int& column);
-    void getmlp(int blockCount, int i, int j, std::vector<std::vector<std::vector<float>>>& m, std::string path2file);
+    void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
+    void cuForward(int& blockCount, int& currentTokenCount, int& promptCount);
+    void cuBackward(std::vector<float>& expectedH);
+    void cuBackward(std::vector<float>& expectedH, int& blockCount);
+    void cuBackward(std::vector<std::vector<float>>& expectedH);
+    void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void cuTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+    void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
+    void cuRun();
 
-    int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
-    void getEmbedding(std::string& word, std::vector<float>& embed);
+#elif USE_OPENCL    // opencl implementation
+    void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
+    void clForward(int &blockCount, int &currentTokenCount, int &promptCount);
+    void clBackward(std::vector<float>& expectedH);
+    void clBackward(std::vector<float>& expectedH, int& blockCount);
+    void clBackward(std::vector<std::vector<float>>& expectedH);
+    void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void clTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+    void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
+    void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
+    void clRun();
+
+#else
+
     void parallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& promptCount);
@@ -104,50 +131,20 @@ public:
                 std::vector<std::vector<std::string>>& rString);
     void run();
 
-    #ifdef USE_CUDA     // cuda implementation
-        void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
-        void cuForward(int& blockCount, int& currentTokenCount, int& promptCount);
-        void cuBackward(std::vector<float>& expectedH);
-        void cuBackward(std::vector<float>& expectedH, int& blockCount);
-        void cuBackward(std::vector<std::vector<float>>& expectedH);
-        void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-        void cuTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
-        void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
-        void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-        void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                    std::vector<std::vector<std::string>>& rString);
-        void cuRun();
-    #elif USE_OPENCL    // opencl implementation
-        cl::Context context;
-        cl::CommandQueue queue;
-        cl::Program program; // Holds the compiled program from clcompute.cl and others
-        std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
-        cl::Device default_device; // Store the device being used
+#endif
 
-        cl::Kernel& getKernel(const std::string& name);     // Helper to get kernel, maybe with error checking
-        void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
-        void clForward(int &blockCount, int &currentTokenCount, int &promptCount);
-        void clBackward(std::vector<float>& expectedH);
-        void clBackward(std::vector<float>& expectedH, int& blockCount);
-        void clBackward(std::vector<std::vector<float>>& expectedH);
-        void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-        void clTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
-        void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
-        void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-        void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                    std::vector<std::vector<std::string>>& rString);
-        void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
-        void clRun();
-        cl_mem cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr, cl_int& err);
-        void cl_write_buffer(cl_command_queue queue, cl_mem buffer, size_t size, const void* ptr, cl_bool blocking = CL_TRUE);
-        void cl_read_buffer(cl_command_queue queue, cl_mem buffer, size_t size, void* ptr, cl_bool blocking = CL_TRUE);
-        void cl_fill_buffer(cl_command_queue queue, cl_mem buffer, const void* pattern, size_t pattern_size, size_t offset, size_t size);
-        void cl_set_kernel_arg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void* arg_value);
-        void cl_enqueue_nd_range_kernel(cl_command_queue queue, cl_kernel kernel, cl_uint work_dim, const size_t* global_work_offset, const size_t* global_work_size, const size_t* local_work_size);
-        void cl_finish(cl_command_queue queue);
-        void cl_release_mem_object(cl_mem memobj);
-        #define CL_CHECK(err) CL_CHECK(err, __FILE__, __LINE__)    
-    #endif
+    void setDims(int m, int x, int y, int n, int d, int h, int l);  // set dimension of transformer
+    void setLearning(float learning);           // set learning rate for MLPs
+    void setEpochs(int epochs);                 // set epochs for MLPs
+    void setAttention(bool attentionType);      // set self attention (1) or cross attention (0)
+
+    void getAllValues(int blockCount, std::string path2folderOfAllBins, bool& inTraining);
+    void getcache(int blockCount, int i, int j, std::vector<std::vector<float>>& q, std::string path2file);
+    void getmat(int blockCount, int i, int j, std::vector<std::vector<float>>& q, std::string path2file, int& row, int& column);
+    void getmlp(int blockCount, int i, int j, std::vector<std::vector<std::vector<float>>>& m, std::string path2file);
+
+    int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
+    void getEmbedding(std::string& word, std::vector<float>& embed);
 
     // default destructor
     ~transformer() = default;

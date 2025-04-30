@@ -8,8 +8,6 @@
 #include <maths.hpp>
 #include <neural.hpp>
 
-#include "include/opencl_setup.hpp"
-
 #define ARCH "SHADY-ATTENTION"
 #define EXTENSION ".llm"
 
@@ -69,7 +67,7 @@ public:
     float learning;         // learning rate for MLPs
     bool isSelf;            // if self attention or cross attention
     bool toTrain;           // if training of model, set to 1, or use of model, set to 0
-    transformer T;          // model with 1 transformer
+    transformer T;         // model with 1 transformer
     modelDataInfo info;     // model info
     FILE *file;             // file where all data is to be stored
     std::string path2model; // path to model for use and training
@@ -82,11 +80,18 @@ public:
     std::vector<std::string> token;
 
     // default constructor
-    model() = default;
+#ifdef USE_OPENCL
+    OpenCLContext& clcontext;
+    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab);
+    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
+    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);
+    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, bool toTrainModel);
+#else 
     model(int m, int x, int y, int n, int d, int h, int l, int vocab);
     model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
     model(int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);
     model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, bool toTrainModel);
+#endif
 
     void setLearning(float learning);
     void setVocab(int vocab);
@@ -117,12 +122,6 @@ public:
     void nextResponse();        // get next response from the model
     void saveChat();        // save chat to file
     void loadChat();        // load chat from file
-
-#ifdef USE_CUDA
-    // cuda implementation
-#elif USE_OPENCL
-    // opencl implementation    
-#endif
 
     // default destructor
     ~model() = default;

@@ -3,6 +3,9 @@
 #include <chrono>
 #include <iostream>
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief Run transformer using model parameters of cache and MLPs for inference, use
  * cache QK' for calculation of KdotQ and then use caches QV' and KH' for EV and EH 
@@ -159,3 +162,5 @@ void transformer::run() {
         // redo
     }
 }
+
+#endif

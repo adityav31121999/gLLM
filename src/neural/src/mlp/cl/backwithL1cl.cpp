@@ -1,25 +1,16 @@
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
-    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Or the minimum version you support
-#endif
-
-#include "include/mlp.hpp"
+#include "include/mlp.hpp" // Includes basic.hpp where OpenCLContext is defined
+#include <maths.hpp>       // Includes basic utilities like flatten, unflatten
 #include <vector>
 #include <stdexcept>
 #include <iostream>
 #include <string>
-#include <CL/cl.hpp>
+#include <CL/cl.hpp> // Keep OpenCL headers
 
 
 /**
- * @brief OpenCL implementation of backpropagation with L1 regularization.
+ * @brief OpenCL implementation of backpropagation with L1 regularization using shared OpenCLContext.
  *        Calculates deltas and updates weights using the L1 update rule directly.
  *        Does NOT calculate or store gradients (gweights).
  * @param in Input/layer size (assuming all layers have the same size 'in')
@@ -57,20 +48,24 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
     // Note: gweights are NOT used or updated by this function.
 
     try {
-        // --- OpenCL Kernel Preparation ---
-        cl::Kernel kernelOutDelta(program, "kernelOutputDeltaSigmoid");
-        cl::Kernel kernelHiddenDelta(program, "kernelHiddenDeltaSigmoid");
-        cl::Kernel kernelUpdateWL1(program, "kernelUpdateWeightsL1"); // L1 update kernel
+        // --- Access Shared OpenCL Context ---
+        OpenCLContext& context_obj = this->clContext; // Use the member reference
 
-        // --- Device Buffer Allocation ---
+        // --- OpenCL Kernel Preparation (Retrieve from context) ---
+        // Ensure these kernel names were provided during OpenCLContext initialization
+        cl::Kernel kernelOutDelta = context_obj.kernels.at("kernelOutputDeltaSigmoid");
+        cl::Kernel kernelHiddenDelta = context_obj.kernels.at("kernelHiddenDeltaSigmoid");
+        cl::Kernel kernelUpdateWL1 = context_obj.kernels.at("kernelUpdateWeightsL1"); // L1 update kernel
+
+        // --- Device Buffer Allocation (using shared context) ---
         size_t layer_size_bytes = sizeof(float) * in;
-        size_t weights_size_bytes = sizeof(float) * in * in;
+        size_t weights_size_bytes = sizeof(float) * in * in; // Assumes square matrices
 
         // Buffers for inputs/outputs/activations
-        cl::Buffer d_input(context, CL_MEM_READ_ONLY, layer_size_bytes);
+        cl::Buffer d_input(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes);
         // Assuming output holds *activated* values for kernelOutputDeltaSigmoid
-        cl::Buffer d_output_activations(context, CL_MEM_READ_ONLY, layer_size_bytes);
-        cl::Buffer d_expected(context, CL_MEM_READ_ONLY, layer_size_bytes);
+        cl::Buffer d_output_activations(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes);
+        cl::Buffer d_expected(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes);
         std::vector<cl::Buffer> d_activations(layers); // Hidden layer activations
 
         // Buffers for weights and deltas (one per layer, including output)
@@ -78,23 +73,23 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         std::vector<cl::Buffer> d_layer_deltas(layers + 1);
 
         for (int l = 0; l <= layers; ++l) {
-            d_weights[l] = cl::Buffer(context, CL_MEM_READ_WRITE, weights_size_bytes);
-            d_layer_deltas[l] = cl::Buffer(context, CL_MEM_READ_WRITE, layer_size_bytes); // Deltas are calculated
+            d_weights[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, weights_size_bytes); // Weights are updated
+            d_layer_deltas[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, layer_size_bytes); // Deltas are calculated
         }
         for (int l = 0; l < layers; ++l) {
-             d_activations[l] = cl::Buffer(context, CL_MEM_READ_ONLY, layer_size_bytes);
+             d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes);
         }
 
-        // --- Data Transfer: Host -> Device ---
-        queue.enqueueWriteBuffer(d_input, CL_TRUE, 0, layer_size_bytes, input.data());
-        queue.enqueueWriteBuffer(d_output_activations, CL_TRUE, 0, layer_size_bytes, output.data());
-        queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, layer_size_bytes, expected.data());
+        // --- Data Transfer: Host -> Device (using shared queue) ---
+        context_obj.queue.enqueueWriteBuffer(d_input, CL_TRUE, 0, layer_size_bytes, input.data());
+        context_obj.queue.enqueueWriteBuffer(d_output_activations, CL_TRUE, 0, layer_size_bytes, output.data());
+        context_obj.queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, layer_size_bytes, expected.data());
         for (int l = 0; l < layers; ++l) {
-            queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data());
+            context_obj.queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data());
         }
         for (int l = 0; l <= layers; ++l) {
             std::vector<float> flat_weights_l = flatten(weights[l]);
-            queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, flat_weights_l.data());
+            context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, flat_weights_l.data());
         }
 
         // --- NDRange Configuration ---
@@ -114,17 +109,17 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         kernelOutDelta.setArg(1, d_expected);
         kernelOutDelta.setArg(2, d_layer_deltas[layers]);
         kernelOutDelta.setArg(3, cl_in);
-        queue.enqueueNDRangeKernel(kernelOutDelta, cl::NullRange, global_1d, local_1d);
+        context_obj.queue.enqueueNDRangeKernel(kernelOutDelta, cl::NullRange, global_1d, local_1d);
 
         // 2. Calculate Hidden Layer Deltas (Propagate backwards from layers-1 down to 0)
         for (int l = layers - 1; l >= 0; --l) {
             kernelHiddenDelta.setArg(0, d_layer_deltas[l + 1]);
             kernelHiddenDelta.setArg(1, d_weights[l + 1]);      // Weights W[l+1]
-            kernelHiddenDelta.setArg(2, d_activations[l]);      // Activations A[l] (CORRECTED)
+            kernelHiddenDelta.setArg(2, d_activations[l]);      // Activations A[l]
             kernelHiddenDelta.setArg(3, d_layer_deltas[l]);     // Output delta[l]
             kernelHiddenDelta.setArg(4, cl_in);                 // current_layer_size
             kernelHiddenDelta.setArg(5, cl_in);                 // next_layer_size
-            queue.enqueueNDRangeKernel(kernelHiddenDelta, cl::NullRange, global_1d, local_1d);
+            context_obj.queue.enqueueNDRangeKernel(kernelHiddenDelta, cl::NullRange, global_1d, local_1d);
         }
 
         // 3. Update Weights using L1 Kernel (Iterate through layers 0 to layers)
@@ -138,22 +133,39 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
             kernelUpdateWL1.setArg(4, cl_lambda);                 // L1 lambda parameter
             kernelUpdateWL1.setArg(5, cl_in);                     // current_layer_size
             kernelUpdateWL1.setArg(6, cl_in);                     // prev_layer_size
-            queue.enqueueNDRangeKernel(kernelUpdateWL1, cl::NullRange, global_2d, local_2d);
+            context_obj.queue.enqueueNDRangeKernel(kernelUpdateWL1, cl::NullRange, global_2d, local_2d);
 
             // Read updated weights back to host for this layer
             std::vector<float> updated_flat_weights(in * in);
-            queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, updated_flat_weights.data());
+            context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, updated_flat_weights.data());
             unflatten(updated_flat_weights, weights[l], in, in);
         }
 
         // --- Cleanup ---
-        // queue.finish(); // Optional
+        // context_obj.queue.finish(); // Optional, reads are blocking (CL_TRUE)
         // Buffers are released automatically by RAII destructors
 
     }
     catch (const cl::Error& err) {
         std::cerr << "OpenCL Error in mlp::clBackwithL1: " << err.what() << " (" << err.err() << ")" << std::endl;
-        throw std::runtime_error("OpenCL error during L1 backpropagation.");
+        // Print build log if it was a build error
+        if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
+             try {
+                // Use this->clContext to get program and device
+                std::string log = this->clContext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clContext.device);
+                std::cerr << "Build Log:\n" << log << std::endl;
+             } catch (const cl::Error& log_err) {
+                 std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+             }
+        }
+        throw std::runtime_error("OpenCL error during L1 backpropagation."); // Re-throw as runtime_error
+    }
+     catch (const std::out_of_range& oor) {
+        // Specific catch for kernel lookup failure from the map
+        std::cerr << "Error: Kernel not found in the shared OpenCLContext kernel map during clBackwithL1. "
+                  << "Ensure kernels 'kernelOutputDeltaSigmoid', 'kernelHiddenDeltaSigmoid', and 'kernelUpdateWeightsL1' were provided during OpenCLContext initialization. "
+                  << "Details: " << oor.what() << std::endl;
+        throw; // Re-throw exception
     }
     catch (const std::exception& e) {
         std::cerr << "Standard Exception in mlp::clBackwithL1: " << e.what() << std::endl;

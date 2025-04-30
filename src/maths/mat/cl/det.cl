@@ -1,7 +1,4 @@
 
-// Helper macro for indexing flattened matrix (assuming row-major)
-#define IDX(row, col, dim) ((row) * (dim) + (col))
-
 /**
  * @brief OpenCL Kernel: Calculates the determinant of a 2x2 matrix.
  * @param flattenedMatrix Pointer to the 2x2 matrix elements in global GPU memory (row-major).

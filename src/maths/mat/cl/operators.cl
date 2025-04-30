@@ -1,7 +1,4 @@
 
-// Helper macro for indexing flattened matrix (assuming row-major)
-#define IDX(row, col, dim) ((row) * (dim) + (col))
-
 /**
  * @brief OpenCL Kernel: Calculates the dot product of each row of a matrix with a vector.
  *        Computes vecOutput = matrix * vec (Matrix-Vector Multiplication).

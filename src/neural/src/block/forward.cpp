@@ -2,6 +2,9 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief forward propagation for partial attention (layer of block)
  * @param in embedding dimensions
@@ -91,3 +94,5 @@ void block::forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& E
         partialforprop(EVp[i], in, currentTokenCount, k, i, layers, n);
     }
 }
+
+#endif

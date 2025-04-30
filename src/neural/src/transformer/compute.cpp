@@ -3,6 +3,8 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
+
 
 /**
  * @brief compute key or query of token using token embedding and matrix for keys and queries
@@ -370,3 +372,5 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
         }
     }
 }
+
+#endif

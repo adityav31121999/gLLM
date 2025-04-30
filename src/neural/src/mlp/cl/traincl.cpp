@@ -1,34 +1,27 @@
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
-    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Or the minimum version you support
-#endif
-
-#include "include/mlp.hpp" // Includes OpenCL headers, getOpenCLErrorString, etc.
+#include "include/mlp.hpp" // Includes OpenCL headers, OpenCLContext, etc.
+#include <maths.hpp>
 #include <vector>
 #include <stdexcept>
 #include <iostream>
 #include <string>
 #include <numeric> // Required for std::accumulate
 #include <cmath>   // For std::pow (though MSE kernel handles squaring)
-
 #include <CL/cl.hpp> // Explicit include for OpenCL C++ bindings
 
 
 /**
- * @brief Helper function to calculate MSE using the kernelMseReduction OpenCL kernel.
+ * @brief Helper function to calculate MSE using the kernelMseReduction OpenCL kernel
+ *        and the provided OpenCLContext.
+ * @param context_obj Reference to the shared OpenCLContext object.
  * @param expected_vec Host expected vector.
  * @param output_vec Host output vector.
  * @param in Size of the vectors.
  * @return Calculated Mean Squared Error.
  */
-float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vector<float>& output_vec, int in) {
+// Make it static as it's only used within this file
+static float calculateMseOpenCL(OpenCLContext& context_obj, const std::vector<float>& expected_vec, const std::vector<float>& output_vec, int in) {
     if (expected_vec.size() != static_cast<size_t>(in) || output_vec.size() != static_cast<size_t>(in)) {
         throw std::runtime_error("calculateMseOpenCL: Vector size mismatch. Expected: " + std::to_string(in));
     }
@@ -37,43 +30,51 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
     float mse = 0.0f;
 
     try {
-        cl::Kernel kernelMse(program, "kernelMseReduction"); // Use the specific kernel name
+        // --- Access Kernel from Shared Context ---
+        cl::Kernel kernelMse = context_obj.kernels.at("kernelMseReduction"); // Use the specific kernel name
 
         // --- NDRange Configuration for Reduction ---
-        // Choose a suitable local work-group size (power of 2 often good, check device limits)        
-        size_t local_size = 64; // Example: 64 work-items per group. Tune this based on device.
-        // Ensure local_size doesn't exceed device capabilities for this kernel
-        // size_t max_work_group_size = kernelMse.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(cl::Device::getDefault());
-        // local_size = std::min(local_size, max_work_group_size);
+        size_t local_size = 64; // Example: Tune this based on device.
+        // Optional: Query device limits if needed
+        try {
+             size_t max_wg_size = kernelMse.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context_obj.device);
+             if (local_size > max_wg_size) {
+                 // std::cout << "Warning: Requested local size (" << local_size
+                 //           << ") exceeds device limit (" << max_wg_size
+                 //           << "). Clamping to max limit." << std::endl;
+                 local_size = max_wg_size;
+             }
+        } catch (const cl::Error& info_err) {
+            std::cerr << "Warning: Could not query CL_KERNEL_WORK_GROUP_SIZE for kernelMseReduction. Using default local_size=" << local_size << ". Error: " << info_err.what() << std::endl;
+        }
 
-        size_t num_groups = (in + local_size - 1) / local_size; // Number of work-groups needed
-        size_t global_size = num_groups * local_size; // Global size must be a multiple of local size
 
-        // --- Device Buffers ---
+        size_t num_groups = (in + local_size - 1) / local_size;
+        size_t global_size = num_groups * local_size;
+
+        // --- Device Buffers (using shared context) ---
         size_t vector_size_bytes = sizeof(float) * in;
-        size_t partial_mse_size_bytes = sizeof(float) * num_groups; // Buffer to hold one result per group
+        size_t partial_mse_size_bytes = sizeof(float) * num_groups;
 
-        // Create buffers and copy host data
-        // Using CL_MEM_COPY_HOST_PTR can be efficient if supported well by the driver
-        cl::Buffer d_expected(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(expected_vec.data()));
-        cl::Buffer d_output(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(output_vec.data()));
-        cl::Buffer d_partial_mse(context, CL_MEM_WRITE_ONLY, partial_mse_size_bytes);
+        // Create buffers using the shared context
+        cl::Buffer d_expected(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(expected_vec.data()));
+        cl::Buffer d_output(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, vector_size_bytes, const_cast<float*>(output_vec.data()));
+        cl::Buffer d_partial_mse(context_obj.context, CL_MEM_WRITE_ONLY, partial_mse_size_bytes);
 
-        // --- Kernel Execution ---
+        // --- Kernel Execution (using shared queue) ---
         kernelMse.setArg(0, d_expected);
         kernelMse.setArg(1, d_output);
         kernelMse.setArg(2, d_partial_mse);
-        // Argument 3 is the local memory buffer, specified using cl::Local
         kernelMse.setArg(3, cl::Local(sizeof(float) * local_size)); // local memory
-        kernelMse.setArg(4, static_cast<cl_int>(in));             // Pass total size
+        kernelMse.setArg(4, static_cast<cl_int>(in));
 
-        // Enqueue the kernel
-        queue.enqueueNDRangeKernel(kernelMse, cl::NullRange, cl::NDRange(global_size), cl::NDRange(local_size));
+        // Enqueue the kernel using the shared queue
+        context_obj.queue.enqueueNDRangeKernel(kernelMse, cl::NullRange, cl::NDRange(global_size), cl::NDRange(local_size));
 
-        // --- Read Partial Results and Sum on Host ---
+        // --- Read Partial Results and Sum on Host (using shared queue) ---
         std::vector<float> h_partial_mse(num_groups);
-        // Blocking read to ensure kernel is finished and data is available
-        queue.enqueueReadBuffer(d_partial_mse, CL_TRUE, 0, partial_mse_size_bytes, h_partial_mse.data());
+        // Blocking read using the shared queue
+        context_obj.queue.enqueueReadBuffer(d_partial_mse, CL_TRUE, 0, partial_mse_size_bytes, h_partial_mse.data());
 
         // Sum the partial results from each work-group on the host
         float total_squared_error = std::accumulate(h_partial_mse.begin(), h_partial_mse.end(), 0.0f);
@@ -84,10 +85,32 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
         // Buffers are released automatically by RAII destructors
 
     }
-    catch (const cl::Error& err) {        
-        std::cerr << "OpenCL Error during training epoch "<< err.what();
+    catch (const cl::Error& err) {
+        std::cerr << "OpenCL Error during MSE calculation: " << err.what() << " (" << err.err() << ")" << std::endl;
+         // Print build log if it was a build error
+        if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
+             try {
+                // Use context_obj to get program and device
+                std::string log = context_obj.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(context_obj.device);
+                std::cerr << "Build Log:\n" << log << std::endl;
+             } catch (const cl::Error& log_err) {
+                 std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+             }
+        }
         throw std::runtime_error("OpenCL error during MSE calculation."); // Re-throw
     }
+    catch (const std::out_of_range& oor) {
+        // Specific catch for kernel lookup failure from the map
+        std::cerr << "Error: Kernel 'kernelMseReduction' not found in the shared OpenCLContext kernel map during MSE calculation. "
+                  << "Ensure this kernel was provided during OpenCLContext initialization. "
+                  << "Details: " << oor.what() << std::endl;
+        throw; // Re-throw exception
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Standard Exception during MSE calculation: " << e.what() << std::endl;
+        throw; // Re-throw standard exceptions
+    }
+
 
     return mse;
 }
@@ -103,7 +126,7 @@ float calculateMseOpenCL(const std::vector<float>& expected_vec, const std::vect
  */
 void mlp::clTrain(float& mse, int in, int layers, float learning) {
     unsigned int e = 0;
-    
+
     const unsigned int max_epochs = 10000; // Add a max epoch limit to prevent infinite loops
     const float convergence_threshold = 1e-6f;
 
@@ -115,11 +138,11 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
 
     while (e < max_epochs) {
         try {
-            // 1. Forward Pass
+            // 1. Forward Pass (Uses shared context internally)
             clForward(in, layers); // Updates this->output
 
-            // 2. Calculate MSE using OpenCL helper function
-            mse = calculateMseOpenCL(this->expected, this->output, in);
+            // 2. Calculate MSE using OpenCL helper function (Pass shared context)
+            mse = calculateMseOpenCL(this->clContext, this->expected, this->output, in);
 
             // 3. Check for convergence
             if (mse < convergence_threshold) {
@@ -133,7 +156,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
             }
 
 
-            // 4. Backward Pass
+            // 4. Backward Pass (Uses shared context internally)
             // Choose the appropriate backward function based on desired method
             // clBackward(layers, in, learning); // Simple update
             clBackprop(layers, in, learning); // Update with gradient calculation
@@ -144,7 +167,17 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
             e++;
 
         } catch (const cl::Error& err) {
-            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "<< err.what();
+            // Error handling already includes context details in calculateMseOpenCL if error originates there
+            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "<< err.what() << " (" << err.err() << ")" << std::endl;
+            // Check if it's a build error from forward/backward passes
+            if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
+                 try {
+                    std::string log = this->clContext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clContext.device);
+                    std::cerr << "Build Log:\n" << log << std::endl;
+                 } catch (const cl::Error& log_err) {
+                     std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+                 }
+            }
             throw; // Re-throw after logging
         } catch (const std::exception& ex) {
             std::cerr << "Standard Exception during training epoch " << e + 1 << ": " << ex.what() << std::endl;
@@ -159,8 +192,8 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
     // Perform a final forward pass to ensure 'output' reflects the trained weights
     try {
         clForward(in, layers);
-    } catch (...) {
-        std::cerr << "Warning: Error during final forward pass after training." << std::endl;
+    } catch (const std::exception& final_fwd_ex) { // Catch standard exception too
+        std::cerr << "Warning: Error during final forward pass after training: " << final_fwd_ex.what() << std::endl;
         // Decide how to handle this - maybe the last calculated MSE is sufficient
     }
 }
@@ -201,16 +234,18 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
                 if (this->input.size() != static_cast<size_t>(in)) {
                      throw std::runtime_error("clTrain (dataset): Sample size mismatch at index " + std::to_string(i));
                 }
+                // Example: If dataset was std::vector<std::pair<std::vector<float>, std::vector<float>>>
+                // this->expected = dataset[i].second;
 
 
-                // 1. Forward Pass
+                // 1. Forward Pass (Uses shared context internally)
                 clForward(in, layers); // Updates this->output
 
-                // 2. Calculate MSE for this sample using OpenCL helper
-                float current_sample_mse = calculateMseOpenCL(this->expected, this->output, in);
+                // 2. Calculate MSE for this sample using OpenCL helper (Pass shared context)
+                float current_sample_mse = calculateMseOpenCL(this->clContext, this->expected, this->output, in);
                 total_epoch_squared_error += current_sample_mse * static_cast<float>(in); // Add total squared error for the sample
 
-                // 3. Backward Pass for this sample
+                // 3. Backward Pass for this sample (Uses shared context internally)
                 // Choose the appropriate backward function
                 // clBackward(layers, in, learning);
                 clBackprop(layers, in, learning);
@@ -223,7 +258,12 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
             e++; // Increment epoch count
 
             // Calculate average MSE for the completed epoch
-            average_epoch_mse = total_epoch_squared_error / (dataset.size() * static_cast<float>(in));
+            if (dataset.empty() || in == 0) {
+                average_epoch_mse = 0.0f; // Avoid division by zero
+            } else {
+                average_epoch_mse = total_epoch_squared_error / (dataset.size() * static_cast<float>(in));
+            }
+
 
             // Print progress
             std::cout << "Epoch " << e << " Average MSE: " << average_epoch_mse << std::endl;
@@ -235,7 +275,17 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
             }
 
         } catch (const cl::Error& err) {
-            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "<< err.what();
+            // Error handling already includes context details in calculateMseOpenCL if error originates there
+            std::cerr << "OpenCL Error during training epoch " << e + 1 << ": "<< err.what() << " (" << err.err() << ")" << std::endl;
+            // Check if it's a build error from forward/backward passes
+            if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
+                 try {
+                    std::string log = this->clContext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clContext.device);
+                    std::cerr << "Build Log:\n" << log << std::endl;
+                 } catch (const cl::Error& log_err) {
+                     std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+                 }
+            }
             throw; // Re-throw after logging
         } catch (const std::exception& ex) {
             std::cerr << "Standard Exception during training epoch " << e << ": " << ex.what() << std::endl;
@@ -260,8 +310,6 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
  */
 void mlp::clValidate(int in, int layers) {
     // --- Placeholder for Validation Data ---
-    // In a real application, load actual validation data here.
-    // For now, using placeholders similar to the CUDA version.
     std::vector<float> validation_input(in, 0.5f); // Example placeholder input
     std::vector<float> validation_expected(in, 0.8f); // Example placeholder expected output
     std::cout << "--- Running OpenCL Validation ---" << std::endl;
@@ -273,18 +321,28 @@ void mlp::clValidate(int in, int layers) {
         this->input = validation_input;
         this->expected = validation_expected;
 
-        // Perform forward propagation using OpenCL
+        // Perform forward propagation using OpenCL (Uses shared context internally)
         clForward(in, layers); // Updates this->output
 
-        // Calculate Mean Squared Error using the OpenCL helper
-        float mse = calculateMseOpenCL(this->expected, this->output, in);
+        // Calculate Mean Squared Error using the OpenCL helper (Pass shared context)
+        float mse = calculateMseOpenCL(this->clContext, this->expected, this->output, in);
 
         // Output the validation MSE
         std::cout << "Validation MSE: " << mse << std::endl;
 
     }
     catch (const cl::Error& err) {
-        std::cerr << "OpenCL Error during validation: "<< err.what();
+        // Error handling already includes context details in calculateMseOpenCL if error originates there
+        std::cerr << "OpenCL Error during validation: "<< err.what() << " (" << err.err() << ")" << std::endl;
+        // Check if it's a build error from forward pass
+        if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
+             try {
+                std::string log = this->clContext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clContext.device);
+                std::cerr << "Build Log:\n" << log << std::endl;
+             } catch (const cl::Error& log_err) {
+                 std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+             }
+        }
         throw; // Re-throw after logging
     }
     catch (const std::exception& ex) {
@@ -304,8 +362,6 @@ void mlp::clValidate(int in, int layers) {
  */
 void mlp::clTest(int in, int layers) {
     // --- Placeholder for Test Data ---
-    // In a real application, load actual test data here.
-    // For now, using placeholders similar to the CUDA version.
     std::vector<float> test_input(in, 0.2f);    // Example placeholder input
     std::vector<float> test_expected(in, 0.4f); // Example placeholder expected output
     std::cout << "--- Running OpenCL Test ---" << std::endl;
@@ -317,7 +373,7 @@ void mlp::clTest(int in, int layers) {
         this->input = test_input;
         this->expected = test_expected; // Store expected for comparison printing
 
-        // Perform forward propagation using OpenCL
+        // Perform forward propagation using OpenCL (Uses shared context internally)
         clForward(in, layers); // Updates this->output
 
         // Output the results: Expected vs Actual Output
@@ -325,20 +381,29 @@ void mlp::clTest(int in, int layers) {
         if (this->output.size() != this->expected.size()) {
              std::cerr << "Warning: Output and Expected sizes differ during test printout." << std::endl;
         }
-        size_t print_count = std::min(this->output.size(), this->expected.size());
+        size_t print_count = std::min({static_cast<size_t>(in), this->output.size(), this->expected.size()}); // Print up to 'in' or actual sizes
         for (size_t i = 0; i < print_count; ++i) {
             std::cout << this->expected[i] << " <-> " << this->output[i] << std::endl;
         }
-        if (print_count < this->output.size() || print_count < this->expected.size()) {
-             std::cout << "... (sizes mismatched, output truncated)" << std::endl;
+        if (print_count < static_cast<size_t>(in)) {
+             std::cout << "... (output truncated to available data or 'in' size)" << std::endl;
         }
 
 
     }
     catch (const cl::Error& err) {
-        std::cerr << "OpenCL Error during testing: "<< err.what();
+        std::cerr << "OpenCL Error during testing: "<< err.what() << " (" << err.err() << ")" << std::endl;
+        // Check if it's a build error from forward pass
+        if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
+             try {
+                std::string log = this->clContext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clContext.device);
+                std::cerr << "Build Log:\n" << log << std::endl;
+             } catch (const cl::Error& log_err) {
+                 std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+             }
+        }
         throw; // Re-throw after logging
-    } 
+    }
     catch (const std::exception& ex) {
         std::cerr << "Standard Exception during testing: " << ex.what() << std::endl;
         throw; // Re-throw

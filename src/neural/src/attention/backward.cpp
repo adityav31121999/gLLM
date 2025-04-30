@@ -2,6 +2,9 @@
 // backward propagation for attention class
 #include "include/attention.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief Backward Propagation for the attention class using gradients from expected Horizontal output.
  *      Use for first (when sentence ends in first block itself) and last block only.
@@ -325,3 +328,5 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& in, in
         }
     }
 }
+
+#endif

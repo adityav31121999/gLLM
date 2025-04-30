@@ -3,6 +3,7 @@
 #include "include/mlp.hpp"
 #include "include/attention.hpp"
 #include "include/block.hpp"
+#include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>

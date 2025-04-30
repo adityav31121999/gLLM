@@ -1,5 +1,4 @@
 
-#define IDX(row, col, n_cols) ((row) * (n_cols) + (col))
 
 /**
  * @brief OpenCL Kernel: Calculates the additive inverse (-A) of a matrix.

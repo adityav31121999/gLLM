@@ -4,6 +4,8 @@
 #include <iostream>
 #include <maths.hpp>
 
+#ifndef USE_CUDA && USE_OPENCL
+
 /**
  * @brief The backward propagation function. This function performs the
  * backward propagation and calculates the error.
@@ -334,3 +336,5 @@ void mlp::backprop2in(int in, int layers, float learning) {
         }
     }
 }
+
+#endif

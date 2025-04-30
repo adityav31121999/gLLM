@@ -1,107 +1,249 @@
-
-// constructor for incomplete attention
-#include "include/attention.hpp"
+// attention.cpp: constructor for incomplete attention
+#include "include/attention.hpp" // Includes basic.hpp -> OpenCLContext definition if USE_OPENCL
+#include "include/mat.hpp"
 #include <numeric>
+#include <stdexcept> // For potential exceptions
+
+// --- Non-OpenCL Constructors ---
+#ifndef USE_OPENCL
 
 /**
- * @brief Constructor for incomplete attention (default: self attention, training)
+ * @brief Constructor for incomplete attention (default: self attention, training) - NO OpenCL
  * @param n number of tokens for each attention head
  * @param d dimension of each token
  * @param h height of MQ, MK and columns of MV, MH
  * @param l layers of mlp
  */
-attention::attention(int n, int d, int h, int l) {
-    KdotQ = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));   // KEYS
-    K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // KEYS
-    Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // QUERYS
-    MQ = mat(h, d);     // hxd
-    MK = mat(h, d);     // hxd
-    MV = mat(d, h);     // dxh
-    MH = mat(d, h);     // dxh
-    dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
-    dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
-    EH.resize(d, 0.0f);      // EH = EH + dH
-    // vertical retention vectors
-    EV.resize(CONTEXT_WIN, std::vector<float>(d, 0));
-    hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
-    ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
-    isSelfAttention = 1;                // default
-    inTraining = 1;                     // default
-}
-
-
-/**
- * @brief Constructor for incomplete attention (default: training)
- * @param n number of tokens for each attention head
- * @param d dimension of each token
- * @param h height of MQ, MK and columns of MV, MH
- * @param l layers of mlp
- */
-attention::attention(int n, int d, int h, int l, bool isSelf) {
-    KdotQ = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));   // KEYS
-    K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // KEYS
-    Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // QUERYS
-    MQ = mat(h, d);     // hxd
-    MK = mat(h, d);     // hxd
-    MV = mat(d, h);     // dxh
-    MH = mat(d, h);     // dxh
-    dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
-    dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
-    EH.resize(d, 0.0f);      // EH = EH + dH
-    // vertical retention vectors
-    EV.resize(n, std::vector<float>(d, 0));
-    hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
-    ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
-    isSelfAttention = isSelf;           // default attention: Self
-    inTraining = 1;                     // default
-}
-
-
-/**
- * @brief Constructor for incomplete attention
- * @param n number of tokens for each attention head
- * @param d dimension of each token
- * @param h height of MQ, MK and columns of MV, MH
- * @param l layers of mlp
- */
-attention::attention(int n, int d, int h, int l, bool isSelf, bool inTraining) {
-    if(inTraining == 1) {
-        // for training
-        KdotQ = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));   // KEYS
-        K = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // KEYS
-        Q = std::vector<std::vector<float>>(n, std::vector<float>(h, 0));   // QUERYS
-        MQ = mat(h, d);     // hxd
-        MK = mat(h, d);     // hxd
-        MV = mat(d, h);     // dxh
-        MH = mat(d, h);     // dxh
-        dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
-        dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
-        EH.resize(d, 0.0f);      // EH = EH + dH
-        // vertical retention vectors
-        EV.resize(n, std::vector<float>(d, 0));
-        hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
-        ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
-        isSelfAttention = isSelf;           // default attention: Self
-        inTraining = this->inTraining;
+attention::attention(int n, int d, int h, int l) :
+    isSelfAttention(true),
+    inTraining(true),
+    tokenCount(0), // Initialize tokenCount
+    ver(d, l, EPOCHS, LEARNING), // Initialize mlp members
+    hor(d, l, EPOCHS, LEARNING),
+    MQ(h, d),
+    MK(h, d),
+    MV(d, h),
+    MH(d, h)
+    // qkCache, qvCache, khCache are only used in inference mode (inTraining=false)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
     }
-    // for use
-    else {
-        KdotQ = std::vector<std::vector<float>>(n, std::vector<float>(n, 0));   // KEYS
-        qkCache = mat(d, d);     // dxd
-        qvCache = mat(d, d);     // dxd
-        khCache = mat(d, d);     // dxd
-        dh.resize(d, 0.0f);      // dh = sum(head[ith row])xK[i]
-        dv.resize(d, 0.0f);      // dv = sum(head[ith col])xQ[i]
-        EH.resize(d, 0.0f);      // EH = EH + dH
-        // vertical retention vectors
-        EV.resize(n, std::vector<float>(d, 0));
-        hor = mlp(d, l, 10, LEARNING);      // MLP for FFN in horizontal
-        ver = mlp(d, l, 10, LEARNING);      // MLP for New Block Attention in vertical
-        isSelfAttention = isSelf;           // default attention: Self
-        inTraining = this->inTraining;
+    KdotQ.resize(n, std::vector<float>(n, 0.0f));
+    K.resize(n, std::vector<float>(h, 0.0f));
+    Q.resize(n, std::vector<float>(h, 0.0f));
+    dh.resize(d, 0.0f);
+    dv.resize(d, 0.0f);
+    EH.resize(d, 0.0f);
+    EV.resize(n, std::vector<float>(d, 0.0f)); // Use n, not CONTEXT_WIN here for consistency? Or always CONTEXT_WIN? Let's stick to n for now based on other constructors.
+}
+
+/**
+ * @brief Constructor for incomplete attention (default: training) - NO OpenCL
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ * @param isSelf Self (true) or Cross (false) attention
+ */
+attention::attention(int n, int d, int h, int l, bool isSelf) :
+    isSelfAttention(isSelf),
+    inTraining(true),
+    tokenCount(0),
+    ver(d, l, EPOCHS, LEARNING),
+    hor(d, l, EPOCHS, LEARNING),
+    MQ(h, d),
+    MK(h, d),
+    MV(d, h),
+    MH(d, h)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+    KdotQ.resize(n, std::vector<float>(n, 0.0f));
+    K.resize(n, std::vector<float>(h, 0.0f));
+    Q.resize(n, std::vector<float>(h, 0.0f));
+    dh.resize(d, 0.0f);
+    dv.resize(d, 0.0f);
+    EH.resize(d, 0.0f);
+    EV.resize(n, std::vector<float>(d, 0.0f));
+}
+
+/**
+ * @brief Constructor for incomplete attention - NO OpenCL
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ * @param isSelf Self (true) or Cross (false) attention
+ * @param trainMode Training (true) or Inference (false)
+ */
+attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode) :
+    isSelfAttention(isSelf),
+    inTraining(trainMode),
+    tokenCount(0),
+    ver(d, l, EPOCHS, LEARNING),
+    hor(d, l, EPOCHS, LEARNING),
+    // Conditionally initialize matrices based on training mode
+    MQ(trainMode ? h : 0, trainMode ? d : 0), // Only needed in training? Check logic. Assuming yes for now.
+    MK(trainMode ? h : 0, trainMode ? d : 0),
+    MV(trainMode ? d : 0, trainMode ? h : 0),
+    MH(trainMode ? d : 0, trainMode ? h : 0),
+    qkCache(trainMode ? 0 : d, trainMode ? 0 : d), // Only needed in inference
+    qvCache(trainMode ? 0 : d, trainMode ? 0 : d),
+    khCache(trainMode ? 0 : d, trainMode ? 0 : d)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+
+    // Common initializations
+    dh.resize(d, 0.0f);
+    dv.resize(d, 0.0f);
+    EH.resize(d, 0.0f);
+    EV.resize(n, std::vector<float>(d, 0.0f));
+    KdotQ.resize(n, std::vector<float>(n, 0.0f)); // Needed for both? Check usage. Assuming yes.
+
+    if (trainMode) {
+        // Training specific initializations
+        K.resize(n, std::vector<float>(h, 0.0f));
+        Q.resize(n, std::vector<float>(h, 0.0f));
+        // Re-initialize matrices if needed (already done in initializer list if logic is correct)
+        if (MQ.row == 0) MQ = mat(h, d);
+        if (MK.row == 0) MK = mat(h, d);
+        if (MV.row == 0) MV = mat(d, h);
+        if (MH.row == 0) MH = mat(d, h);
+    } else {
+        // Inference specific initializations (Matrices initialized in initializer list)
+        // K and Q might not be needed if using caches directly? Check logic.
+        // Let's assume K/Q vectors are not stored persistently in inference.
     }
 }
 
+#else // USE_OPENCL is defined
+
+// --- OpenCL Constructors ---
+
+/**
+ * @brief Constructor for incomplete attention (default: self attention, training) - WITH OpenCL
+ * @param context Reference to the shared OpenCL context.
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ */
+attention::attention(OpenCLContext& context, int n, int d, int h, int l) :
+    clcontext(context), // Initialize OpenCL context reference
+    isSelfAttention(true),
+    inTraining(true),
+    tokenCount(0),
+    ver(context, d, l, EPOCHS, LEARNING), // Pass context to mlp constructor
+    hor(context, d, l, EPOCHS, LEARNING), // Pass context to mlp constructor
+    MQ(h, d),
+    MK(h, d),
+    MV(d, h),
+    MH(d, h)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+    KdotQ.resize(n, std::vector<float>(n, 0.0f));
+    K.resize(n, std::vector<float>(h, 0.0f));
+    Q.resize(n, std::vector<float>(h, 0.0f));
+    dh.resize(d, 0.0f);
+    dv.resize(d, 0.0f);
+    EH.resize(d, 0.0f);
+    EV.resize(n, std::vector<float>(d, 0.0f));
+}
+
+/**
+ * @brief Constructor for incomplete attention (default: training) - WITH OpenCL
+ * @param context Reference to the shared OpenCL context.
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ * @param isSelf Self (true) or Cross (false) attention
+ */
+attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf) :
+    clcontext(context),
+    isSelfAttention(isSelf),
+    inTraining(true),
+    tokenCount(0),
+    ver(context, d, l, EPOCHS, LEARNING),
+    hor(context, d, l, EPOCHS, LEARNING),
+    MQ(h, d),
+    MK(h, d),
+    MV(d, h),
+    MH(d, h)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+    KdotQ.resize(n, std::vector<float>(n, 0.0f));
+    K.resize(n, std::vector<float>(h, 0.0f));
+    Q.resize(n, std::vector<float>(h, 0.0f));
+    dh.resize(d, 0.0f);
+    dv.resize(d, 0.0f);
+    EH.resize(d, 0.0f);
+    EV.resize(n, std::vector<float>(d, 0.0f));
+}
+
+/**
+ * @brief Constructor for incomplete attention - WITH OpenCL
+ * @param context Reference to the shared OpenCL context.
+ * @param n number of tokens for each attention head
+ * @param d dimension of each token
+ * @param h height of MQ, MK and columns of MV, MH
+ * @param l layers of mlp
+ * @param isSelf Self (true) or Cross (false) attention
+ * @param trainMode Training (true) or Inference (false)
+ */
+attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf, bool trainMode) :
+    clcontext(context),
+    isSelfAttention(isSelf),
+    inTraining(trainMode),
+    tokenCount(0),
+    ver(context, d, l, EPOCHS, LEARNING),
+    hor(context, d, l, EPOCHS, LEARNING),
+    // Conditionally initialize matrices based on training mode
+    MQ(trainMode ? h : 0, trainMode ? d : 0),
+    MK(trainMode ? h : 0, trainMode ? d : 0),
+    MV(trainMode ? d : 0, trainMode ? h : 0),
+    MH(trainMode ? d : 0, trainMode ? h : 0),
+    qkCache(trainMode ? 0 : d, trainMode ? 0 : d),
+    qvCache(trainMode ? 0 : d, trainMode ? 0 : d),
+    khCache(trainMode ? 0 : d, trainMode ? 0 : d)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+
+    // Common initializations
+    dh.resize(d, 0.0f);
+    dv.resize(d, 0.0f);
+    EH.resize(d, 0.0f);
+    EV.resize(n, std::vector<float>(d, 0.0f));
+    KdotQ.resize(n, std::vector<float>(n, 0.0f));
+
+    if (trainMode) {
+        // Training specific initializations
+        K.resize(n, std::vector<float>(h, 0.0f));
+        Q.resize(n, std::vector<float>(h, 0.0f));
+        if (MQ.row == 0) MQ = mat(h, d);
+        if (MK.row == 0) MK = mat(h, d);
+        if (MV.row == 0) MV = mat(d, h);
+        if (MH.row == 0) MH = mat(d, h);
+    } else {
+        // Inference specific initializations (Matrices initialized in initializer list)
+    }
+     // Optional: Log OpenCL context usage
+    // std::cout << "Attention head constructed with OpenCL context." << std::endl;
+}
+
+#endif // USE_OPENCL
+
+// --- Common Member Functions ---
 
 /**
  * @brief set attention type of model for cross and self attention
@@ -110,3 +252,5 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool inTraining) {
 void attention::setAttentionType(bool isSelforCross) {
     isSelfAttention = isSelforCross;
 }
+
+// Other attention member function implementations follow...

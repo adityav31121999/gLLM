@@ -1,24 +1,11 @@
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Match setup
-#endif
-#ifndef CL_HPP_MINIMUM_OPENCL_VERSION
-    #define CL_HPP_MINIMUM_OPENCL_VERSION 120 // Match setup
-#endif
-
+#include "include/mlp.hpp" // This now includes basic.hpp where OpenCLContext is defined
+#include <maths.hpp>       // Includes basic utilities like flatten
 #include <vector>
 #include <stdexcept>
 #include <iostream>
-#include <numeric> // For std::inner_product (if needed for verification, though not in CL path)
-#include "include/mlp.hpp" // Adjusted path relative to forpropcl.cpp location
-#include <maths.hpp>          // For flatten function declaration
-
-#include <CL/cl.hpp> // Use C++ bindings
-
+#include <string>
 
 /**
  * @brief Performs forward propagation using OpenCL kernels.
@@ -34,128 +21,146 @@ void mlp::clForward(int in, int layers) {
          throw std::runtime_error("Mismatch between layers count and weights size in clForward.");
     }
 
-    // Ensure host-side vectors for storing results are sized correctly
-    // Note: Device buffers will be created with appropriate sizes.
-    // These host vectors might only be needed if reading back intermediate results.
     hlayers.resize(layers, std::vector<float>(in, 0.0f));
     activations.resize(layers, std::vector<float>(in, 0.0f));
     output.resize(in, 0.0f); // Resize host output vector
 
     try {
-        // --- Create Kernels ---
-        cl::Kernel layerForwardKernel(program, "kernelLayerForward");
-        cl::Kernel sigmoidKernel(program, "clSigmoid1d"); // Use the 1D sigmoid kernel
+        OpenCLContext& context_obj = this->clContext; // Use the member reference
 
-        // --- Determine Sizes ---
-        // Assuming 'in' is the size for input, hidden, and output layers based on CPU code.
+        cl::Kernel layerForwardKernel = context_obj.kernels.at("kernelLayerForward"); // From kernel.cl
+        cl::Kernel sigmoidKernel = context_obj.kernels.at("clSigmoid1d"); // From activations.cl
+
         size_t layer_size = static_cast<size_t>(in);
         size_t buffer_size_bytes = layer_size * sizeof(float);
 
-        // --- Device Buffers ---
-        // Input buffer (read-only for the first layer)
-        cl::Buffer d_current_input(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buffer_size_bytes, const_cast<float*>(input.data()));
+        cl::Buffer d_current_input(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buffer_size_bytes, const_cast<float*>(input.data()));
 
-        // Buffers for intermediate results (activations) - We only need the previous layer's activation
-        cl::Buffer d_prev_activation = d_current_input; // Start with the input buffer
-        cl::Buffer d_current_hlayer(context, CL_MEM_READ_WRITE, buffer_size_bytes); // To store pre-activation sums
-        cl::Buffer d_current_activation(context, CL_MEM_READ_WRITE, buffer_size_bytes); // To store activations
+        // Buffers for intermediate results (read/write between kernels)
+        cl::Buffer d_current_hlayer(context_obj.context, CL_MEM_READ_WRITE, buffer_size_bytes);
+        cl::Buffer d_current_activation(context_obj.context, CL_MEM_READ_WRITE, buffer_size_bytes);
+
+        // Buffer to hold the activation from the *previous* layer (starts as input)
+        cl::Buffer d_prev_activation = d_current_input; // Initial input for the first layer
 
         // --- Process Hidden Layers (0 to layers-1) ---
         for (int i = 0; i < layers; ++i) {
-            // Determine input/output sizes for this layer connection
-            // Layer i connects previous layer (size 'in') to current layer (size 'in')
-            size_t current_input_size = layer_size; // Size of previous layer's activations (or initial input)
-            size_t current_output_size = layer_size; // Size of the current layer
+            size_t current_input_size = layer_size; // Input size for this layer (output of previous)
+            size_t current_output_size = layer_size; // Output size for this layer
 
-            // Flatten weights for the current layer (weights[i])
-            // weights[i] connects previous layer (size current_input_size) to current layer (size current_output_size)
-            // It should have dimensions [current_output_size x current_input_size]
             if (weights[i].size() != current_output_size || (!weights[i].empty() && weights[i][0].size() != current_input_size)) {
-                 throw std::runtime_error("Weight dimensions mismatch for layer " + std::to_string(i));
+                 throw std::runtime_error("Weight dimensions mismatch for hidden layer " + std::to_string(i));
             }
-            std::vector<float> flat_weights = flatten(weights[i]); // Flatten the current layer's weights
+            // Flatten weights for the current layer
+            std::vector<float> flat_weights = flatten(weights[i]);
             size_t weights_bytes = flat_weights.size() * sizeof(float);
 
-            // Create and write weights buffer for this layer
-            cl::Buffer d_weights(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, flat_weights.data());
+            // Create and write weights buffer for this layer (read-only for kernel)
+            cl::Buffer d_weights(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, flat_weights.data());
 
-            // 1. Compute Weighted Sum (Forward Kernel)
-            // kernelLayerForward(inputs, weights, outputs, input_size, output_size)
-            layerForwardKernel.setArg(0, d_prev_activation); // Input is previous layer's activation (or initial input)
-            layerForwardKernel.setArg(1, d_weights);
-            layerForwardKernel.setArg(2, d_current_hlayer); // Output is the pre-activation sum for this layer
+            // --- Kernel Execution for Hidden Layer i ---
+
+            // 1. Compute Weighted Sum (Layer Forward Kernel)
+            //    output = input * weights^T (effectively, handled by kernel indexing)
+            //    kernelLayerForward(inputs, weights, outputs, input_size, output_size)
+            layerForwardKernel.setArg(0, d_prev_activation);    // Input activations (from previous layer or initial input)
+            layerForwardKernel.setArg(1, d_weights);            // Weights for this layer
+            layerForwardKernel.setArg(2, d_current_hlayer);     // Output buffer for weighted sum (pre-activation)
             layerForwardKernel.setArg(3, static_cast<cl_int>(current_input_size));
             layerForwardKernel.setArg(4, static_cast<cl_int>(current_output_size));
 
-            // NDRange for layerForwardKernel (parallel over output neurons)
-            cl::NDRange global_fwd(current_output_size);
-            // Let OpenCL choose local size, or specify e.g., cl::NDRange(256) if appropriate
-            cl::NDRange local_fwd = cl::NullRange;
-            queue.enqueueNDRangeKernel(layerForwardKernel, cl::NullRange, global_fwd, local_fwd);
+            cl::NDRange global_fwd(current_output_size); // One work-item per output neuron
+            cl::NDRange local_fwd = cl::NullRange;       // Let OpenCL decide local size (or specify if needed)
+            context_obj.queue.enqueueNDRangeKernel(layerForwardKernel, cl::NullRange, global_fwd, local_fwd);
 
             // 2. Apply Activation Function (Sigmoid Kernel)
-            // clSigmoid1d(x, out, size)
-            sigmoidKernel.setArg(0, d_current_hlayer); // Input is the pre-activation sum
-            sigmoidKernel.setArg(1, d_current_activation); // Output is the activation for this layer
+            //    activation = sigmoid(weighted_sum)
+            //    clSigmoid1d(input_buffer, output_buffer, size)
+            sigmoidKernel.setArg(0, d_current_hlayer);      // Input buffer (weighted sum)
+            sigmoidKernel.setArg(1, d_current_activation);  // Output buffer for activations
             sigmoidKernel.setArg(2, static_cast<cl_int>(current_output_size));
 
-            // NDRange for sigmoidKernel (parallel over layer neurons)
-            cl::NDRange global_act(current_output_size);
-            cl::NDRange local_act = cl::NullRange; // Or specify
-            queue.enqueueNDRangeKernel(sigmoidKernel, cl::NullRange, global_act, local_act);
+            cl::NDRange global_act(current_output_size); // One work-item per neuron
+            cl::NDRange local_act = cl::NullRange;
+            context_obj.queue.enqueueNDRangeKernel(sigmoidKernel, cl::NullRange, global_act, local_act);
 
-            // The output of this layer's activation becomes the input for the next layer
+            // --- Prepare for next layer ---
+            // The activation of the current layer becomes the input for the next layer
             d_prev_activation = d_current_activation;
 
-            // Optional: Read back intermediate hlayers/activations if needed on host
-            // queue.enqueueReadBuffer(d_current_hlayer, CL_TRUE, 0, buffer_size_bytes, hlayers[i].data());
-            // queue.enqueueReadBuffer(d_current_activation, CL_TRUE, 0, buffer_size_bytes, activations[i].data());
-        }
+            // Optional: Read back intermediate results to host (useful for debugging or backprop)
+            context_obj.queue.enqueueReadBuffer(d_current_hlayer, CL_TRUE, 0, buffer_size_bytes, hlayers[i].data());
+            context_obj.queue.enqueueReadBuffer(d_current_activation, CL_TRUE, 0, buffer_size_bytes, activations[i].data());
+        } // End of hidden layer loop
 
-        // --- Process Output Layer (layers) ---
-        // Connects last hidden layer (activations[layers-1]) to output layer
-        size_t output_layer_input_size = layer_size; // Size of last hidden layer activation
-        size_t output_layer_output_size = layer_size; // Size of the final output layer
+        // --- Process Output Layer (using weights[layers]) ---
+        size_t output_layer_input_size = layer_size; // Input is activation from last hidden layer
+        size_t output_layer_output_size = layer_size; // Final output size
 
-        // Flatten weights for the output layer connection (weights[layers])
         if (weights[layers].size() != output_layer_output_size || (!weights[layers].empty() && weights[layers][0].size() != output_layer_input_size)) {
              throw std::runtime_error("Weight dimensions mismatch for output layer");
         }
         std::vector<float> flat_output_weights = flatten(weights[layers]);
         size_t output_weights_bytes = flat_output_weights.size() * sizeof(float);
 
-        // Create and write output weights buffer
-        cl::Buffer d_output_weights(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, output_weights_bytes, flat_output_weights.data());
+        // Create and write output weights buffer (read-only for kernel)
+        cl::Buffer d_output_weights(context_obj.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, output_weights_bytes, flat_output_weights.data());
 
-        // Create buffer for the final output (pre-activation, as CPU version doesn't activate output)
-        cl::Buffer d_output(context, CL_MEM_WRITE_ONLY, buffer_size_bytes);
+        // Create buffer for the final network output (write-only for kernel)
+        cl::Buffer d_output(context_obj.context, CL_MEM_WRITE_ONLY, buffer_size_bytes);
 
-        // Compute Weighted Sum for Output Layer
-        layerForwardKernel.setArg(0, d_prev_activation); // Input is the last hidden layer's activation
-        layerForwardKernel.setArg(1, d_output_weights);
-        layerForwardKernel.setArg(2, d_output); // Output is the final network output
+        // --- Kernel Execution for Output Layer ---
+
+        // 1. Compute Weighted Sum for Output Layer (using layerForwardKernel again)
+        layerForwardKernel.setArg(0, d_prev_activation);    // Input activations (from last hidden layer)
+        layerForwardKernel.setArg(1, d_output_weights);     // Weights for the output layer
+        layerForwardKernel.setArg(2, d_output);             // Output buffer for final result (pre-activation if activation applied separately)
         layerForwardKernel.setArg(3, static_cast<cl_int>(output_layer_input_size));
         layerForwardKernel.setArg(4, static_cast<cl_int>(output_layer_output_size));
 
         cl::NDRange global_out(output_layer_output_size);
-        cl::NDRange local_out = cl::NullRange; // Or specify
-        queue.enqueueNDRangeKernel(layerForwardKernel, cl::NullRange, global_out, local_out);
+        cl::NDRange local_out = cl::NullRange;
+        context_obj.queue.enqueueNDRangeKernel(layerForwardKernel, cl::NullRange, global_out, local_out);
+
+        // NOTE: Applying activation to the output layer depends on the network design.
+        // If the output layer needs sigmoid activation, you would enqueue the sigmoidKernel here:
+        /*
+        cl::Buffer d_final_activation(context_obj.context, CL_MEM_WRITE_ONLY, buffer_size_bytes); // Need a separate buffer if d_output was pre-activation
+        sigmoidKernel.setArg(0, d_output); // Input is the weighted sum from layerForwardKernel
+        sigmoidKernel.setArg(1, d_final_activation); // Output is the final activated output
+        sigmoidKernel.setArg(2, static_cast<cl_int>(output_layer_output_size));
+        context_obj.queue.enqueueNDRangeKernel(sigmoidKernel, cl::NullRange, global_out, local_out); // Reuse global range
+        // Then read from d_final_activation instead of d_output
+        */
+        // Assuming for now the output layer does NOT have activation applied by clForward itself.
 
         // --- Read Final Output Back to Host ---
-        // Blocking read to ensure computation is finished and data is available
-        queue.enqueueReadBuffer(d_output, CL_TRUE, 0, buffer_size_bytes, output.data());
+        // Read from the buffer that holds the final desired result (d_output in this case)
+        context_obj.queue.enqueueReadBuffer(d_output, CL_TRUE, 0, buffer_size_bytes, output.data());
 
-        // Optional: Explicitly wait for queue to finish if using non-blocking operations elsewhere
-        // queue.finish();
+        // Explicitly wait for queue to finish (optional, enqueueReadBuffer with CL_TRUE is blocking)
+        // context_obj.queue.finish();
 
     }
     catch (const cl::Error& err) {
         std::cerr << "OpenCL Error in mlp::clForward: " << err.what() << " (" << err.err() << ")" << std::endl;
-        // Print build log if it was a build error (though build happens in initializeOpenCL)
+        // Print build log if it was a build error - Access program and device via the SHARED context object
         if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
-             std::string log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device);
-             std::cerr << "Build Log:\n" << log << std::endl;
+             try {
+                // Use this->clContext to get program and device
+                std::string log = this->clContext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clContext.device);
+                std::cerr << "Build Log:\n" << log << std::endl;
+             } catch (const cl::Error& log_err) {
+                 std::cerr << "Could not retrieve build log: " << log_err.what() << " (" << log_err.err() << ")" << std::endl;
+             }
         }
+        throw; // Re-throw exception
+    }
+     catch (const std::out_of_range& oor) {
+        // Specific catch for kernel lookup failure from the map
+        std::cerr << "Error: Kernel not found in the shared OpenCLContext kernel map. "
+                  << "Ensure kernels 'kernelLayerForward' and 'clSigmoid1d' were provided during OpenCLContext initialization. "
+                  << "Details: " << oor.what() << std::endl;
         throw; // Re-throw exception
     }
     catch (const std::exception& e) {

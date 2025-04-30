@@ -4,6 +4,9 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
+
+
 /**
  * @brief train the transformer for next token prediction (single token training)
  * @param promptCount number of tokens in the prompt
@@ -392,3 +395,5 @@ void transformer::train(std::vector<std::vector<std::vector<float>>>& prompts, s
         train(prompts[i], responses[i], rString[i]);
     }
 }
+
+#endif

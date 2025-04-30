@@ -4,6 +4,8 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
+#ifndef USE_CUDA && USE_OPENCL
+
 
 /**
  * @brief backward propagation for last to first block
@@ -126,3 +128,5 @@ void transformer::backward(std::vector<std::vector<float>>& expected, int& k) {
         }
     }
 }
+
+#endif
