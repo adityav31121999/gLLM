@@ -9,8 +9,6 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <maths.hpp>
-#include <neural.hpp>
 #include "model.hpp"
 
 // serialisation and deserilisation of model parameters
@@ -21,7 +19,11 @@ void serialiseModel(const model& a);
 
 void deserialiseMAT(mat& a, FILE* file, int, int);
 void deserialiseMLP(mlp& a, FILE* file, int, int);
+#ifndef USE_OPENCL
 void deserialiseModel(model& a);
+#else
+void deserialiseModel(model& a, OpenCLContext& context);
+#endif
 
 void loadModel(model& a, std::string& from);
 void loadModel(model& a, FILE* file);

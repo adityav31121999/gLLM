@@ -18,7 +18,8 @@ void model::save() {
     }
     
     // Open file for writing
-    file = fopen(filePath.c_str(), "wb");
+    errno_t err = fopen_s(&file, filePath.c_str(), "wb");
+    if (err != 0)
     if (!file) {
         throw std::runtime_error("Failed to open file for writing: " + filePath);
     }
@@ -59,14 +60,15 @@ void model::load() {
     }
     
     // Open file for reading
-    file = fopen(filePath.c_str(), "rb");
+    errno_t err = fopen_s(&file, filePath.c_str(), "rb");
+    if (err != 0)
     if (!file) {
         throw std::runtime_error("Failed to open file for reading: " + filePath);
     }
     
     try {
         // Deserialize model from file
-        deserialiseModel(*this);
+        // deserialiseModel(*this);
         
         // Close file
         fclose(file);
@@ -82,5 +84,3 @@ void model::load() {
         throw std::runtime_error("Error loading model: " + std::string(e.what()));
     }
 }
-
-

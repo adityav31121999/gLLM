@@ -62,6 +62,8 @@ void deserialiseMLP(mlp& a, FILE* file, int layers, int neurons) {
     }
 }
 
+#ifndef USE_OPENCL
+
 /**
  * @brief Deserialize model from binary file
  * @param a model to deserialize into
@@ -72,7 +74,7 @@ void deserialiseModel(model& a) {
     }
 
     FILE* file = a.file;
-    
+
     // Read model metadata
     fread(&a.m, sizeof(int), 1, file);            // number of blocks
     fread(&a.x, sizeof(int), 1, file);            // incomplete attentions
@@ -105,21 +107,55 @@ void deserialiseModel(model& a) {
             }
         }
     }
-    
-    // Update model info structure with the loaded parameters
-    /**
-    a.info.d = a.d;
-    a.info.qkrow = a.d;
-    a.info.qkcol = a.h;
-    a.info.vhrow = a.h;
-    a.info.vhcol = a.d;
-    a.info.layer = a.l;
-    a.info.nIAs = a.y;
-    a.info.nPAs = a.x;
-    a.info.nCAs = a.m;
-    a.info.paramsIA = (4 * a.h * a.d) + (2 * a.d * a.d * a.l);
-    a.info.totalParams = a.totalParams;
-     */
-    
     std::cout << "Model deserialized successfully." << std::endl;
 }
+
+#else
+
+/**
+ * @brief Deserialize model from binary file
+ * @param a model to deserialize into
+ */
+void deserialiseModel(model& a, OpenCLContext& context) {
+    if (!a.file) {
+        throw std::runtime_error("Model file pointer is null");
+    }
+
+    FILE* file = a.file;
+
+    // Read model metadata
+    fread(&a.m, sizeof(int), 1, file);            // number of blocks
+    fread(&a.x, sizeof(int), 1, file);            // incomplete attentions
+    fread(&a.y, sizeof(int), 1, file);            // layers of partial attention
+    fread(&a.n, sizeof(int), 1, file);            // total tokens
+    fread(&a.d, sizeof(int), 1, file);            // token dimension
+    fread(&a.h, sizeof(int), 1, file);            // height of matrices
+    fread(&a.l, sizeof(int), 1, file);            // layers of mlp
+    fread(&a.totalParams, sizeof(int), 1, file);  // total parameters
+    fread(&a.total, sizeof(int), 1, file);        // total token limit
+
+    // Deserialize transformer by deserializing attention class
+    // block = t[k]
+    for (auto& block : a.T.t) { // t -> vector<blocks>
+        // For each block, deserialize its attention layers
+        // alay = block.b[i]
+        for (auto& alay : block.b) { // b -> vector<vector<attention>>
+            // For each attention layer, deserialize each attention's 4mat and 2mlp
+            // att = block.b[i][j]
+            for (auto& att : alay) {
+                // Deserialize matrices
+                deserialiseMAT(att.MQ, file, a.d, a.h);   // qkrow * qkcol
+                deserialiseMAT(att.MK, file, a.d, a.h);   // qkrow * qkcol
+                deserialiseMAT(att.MV, file, a.h, a.d);   // vhrow * vhcol
+                deserialiseMAT(att.MH, file, a.h, a.d);   // vhrow * vhcol
+
+                // Deserialize MLPs
+                deserialiseMLP(att.ver, file, a.l, a.d);  // (d * d) * l
+                deserialiseMLP(att.hor, file, a.l, a.d);  // (d * d) * l
+            }
+        }
+    }
+    std::cout << "Model deserialized successfully." << std::endl;
+}
+
+#endif

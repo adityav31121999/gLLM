@@ -19,9 +19,10 @@
  * @param l layers of mlp
  */
 model::model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab) :
-    clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l) {
+    clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l),
+    T(context, m, x, y, n, d, h, l, vocab) // Initialize T in the initializer list
+{
     totalParams = m * x * y * ((4 * h * d) + (2 * d * d * l));
-    T(context, m, x, y, n, d, h, l, vocab);  // transformer(int m, int x, int y, int n, int d, int h, int l);
     isSelf = 1;
     toTrain = 1;
     // allocate float value block of size totalParams to file
@@ -41,9 +42,10 @@ model::model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, i
  * @param learning learning rate for MLPs
  */
 model::model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab) :
-    clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning) {
+    clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning),
+    T(context, m, x, y, n, d, h, l, vocab) // Initialize T in the initializer list
+{
     totalParams = m * x * y * ((4 * h * d) + (2 * d * d * l));
-    T = transformer(context, m, x, y, n, d, h, l, vocab);
     T.setLearning(learning);  // Set learning rate for the transformer
     isSelf = 1;
     toTrain = 1;
@@ -63,15 +65,10 @@ model::model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, i
  * @param l layers of mlp
  */
 model::model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel) :
-clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(isSelfAttention), toTrain(toTrainModel)
+    clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(isSelfAttention), toTrain(toTrainModel),
+    T(context, m, x, y, n, d, h, l, vocab, isSelfAttention, toTrainModel) // Initialize T using the appropriate transformer constructor
 {
     totalParams = m * x * y * ((4 * h * d) + (2 * d * d * l));
-    if(toTrainModel == 1) {
-        T(context, m, x, y, n, d, h, l, vocab, isSelfAttention);
-    }
-    else {
-        T(context, x, y, n, d, h, l, vocab);
-    }
     // allocate float value block of size totalParams to file
     allocateMemory();
 }
@@ -89,10 +86,10 @@ clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), isSelf(isSelfAtten
  * @param learning learning rate for MLPs
  */
 model::model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, bool toTrainModel) :
-clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning), isSelf(isSelfAttention), toTrain(toTrainModel)
+    clcontext(context), m(m), x(x), y(y), n(n), d(d), h(h), l(l), learning(learning), isSelf(isSelfAttention), toTrain(toTrainModel),
+    T(context, m, x, y, n, d, h, l, vocab, isSelfAttention, toTrainModel) // Initialize T using the appropriate transformer constructor
 {
     totalParams = m * x * y * ((4 * h * d) + (2 * d * d * l));
-    T = (context, m, x, y, n, d, h, l, vocab, isSelfAttention);
     T.setLearning(learning);  // Set learning rate for the transformer
     // allocate float value block of size totalParams to file
     allocateMemory();

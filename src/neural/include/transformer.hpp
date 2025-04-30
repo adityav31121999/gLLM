@@ -66,10 +66,6 @@ public:
     std::vector<std::vector<float>> tokForBlock;        // token embeddings for local context for inference
 
 #ifdef USE_OPENCL
-    // If transformer owns the context, declare the object here.
-    // The OpenCLContext class itself needs a default constructor or
-    // the transformer constructors need to initialize it in their
-    // initializer list or body.
     OpenCLContext& clcontext;
     transformer(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab);
     transformer(OpenCLContext& context, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType);

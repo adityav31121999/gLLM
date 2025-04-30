@@ -9,7 +9,7 @@
 #include <neural.hpp>
 
 #define ARCH "SHADY-ATTENTION"
-#define EXTENSION ".llm"
+#define EXTENSION ".lm"
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -81,7 +81,7 @@ public:
 
     // default constructor
 #ifdef USE_OPENCL
-    OpenCLContext& clcontext;
+    OpenCLContext& clcontext;   // reference to class for opencl context for accessing all kernels
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab);
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);
