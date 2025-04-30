@@ -3,8 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief Run transformer using model parameters of cache and MLPs for inference, use

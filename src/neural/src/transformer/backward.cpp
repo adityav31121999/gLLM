@@ -4,8 +4,7 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief backward propagation for last to first block

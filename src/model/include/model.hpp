@@ -111,7 +111,7 @@ public:
     void load(std::string& from, std::string& to);
     void save();
     void train();
-    
+
     // chats
     void takeInput();       // take required input for transformer
     void runTransformer();  // run transformer for conversation

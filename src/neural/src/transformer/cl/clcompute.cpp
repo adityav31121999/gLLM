@@ -114,29 +114,29 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
     try {
         // --- Allocate Large Device Buffers ---
         // Use cl_context (assumed member variable or accessible)
-        d_all_kdotq = cl::Buffer(cl_context, CL_MEM_READ_WRITE, total_kdotq_bytes);
+        d_all_kdotq = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, total_kdotq_bytes);
         // Initialize KdotQ to 0. Use enqueueFillBuffer for initialization.
         cl_float zero = 0.0f;
-        CL_CHECK(cl_queue.enqueueFillBuffer(d_all_kdotq, zero, 0, total_kdotq_bytes));
+        CL_CHECK(this->clcontext.queue.enqueueFillBuffer(d_all_kdotq, zero, 0, total_kdotq_bytes));
         // Ensure fill is complete before proceeding (optional, depends on queue properties)
         // CL_CHECK(cl_queue.finish());
 
         if (inTraining) {
-            d_all_keys = cl::Buffer(cl_context, CL_MEM_READ_ONLY, total_k_bytes);
-            d_all_querys = cl::Buffer(cl_context, CL_MEM_READ_ONLY, total_q_bytes);
+            d_all_keys = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, total_k_bytes);
+            d_all_querys = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, total_q_bytes);
             h_all_keys_flat.reserve(total_k_elems);
             h_all_querys_flat.reserve(total_q_elems);
         }
         else {
             // Inference
-            d_all_M = cl::Buffer(cl_context, CL_MEM_READ_ONLY, total_m_bytes);
+            d_all_M = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, total_m_bytes);
             h_all_M_flat.reserve(total_m_elems);
 
             if (blockCount == 1) {
                 // Need global tokenEmbed
                 h_transformer_tokenEmbed_flat = flatten(this->tokenEmbed);
                 if (!h_transformer_tokenEmbed_flat.empty()) {
-                    d_transformer_tokenEmbed_flat = cl::Buffer(cl_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                    d_transformer_tokenEmbed_flat = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                                                h_transformer_tokenEmbed_flat.size() * sizeof(cl_float),
                                                                h_transformer_tokenEmbed_flat.data());
                 } else {
@@ -148,7 +148,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                 // Need block-local tokForBlock and EVp from previous block
                 h_block_tokForBlock_flat = flatten(current_block.tokForBlock);
                 if (!h_block_tokForBlock_flat.empty()) {
-                     d_block_tokForBlock_flat = cl::Buffer(cl_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                     d_block_tokForBlock_flat = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                                           h_block_tokForBlock_flat.size() * sizeof(cl_float),
                                                           h_block_tokForBlock_flat.data());
                 } else {
@@ -160,7 +160,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     // d_block_tokForBlock_flat = cl::Buffer(cl_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(cl_float), &dummy_val);
                 }
 
-                d_all_EVp = cl::Buffer(cl_context, CL_MEM_READ_ONLY, total_evp_bytes);
+                d_all_EVp = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, total_evp_bytes);
                 h_all_EVp_flat.reserve(total_evp_elems);
             }
         }
@@ -231,21 +231,21 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         h_all_keys_flat.size(), total_k_elems, h_all_querys_flat.size(), total_q_elems);
                 return;
             }
-            CL_CHECK(cl_queue.enqueueWriteBuffer(d_all_keys, CL_TRUE, 0, total_k_bytes, h_all_keys_flat.data()));
-            CL_CHECK(cl_queue.enqueueWriteBuffer(d_all_querys, CL_TRUE, 0, total_q_bytes, h_all_querys_flat.data()));
+            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_all_keys, CL_TRUE, 0, total_k_bytes, h_all_keys_flat.data()));
+            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_all_querys, CL_TRUE, 0, total_q_bytes, h_all_querys_flat.data()));
         } else {
             // Inference
             if (h_all_M_flat.size() != total_m_elems) {
                 fprintf(stderr, "Error: Packed host M size mismatch after loop (%zu vs %zu).\n", h_all_M_flat.size(), total_m_elems);
                 return;
             }
-             CL_CHECK(cl_queue.enqueueWriteBuffer(d_all_M, CL_TRUE, 0, total_m_bytes, h_all_M_flat.data()));
+             CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_all_M, CL_TRUE, 0, total_m_bytes, h_all_M_flat.data()));
             if (blockCount > 1) {
                  if (h_all_EVp_flat.size() != total_evp_elems) {
                     fprintf(stderr, "Error: Packed host EVp size mismatch after loop (%zu vs %zu).\n", h_all_EVp_flat.size(), total_evp_elems);
                     return;
                 }
-                CL_CHECK(cl_queue.enqueueWriteBuffer(d_all_EVp, CL_TRUE, 0, total_evp_bytes, h_all_EVp_flat.data()));
+                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_all_EVp, CL_TRUE, 0, total_evp_bytes, h_all_EVp_flat.data()));
             }
             // d_transformer_tokenEmbed_flat and d_block_tokForBlock_flat already copied via CL_MEM_COPY_HOST_PTR
         }
@@ -267,7 +267,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         cl_int context_len_in_block = 0;
 
         // Helper lambda to calculate rounded global size
-        auto calculate_global_size = & {
+        auto calculate_global_size = [](size_t total_x, size_t total_y) {
             size_t global_x = (total_x + WORKGROUP_SIZE_X - 1) / WORKGROUP_SIZE_X * WORKGROUP_SIZE_X;
             size_t global_y = (total_y + WORKGROUP_SIZE_Y - 1) / WORKGROUP_SIZE_Y * WORKGROUP_SIZE_Y;
             return cl::NDRange(global_x, global_y);
@@ -336,19 +336,19 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     cl::Buffer d_querys_head = d_all_querys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &q_region);
 
                     if (isSelf) {
-                        kernel = cl_kernels.at("kernelKdotQforSelf_train");
+                        kernel = this->clcontext.kernels.at("kernelKdotQforSelf_train");
                         CL_CHECK(kernel.setArg(0, d_kdotq_head));  // Pass sub-buffer
                         CL_CHECK(kernel.setArg(1, d_keys_head));   // Pass sub-buffer
                         CL_CHECK(kernel.setArg(2, d_querys_head)); // Pass sub-buffer
                         // ... set remaining args 3-7 ...
                     } else { // Cross Attention
-                        kernel = cl_kernels.at("kernelKdotQforCross_train");
+                        kernel = this->clcontext.kernels.at("kernelKdotQforCross_train");
                         CL_CHECK(kernel.setArg(0, d_kdotq_head));  // Pass sub-buffer
                         CL_CHECK(kernel.setArg(1, d_keys_head));   // Pass sub-buffer
                         CL_CHECK(kernel.setArg(2, d_querys_head)); // Pass sub-buffer
                         // ... set remaining args 3-7 ...
                     }
-                    CL_CHECK(cl_queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
+                    CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
                  }
             } else { // Inference Mode
                 if (effective_prompt_len > 0) {
@@ -358,13 +358,13 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
 
                     if (blockCount == 1) {
                          if (isSelf) {
-                            kernel = cl_kernels.at("kernelKdotQBlock1Self_Inference");
+                            kernel = this->clcontext.kernels.at("kernelKdotQBlock1Self_Inference");
                             CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
                             CL_CHECK(kernel.setArg(1, d_transformer_tokenEmbed_flat)); // Shared buffer (no sub-buffer needed)
                             CL_CHECK(kernel.setArg(2, d_M_head));    // Pass sub-buffer
                             // ... set remaining args 3-8 ...
                         } else {
-                            kernel = cl_kernels.at("kernelKdotQBlock1Cross_Inference");
+                            kernel = this->clcontext.kernels.at("kernelKdotQBlock1Cross_Inference");
                             CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
                             CL_CHECK(kernel.setArg(1, d_transformer_tokenEmbed_flat));
                             CL_CHECK(kernel.setArg(2, d_M_head));    // Pass sub-buffer
@@ -376,14 +376,14 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         cl::Buffer d_EVp_head = d_all_EVp.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &evp_region);
 
                         if (isSelf) {
-                            kernel = cl_kernels.at("kernelKdotQBlockNSelf_Inference");
+                            kernel = this->clcontext.kernels.at("kernelKdotQBlockNSelf_Inference");
                             CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
                             CL_CHECK(kernel.setArg(1, d_block_tokForBlock_flat)); // Shared buffer
                             CL_CHECK(kernel.setArg(2, d_EVp_head));   // Pass sub-buffer
                             CL_CHECK(kernel.setArg(3, d_M_head));     // Pass sub-buffer
                             // ... set remaining args 4-9 ...
                         } else {
-                            kernel = cl_kernels.at("kernelKdotQBlockNCross_Inference");
+                            kernel = this->clcontext.kernels.at("kernelKdotQBlockNCross_Inference");
                             CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
                             CL_CHECK(kernel.setArg(1, d_block_tokForBlock_flat));
                             CL_CHECK(kernel.setArg(2, d_EVp_head));   // Pass sub-buffer
@@ -391,7 +391,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                             // ... set remaining args 4-9 ...
                         }
                     }
-                     CL_CHECK(cl_queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
+                     CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
                 } // End if effective_prompt_len > 0
             } // End Inference Mode
             // Sub-buffers (d_kdotq_head, d_keys_head, etc.) go out of scope and are released here
@@ -399,11 +399,11 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
 
 
         // Ensure all kernels are finished before reading back
-        CL_CHECK(cl_queue.finish());
+        CL_CHECK(this->clcontext.queue.finish());
 
         // --- Batch Copy Result Device -> Host ---
         h_all_kdotq_flat.resize(total_kdotq_elems); // Allocate host buffer
-        CL_CHECK(cl_queue.enqueueReadBuffer(d_all_kdotq, CL_TRUE, 0, total_kdotq_bytes, h_all_kdotq_flat.data()));
+        CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_all_kdotq, CL_TRUE, 0, total_kdotq_bytes, h_all_kdotq_flat.data()));
 
         // --- Unpack Results into Attention Heads ---
         auto it_kdotq = h_all_kdotq_flat.begin();
@@ -429,7 +429,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             unflatten(head_kdotq_flat, head.KdotQ, context_win_size, context_win_size);
         }
 
-    } catch (int cl::Error& err) {
+    } catch (const cl::Error& err) {
         fprintf(stderr, "OpenCL Runtime error during clParallelKdotQs: %s (%d)\n", err.what(), err.err());
         // cl::Buffer RAII will handle cleanup automatically
         return;

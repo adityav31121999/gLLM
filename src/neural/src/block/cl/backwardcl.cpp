@@ -1,14 +1,8 @@
 // Add this to a new file, e.g., block/cl/backwardcl.cpp
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/block.hpp"     // Provides block class declaration and attention.hpp
+#include <maths.hpp>
 #include <vector>                // For std::vector
 #include <stdexcept>             // For std::out_of_range, std::runtime_error
 #include <string>                // For std::to_string in error messages
@@ -43,7 +37,7 @@ void block::clBackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
         try {
             // Call the partial backward function for the current column j
             // This function handles the logic for the very first head vs others internally.
-            this->cl1ParallelBackward1stBlock(context, queue, kernels, expectedH, in, layers, j);
+            this->cl1ParallelBackward1stBlock(expectedH, in, layers, j);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(H) for column ["
@@ -84,7 +78,7 @@ void block::clBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
     for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             // Call the partial backward function for the current column j, passing the specific expectedH[j]
-            this->cl1ParallelBackward1stBlock(context, queue, kernels, expectedH[j], in, layers, j);
+            this->cl1ParallelBackward1stBlock(expectedH[j], in, layers, j);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(H) for column ["
@@ -139,7 +133,7 @@ void block::clBackward1stBlock(std::vector<std::vector<std::vector<std::vector<f
 
         try {
             // Call the partial backward function for the current column j
-            this->cl1ParallelBackward1stBlock(context, queue, kernels, expectedV_col_j, in, layers, j);
+            this->cl1ParallelBackward1stBlock(expectedV_col_j, in, layers, j);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(V) for column ["
@@ -176,7 +170,7 @@ void block::clBackward(std::vector<float>& expectedH, int& in, int& layers)
     for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             // Call the partial backward function for non-first blocks
-            this->cl1ParallelBackward(context, queue, kernels, expectedH, in, layers, j);
+            this->cl1ParallelBackward(expectedH, in, layers, j);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward(H) for column ["
@@ -217,7 +211,7 @@ void block::clBackward(std::vector<std::vector<float>>& expectedH, int& in, int&
     for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             // Call the partial backward function for non-first blocks, passing the specific expectedH[j]
-            this->cl1ParallelBackward(context, queue, kernels, expectedH[j], in, layers, j);
+            this->cl1ParallelBackward(expectedH[j], in, layers, j);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward(H) for column ["
@@ -271,7 +265,7 @@ void block::clBackward(std::vector<std::vector<std::vector<std::vector<float>>>>
 
         try {
             // Call the partial backward function for non-first blocks
-            this->cl1ParallelBackward(context, queue, kernels, expectedV_col_j, in, layers, j);
+            this->cl1ParallelBackward(expectedV_col_j, in, layers, j);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward(V) for column ["

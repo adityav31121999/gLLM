@@ -1,13 +1,6 @@
 // Add this to a new file, e.g., block/cl/kdotqcl.cpp
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/block.hpp" // Includes attention.hpp -> mlp.hpp -> maths.hpp
 #include <vector>
 #include <string>
@@ -16,17 +9,13 @@
 #include <numeric>
 #include <algorithm>
 #include <cmath>
-#include <map>
+#include <maths.hpp>
 #include <CL/cl.hpp> // Or <CL/cl.h>
-
 
 /**
  * @brief OpenCL: Computes KdotQ in parallel for a column during TRAINING using K and Q matrices.
  *        Uses kernelKdotQforSelf_train or kernelKdotQforCross_train.
  *        Matches signature: void block::clParallelKdotQ(cl_context context, cl_command_queue queue, std::map<std::string, cl_kernel>& kernels, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
- * @param context OpenCL context.
- * @param queue OpenCL command queue.
- * @param kernels Map of compiled OpenCL kernels.
  * @param columnNumber Index of the column of attention heads.
  * @param blockNumber 1-based index of the current block.
  * @param tokenCount Global token count *before* adding the prompt.
@@ -40,21 +29,14 @@ void block::clParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
         throw std::out_of_range("clParallelKdotQ: columnNumber out of range.");
     }
 
-    cl_context context;
-    cl_command_queue queue;
-    cl_kernel kernels;
-    
     // Use MATHEIGHTS for K/Q dimension based on forward pass logic
     const int key_query_dim = MATHEIGHTS;
     const float inv_scaling = 1.0f / std::sqrt(static_cast<float>(key_query_dim)); // Scale by key/query dim
     const int num_heads_in_column = this->x;
-    cl_int err;
 
     std::vector<std::vector<float>> flat_kdotq_results(num_heads_in_column);
     std::vector<size_t> kdotq_total_sizes(num_heads_in_column);
-    std::vector<cl_mem> d_kdotq_buffers(num_heads_in_column, nullptr); // Store buffer handles for later read/release
-    std::vector<cl_mem> d_keys_buffers(num_heads_in_column, nullptr);   // Store temporary buffers for cleanup
-    std::vector<cl_mem> d_querys_buffers(num_heads_in_column, nullptr); // Store temporary buffers for cleanup
+    std::vector<cl::Buffer> d_kdotq_buffers(num_heads_in_column); // Store cl::Buffer objects
 
     try {
         for (int i = 0; i < num_heads_in_column; ++i) {
@@ -95,29 +77,25 @@ void block::clParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
                 continue;
             }
 
-            // --- GPU Allocation & Copy ---
-            cl_mem d_kdotq = nullptr, d_keys = nullptr, d_querys = nullptr;
             // K/Q size uses key_query_dim (MATHEIGHTS)
             size_t keys_size_bytes = static_cast<size_t>(num_keys_eff) * key_query_dim * sizeof(float);
             size_t querys_size_bytes = static_cast<size_t>(num_queries_eff) * key_query_dim * sizeof(float);
-
-            d_kdotq = cl_create_buffer(context, CL_MEM_WRITE_ONLY, kdotq_size_bytes, nullptr, err); CL_CHECK(err);
-            d_keys = cl_create_buffer(context, CL_MEM_READ_ONLY, keys_size_bytes, nullptr, err); CL_CHECK(err);
-            d_querys = cl_create_buffer(context, CL_MEM_READ_ONLY, querys_size_bytes, nullptr, err); CL_CHECK(err);
-            d_kdotq_buffers[i] = d_kdotq; // Store for later read
-            d_keys_buffers[i] = d_keys;   // Store for cleanup
-            d_querys_buffers[i] = d_querys; // Store for cleanup
-
-            float zero_pattern = 0.0f;
-            cl_fill_buffer(queue, d_kdotq, &zero_pattern, sizeof(float), 0, kdotq_size_bytes); // Zero init
-
             // Flatten only the relevant part of K/Q
             std::vector<float> flat_K, flat_Q;
             flat_K.reserve(num_keys_eff * key_query_dim);
             flat_Q.reserve(num_queries_eff * key_query_dim);
             for(int r=0; r<num_keys_eff; ++r) flat_K.insert(flat_K.end(), head.K[r].begin(), head.K[r].end());
             for(int r=0; r<num_queries_eff; ++r) flat_Q.insert(flat_Q.end(), head.Q[r].begin(), head.Q[r].end());
+            
+            cl::Buffer d_kdotq(this->clcontext.context, CL_MEM_WRITE_ONLY, kdotq_size_bytes);
+            cl::Buffer d_keys(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, keys_size_bytes, flat_K.data()); // Copy during creation
+            cl::Buffer d_querys(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, querys_size_bytes, flat_Q.data()); // Copy during creation
+            d_kdotq_buffers[i] = d_kdotq; // Store for later read
+            // No need to store d_keys/d_querys separately for release, cl::Buffer handles it
 
+            // Zero initialize the output buffer
+            float zero_pattern = 0.0f;
+            this->clcontext.queue.enqueueFillBuffer(d_kdotq, zero_pattern, 0, kdotq_size_bytes);
 
             if (flat_K.size() * sizeof(float) < keys_size_bytes || flat_Q.size() * sizeof(float) < querys_size_bytes) {
                 std::cerr << "Warning: Flattened K/Q size insufficient for head (" << i << ", " << columnNumber << "). Skipping." << std::endl;
@@ -125,22 +103,22 @@ void block::clParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
                 continue;
             }
 
-            cl_write_buffer(queue, d_keys, keys_size_bytes, flat_K.data(), CL_FALSE); // Non-blocking write
-            cl_write_buffer(queue, d_querys, querys_size_bytes, flat_Q.data(), CL_FALSE); // Non-blocking write
+            // Writes are handled by CL_MEM_COPY_HOST_PTR during buffer creation now
+            // this->clcontext.queue.enqueueWriteBuffer(d_keys, CL_FALSE, 0, keys_size_bytes, flat_K.data()); // Non-blocking write
+            // this->clcontext.queue.enqueueWriteBuffer(d_querys, CL_FALSE, 0, querys_size_bytes, flat_Q.data()); // Non-blocking write
 
             // --- Kernel Launch ---
-            cl_kernel kdotq_kernel = nullptr;
+            cl::Kernel kdotq_kernel;
             if (isSelfAttention) {
-                kdotq_kernel = this->kernels.at("kernelKdotQforSelf_train");
+                kdotq_kernel = this->clcontext.kernels.at("kernelKdotQforSelf_train");
             } else {
-                kdotq_kernel = this->kernels.at("kernelKdotQforCross_train");
+                kdotq_kernel = this->clcontext.kernels.at("kernelKdotQforCross_train");
             }
 
-            size_t local_work_size[2] = { 16, 16 };
-            size_t global_work_size[2] = {
+            cl::NDRange local_work_size(16, 16);
+            cl::NDRange global_work_size(
                 (static_cast<size_t>(num_keys_eff) + local_work_size[0] - 1) / local_work_size[0] * local_work_size[0],
-                (static_cast<size_t>(num_queries_eff) + local_work_size[1] - 1) / local_work_size[1] * local_work_size[1]
-            };
+                (static_cast<size_t>(num_queries_eff) + local_work_size[1] - 1) / local_work_size[1] * local_work_size[1]);
 
             cl_int cl_num_queries_eff = num_queries_eff;
             cl_int cl_num_keys_eff = num_keys_eff;
@@ -148,52 +126,48 @@ void block::clParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
             // Kernel expects key_query_dim (MATHEIGHTS) as the dimension for dot product
             cl_int cl_key_query_dim_arg = key_query_dim;
 
-            cl_set_kernel_arg(kdotq_kernel, 0, sizeof(cl_mem), &d_kdotq);
-            cl_set_kernel_arg(kdotq_kernel, 1, sizeof(cl_mem), &d_keys);
-            cl_set_kernel_arg(kdotq_kernel, 2, sizeof(cl_mem), &d_querys);
-            cl_set_kernel_arg(kdotq_kernel, 3, sizeof(cl_int), &cl_num_queries_eff);
-            cl_set_kernel_arg(kdotq_kernel, 4, sizeof(cl_int), &cl_num_keys_eff);
-            cl_set_kernel_arg(kdotq_kernel, 5, sizeof(cl_int), &cl_kdotq_cols);
-            cl_set_kernel_arg(kdotq_kernel, 6, sizeof(cl_int), &cl_key_query_dim_arg); // Use MATHEIGHTS
-            cl_set_kernel_arg(kdotq_kernel, 7, sizeof(cl_float), &inv_scaling);
+            kdotq_kernel.setArg(0, d_kdotq);
+            kdotq_kernel.setArg(1, d_keys);
+            kdotq_kernel.setArg(2, d_querys);
+            kdotq_kernel.setArg(3, cl_num_queries_eff);
+            kdotq_kernel.setArg(4, cl_num_keys_eff);
+            kdotq_kernel.setArg(5, cl_kdotq_cols);
+            kdotq_kernel.setArg(6, cl_key_query_dim_arg); // Use MATHEIGHTS
+            kdotq_kernel.setArg(7, inv_scaling);
 
-            cl_enqueue_nd_range_kernel(queue, kdotq_kernel, 2, nullptr, global_work_size, local_work_size);
+            this->clcontext.queue.enqueueNDRangeKernel(kdotq_kernel, cl::NullRange, global_work_size, local_work_size);
 
             // --- Enqueue Read Back (Asynchronous) ---
             flat_kdotq_results[i].resize(kdotq_total_sizes[i]);
-            cl_read_buffer(queue, d_kdotq, kdotq_size_bytes, flat_kdotq_results[i].data(), CL_FALSE); // Non-blocking read
+            this->clcontext.queue.enqueueReadBuffer(d_kdotq, CL_FALSE, 0, kdotq_size_bytes, flat_kdotq_results[i].data()); // Non-blocking read
 
-            // Note: Temporary buffers d_keys, d_querys, d_kdotq will be released after clFinish
+            // Note: cl::Buffer d_keys, d_querys, d_kdotq will be released automatically when they go out of scope after clFinish
         }
 
         // --- Sync & Unflatten ---
-        cl_finish(queue); // Wait for all enqueued operations for all heads
+        this->clcontext.queue.finish(); // Wait for all enqueued operations for all heads
 
         for (int i = 0; i < num_heads_in_column; ++i) {
-             // Release temporary buffers for this head
-            if (d_keys_buffers[i]) cl_release_mem_object(d_keys_buffers[i]);
-            if (d_querys_buffers[i]) cl_release_mem_object(d_querys_buffers[i]);
+             // No explicit release needed for cl::Buffer
 
-            if (d_kdotq_buffers[i] == nullptr) continue; // Skip heads that had errors or zero size
+            // Check if the buffer was actually created (i.e., size > 0 and no error before)
+            if (kdotq_total_sizes[i] == 0) continue;
 
             attention& head = b[i][columnNumber];
             int kdotq_rows = head.KdotQ.size();
-            int kdotq_cols = (kdotq_rows > 0) ? head.KdotQ[0].size() : 0;
+            int kdotq_cols = (kdotq_rows > 0) ? static_cast<int>(head.KdotQ[0].size()) : 0;
 
             if (kdotq_total_sizes[i] > 0 && flat_kdotq_results[i].size() == kdotq_total_sizes[i]) {
                 unflatten(flat_kdotq_results[i], head.KdotQ, kdotq_rows, kdotq_cols);
             }
-            cl_release_mem_object(d_kdotq_buffers[i]); // Release the kdotq buffer now
+            // No explicit release needed for cl::Buffer d_kdotq_buffers[i]
         }
     } 
-    catch (const std::exception& e) {
+    catch (const cl::Error& err) {
+        std::cerr << "OpenCL Error in clParallelKdotQ (Training): " << err.what() << " (" << err.err() << ")" << std::endl;
+        throw; // Re-throw cl::Error
+    } catch (const std::exception& e) {
         std::cerr << "OpenCL Exception in clParallelKdotQ (Training): " << e.what() << std::endl;
-        // Cleanup any remaining valid buffer handles
-        for (int i = 0; i < num_heads_in_column; ++i) {
-            if (d_kdotq_buffers[i]) cl_release_mem_object(d_kdotq_buffers[i]);
-            if (d_keys_buffers[i]) cl_release_mem_object(d_keys_buffers[i]);
-            if (d_querys_buffers[i]) cl_release_mem_object(d_querys_buffers[i]);
-        }
         throw;
     }
 }
@@ -204,10 +178,6 @@ void block::clParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
  *        Uses global tokenEmbed and head.qkCache (M).
  *        Uses kernelKdotQ_Block1_Self_Inference or kernelKdotQ_Block1_Cross_Inference.
  *        Matches signature: void block::clParallelUseKdotQ(cl_context context, cl_command_queue queue, std::map<std::string, cl_kernel>& kernels, const std::vector<std::vector<float>>& tokenEmbed, int& columnNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
- *
- * @param context OpenCL context.
- * @param queue OpenCL command queue.
- * @param kernels Map of compiled OpenCL kernels.
  * @param tokenEmbed Global token embeddings (Host). Should contain full context.
  * @param columnNumber Index of the column of attention heads.
  * @param tokenCount Global token count *before* adding the prompt.
@@ -222,19 +192,14 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
         throw std::out_of_range("clParallelUseKdotQ (Block 1): columnNumber out of range.");
     }
 
-    cl_context context;
-    cl_command_queue queue;
-    cl_kernel kernels;
-    
     const int embedding_dim = EMBEDDING;
     const float inv_scaling = 1.0f / std::sqrt(static_cast<float>(embedding_dim)); // Scale by embedding_dim for inference
     const int num_heads_in_column = this->x;
-    cl_int err;
 
+    // Use cl::Buffer for automatic memory management
     std::vector<std::vector<float>> flat_kdotq_results(num_heads_in_column);
     std::vector<size_t> kdotq_total_sizes(num_heads_in_column);
-    std::vector<cl_mem> d_kdotq_buffers(num_heads_in_column, nullptr);
-    std::vector<cl_mem> d_M_buffers(num_heads_in_column, nullptr); // Store M buffers for cleanup
+    std::vector<cl::Buffer> d_kdotq_buffers(num_heads_in_column); // Use cl::Buffer
 
     // --- Pre-computation / Validation ---
     int context_len_total = tokenCount + promptCount;
@@ -250,13 +215,10 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
     }
 
     // Allocate and copy global tokenEmbed once
-    cl_mem d_tokenEmbed_global = nullptr;
-    d_tokenEmbed_global = cl_create_buffer(context, CL_MEM_READ_ONLY, embed_size_bytes, nullptr, err);
-    if (err != CL_SUCCESS) { CL_CHECK(err); return; } // Early exit on allocation failure
-    // Use blocking write for this shared resource before the loop starts
-    cl_write_buffer(queue, d_tokenEmbed_global, embed_size_bytes, flat_tokenEmbed.data(), CL_TRUE);
-
+    cl::Buffer d_tokenEmbed_global;
     try {
+        d_tokenEmbed_global = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embed_size_bytes, flat_tokenEmbed.data());
+
         for (int i = 0; i < num_heads_in_column; ++i) {
             attention& head = b[i][columnNumber];
 
@@ -294,30 +256,27 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
             }
 
             // --- GPU Allocation & Copy (M only) ---
-            cl_mem d_kdotq = nullptr, d_M = nullptr;
-            d_kdotq = cl_create_buffer(context, CL_MEM_WRITE_ONLY, kdotq_size_bytes, nullptr, err); CL_CHECK(err);
-            d_M = cl_create_buffer(context, CL_MEM_READ_ONLY, M_size_bytes, nullptr, err); CL_CHECK(err);
+            cl::Buffer d_kdotq(this->clcontext.context, CL_MEM_WRITE_ONLY, kdotq_size_bytes);
+            cl::Buffer d_M(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, M_size_bytes, flat_M.data());
             d_kdotq_buffers[i] = d_kdotq;
-            d_M_buffers[i] = d_M; // Store for cleanup
+            // No need to store d_M for cleanup, cl::Buffer handles it
 
             float zero_pattern = 0.0f;
-            cl_fill_buffer(queue, d_kdotq, &zero_pattern, sizeof(float), 0, kdotq_size_bytes);
-            cl_write_buffer(queue, d_M, M_size_bytes, flat_M.data(), CL_FALSE);
+            this->clcontext.queue.enqueueFillBuffer(d_kdotq, zero_pattern, 0, kdotq_size_bytes);
+            // Write for d_M handled by CL_MEM_COPY_HOST_PTR
 
             // --- Kernel Launch ---
-            cl_kernel kdotq_kernel = nullptr;
+            cl::Kernel kdotq_kernel;
             if (isSelfAttention) {
-                kdotq_kernel = this->kernels.at("kernelKdotQ_Block1_Self_Inference");
+                kdotq_kernel = this->clcontext.kernels.at("kernelKdotQ_Block1_Self_Inference");
             } else {
-                kdotq_kernel = this->kernels.at("kernelKdotQ_Block1_Cross_Inference");
+                kdotq_kernel = this->clcontext.kernels.at("kernelKdotQ_Block1_Cross_Inference");
             }
 
-            size_t local_work_size[2] = { 16, 16 };
-            // Grid covers prompt rows and full context columns
-            size_t global_work_size[2] = {
+            cl::NDRange local_work_size(16, 16);
+            cl::NDRange global_work_size(
                 (static_cast<size_t>(num_keys_eff) + local_work_size[0] - 1) / local_work_size[0] * local_work_size[0],
-                (static_cast<size_t>(num_queries_eff) + local_work_size[1] - 1) / local_work_size[1] * local_work_size[1]
-            };
+                (static_cast<size_t>(num_queries_eff) + local_work_size[1] - 1) / local_work_size[1] * local_work_size[1]);
 
             cl_int cl_prompt_start_index = prompt_start_index_global;
             cl_int cl_prompt_len = promptCount;
@@ -325,56 +284,52 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
             cl_int cl_kdotq_cols = kdotq_cols; // Width of output buffer
             cl_int cl_embedding_dim_arg = embedding_dim;
 
-            cl_set_kernel_arg(kdotq_kernel, 0, sizeof(cl_mem), &d_kdotq);
-            cl_set_kernel_arg(kdotq_kernel, 1, sizeof(cl_mem), &d_tokenEmbed_global); // Use global embed buffer
-            cl_set_kernel_arg(kdotq_kernel, 2, sizeof(cl_mem), &d_M);
-            cl_set_kernel_arg(kdotq_kernel, 3, sizeof(cl_int), &cl_prompt_start_index);
-            cl_set_kernel_arg(kdotq_kernel, 4, sizeof(cl_int), &cl_prompt_len);
-            cl_set_kernel_arg(kdotq_kernel, 5, sizeof(cl_int), &cl_context_len);
-            cl_set_kernel_arg(kdotq_kernel, 6, sizeof(cl_int), &cl_kdotq_cols);
-            cl_set_kernel_arg(kdotq_kernel, 7, sizeof(cl_int), &cl_embedding_dim_arg);
-            cl_set_kernel_arg(kdotq_kernel, 8, sizeof(cl_float), &inv_scaling);
+            kdotq_kernel.setArg(0, d_kdotq);
+            kdotq_kernel.setArg(1, d_tokenEmbed_global); // Use global embed buffer
+            kdotq_kernel.setArg(2, d_M);
+            kdotq_kernel.setArg(3, cl_prompt_start_index);
+            kdotq_kernel.setArg(4, cl_prompt_len);
+            kdotq_kernel.setArg(5, cl_context_len);
+            kdotq_kernel.setArg(6, cl_kdotq_cols);
+            kdotq_kernel.setArg(7, cl_embedding_dim_arg);
+            kdotq_kernel.setArg(8, inv_scaling);
 
-            cl_enqueue_nd_range_kernel(queue, kdotq_kernel, 2, nullptr, global_work_size, local_work_size);
+            // Convert C-style arrays to cl::NDRange
+            this->clcontext.queue.enqueueNDRangeKernel(kdotq_kernel, cl::NullRange, global_work_size, local_work_size);
 
             // --- Enqueue Read Back (Asynchronous) ---
             flat_kdotq_results[i].resize(kdotq_total_sizes[i]);
-            cl_read_buffer(queue, d_kdotq, kdotq_size_bytes, flat_kdotq_results[i].data(), CL_FALSE);
+            this->clcontext.queue.enqueueReadBuffer(d_kdotq, CL_FALSE, 0, kdotq_size_bytes, flat_kdotq_results[i].data());
 
-            // Note: d_M and d_kdotq released after clFinish
+            // Note: d_M and d_kdotq released automatically by cl::Buffer destructor after clFinish
         }
 
         // --- Sync & Unflatten ---
-        cl_finish(queue); // Wait for all heads in the column
+        this->clcontext.queue.finish(); // Wait for all heads in the column
 
         for (int i = 0; i < num_heads_in_column; ++i) {
-            if (d_M_buffers[i]) cl_release_mem_object(d_M_buffers[i]); // Release M buffer
+            // No explicit release needed for d_M or d_kdotq
 
-            if (d_kdotq_buffers[i] == nullptr) continue; // Skip heads with errors/zero size
+            if (kdotq_total_sizes[i] == 0) continue; // Skip heads with zero size
 
             attention& head = b[i][columnNumber];
             int kdotq_rows = head.KdotQ.size();
-            int kdotq_cols = (kdotq_rows > 0) ? head.KdotQ[0].size() : 0;
+            int kdotq_cols = (kdotq_rows > 0) ? static_cast<int>(head.KdotQ[0].size()) : 0;
 
             if (kdotq_total_sizes[i] > 0 && flat_kdotq_results[i].size() == kdotq_total_sizes[i]) {
                 unflatten(flat_kdotq_results[i], head.KdotQ, kdotq_rows, kdotq_cols);
             }
-            cl_release_mem_object(d_kdotq_buffers[i]); // Release kdotq buffer
+            // No explicit release needed for cl::Buffer d_kdotq_buffers[i]
         }
 
+    } catch (const cl::Error& err) {
+        std::cerr << "OpenCL Error in clParallelUseKdotQ (Block 1): " << err.what() << " (" << err.err() << ")" << std::endl;
+        // d_tokenEmbed_global is managed by cl::Buffer RAII
+        throw;
     } catch (const std::exception& e) {
         std::cerr << "OpenCL Exception in clParallelUseKdotQ (Block 1): " << e.what() << std::endl;
-        for (int i = 0; i < num_heads_in_column; ++i) {
-            if (d_kdotq_buffers[i]) cl_release_mem_object(d_kdotq_buffers[i]);
-            if (d_M_buffers[i]) cl_release_mem_object(d_M_buffers[i]);
-        }
-        // d_tokenEmbed_global needs release outside the loop
-        if (d_tokenEmbed_global) cl_release_mem_object(d_tokenEmbed_global);
         throw;
     }
-
-    // Release the global token embed buffer
-    if (d_tokenEmbed_global) cl_release_mem_object(d_tokenEmbed_global);
 }
 
 
@@ -383,10 +338,6 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
  *        Uses block-local tokForBlock, previous block's EVp, and head.qkCache (M).
  *        Uses kernelKdotQ_BlockN_Self_Inference or kernelKdotQ_BlockN_Cross_Inference.
  *        Matches signature: void block::clParallelUseKdotQ(cl_context context, cl_command_queue queue, std::map<std::string, cl_kernel>& kernels, const std::vector<std::vector<std::vector<float>>>& EVp, int& columnNumber, int& blockNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
- *
- * @param context OpenCL context.
- * @param queue OpenCL command queue.
- * @param kernels Map of compiled OpenCL kernels.
  * @param EVp Vertical retention vectors from the previous block (Host). Structure: EVp[head_idx][token_idx][embedding_dim].
  * @param columnNumber Index of the column of attention heads.
  * @param blockNumber 1-based index of the current block (must be > 1).
@@ -405,20 +356,14 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
         throw std::out_of_range("clParallelUseKdotQ (Block N): columnNumber out of range.");
     }
 
-    cl_context context;
-    cl_command_queue queue;
-    cl_kernel kernels;
-    
     const int embedding_dim = EMBEDDING;
     const float inv_scaling = 1.0f / std::sqrt(static_cast<float>(embedding_dim)); // Scale by embedding_dim for inference
     const int num_heads_in_column = this->x;
-    cl_int err;
 
+    // Use cl::Buffer for automatic memory management
     std::vector<std::vector<float>> flat_kdotq_results(num_heads_in_column);
     std::vector<size_t> kdotq_total_sizes(num_heads_in_column);
-    std::vector<cl_mem> d_kdotq_buffers(num_heads_in_column, nullptr);
-    std::vector<cl_mem> d_EVp_buffers(num_heads_in_column, nullptr); // Store EVp buffers for cleanup
-    std::vector<cl_mem> d_M_buffers(num_heads_in_column, nullptr);   // Store M buffers for cleanup
+    std::vector<cl::Buffer> d_kdotq_buffers(num_heads_in_column); // Use cl::Buffer
 
     // --- Pre-computation / Validation ---
     int context_len_total = tokenCount + promptCount;
@@ -443,13 +388,10 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
     }
 
     // Allocate and copy tokForBlock once
-    cl_mem d_tokForBlock_global = nullptr;
-    d_tokForBlock_global = cl_create_buffer(context, CL_MEM_READ_ONLY, tok_size_bytes, nullptr, err);
-    if (err != CL_SUCCESS) { CL_CHECK(err); return; }
-    // Use blocking write for this shared resource
-    cl_write_buffer(queue, d_tokForBlock_global, tok_size_bytes, flat_tokForBlock.data(), CL_TRUE);
-
+    cl::Buffer d_tokForBlock_global;
     try {
+        d_tokForBlock_global = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, tok_size_bytes, flat_tokForBlock.data());
+
         for (int i = 0; i < num_heads_in_column; ++i) {
             attention& head = b[i][columnNumber];
 
@@ -496,33 +438,29 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
             }
 
             // --- GPU Allocation & Copy (EVp, M) ---
-            cl_mem d_kdotq = nullptr, d_EVp = nullptr, d_M = nullptr;
-            d_kdotq = cl_create_buffer(context, CL_MEM_WRITE_ONLY, kdotq_size_bytes, nullptr, err); CL_CHECK(err);
-            d_EVp = cl_create_buffer(context, CL_MEM_READ_ONLY, evp_size_bytes, nullptr, err); CL_CHECK(err);
-            d_M = cl_create_buffer(context, CL_MEM_READ_ONLY, M_size_bytes, nullptr, err); CL_CHECK(err);
+            cl::Buffer d_kdotq, d_EVp, d_M;
+            d_kdotq = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, kdotq_size_bytes);
+            d_EVp = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, evp_size_bytes, flat_EVp.data());
+            d_M = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, M_size_bytes, flat_M.data());
             d_kdotq_buffers[i] = d_kdotq;
-            d_EVp_buffers[i] = d_EVp; // Store for cleanup
-            d_M_buffers[i] = d_M;     // Store for cleanup
+            // No need to store d_EVp/d_M for cleanup
 
             float zero_pattern = 0.0f;
-            cl_fill_buffer(queue, d_kdotq, &zero_pattern, sizeof(float), 0, kdotq_size_bytes);
-            cl_write_buffer(queue, d_EVp, evp_size_bytes, flat_EVp.data(), CL_FALSE);
-            cl_write_buffer(queue, d_M, M_size_bytes, flat_M.data(), CL_FALSE);
+            this->clcontext.queue.enqueueFillBuffer(d_kdotq, zero_pattern, 0, kdotq_size_bytes);
+            // Writes for d_EVp, d_M handled by CL_MEM_COPY_HOST_PTR
 
             // --- Kernel Launch ---
-            cl_kernel kdotq_kernel = nullptr;
+            cl::Kernel kdotq_kernel;
             if (isSelfAttention) {
-                kdotq_kernel = this->kernels.at(cl_Kernel, "kernelKdotQ_BlockN_Self_Inference");
+                kdotq_kernel = this->clcontext.kernels.at("kernelKdotQ_BlockN_Self_Inference");
             } else {
-                kdotq_kernel = this->kernels.at(cl_Kernel,"kernelKdotQ_BlockN_Cross_Inference");
+                kdotq_kernel = this->clcontext.kernels.at("kernelKdotQ_BlockN_Cross_Inference");
             }
 
-            size_t local_work_size[2] = { 16, 16 };
-            // Grid covers prompt rows and block context columns
-            size_t global_work_size[2] = {
+            cl::NDRange local_work_size(16, 16);
+            cl::NDRange global_work_size(
                 (static_cast<size_t>(num_keys_eff) + local_work_size[0] - 1) / local_work_size[0] * local_work_size[0],
-                (static_cast<size_t>(num_queries_eff) + local_work_size[1] - 1) / local_work_size[1] * local_work_size[1]
-            };
+                (static_cast<size_t>(num_queries_eff) + local_work_size[1] - 1) / local_work_size[1] * local_work_size[1]);
 
             cl_int cl_prompt_start_index_in_block = prompt_start_index_in_block;
             cl_int cl_prompt_len = promptCount;
@@ -530,59 +468,52 @@ void block::clParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
             cl_int cl_kdotq_cols = kdotq_cols; // Width of output buffer
             cl_int cl_embedding_dim_arg = embedding_dim;
 
-            cl_set_kernel_arg(kdotq_kernel, 0, sizeof(cl_mem), &d_kdotq);
-            cl_set_kernel_arg(kdotq_kernel, 1, sizeof(cl_mem), &d_tokForBlock_global); // Use global block token buffer
-            cl_set_kernel_arg(kdotq_kernel, 2, sizeof(cl_mem), &d_EVp);
-            cl_set_kernel_arg(kdotq_kernel, 3, sizeof(cl_mem), &d_M);
-            cl_set_kernel_arg(kdotq_kernel, 4, sizeof(cl_int), &cl_prompt_start_index_in_block);
-            cl_set_kernel_arg(kdotq_kernel, 5, sizeof(cl_int), &cl_prompt_len);
-            cl_set_kernel_arg(kdotq_kernel, 6, sizeof(cl_int), &cl_context_len_block);
-            cl_set_kernel_arg(kdotq_kernel, 7, sizeof(cl_int), &cl_kdotq_cols);
-            cl_set_kernel_arg(kdotq_kernel, 8, sizeof(cl_int), &cl_embedding_dim_arg);
-            cl_set_kernel_arg(kdotq_kernel, 9, sizeof(cl_float), &inv_scaling);
+            kdotq_kernel.setArg(0, d_kdotq);
+            kdotq_kernel.setArg(1, d_tokForBlock_global); // Use global block token buffer
+            kdotq_kernel.setArg(2, d_EVp);
+            kdotq_kernel.setArg(3, d_M);
+            kdotq_kernel.setArg(4, cl_prompt_start_index_in_block);
+            kdotq_kernel.setArg(5, cl_prompt_len);
+            kdotq_kernel.setArg(6, cl_context_len_block);
+            kdotq_kernel.setArg(7, cl_kdotq_cols);
+            kdotq_kernel.setArg(8, cl_embedding_dim_arg);
+            kdotq_kernel.setArg(9, inv_scaling);
 
-            cl_enqueue_nd_range_kernel(queue, kdotq_kernel, 2, nullptr, global_work_size, local_work_size);
+            this->clcontext.queue.enqueueNDRangeKernel(kdotq_kernel, cl::NullRange, global_work_size, local_work_size);
 
             // --- Enqueue Read Back (Asynchronous) ---
             flat_kdotq_results[i].resize(kdotq_total_sizes[i]);
-            cl_read_buffer(queue, d_kdotq, kdotq_size_bytes, flat_kdotq_results[i].data(), CL_FALSE);
+            this->clcontext.queue.enqueueReadBuffer(d_kdotq, CL_FALSE, 0, kdotq_size_bytes, flat_kdotq_results[i].data());
 
-            // Note: d_EVp, d_M, d_kdotq released after clFinish
+            // Note: d_EVp, d_M, d_kdotq released automatically by cl::Buffer destructor after clFinish
         }
 
         // --- Sync & Unflatten ---
-        cl_finish(queue); // Wait for all heads in the column
+        this->clcontext.queue.finish(); // Wait for all heads in the column
 
         for (int i = 0; i < num_heads_in_column; ++i) {
-            if (d_EVp_buffers[i]) cl_release_mem_object(d_EVp_buffers[i]); // Release EVp buffer
-            if (d_M_buffers[i]) cl_release_mem_object(d_M_buffers[i]);     // Release M buffer
+            // No explicit release needed for d_EVp, d_M, or d_kdotq
 
-            if (d_kdotq_buffers[i] == nullptr) continue; // Skip heads with errors/zero size
+            if (kdotq_total_sizes[i] == 0) continue; // Skip heads with zero size
 
             attention& head = b[i][columnNumber];
             int kdotq_rows = head.KdotQ.size();
-            int kdotq_cols = (kdotq_rows > 0) ? head.KdotQ[0].size() : 0;
+            int kdotq_cols = (kdotq_rows > 0) ? static_cast<int>(head.KdotQ[0].size()) : 0;
 
             if (kdotq_total_sizes[i] > 0 && flat_kdotq_results[i].size() == kdotq_total_sizes[i]) {
                 unflatten(flat_kdotq_results[i], head.KdotQ, kdotq_rows, kdotq_cols);
             }
-            cl_release_mem_object(d_kdotq_buffers[i]); // Release kdotq buffer
+            // No explicit release needed for cl::Buffer d_kdotq_buffers[i]
         }
 
+    } catch (const cl::Error& err) {
+        std::cerr << "OpenCL Error in clParallelUseKdotQ (Block N): " << err.what() << " (" << err.err() << ")" << std::endl;
+        // d_tokForBlock_global is managed by cl::Buffer RAII
+        throw;
     } catch (const std::exception& e) {
         std::cerr << "OpenCL Exception in clParallelUseKdotQ (Block N): " << e.what() << std::endl;
-        for (int i = 0; i < num_heads_in_column; ++i) {
-            if (d_kdotq_buffers[i]) cl_release_mem_object(d_kdotq_buffers[i]);
-            if (d_EVp_buffers[i]) cl_release_mem_object(d_EVp_buffers[i]);
-            if (d_M_buffers[i]) cl_release_mem_object(d_M_buffers[i]);
-        }
-        // d_tokForBlock_global needs release outside the loop
-        if (d_tokForBlock_global) cl_release_mem_object(d_tokForBlock_global);
         throw;
     }
-
-    // Release the global block token buffer
-    if (d_tokForBlock_global) cl_release_mem_object(d_tokForBlock_global);
 }
 
 #endif // USE_OPENCL

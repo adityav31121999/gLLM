@@ -99,7 +99,10 @@ public:
 #elif USE_OPENCL
     
 // opencl equivalent functions for attention
+    cl::Buffer d_EV; // Device buffer for Vertical Retention
+    cl::Buffer& getDeviceEVBuffer() { return d_EV; } // Getter for the device buffer
     void clforprop(int& in, int& layers, int& tokenCount);
+    // TODO: Ensure d_EV is initialized in the constructor and used in clforprop/clbackward
     void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     void clbackward(std::vector<float>& expected, int& in, int& layers);
     void clbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);

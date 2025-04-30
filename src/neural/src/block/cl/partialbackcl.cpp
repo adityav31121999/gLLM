@@ -1,13 +1,7 @@
 // Add this to a new file, e.g., block/cl/partialbackcl.cpp
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
+#include <maths.hpp>
 #include "include/block.hpp"     // Provides block class declaration and attention.hpp
 #include <vector>                // For std::vector
 #include <stdexcept>             // For std::out_of_range, std::runtime_error
@@ -53,7 +47,7 @@ void block::cl1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, 
         try {
             if (is_first_head) {
                 // Call the specific overload for the very first head (updates EH)
-                head_obj.clbackward1stHead(context, queue, kernels, expectedH, in, layers);
+                head_obj.clbackward1stHead(expectedH, in, layers);
             } else {
                 // Call the overload for other heads in the first block (doesn't update EH)
                 // This requires an overload in attention::clbackward1stHead that takes a dummy expectedV
@@ -65,7 +59,7 @@ void block::cl1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, 
                 // void attention::clbackward1stHead(cl_context, cl_command_queue, kernels, expectedH, expectedV, in, layers);
                 // We need a dummy expectedV.
                 std::vector<std::vector<float>> dummyExpectedV; // Empty vector
-                head_obj.clbackward1stHead(context, queue, kernels, expectedH, dummyExpectedV, in, layers);
+                head_obj.clbackward1stHead(expectedH, dummyExpectedV, in, layers);
             }
         }
         catch (const std::exception& e) {
@@ -112,7 +106,7 @@ void block::cl1ParallelBackward1stBlock(std::vector<std::vector<std::vector<floa
 
         try {
             // Call the overload of clbackward1stHead that takes only expectedV
-            head_obj.clbackward1stHead(context, queue, kernels, expectedV_head, in, layers);
+            head_obj.clbackward1stHead(expectedV_head, in, layers);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception during cl1ParallelBackward1stBlock(V) for head ["
@@ -157,7 +151,7 @@ void block::cl1ParallelBackward(std::vector<float>& expectedH, int& in, int& lay
 
         try {
             // Call the general backward function for non-first-block heads (updates EH and EV)
-            head_obj.clbackward(context, queue, kernels, expectedH, in, layers);
+            head_obj.clbackward(expectedH, in, layers);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception during cl1ParallelBackward(H) for head ["
@@ -203,7 +197,7 @@ void block::cl1ParallelBackward(std::vector<std::vector<std::vector<float>>>& ex
 
         try {
             // Call the general backward function for non-first-block heads (updates MV, MQ, MK_corr, EV)
-            head_obj.clbackward(context, queue, kernels, expectedV_head, in, layers);
+            head_obj.clbackward(expectedV_head, in, layers);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception during cl1ParallelBackward(V) for head ["

@@ -2,8 +2,6 @@
 #include "include/mlp.hpp"
 #include <random>
 
-#ifndef USE_CUDA && USE_OPENCL
-
 /**
  * @brief Function to initialize the weights of the multi-layer perceptron.
  * This function initializes the weights of the mlp using a normal distribution
@@ -25,7 +23,6 @@ void mlp::initializeWeights(int in, int layers) {
     }
 }
 
-#endif
 
 /**
  * @brief Flattens a 2D vector into a 1D vector (row-major).

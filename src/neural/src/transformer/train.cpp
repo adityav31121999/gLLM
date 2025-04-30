@@ -4,8 +4,7 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
-#ifndef USE_CUDA && USE_OPENCL
-
+#ifdef USE_CPU
 
 /**
  * @brief train the transformer for next token prediction (single token training)

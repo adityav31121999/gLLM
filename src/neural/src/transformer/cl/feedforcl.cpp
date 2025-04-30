@@ -1,13 +1,6 @@
 // transformer_cl_forward.cpp (or add to an existing transformer_cl.cpp)
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/transformer.hpp" // Includes block.hpp, attention.hpp, mlp.hpp
 #include <vector>
 #include <numeric>   // std::accumulate
@@ -113,17 +106,17 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
 
             // Create device buffers for input EH (otok) and embeddings
             size_t otok_bytes = otok.size() * sizeof(float);
-            d_otok_buffer = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, otok.data());
-            d_embeddings_buffer = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddings_bytes, flat_embeddings.data());
+            d_otok_buffer = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, otok.data());
+            d_embeddings_buffer = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddings_bytes, flat_embeddings.data());
 
             // Create device buffer for the single integer output index
-            d_result_index_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_int));
+            d_result_index_buffer = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int));
 
             // Get the prediction kernel
             cl::Kernel predictionKernel;
             try {
                 // Use the specific kernel name defined previously
-                predictionKernel = kernels.at("kernelComputePredictionIndex");
+                predictionKernel = this->clcontext.kernels.at("kernelComputePredictionIndex");
             } catch (const std::out_of_range& oor) {
                  throw std::runtime_error("Kernel 'kernelComputePredictionIndex' not found. Ensure it's defined in a .cl file and loaded during setup.");
             }
@@ -140,11 +133,11 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             cl::NDRange local_size(1);
 
             // Enqueue the kernel
-            queue.enqueueNDRangeKernel(predictionKernel, cl::NullRange, global_size, local_size);
+            this->clcontext.queue.enqueueNDRangeKernel(predictionKernel, cl::NullRange, global_size, local_size);
 
             // Read the single integer result back to the host member variable indexForToken
             // Use blocking read (CL_TRUE) to ensure the kernel finishes and the result is available.
-            queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &this->indexForToken);
+            this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &this->indexForToken);
 
             std::cout << "clForward: kernelComputePredictionIndex finished. Predicted index: " << this->indexForToken << std::endl;
 
@@ -180,7 +173,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         std::cerr << "OpenCL Error in transformer::clForward: " << err.what() << " (" << err.err() << ")" << std::endl;
         if (err.err() == CL_BUILD_PROGRAM_FAILURE) {
              try {
-                 std::string log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device);
+                 std::string log = this->clcontext.program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(this->clcontext.device);
                  std::cerr << "Build Log:\n" << log << std::endl;
              } catch(...) { /* Ignore errors getting build log */ }
         }

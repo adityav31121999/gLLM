@@ -1,16 +1,10 @@
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/transformer.hpp"
 #include "include/block.hpp"
 #include "include/attention.hpp"
 #include "include/mlp.hpp" // For flatten/unflatten, errorofv
+#include <maths.hpp>
 #include <CL/cl.hpp>
 #include <vector>
 #include <stdexcept>
@@ -20,16 +14,6 @@
 
 // Forward declaration (already present in the provided code)
 // void transformer::clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
-
-// Helper function to get kernel, assuming it's part of the transformer class or accessible
-cl::Kernel& transformer::getKernel(const std::string& name) {
-    auto it = kernels.find(name);
-    if (it == kernels.end()) {
-        throw std::runtime_error("Kernel not found: " + name);
-    }
-    return it->second;
-}
-
 
 /**
  * @brief (OpenCL) Train the transformer for next token prediction (single token training).
@@ -70,8 +54,8 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
         size_t indexBytes = sizeof(int);       // Size for the result index
 
         // Create buffers
-        d_tokenEmbed = cl::Buffer(context, CL_MEM_READ_WRITE, tokenEmbedBytes);
-        d_expected = cl::Buffer(context, CL_MEM_READ_ONLY, expectedBytes);
+        d_tokenEmbed = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes);
+        d_expected = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, expectedBytes);
 
         // Flatten and copy current tokenEmbed context to device
         std::vector<float> flat_host_tokenEmbed;
@@ -88,14 +72,14 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
         }
         // Pad the rest of the buffer with zeros
         flat_host_tokenEmbed.resize(totalTokenEmbedFloats, 0.0f);
-        queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, tokenEmbedBytes, flat_host_tokenEmbed.data());
+        this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, tokenEmbedBytes, flat_host_tokenEmbed.data());
 
         // Flatten and copy embeddings table
         std::vector<float> flat_embeddings = flatten(this->embeddings);
-        d_embeddings = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
+        d_embeddings = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
 
         // Copy expected vector
-        queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, expectedBytes, expected.data());
+        this->clcontext.queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, expectedBytes, expected.data());
 
         // Determine effective context size and block index for the *current* state
         int effective_context_size = currentTokenCount;
@@ -137,12 +121,12 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
 
                 try {
                     // Create and copy output (EH) vector
-                    d_output = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, h_otok_buffer.data());
+                    d_output = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, h_otok_buffer.data());
                     // Create buffer for the kernel to write the result index
-                    d_result_index = cl::Buffer(context, CL_MEM_WRITE_ONLY, indexBytes);
+                    d_result_index = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, indexBytes);
 
                     // --- Get and Set Kernel Arguments ---
-                    cl::Kernel kernel = getKernel("compute_prediction");
+                    cl::Kernel kernel = this->clcontext.kernels.at("compute_prediction");
                     kernel.setArg(0, d_output);
                     kernel.setArg(1, d_embeddings); // Use d_embeddings created earlier
                     kernel.setArg(2, static_cast<cl_int>(d)); // dim
@@ -152,13 +136,13 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
                     // --- Enqueue Kernel ---
                     cl::NDRange global(1);
                     cl::NDRange local(1);
-                    cl_int err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
+                    cl_int err = this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
                     if (err != CL_SUCCESS) {
                         throw cl::Error(err, "Failed to enqueue compute_prediction kernel");
                     }
 
                     // --- Read Result Back ---
-                    err = queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
+                    err = this->clcontext.queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
                     if (err != CL_SUCCESS) {
                         throw cl::Error(err, "Failed to read result index buffer");
                     }
@@ -190,7 +174,7 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
                  if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                     throw std::out_of_range("clTrain(single): Calculated offset for writing converged token exceeds buffer bounds.");
                  }
-                queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected.data()); // Write expected token
+                 this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected.data()); // Write expected token
                 break; // Exit training loop
             }
 
@@ -210,7 +194,7 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
                      if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                          throw std::out_of_range("clTrain(single): Calculated offset for writing converged token exceeds buffer bounds.");
                      }
-                     queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected.data());
+                     this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected.data());
                      break;
                  }
             }
@@ -324,8 +308,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
         size_t indexBytes = sizeof(int);       // Size for the result index
 
         // Create buffers
-        d_tokenEmbed = cl::Buffer(context, CL_MEM_READ_WRITE, tokenEmbedBytes);
-        d_expected_token = cl::Buffer(context, CL_MEM_READ_ONLY, singleTokenBytes); // Buffer for the target token
+        d_tokenEmbed = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes);
+        d_expected_token = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, singleTokenBytes); // Buffer for the target token
 
         // Prepare initial context buffer content
         std::vector<float> flat_host_tokenEmbed;
@@ -346,11 +330,11 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
         // Pad the rest of the buffer
         flat_host_tokenEmbed.resize(totalTokenEmbedFloats, 0.0f);
         // Write initial buffer content to device
-        queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, tokenEmbedBytes, flat_host_tokenEmbed.data());
+        this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, tokenEmbedBytes, flat_host_tokenEmbed.data());
 
         // Flatten and copy embeddings table
         std::vector<float> flat_embeddings = flatten(this->embeddings);
-        d_embeddings = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
+        d_embeddings = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
 
 
         // --- Initialize Host State ---
@@ -387,7 +371,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
             std::string& expected_str = rString[i];
 
             // Copy target token H->D into the dedicated buffer
-            queue.enqueueWriteBuffer(d_expected_token, CL_TRUE, 0, singleTokenBytes, expected_vec.data());
+            this->clcontext.queue.enqueueWriteBuffer(d_expected_token, CL_TRUE, 0, singleTokenBytes, expected_vec.data());
 
             int effective_context_size = this->currentTokenCount; // Context size *before* adding token i
             int current_block_idx = this->blockCount; // Block index based on current context size
@@ -428,12 +412,12 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
 
                     try {
                         // Create and copy output (EH) vector
-                        d_output = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, h_otok_buffer.data());
+                        d_output = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, h_otok_buffer.data());
                         // Create buffer for the kernel to write the result index
-                        d_result_index = cl::Buffer(context, CL_MEM_WRITE_ONLY, indexBytes);
+                        d_result_index = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, indexBytes);
 
                         // --- Get and Set Kernel Arguments ---
-                        cl::Kernel kernel = getKernel("compute_prediction");
+                        cl::Kernel kernel = this->clcontext.kernels.at("compute_prediction");
                         kernel.setArg(0, d_output);
                         kernel.setArg(1, d_embeddings); // Use d_embeddings created earlier
                         kernel.setArg(2, static_cast<cl_int>(d)); // dim
@@ -443,13 +427,13 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                         // --- Enqueue Kernel ---
                         cl::NDRange global(1);
                         cl::NDRange local(1);
-                        cl_int err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
+                        cl_int err = this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
                         if (err != CL_SUCCESS) {
                             throw cl::Error(err, "Failed to enqueue compute_prediction kernel");
                         }
 
                         // --- Read Result Back ---
-                        err = queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
+                        err = this->clcontext.queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
                         if (err != CL_SUCCESS) {
                             throw cl::Error(err, "Failed to read result index buffer");
                         }
@@ -480,7 +464,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                      if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                         throw std::out_of_range("clTrain(sentence): Calculated offset for writing converged token exceeds buffer bounds.");
                      }
-                    queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
+                     this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
                     break; // Exit training loop for this token
                 }
 
@@ -495,7 +479,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                          if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                              throw std::out_of_range("clTrain(sentence): Calculated offset for writing converged token exceeds buffer bounds.");
                          }
-                         queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
+                         this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
                          break;
                     }
                 }
@@ -596,8 +580,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         size_t indexBytes = sizeof(int);       // Size for the result index
 
         // Create buffers
-        d_tokenEmbed = cl::Buffer(context, CL_MEM_READ_WRITE, tokenEmbedBytes);
-        d_expected_response_token = cl::Buffer(context, CL_MEM_READ_ONLY, singleTokenBytes);
+        d_tokenEmbed = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes);
+        d_expected_response_token = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, singleTokenBytes);
 
         // Prepare initial context buffer content (existing context)
         std::vector<float> flat_host_tokenEmbed;
@@ -616,12 +600,12 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
 
         // Write existing context to device
         if (!flat_host_tokenEmbed.empty()) {
-            queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, flat_host_tokenEmbed.size() * sizeof(float), flat_host_tokenEmbed.data());
+            this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, flat_host_tokenEmbed.size() * sizeof(float), flat_host_tokenEmbed.data());
         }
 
         // Flatten and copy embeddings table
         std::vector<float> flat_embeddings = flatten(this->embeddings);
-        d_embeddings = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
+        d_embeddings = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
 
 
         // --- Process Prompt (Add to context on Host and Device) ---
@@ -635,7 +619,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
              if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                  throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing prompt token.");
              }
-            queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, prompt[p].data());
+             this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, prompt[p].data());
 
             // Update host tracking
             int previousTokenCount = this->currentTokenCount;
@@ -671,7 +655,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             std::string& expected_str = rString[i];
 
             // Copy target token H->D
-            queue.enqueueWriteBuffer(d_expected_response_token, CL_TRUE, 0, singleTokenBytes, expected_vec.data());
+            this->clcontext.queue.enqueueWriteBuffer(d_expected_response_token, CL_TRUE, 0, singleTokenBytes, expected_vec.data());
 
             int effective_context_size = this->currentTokenCount; // Context size *before* adding response[i]
             int current_block_idx = this->blockCount; // Block index based on current context size
@@ -715,12 +699,12 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
 
                     try {
                         // Create and copy output (EH) vector
-                        d_output = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, h_otok_buffer.data());
+                        d_output = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, h_otok_buffer.data());
                         // Create buffer for the kernel to write the result index
-                        d_result_index = cl::Buffer(context, CL_MEM_WRITE_ONLY, indexBytes);
+                        d_result_index = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, indexBytes);
 
                         // --- Get and Set Kernel Arguments ---
-                        cl::Kernel kernel = getKernel("compute_prediction");
+                        cl::Kernel kernel = this->clcontext.kernels.at("compute_prediction");
                         kernel.setArg(0, d_output);
                         kernel.setArg(1, d_embeddings); // Use d_embeddings created earlier
                         kernel.setArg(2, static_cast<cl_int>(d)); // dim
@@ -730,13 +714,13 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                         // --- Enqueue Kernel ---
                         cl::NDRange global(1);
                         cl::NDRange local(1);
-                        cl_int err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
+                        cl_int err = this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
                         if (err != CL_SUCCESS) {
                             throw cl::Error(err, "Failed to enqueue compute_prediction kernel");
                         }
 
                         // --- Read Result Back ---
-                        err = queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
+                        err = this->clcontext.queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
                         if (err != CL_SUCCESS) {
                             throw cl::Error(err, "Failed to read result index buffer");
                         }
@@ -767,7 +751,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                      if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                          throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                      }
-                    queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
+                     this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
                     break; // Exit training loop
                 }
 
@@ -782,7 +766,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                          if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                              throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                          }
-                         queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
+                         this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
                          break;
                      }
                 }
@@ -929,17 +913,17 @@ void transformer::clComputeOutput(std::vector<float>& output, std::vector<std::v
         size_t indexBytes = sizeof(int);
 
         // Create and copy output (EH) vector
-        d_output = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, output.data());
+        d_output = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, outputBytes, output.data());
 
         // Flatten and copy embeddings table
         std::vector<float> flat_embeddings = flatten(embeddings); // Flatten [voc][d] -> [voc*d]
-        d_embeddings_compute = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
+        d_embeddings_compute = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, embeddingsBytes, flat_embeddings.data());
 
         // Create buffer for the kernel to write the result index
-        d_result_index = cl::Buffer(context, CL_MEM_WRITE_ONLY, indexBytes);
+        d_result_index = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, indexBytes);
 
         // --- Get and Set Kernel Arguments ---
-        cl::Kernel kernel = getKernel("compute_prediction");
+        cl::Kernel kernel = this->clcontext.kernels.at("compute_prediction");
         kernel.setArg(0, d_output);
         kernel.setArg(1, d_embeddings_compute); // Pass the correct buffer
         kernel.setArg(2, static_cast<cl_int>(d)); // dim
@@ -949,13 +933,13 @@ void transformer::clComputeOutput(std::vector<float>& output, std::vector<std::v
         // --- Enqueue Kernel ---
         cl::NDRange global(1);
         cl::NDRange local(1);
-        cl_int err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
+        cl_int err = this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
         if (err != CL_SUCCESS) {
             throw cl::Error(err, "Failed to enqueue compute_prediction kernel");
         }
 
         // --- Read Result Back ---
-        err = queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
+        err = this->clcontext.queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
          if (err != CL_SUCCESS) {
             throw cl::Error(err, "Failed to read result index buffer");
         }

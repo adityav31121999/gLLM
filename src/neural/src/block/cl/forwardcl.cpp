@@ -1,18 +1,12 @@
 // Add this to a new file, e.g., block/cl/forwardcl.cpp
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/block.hpp"     // Provides block class declaration and attention.hpp
 #include <vector>                // For std::vector
 #include <stdexcept>             // For std::out_of_range, std::runtime_error
 #include <string>                // For std::to_string in error messages
 #include <map>                   // For kernel map
+#include <maths.hpp>
 #include <CL/cl.hpp>             // Or <CL/cl.h>
 
 
@@ -39,7 +33,7 @@ void block::cl1parallelForprop(int& in, int& tokenCount, int i, int& layers)
         attention& head = this->b[layer_idx][i];
         try {
             // Call the first overload of attention::clforprop (for first block)
-            head.clforprop(context, queue, kernels, in, layers, tokenCount);
+            head.clforprop(in, layers, tokenCount);
         }
         catch (const std::exception& e) {
             // Add context to the exception before re-throwing
@@ -78,7 +72,6 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
          throw std::runtime_error("cl1ParallelForprop (subsequent block): EVp layer dimension mismatch for column " + std::to_string(i)
                                   + ". Expected " + std::to_string(this->x) + " layers, got " + std::to_string(EVp.size()) + ".");
     }
-
     // Iterate through the layers (rows) of attention heads in the specified column 'i'
     for (int layer_idx = 0; layer_idx < this->x; ++layer_idx) {
         attention& head = this->b[layer_idx][i];
@@ -86,7 +79,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
         std::vector<std::vector<float>>& EVp_layer = EVp[layer_idx];
         try {
             // Call the second overload of attention::clforprop (for subsequent blocks)
-            head.clforprop(context, queue, kernels, EVp_layer, in, layers, tokenCount, blockCount, n);
+            head.clforprop(EVp_layer, in, layers, tokenCount, blockCount, n);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in attention::clforprop (subsequent block overload) for head ["
@@ -114,7 +107,7 @@ void block::clForprop(int& in, int& tokenCount, int& layers)
     for (int j = 0; j < this->y; ++j) {
         try {
             // Call the first block version for the column j
-            this->cl1parallelForprop(context, queue, kernels, in, tokenCount, j, layers);
+            this->cl1parallelForprop(in, tokenCount, j, layers);
         }
         catch (const std::exception& e) {
             // Add context to the exception before re-throwing
@@ -165,7 +158,7 @@ void block::clForprop(std::vector<std::vector<std::vector<std::vector<float>>>>&
 
         try {
             // Call the subsequent block version for the column j, passing the column-specific EVp
-            this->cl1ParallelForprop(context, queue, kernels, EVp_col_j, in, tokenCount, blockCount, j, layers, n);
+            this->cl1ParallelForprop(EVp_col_j, in, tokenCount, blockCount, j, layers, n);
         }
         catch (const std::exception& e) {
             // Add context to the exception before re-throwing

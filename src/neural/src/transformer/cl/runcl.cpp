@@ -1,17 +1,10 @@
 #ifdef USE_OPENCL
 
-#ifndef CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_ENABLE_EXCEPTIONS
-#endif
-#ifndef CL_HPP_TARGET_OPENCL_VERSION
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 // Or the version you are targeting
-#endif
-
 #include "include/transformer.hpp"
 #include "include/mlp.hpp"
 #include "include/attention.hpp"
 #include "include/block.hpp"
-
+#include <maths.hpp>
 #include <CL/cl.hpp>
 #include <vector>
 #include <string>
@@ -57,10 +50,10 @@ void transformer::clRun() {
 
     try {
         // Create Buffers
-        d_tokenEmbed = cl::Buffer(context, CL_MEM_READ_WRITE, full_context_bytes);
-        d_embeddings = cl::Buffer(context, CL_MEM_READ_ONLY, vocab_bytes); // Read-only for inference
-        d_EVuse = cl::Buffer(context, CL_MEM_READ_WRITE, ev_use_bytes); // Holds state between blocks
-        d_tokForBlock = cl::Buffer(context, CL_MEM_READ_WRITE, context_win_bytes); // Holds current block's context
+        d_tokenEmbed = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, full_context_bytes);
+        d_embeddings = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, vocab_bytes); // Read-only for inference
+        d_EVuse = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, ev_use_bytes); // Holds state between blocks
+        d_tokForBlock = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, context_win_bytes); // Holds current block's context
 
         // --- Initial Data Transfer ---
         // Flatten and copy vocabulary embeddings H->D (once)
@@ -70,7 +63,7 @@ void transformer::clRun() {
             if (embed.size() != static_cast<size_t>(d)) throw std::runtime_error("Inconsistent embedding dimension in vocabulary.");
             flat_embeddings.insert(flat_embeddings.end(), embed.begin(), embed.end());
         }
-        queue.enqueueWriteBuffer(d_embeddings, CL_TRUE, 0, vocab_bytes, flat_embeddings.data());
+        this->clcontext.queue.enqueueWriteBuffer(d_embeddings, CL_TRUE, 0, vocab_bytes, flat_embeddings.data());
         flat_embeddings.clear(); // Free host memory
 
         // --- Main Inference Loop ---
@@ -124,7 +117,7 @@ void transformer::clRun() {
             if (prompt_offset_bytes + prompt_bytes > full_context_bytes) {
                  throw std::runtime_error("Prompt copy exceeds d_tokenEmbed bounds.");
             }
-            queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, prompt_offset_bytes, prompt_bytes, prompt_embeddings_flat.data());
+            this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, prompt_offset_bytes, prompt_bytes, prompt_embeddings_flat.data());
             prompt_embeddings_flat.clear(); // Free host memory
 
 
@@ -142,7 +135,7 @@ void transformer::clRun() {
                     // The 'currentTokenCount' argument to clParallelKdotQs should be the count *before* adding the prompt
                     clParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
                 }
-                 queue.finish(); // Ensure KdotQ calculation is done
+                this->clcontext.queue.finish(); // Ensure KdotQ calculation is done
             } else {
                 // Case 2: Prompt spans across the current and next block
                 int m2 = space_in_current_block; // Tokens fitting in the current block
@@ -154,7 +147,7 @@ void transformer::clRun() {
                         int effectivePromptCount = m2;
                         clParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
                     }
-                     queue.finish(); // Ensure KdotQ for m2 is done
+                    this->clcontext.queue.finish(); // Ensure KdotQ for m2 is done
                 }
 
                 // --- Transition to the next block ---
@@ -183,11 +176,11 @@ void transformer::clRun() {
                             }
 
                             // Enqueue the device-to-device buffer copy
-                            cl_int err = queue.enqueueCopyBuffer(src_ev_buffer, d_EVuse, 0, dest_offset_bytes, head_ev_bytes);
+                            cl_int err = this->clcontext.queue.enqueueCopyBuffer(src_ev_buffer, d_EVuse, 0, dest_offset_bytes, head_ev_bytes);
                             if (err != CL_SUCCESS) {
-                                throw cl::Error(err, "Failed to enqueue EV copy for head [" + std::to_string(i) + "][" + std::to_string(j) + "]");
+                                std::string error_msg = "Failed to enqueue EV copy for head [" + std::to_string(i) + "][" + std::to_string(j) + "]";
+                                throw cl::Error(err, error_msg.c_str()); // Use .c_str() here
                             }
-
                         }
                         catch (const cl::Error& clErr) {
                             std::cerr << "OpenCL Error getting/copying EV buffer for head [" << i << "][" << j << "]: "
@@ -203,7 +196,7 @@ void transformer::clRun() {
                 } // End loop rows (i)
 
                 // Ensure all copy operations are completed before proceeding
-                queue.finish();
+                this->clcontext.queue.finish();
 
                 blockCount += 1; // Increment block count *once*
 
@@ -214,8 +207,8 @@ void transformer::clRun() {
                 if (copy_offset_bytes + context_win_bytes > full_context_bytes) {
                     throw std::runtime_error("d_tokForBlock source offset out of bounds.");
                 }
-                queue.enqueueCopyBuffer(d_tokenEmbed, d_tokForBlock, copy_offset_bytes, 0, context_win_bytes);
-                queue.finish(); // Ensure copy is done
+                this->clcontext.queue.enqueueCopyBuffer(d_tokenEmbed, d_tokForBlock, copy_offset_bytes, 0, context_win_bytes);
+                this->clcontext.queue.finish(); // Ensure copy is done
 
 
                 // Pre-calculate KdotQ for the second part (m1 tokens) in the *new* block
@@ -227,7 +220,7 @@ void transformer::clRun() {
                         // Pass the new blockCount
                         clParallelKdotQs(effectivePromptCount, start_of_new_block_count, blockCount, col, isSelf, inTraining);
                     }
-                    queue.finish(); // Ensure KdotQ for m1 is done
+                    this->clcontext.queue.finish(); // Ensure KdotQ for m1 is done
                 }
             }
 
@@ -243,7 +236,7 @@ void transformer::clRun() {
                 // Pass 0 for promptCount during generation.
                 int generationPromptCount = 0; // Indicate generation phase
                 clForward(blockCount, currentTokenCount, generationPromptCount); // Updates t[0]'s internal state (EH, EV)
-                queue.finish(); // Ensure forward pass is complete
+                this->clcontext.queue.finish(); // Ensure forward pass is complete
 
                 // --- Get Output Token ---
                 // Assume clForward updated the host t[0].EH. If not, read back from device.
@@ -259,12 +252,12 @@ void transformer::clRun() {
 
                     try {
                         // Create and copy EH to device buffer
-                        d_output = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, t[0].EH.data());
+                        d_output = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, t[0].EH.data());
                         // Create buffer for the kernel to write the result index
-                        d_result_index = cl::Buffer(context, CL_MEM_WRITE_ONLY, indexBytes);
+                        d_result_index = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, indexBytes);
 
                         // Get the kernel
-                        cl::Kernel kernel = getKernel("compute_prediction"); // Use member function
+                        cl::Kernel kernel = this->clcontext.kernels.at("compute_prediction"); // Use member function
 
                         // Set arguments based on the kernel signature
                         kernel.setArg(0, d_output);
@@ -276,13 +269,13 @@ void transformer::clRun() {
                         // --- Enqueue Kernel ---
                         cl::NDRange global(1);
                         cl::NDRange local(1);
-                        cl_int err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
+                        cl_int err = this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
                         if (err != CL_SUCCESS) {
                             throw cl::Error(err, "Failed to enqueue compute_prediction kernel");
                         }
 
                         // --- Read Result Back ---
-                        err = queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
+                        err = this->clcontext.queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val);
                         if (err != CL_SUCCESS) {
                             throw cl::Error(err, "Failed to read result index buffer");
                         }
@@ -314,7 +307,7 @@ void transformer::clRun() {
                 if (next_token_offset_bytes + next_token_bytes > full_context_bytes) {
                     throw std::runtime_error("Next token copy exceeds d_tokenEmbed bounds.");
                 }
-                queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, next_token_offset_bytes, next_token_bytes, next_token_embed_h.data());
+                this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, next_token_offset_bytes, next_token_bytes, next_token_embed_h.data());
 
                 // Store the token string (host)
                 if (currentTokenCount >= mTokens.size()) {
@@ -345,8 +338,8 @@ void transformer::clRun() {
                     if (copy_offset_bytes + context_win_bytes > full_context_bytes) {
                         throw std::runtime_error("d_tokForBlock source offset out of bounds during generation.");
                     }
-                    queue.enqueueCopyBuffer(d_tokenEmbed, d_tokForBlock, copy_offset_bytes, 0, context_win_bytes);
-                    queue.finish(); // Ensure copy is done
+                    this->clcontext.queue.enqueueCopyBuffer(d_tokenEmbed, d_tokForBlock, copy_offset_bytes, 0, context_win_bytes);
+                    this->clcontext.queue.finish(); // Ensure copy is done
 
                     // Optional: Pre-calculate KdotQ for the new block if needed.
                 }
