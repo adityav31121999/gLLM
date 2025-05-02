@@ -253,4 +253,27 @@ void attention::setAttentionType(bool isSelforCross) {
     isSelfAttention = isSelforCross;
 }
 
-// Other attention member function implementations follow...
+// clear all the vectors of attention class
+void attention::clearValues()
+{
+     // Clear 1D vectors by filling with 0.0f
+    std::fill(EH.begin(), EH.end(), 0.0f);
+    std::fill(dh.begin(), dh.end(), 0.0f);
+    std::fill(dv.begin(), dv.end(), 0.0f);
+
+    // Clear 2D vectors by filling inner vectors with 0.0f
+    for (auto& innerVec : K) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+    for (auto& innerVec : Q) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+    for (auto& innerVec : KdotQ) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+    for (auto& innerVec : EV) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+    hor.clearValues();
+    ver.clearValues();
+}

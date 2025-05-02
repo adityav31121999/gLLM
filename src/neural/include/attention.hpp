@@ -124,6 +124,7 @@ public:
 
 #endif
     void setAttentionType(bool attentionType);
+    void clearValues();
     // default destructor
     ~attention() = default;
 };

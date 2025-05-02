@@ -85,5 +85,29 @@ mlp::mlp(OpenCLContext& context, unsigned int in, unsigned int layers, unsigned 
 
 #endif // USE_OPENCL
 
-// Other mlp member function implementations would follow here...
-// e.g., mlp::initializeWeights, mlp::forward, mlp::clForward, etc.
+// clear all values
+void mlp::clearValues() {
+    std::fill(input.begin(), input.end(), 0.0f);
+    std::fill(output.begin(), output.end(), 0.0f);
+    std::fill(expected.begin(), expected.end(), 0.0f);
+
+    // Clear 2D vectors
+    for (auto& layer : hlayers) {
+        std::fill(layer.begin(), layer.end(), 0.0f);
+    }
+    for (auto& layer : activations) {
+        std::fill(layer.begin(), layer.end(), 0.0f);
+    }
+
+    // Clear 3D vectors
+    for (auto& layer : weights) {
+        for (auto& matrix : layer) {
+            std::fill(matrix.begin(), matrix.end(), 0.0f);
+        }
+    }
+    for (auto& layer : gweights) {
+        for (auto& matrix : layer) {
+            std::fill(matrix.begin(), matrix.end(), 0.0f);
+        }
+    }
+}

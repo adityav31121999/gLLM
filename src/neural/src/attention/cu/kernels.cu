@@ -1,6 +1,7 @@
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+#include "include/attention.hpp"
 #include <vector>
 #include <iostream>
 #include <stdexcept>
@@ -9,6 +10,10 @@
 #include <maths.hpp>
 #include <string>
 
+float* attention::getDeviceEVPointer() {
+    // Return the device pointer for the EV matrix
+    return d_EV;
+}
 
 /**------------------------------------MULTIPLICATION------------------------------------**/
 

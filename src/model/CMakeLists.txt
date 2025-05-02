@@ -6,14 +6,18 @@ project(model C CXX)
 add_library(model STATIC
     src/model.cpp
     src/create.cpp
-    src/run.cpp
     src/save.cpp
-    src/serialise.cpp
-    src/deserialise.cpp
-    src/chat.cpp
 
-    src/use/load.cpp
-    src/use/act.cpp
+    src/serialise/serialise.cpp
+    src/serialise/deserialise.cpp
+
+    src/training/train.cpp
+    src/training/test.cpp
+    src/training/validate.cpp
+
+    src/inference/load.cpp
+    src/inference/chat.cpp
+    src/inference/run.cpp
 )
 
 target_link_libraries(model

@@ -11,9 +11,6 @@ add_library(neural STATIC
     src/mlp/mlp.cpp
     src/mlp/forprop.cpp
     src/mlp/backprop.cpp
-    src/mlp/cu/backward.cu
-    src/mlp/cu/backwithL1.cu
-    src/mlp/cu/backwithL2.cu
     src/mlp/loss.cpp
     src/mlp/weights.cpp
     src/mlp/train.cpp
@@ -79,6 +76,8 @@ add_library(neural STATIC
     src/transformer/feedfor.cpp
     src/transformer/backward.cpp
     src/transformer/train.cpp
+    src/transformer/test.cpp
+    src/transformer/validate.cpp
     src/transformer/run.cpp
     src/transformer/getVal.cpp
     # CUDA
@@ -87,6 +86,8 @@ add_library(neural STATIC
     src/transformer/cu/feedfor.cu
     src/transformer/cu/backward.cu
     src/transformer/cu/train.cu
+    src/transformer/cu/test.cu
+    src/transformer/cu/validate.cu
     src/transformer/cu/run.cu
     # OpenCL
     src/transformer/cl/kernels.cl
@@ -94,6 +95,8 @@ add_library(neural STATIC
     src/transformer/cl/feedforcl.cpp
     src/transformer/cl/backwardcl.cpp
     src/transformer/cl/traincl.cpp
+    src/transformer/cl/testcl.cpp
+    src/transformer/cl/validatecl.cpp
     src/transformer/cl/runcl.cpp
 )
 

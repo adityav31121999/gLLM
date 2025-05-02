@@ -66,6 +66,32 @@ std::vector<float> flatten(const mat& matrix) {
     return flatten(matrix.a);
 }
 
+
+/**
+ * @brief Flattens a specified range of rows from a 2D vector into a 1D vector.
+ * @param vec2d The input 2D vector (vector of vectors).
+ * @param start_row The starting row index (inclusive).
+ * @param num_rows The number of rows to flatten.
+ * @return A 1D vector containing the flattened elements.
+ * @throws std::out_of_range if start_row or num_rows are invalid.
+ */
+inline std::vector<float> flatten_range(const std::vector<std::vector<float>>& vec2d, size_t start_row, size_t num_rows) {
+    if (vec2d.empty() || num_rows == 0) {
+        return {};
+    }
+    if (start_row >= vec2d.size() || start_row + num_rows > vec2d.size()) {
+        throw std::out_of_range("flatten_range: Invalid start_row or num_rows exceeds vector bounds.");
+    }
+    size_t cols = vec2d[start_row].size(); // Assuming consistent column size based on start_row
+    std::vector<float> flat_vec;
+    flat_vec.reserve(num_rows * cols);
+    for (size_t i = 0; i < num_rows; ++i) {
+        flat_vec.insert(flat_vec.end(), vec2d[start_row + i].begin(), vec2d[start_row + i].end());
+    }
+    return flat_vec;
+}
+
+
 /**
  * @brief Unflattens a 1D vector back into a 2D vector (row-major).
  * @param flat_vec The input 1D vector.

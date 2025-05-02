@@ -52,6 +52,9 @@ public:
     int trainCount;         // total training count
     int vocabsize;          // size of vocabulary
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
+    float testError, validationError;
+    float testMSE, validationMSE;
+    int testCount, validationCount;
 
 // containers
     std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
@@ -81,8 +84,8 @@ public:
     transformer(int m, int x, int y, int n, int d, int h, int l, int vocab, bool attentionType, bool& inTraining);
 #endif
 
-#ifdef USE_CUDA     // cuda implementation
-
+#ifdef USE_CUDA
+// cuda implementation
     void cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void cuForward(int& blockCount, int& currentTokenCount, int& promptCount);
     void cuBackward(std::vector<float>& expectedH);
@@ -94,9 +97,21 @@ public:
     void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
+    void cuTest(std::vector<float>&, std::string&);
+    void cuTest(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void cuTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void cuTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+             std::vector<std::vector<std::string>>& rString);
+    void cuValidate(std::vector<float>&, std::string&);
+    void cuValidate(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void cuValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void cuValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
+    void cuRun(std::vector<std::vector<float>>& prompt);
     void cuRun();
 
-#elif USE_OPENCL    // opencl implementation
+#elif USE_OPENCL
+// opencl implementation
     void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void clForward(int &blockCount, int &currentTokenCount, int &promptCount);
     void clBackward(std::vector<float>& expectedH);
@@ -108,7 +123,18 @@ public:
     void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
+    void clTest(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+    void clTest(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void clTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void clTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
+    void clValidate(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+    void clValidate(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void clValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void clValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
     void clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
+    void clRun(std::vector<std::vector<float>>& prompt);
     void clRun();
 
 #else
@@ -125,6 +151,17 @@ public:
     void train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
+    void test(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+    void test(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void test(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void test(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
+    void validate(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
+    void validate(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void validate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
+    void validate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+                std::vector<std::vector<std::string>>& rString);
+    void run(std::vector<std::vector<float>>& prompt);
     void run();
 
 #endif
@@ -141,7 +178,8 @@ public:
 
     int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
     void getEmbedding(std::string& word, std::vector<float>& embed);
-
+    
+    void clearValues();
     // default destructor
     ~transformer() = default;
 };

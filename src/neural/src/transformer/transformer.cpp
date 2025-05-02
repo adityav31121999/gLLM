@@ -375,3 +375,39 @@ void transformer::setEpochs(int epochs) {
 void transformer::setAttention(bool attentionType) {
     this->isSelf = attentionType;
 }
+
+void transformer::clearValues() {
+    // Clear string vectors
+    tokens.clear();
+    mTokens.clear();
+
+    // Clear 1D float vector and set to 0
+    std::fill(otok.begin(), otok.end(), 0.0f);
+
+    // Clear 2D float vectors and set to 0
+    for (auto& innerVec : embeddings) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+    for (auto& innerVec : tokenEmbed) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+    for (auto& innerVec : tokForBlock) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+
+    // Clear 4D float vector (EVuse) and set to 0
+    for (auto& dim1 : EVuse) {
+        for (auto& dim2 : dim1) {
+            for (auto& dim3 : dim2) {
+                std::fill(dim3.begin(), dim3.end(), 0.0f);
+            }
+        }
+    }
+
+    // Reset counters and flags if needed (optional, depending on logic)
+    // blockCount = 0;
+    // currentTokenCount = 0;
+    // promptCount = 0;
+    // isTerminate = false;
+}
+

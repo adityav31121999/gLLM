@@ -99,6 +99,7 @@ public:
 
 #endif
     void initializeWeights(int in, int layers);
+    void clearValues();
     // default destructor
     ~mlp() = default; // Default destructor is fine
 };
@@ -111,6 +112,7 @@ float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights);
 std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
+std::vector<float> flatten_range(const std::vector<std::vector<float>>& vec2d, size_t start_row, size_t num_rows);
 std::vector<float> flatten(mat&);
 void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
 void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);

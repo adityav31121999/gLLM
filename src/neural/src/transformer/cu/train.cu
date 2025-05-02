@@ -19,7 +19,6 @@ do {                                                                         \
     if (err != cudaSuccess) {                                                \
         fprintf(stderr, "CUDA Error in %s at line %d: %s\n",                 \
                 __FILE__, __LINE__, cudaGetErrorString(err));                \
-        /* Consider throwing an exception or exiting */                      \
         throw std::runtime_error("CUDA Error: " + std::string(cudaGetErrorString(err)));    \
     }                                                                        \
 } while (0)
@@ -36,25 +35,24 @@ do {                                                                         \
 void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected,
     std::string& expString)
 {
-    // --- Device pointers (assumed members of transformer class) ---
-    float* d_tokenEmbed; // Device buffer for input/context token embeddings
+    // Device pointers (assuming d_tokenEmbed and d_embeddings are managed elsewhere or allocated here)
+    float* d_tokenEmbed; // Device context buffer
     CUDA_CHECK(cudaMalloc(&d_tokenEmbed, m * CONTEXT_WIN * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_tokenEmbed, tokenEmbed.data(), m * CONTEXT_WIN * d * sizeof(float), cudaMemcpyHostToDevice));
-    float* d_embeddings; // Device buffer for the main embedding table (flattened vocabsize * d)
+    float* d_embeddings; // Device embedding table
     CUDA_CHECK(cudaMalloc(&d_embeddings, vocabsize * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_embeddings, tokenEmbed.data(), vocabsize * d * sizeof(float), cudaMemcpyHostToDevice));
-    // --- Allocate necessary temporary device memory ---
+    // Allocate necessary temporary device memory
     float* d_expected;
     CUDA_CHECK(cudaMalloc(&d_expected, expected.size() * sizeof(float)));
-    float* d_otok_buffer; // Temporary buffer for EH output from forward pass
-    CUDA_CHECK(cudaMalloc(&d_otok_buffer, d * sizeof(float))); // d = embedding dimension
-    // --- Copy expected vector from Host to Device ---
-    CUDA_CHECK(cudaMemcpy(d_expected, expected.data(), expected.size() * sizeof(float), cudaMemcpyHostToDevice)); // H->D
+    float* d_otok_buffer; // Temporary buffer for EH output
+    CUDA_CHECK(cudaMalloc(&d_otok_buffer, d * sizeof(float)));
+    // Copy expected vector from Host to Device
+    CUDA_CHECK(cudaMemcpy(d_expected, expected.data(), expected.size() * sizeof(float), cudaMemcpyHostToDevice));
 
-    // for first block
+    // Training logic for the first block
     if(blockCount == 1 && currentTokenCount < CONTEXT_WIN) {
         cuParallelKdotQs(promptCount, currentTokenCount, blockCount, d, isSelf, inTraining); // d is embedding dim
-        // Train from here
         cuForward(blockCount, currentTokenCount, promptCount); // Operates on device data
         int i = 0;      // epoch counter
         float current_error = 1.0f; // Initialize error high
@@ -62,14 +60,13 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
         while (i <= epochs) 
         {
             float* d_block0_EH_ptr = nullptr; // Hypothetical function to get device pointer
-            CUDA_CHECK(cudaMalloc(&d_block0_EH_ptr, d * sizeof(float))); // d = embedding dimension
-            CUDA_CHECK(cudaMemcpy(d_block0_EH_ptr, t[0].EH.data(), d * sizeof(float), cudaMemcpyDeviceToHost)); // D->H
+            CUDA_CHECK(cudaMalloc(&d_block0_EH_ptr, d * sizeof(float)));
+            CUDA_CHECK(cudaMemcpy(d_block0_EH_ptr, t[0].EH.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy EH from device block if needed
 
-            // Compute final output token embedding and find best token index on GPU
-            // Pass the device pointer to the embedding table (this->d_embeddings)
-            cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d); // Use class member d_embeddings
+            // Compute output token embedding and find best token index on GPU
+            cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
             std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // D->H
+            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back to host for error check
             current_error = errorofv(h_otok_buffer, expected);
 
             if((current_error < 0.01) || (host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == expString))
@@ -78,7 +75,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
                 break;
             }
 
-            // if error is not corrected even after epochs, then increase epochs
+            // Increase epochs if error is persistent
             if(current_error > 0.01 && i == epochs) {
                 epochs += 10;
             }
@@ -87,7 +84,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
             cuForward(blockCount, currentTokenCount, promptCount);
             i++;
         }
-        // --- Update host counters ---
+        // Update host counters
         trainCount++;
         epochCount += i;
         error += current_error; // Add final error
@@ -96,12 +93,10 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
             blockCount += 1;
         }
     }
-    // for next blocks
+    // Training logic for subsequent blocks
     else if(blockCount > 1 && currentTokenCount >= CONTEXT_WIN) 
     {
         cuParallelKdotQs(promptCount, currentTokenCount, blockCount, d, isSelf, inTraining);
-
-        // Train from here
         cuForward(blockCount, currentTokenCount, promptCount); // Operates on device data
 
         int i = 0;
@@ -110,13 +105,13 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
 
         while (i < epochs) 
         {
-            float* d_current_block_EH_ptr; // Hypothetical  = this->t[blockCount-1].getDeviceEH()
+            float* d_current_block_EH_ptr; // Pointer to the current block's EH on device
             CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, d * sizeof(float)));
             CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, t[blockCount-1].EH.data(), d * sizeof(float), cudaMemcpyHostToDevice));
-            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d); // Use class member d_embeddings
+            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
 
             std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // D->H
+            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
             current_error = errorofv(h_otok_buffer, expected);
 
             if(current_error < 0.01 || (host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == expString)) 
@@ -125,19 +120,18 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
                 break; // Exit training loop
             }
 
-            // if error is not corrected even after epochs, then increase epochs
+            // Increase epochs if error is persistent
             if(current_error > 0.01 && i == epochs -1)
             {
                 epochs += 10;
             }
 
-            cuBackward(expected, blockCount); // Pass host vector 'expected' and block index
+            cuBackward(expected, blockCount);
 
-            // Perform forward pass again on GPU
             cuForward(blockCount, currentTokenCount, promptCount);
             i++;
         }
-        // --- Update host counters ---
+        // Update host counters
         trainCount++;
         epochCount += i;
         error += current_error;
@@ -147,10 +141,9 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
         }
     }
 
-    // --- Free temporary device memory ---
+    // Free temporary device memory
     CUDA_CHECK(cudaFree(d_expected));
-    CUDA_CHECK(cudaFree(d_otok_buffer)); // d_otok_buffer might not be needed if EH ptr is used directly
-    // CUDA_CHECK(cudaFree(d_final_otok)); // If allocated
+    CUDA_CHECK(cudaFree(d_otok_buffer));
 }
 
 
@@ -161,7 +154,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
  */
 void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString)
 {
-    // --- Basic validation ---
+    // Basic validation
     if(sentence.size() > FULL_CONTEXT) {
         throw std::runtime_error("Sentence size should not exceed FULL_CONTEXT");
     }
@@ -169,30 +162,31 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         throw std::runtime_error("Sentence embeddings and sentence strings must be non-empty and have the same size.");
     }
 
-    // --- Allocate temporary device buffers ---
+    // Allocate temporary device buffers
     float* d_expected_token;
     CUDA_CHECK(cudaMalloc(&d_expected_token, d * sizeof(float)));
-    float* d_otok_buffer; // Buffer to hold EH output if needed for cuComputeOutput or error check
+    float* d_otok_buffer; // Buffer for EH output if needed
     CUDA_CHECK(cudaMalloc(&d_otok_buffer, d * sizeof(float)));
     int* d_indexForToken_ptr;
     CUDA_CHECK(cudaMalloc(&d_indexForToken_ptr, sizeof(int)));
-    float* d_tokenEmbed; // Device buffer for input/context token embeddings
+    float* d_tokenEmbed; // Device context buffer
     CUDA_CHECK(cudaMalloc(&d_tokenEmbed, m * CONTEXT_WIN * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_tokenEmbed, tokenEmbed.data(), m * CONTEXT_WIN * d * sizeof(float), cudaMemcpyHostToDevice));
-    float* d_embeddings; // Device buffer for the main embedding table (flattened vocabsize * d)
+    float* d_embeddings; // Device embedding table
     CUDA_CHECK(cudaMalloc(&d_embeddings, vocabsize * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_embeddings, tokenEmbed.data(), vocabsize * d * sizeof(float), cudaMemcpyHostToDevice));
+
+    // Initialize state for sentence training
     promptCount = 1; // The first token acts as the initial prompt
     blockCount = 1;
     currentTokenCount = 1;
 
-
-    // --- Train for each subsequent token in the sentence ---
+    // Train for each subsequent token in the sentence
     for(int i = 1; i < sentence.size(); ++i) {
-        // --- Copy the expected token embedding to device ---
-        CUDA_CHECK(cudaMemcpy(d_expected_token, sentence[i].data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
+        // Copy the expected token embedding to device
+        CUDA_CHECK(cudaMemcpy(d_expected_token, sentence[i].data(), d * sizeof(float), cudaMemcpyHostToDevice));
 
-        // Determine the effective number of tokens in the context for this step
+        // Determine context size *before* adding token i
         int effective_context_size = currentTokenCount; // Size of context *before* adding token i
 
         // first block
@@ -207,13 +201,13 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
 
             while (j <= epochs) 
             {
-                float* d_block0_EH_ptr; // Hypothetical
+                float* d_block0_EH_ptr; // Pointer to block 0's EH on device
                 CUDA_CHECK(cudaMalloc(&d_block0_EH_ptr, d * sizeof(float)));
                 CUDA_CHECK(cudaMemcpy(d_block0_EH_ptr, t[0].EH.data(), d * sizeof(float), cudaMemcpyHostToDevice));
-                cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d); // Use class member d_embeddings
+                cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
 
                 std::vector<float> h_otok_buffer(d);
-                CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // D->H
+                CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
                 current_error = errorofv(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
 
                 if((current_error < 0.01) || (host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == rString[i])) 
@@ -225,17 +219,17 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
                 if(current_error > 0.01 && j == epochs) {
                     epochs += 10;
                 }
-                cuBackward(sentence[i]); // Passing host vector sentence[i]
+                cuBackward(sentence[i]);
 
                 cuForward(blockCount, effective_context_size, promptCount);
                 j++;
             }
-            // --- Update host counters ---
+            // Update host counters
             trainCount++;
             epochCount += j;
             error += current_error; // Add final error for this token
             currentTokenCount += 1; // Increment *after* processing token i
-            if(currentTokenCount == CONTEXT_WIN) {
+            if(currentTokenCount == CONTEXT_WIN) { // Move to next block if context window is full
                 blockCount += 1;
                 promptCount = 0; // Reset prompt count when moving to a new block? Or keep it relative? Assume reset for now.
             }
@@ -245,7 +239,6 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         {
             cuParallelKdotQs(promptCount, effective_context_size, blockCount, d, isSelf, inTraining);
 
-            // Forward pass to predict token i
             cuForward(blockCount, effective_context_size, promptCount);
 
             int j = 0;
@@ -254,13 +247,13 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
 
             while (j < epochs) 
             {
-                float* d_current_block_EH_ptr; // Hypothetical
+                float* d_current_block_EH_ptr; // Pointer to current block's EH on device
                 CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, m * CONTEXT_WIN * d * sizeof(float)));
                 CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, t[blockCount-1].EH.data(), m * CONTEXT_WIN * d * sizeof(float), cudaMemcpyHostToDevice));
 
-                cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d); // Use class member d_embeddings
+                cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
                 std::vector<float> h_otok_buffer(d);
-                CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // D->H
+                CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
                 current_error = errorofv(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
 
                 if(current_error < 0.01 || (host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == rString[i]))
@@ -272,17 +265,17 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
                 if(current_error > 0.01 && j == epochs - 1) {
                     epochs += 10;
                 }
-                cuBackward(sentence[i], blockCount); // Passing host vector sentence[i]
+                cuBackward(sentence[i], blockCount);
 
                 cuForward(blockCount, effective_context_size, promptCount);
                 j++;
             }
-            // --- Update host counters ---
+            // Update host counters
             trainCount++;
             epochCount += j;
             error += current_error;
             currentTokenCount += 1;
-            if(currentTokenCount % CONTEXT_WIN == 0) {
+            if(currentTokenCount % CONTEXT_WIN == 0) { // Move to next block if needed
                 blockCount += 1;
                  promptCount = 0; // Reset prompt count?
             }
@@ -290,9 +283,9 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
     }
 
     // --- Free temporary device memory ---
-    CUDA_CHECK(cudaFree(d_expected_token));
-    CUDA_CHECK(cudaFree(d_otok_buffer)); // May not be needed
-}
+    CUDA_CHECK(cudaFree(d_expected_token)); // Free the buffer for the expected token
+    CUDA_CHECK(cudaFree(d_otok_buffer));    // Free the temporary output buffer
+} // Note: d_tokenEmbed and d_embeddings might need freeing depending on overall memory management strategy
 
 
 /**
@@ -303,7 +296,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
  */
 void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString)
 {
-    // --- Basic validation ---
+    // Basic validation
     if (prompt.empty()) {
         throw std::runtime_error("Initial prompt cannot be empty!");
     }
@@ -316,26 +309,28 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         throw std::runtime_error("Response embeddings and response strings must be non-empty and have the same size!");
     }
 
-    // --- Allocate temporary device buffers ---
+    // Allocate device buffers (context, embeddings, temporary)
     float* d_tokenEmbed;
     CUDA_CHECK(cudaMalloc(&d_tokenEmbed, m * CONTEXT_WIN * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_tokenEmbed, tokenEmbed.data(), m * CONTEXT_WIN * d * sizeof(float), cudaMemcpyHostToDevice));
     float* d_embeddings;
     CUDA_CHECK(cudaMalloc(&d_embeddings, m * CONTEXT_WIN * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_embeddings, embeddings.data(), vocabsize * d * sizeof(float), cudaMemcpyHostToDevice));
-    float* d_expected_response_token;
+    float* d_expected_response_token; // Buffer for the target response token
     CUDA_CHECK(cudaMalloc(&d_expected_response_token, d * sizeof(float)));
-    float* d_otok_buffer; // Buffer to hold EH output if needed
+    float* d_otok_buffer; // Buffer for EH output
     CUDA_CHECK(cudaMalloc(&d_otok_buffer, d * sizeof(float)));
     int* d_indexForToken_ptr;
     CUDA_CHECK(cudaMalloc(&d_indexForToken_ptr, sizeof(int)));
-    int current_prompt_size = prompt.size();
 
+    // Process Prompt: Add prompt tokens to context (Host and Device)
+    int current_prompt_size = prompt.size();
     for(int p = 0; p < current_prompt_size; ++p) {
         if (currentTokenCount >= FULL_CONTEXT) {
              throw std::runtime_error("Cannot add prompt, FULL_CONTEXT limit reached.");
         }
-        CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, prompt[p].data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
+        // Add to device context
+        CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, prompt[p].data(), d * sizeof(float), cudaMemcpyHostToDevice));
         currentTokenCount++;
         // Update blockCount if necessary
         if (currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
@@ -345,14 +340,15 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
     promptCount = current_prompt_size;
     blockCount = (currentTokenCount == 0) ? 1 : ((currentTokenCount - 1) / CONTEXT_WIN) + 1;
 
-    // --- Train for Response ---
+    // Train for Response: Predict each response token based on context (prompt + previous response tokens)
     for(int i = 0; i < response.size(); ++i) {
         if (currentTokenCount >= FULL_CONTEXT) {
             throw std::runtime_error("Cannot add response, FULL_CONTEXT limit reached.");
         }
         int effective_context_size = currentTokenCount; // Context size *before* adding response[i]
-        CUDA_CHECK(cudaMemcpy(d_expected_response_token, response[i].data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
         int current_block_idx = (effective_context_size == 0) ? 1 : ((effective_context_size -1) / CONTEXT_WIN) + 1;
+        // Copy target response token to device
+        CUDA_CHECK(cudaMemcpy(d_expected_response_token, response[i].data(), d * sizeof(float), cudaMemcpyHostToDevice));
         cuParallelKdotQs(promptCount, effective_context_size, current_block_idx, d, isSelf, inTraining);
 
         cuForward(current_block_idx, effective_context_size, promptCount);
@@ -363,13 +359,13 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
 
         while (j < epochs) 
         {
-            float* d_current_block_EH_ptr; // Hypothetical
+            float* d_current_block_EH_ptr; // Pointer to current block's EH on device
             CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, d * sizeof(float)));
             CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, t[blockCount-1].EH.data(), d * sizeof(float), cudaMemcpyHostToDevice));
 
-            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d); // Use class member d_embeddings
+            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
             std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // D->H
+            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
             current_error = errorofv(h_otok_buffer, response[i]); // Compare against target response[i]
 
             if(current_error < 0.01 || (host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == rString[i]))
@@ -381,18 +377,20 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             if(current_error > 0.01 && j == epochs - 1) {
                 epochs += 10;
             }
-            cuBackward(response[i], current_block_idx); // Passing host vector response[i]
+            
+            cuBackward(response[i], current_block_idx);
 
-            // Perform forward pass again on GPU
             cuForward(current_block_idx, effective_context_size, promptCount);
             j++;
         }
-        // --- Update host counters ---
+        // Update host counters and add the true response token to context for the next prediction
         trainCount++;
         epochCount += j;
         error += current_error;
         currentTokenCount += 1; // Increment *after* processing response token i
         blockCount = (currentTokenCount == 0) ? 1 : ((currentTokenCount - 1) / CONTEXT_WIN) + 1;
+        // Add true response token to device context (handled within the loop if break condition met, or needs adding here?)
+        // Assuming the break condition handles adding the correct token to d_tokenEmbed
     }
 
      // --- Free temporary device memory ---
@@ -410,6 +408,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
 void transformer::cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses,
                         std::vector<std::vector<std::string>>& rString)
 {
+    // Basic validation for chat structure
     if(prompts.size() != responses.size() || responses.size() != rString.size()) {
         throw std::runtime_error("Rows of all the vectors must match");
     }
@@ -430,7 +429,7 @@ void transformer::cuTrain(std::vector<std::vector<std::vector<float>>>& prompts,
         throw std::runtime_error("TOTAL TOKENS SHOULD NOT EXCEED THE FULL CONTEXT");
     }
 
-    // --- TRAIN FOR CHAT by calling the prompt-response trainer repeatedly ---
+    // Train for chat by calling the prompt-response trainer for each turn
     for(int i = 0; i < prompts.size(); ++i) {
         if (!prompts[i].empty() && !responses[i].empty()) {
             cuTrain(prompts[i], responses[i], rString[i]);

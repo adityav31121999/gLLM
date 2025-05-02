@@ -20,9 +20,9 @@ void serialiseModel(const model& a);
 void deserialiseMAT(mat& a, FILE* file, int, int);
 void deserialiseMLP(mlp& a, FILE* file, int, int);
 #ifndef USE_OPENCL
-void deserialiseModel(model& a);
+    void deserialiseModel(model& a);
 #else
-void deserialiseModel(model& a, OpenCLContext& context);
+    void deserialiseModel(model& a, OpenCLContext& context);
 #endif
 
 void loadModel(model& a, std::string& from);

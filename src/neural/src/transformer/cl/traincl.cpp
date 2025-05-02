@@ -550,24 +550,25 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
     }
     // Warning for large prompts, but allow up to CONTEXT_WIN
     if (prompt.size() > CONTEXT_WIN) {
-         std::cerr << "Warning: Prompt size (" << prompt.size() << ") exceeds context window (" << CONTEXT_WIN << "). Ensure this is intended." << std::endl;
-         // Consider truncating prompt if it exceeds CONTEXT_WIN and multi-block prompts aren't handled.
-         // For now, assume it fits or multi-block processing handles it.
+        std::cerr << "Warning: Prompt size (" << prompt.size() << ") exceeds context window (" << CONTEXT_WIN << "). Ensure this is intended." << std::endl;
+        // Consider truncating prompt if it exceeds CONTEXT_WIN and multi-block prompts aren't handled.
+        // For now, assume it fits or multi-block processing handles it.
     }
-     if (response.empty() || response.size() != rString.size()) {
+    if (response.empty() || response.size() != rString.size()) {
         throw std::runtime_error("clTrain(prompt-response): Response embeddings/strings mismatch or empty.");
     }
-     if ((!prompt.empty() && prompt[0].size() != static_cast<size_t>(d)) || (!response.empty() && response[0].size() != static_cast<size_t>(d))) {
-         throw std::runtime_error("clTrain(prompt-response): Embedding dimension mismatch.");
-     }
-     if (this->currentTokenCount + prompt.size() + response.size() > FULL_CONTEXT) {
-         throw std::runtime_error("clTrain(prompt-response): Adding prompt and response exceeds FULL_CONTEXT limit.");
-     }
+    if ((!prompt.empty() && prompt[0].size() != static_cast<size_t>(d)) || (!response.empty() && response[0].size() != static_cast<size_t>(d))) {
+        throw std::runtime_error("clTrain(prompt-response): Embedding dimension mismatch.");
+    }
+    if (this->currentTokenCount + prompt.size() + response.size() > FULL_CONTEXT) {
+        throw std::runtime_error("clTrain(prompt-response): Adding prompt and response exceeds FULL_CONTEXT limit.");
+    }
 
 
     cl::Buffer d_tokenEmbed, d_embeddings, d_expected_response_token;
     int host_indexForToken = -1;
     float current_error = 1.0f;
+    int initial_token_count = this->currentTokenCount; // Store initial count
     int initial_epochs = this->epochs;
 
     try {
@@ -582,6 +583,10 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         // Create buffers
         d_tokenEmbed = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes);
         d_expected_response_token = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, singleTokenBytes);
+
+            // If currentTokenCount > 0, copy existing host tokenEmbed H->D
+            // std::vector<float> initial_flat_context = flatten_range(this->tokenEmbed, 0, initial_token_count);
+            // this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, 0, initial_flat_context.size() * sizeof(float), initial_flat_context.data());
 
         // Prepare initial context buffer content (existing context)
         std::vector<float> flat_host_tokenEmbed;
@@ -609,29 +614,41 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
 
 
         // --- Process Prompt (Add to context on Host and Device) ---
-        int prompt_start_token_index = this->currentTokenCount;
-        for (size_t p = 0; p < prompt.size(); ++p) {
-            if (this->currentTokenCount >= FULL_CONTEXT) {
-                 throw std::runtime_error("clTrain(prompt-response): FULL_CONTEXT limit reached while adding prompt."); // Should be caught earlier, but safety check
+            if (initial_token_count + prompt.size() > CONTEXT_WIN) {
+                 throw std::runtime_error("clTrain(prompt, response): Prompt exceeds first block capacity when starting.");
             }
+
+        for (size_t p = 0; p < prompt.size(); ++p) {
             // Update device buffer
-            size_t offset_bytes = static_cast<size_t>(this->currentTokenCount) * d * sizeof(float);
+                size_t offset_bytes = static_cast<size_t>(initial_token_count + p) * d * sizeof(float);
              if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                  throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing prompt token.");
              }
              this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, prompt[p].data());
 
             // Update host tracking
-            int previousTokenCount = this->currentTokenCount;
-            if (previousTokenCount < this->tokenEmbed.size()) {
-                 this->tokenEmbed[previousTokenCount] = prompt[p];
+                if (static_cast<size_t>(initial_token_count + p) < this->tokenEmbed.size()) {
+                     this->tokenEmbed[initial_token_count + p] = prompt[p];
             } else {
                  this->tokenEmbed.push_back(prompt[p]);
             }
             this->currentTokenCount++;
-             if (this->tokenEmbed.size() != static_cast<size_t>(this->currentTokenCount)) {
-                 this->tokenEmbed.resize(this->currentTokenCount);
-             }
+            }
+            // Resize host vector if push_back was used
+            if (this->tokenEmbed.size() != static_cast<size_t>(this->currentTokenCount)) {
+                this->tokenEmbed.resize(this->currentTokenCount);
+            }
+
+            // Copy prompt D->D from d_tokenEmbed into d_EV of each head in block 0
+            size_t prompt_bytes = prompt.size() * d * sizeof(float);
+            size_t prompt_start_offset_bytes = initial_token_count * d * sizeof(float);
+            for (int i = 0; i < x; ++i) { // Layers
+                for (int j = 0; j < y; ++j) { // Parallels
+                    cl::Buffer& d_head_ev = t[0].b[i][j].getDeviceEVBuffer(); // Assuming getter exists
+                    size_t dest_offset_bytes = initial_token_count * d * sizeof(float);
+                    // Add size checks if necessary
+                    this->clcontext.queue.enqueueCopyBuffer(d_tokenEmbed, d_head_ev, prompt_start_offset_bytes, dest_offset_bytes, prompt_bytes);
+                }
         }
         // Update blockCount and promptCount *after* processing the entire prompt
         this->blockCount = (this->currentTokenCount == 0) ? 1 : ((this->currentTokenCount - 1) / CONTEXT_WIN) + 1;
@@ -661,6 +678,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             int current_block_idx = this->blockCount; // Block index based on current context size
 
              if (current_block_idx <= 0 || current_block_idx > m) {
+                 // If strictly training block 1, this should ideally be checked earlier or always be 1
                  throw std::out_of_range("clTrain(prompt-response): Calculated current_block_idx (" + std::to_string(current_block_idx) + ") is out of range [1, " + std::to_string(m) + "].");
              }
 
@@ -668,7 +686,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             int j = 0; // Epoch counter
             current_error = 1.0f;
             host_indexForToken = -1;
-
+            // --- Get EH output (Host copy for prediction setup) ---
+            std::vector<float> h_otok_buffer;
             while (j <= this->epochs) {
                 // --- Forward Pass ---
                  if (this->inTraining) {
@@ -680,21 +699,21 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
 
                 clForward(current_block_idx, effective_context_size, current_prompt_count_in_block);
 
-                // --- Get EH output ---
-                std::vector<float> h_otok_buffer;
-                 if (current_block_idx > 0 && current_block_idx <= m) {
+                if (current_block_idx > 0 && current_block_idx <= m) {
                     h_otok_buffer = t[current_block_idx - 1].EH; // Get host copy
-                     if (h_otok_buffer.size() != static_cast<size_t>(d)) {
-                         throw std::runtime_error("clTrain(prompt-response): EH buffer from block " + std::to_string(current_block_idx) + " has incorrect size.");
-                     }
-                 } else {
-                      throw std::runtime_error("clTrain(prompt-response): Invalid block index (" + std::to_string(current_block_idx) + ") before clComputeOutput.");
-                 }
-
+                    // TODO: Ideally clForward updates a device buffer, and we use that directly.
+                    // This H->D copy below is inefficient but matches the structure.
+                    if (h_otok_buffer.size() != static_cast<size_t>(d)) {
+                        throw std::runtime_error("clTrain(prompt-response): EH buffer from block " + std::to_string(current_block_idx) + " has incorrect size.");
+                    }
+                } 
+                else {
+                    throw std::runtime_error("clTrain(prompt-response): Invalid block index (" + std::to_string(current_block_idx) + ") before clComputeOutput.");
+                }
+                cl::Buffer d_output, d_result_index;
                 // --- Compute Prediction & Error ---
                 // --- Start: Inline clComputeOutput Logic ---
                 { // Scope for temporary compute output buffers
-                    cl::Buffer d_output, d_result_index;
                     int result_index_val = -1; // Initialize
 
                     try {
@@ -746,12 +765,12 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 }
 
                 if (converged) {
-                    // Converged: Update device token buffer
+                    // CPU Logic: Update context with predicted EH
                     size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
                      if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
                          throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                      }
-                     this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
+                     this->clcontext.queue.enqueueCopyBuffer(d_output, d_tokenEmbed, 0, offset_bytes, outputBytes); // Copy from d_output (predicted EH) D->D
                     break; // Exit training loop
                 }
 
@@ -763,11 +782,11 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                      } else {
                         // String matches, break even if error is high
                          size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
-                         if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
+                         if (offset_bytes + outputBytes > tokenEmbedBytes) { // Use outputBytes
                              throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                          }
-                         this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected_vec.data());
-                         break;
+                         this->clcontext.queue.enqueueCopyBuffer(d_output, d_tokenEmbed, 0, offset_bytes, outputBytes); // Copy from d_output (predicted EH) D->D
+                        break;
                      }
                 }
 
@@ -783,10 +802,10 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             this->error += current_error;
 
             // Add the *converged/expected* token to the host context tracking
-            int previousTokenCount = this->currentTokenCount;
-            if (previousTokenCount < this->tokenEmbed.size()) {
-                 this->tokenEmbed[previousTokenCount] = expected_vec;
-            } else {
+            // CPU Logic: Update host context with predicted EH (copied D->H)
+            if (static_cast<size_t>(effective_context_size) < this->tokenEmbed.size()) {
+                 this->tokenEmbed[effective_context_size] = h_otok_buffer; // Use the h_otok_buffer (predicted EH)
+            } else { // Should not happen if size is managed correctly
                  this->tokenEmbed.push_back(expected_vec);
             }
             this->currentTokenCount++;
@@ -818,7 +837,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         throw;
     }
     // Buffers released by RAII
-}
+} // End clTrain(prompt, response, rString)
 
 
 /**

@@ -242,4 +242,28 @@ void block::setVerticalRetention(std::vector<std::vector<std::vector<std::vector
     }
 }
 
-// Other block member function implementations follow...
+void block::clearValues() {
+    // Clear 1D float vector EH
+    std::fill(EH.begin(), EH.end(), 0.0f);
+
+    // Clear 2D float vector tokForBlock
+    for (auto& innerVec : tokForBlock) {
+        std::fill(innerVec.begin(), innerVec.end(), 0.0f);
+    }
+
+    // Clear 4D float vector EV
+    for (auto& dim1 : EV) {
+        for (auto& dim2 : dim1) {
+            for (auto& dim3 : dim2) {
+                std::fill(dim3.begin(), dim3.end(), 0.0f);
+            }
+        }
+    }
+
+    // Clear each attention object within the block
+    for (auto& layer : b) {
+        for (auto& head : layer) {
+            head.clearValues(); // Call clearValues on each attention object
+        }
+    }
+}

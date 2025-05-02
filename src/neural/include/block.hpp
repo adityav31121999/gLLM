@@ -63,6 +63,7 @@ public:
 #endif // USE_OPENCL
 
 #ifdef USE_CUDA
+
 // cuda equivalent functions for block (for parallels in loop)
     void cuParallelKdotQ(int& columnNumber, int& blockNumber, int& promptCount, int& tokenCount, bool isSelfAttention);
     void cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed, int& columnNumber, int& tokenCount, int& promptCount, bool isSelfAttention);
@@ -138,7 +139,7 @@ public:
 
     // set retention vectors for vertical pass
     void setVerticalRetention(std::vector<std::vector<std::vector<std::vector<float>>>>& EV);
-
+    void clearValues();
     // default destructor
     ~block() = default;
 };
