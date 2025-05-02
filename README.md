@@ -15,7 +15,7 @@
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
   - Attention Mechanism: Shady
-  - Architecture: Divided context
+  - Transformer Architecture: Divided context
   - Neural Connections: Dense
 
 ## Project Structure
@@ -24,20 +24,20 @@
 - **model**: Model Library for LLM
 
 ### src/maths
-- *basic*: Basic Mathematical Functions
-- *mat*: Mathematical Functions for Matrix Operations
-- *stats*: Mathematical Functions for Statistics
+- *basic.hpp*: Basic Mathematical Functions
+- *mat.hpp*: Mathematical Functions for Matrix Operations
+- *stats.hpp*: Mathematical Functions for Statistics
 - *maths.hpp*: Main Header
 
 ### src/neural
-- *mlp*: Multi-Layer Perceptron
-- *attention*: Attention Mechanism
-- *block*: Attention Block
-- *transformer*: Transformer Structure
+- *mlp.hpp*: Multi-Layer Perceptron
+- *attention.hpp*: Attention Mechanism
+- *block.hpp*: Attention Block
+- *transformer.hpp*: Transformer Structure
 - *neural.hpp*: Main Header
 
 ### src/model
-- *model.hpp*: Main Header
+- *model.hpp*: Main Header for model class
 
 ### bin
 - Output directory for compiled binaries: .lib (static) and .dll (dynamic)
@@ -119,6 +119,11 @@
 ### Inference
 
 ## MODEL STRUCTURE
+
+**MODEL**:
+- All data related to model
+- Files for chat and metadata information
+- userPrompt string for prompt input
 
 **MODEL METADATA**:
 ```

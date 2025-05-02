@@ -12,8 +12,6 @@
 #include <string>
 #include <cmath> // For std::abs, std::max
 
-// Forward declaration (already present in the provided code)
-// void transformer::clComputeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int& voc, int& index);
 
 /**
  * @brief (OpenCL) Train the transformer for next token prediction (single token training).

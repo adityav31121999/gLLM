@@ -15,7 +15,6 @@ add_library(model STATIC
     src/training/test.cpp
     src/training/validate.cpp
 
-    src/inference/load.cpp
     src/inference/chat.cpp
     src/inference/run.cpp
 )

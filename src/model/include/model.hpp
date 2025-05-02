@@ -9,8 +9,9 @@
 #include <neural.hpp>
 
 /**
- * Model will have several .bin files for storing all prameters in binary
- * format. These files are of Matrices, NLPs and Caches:
+ * Model parameters are stored in several binary files. A central .txt file
+ * stores the model's metadata (modelDataInfo). The actual numerical
+ * parameters are stored in separate .bin files:
  * 1. Matrices: MQ.bin, MK.bin, MH.bin, MV.bin
  * 2. MLPs: hor.bin, ver.bin
  * 3. Caches: QK.bin, KH.bin, QV.bin
@@ -18,7 +19,6 @@
 
 #define MECH "SHADY-ATTENTION"
 #define ARCH "DIVIDED-CONTEXT"
-#define EXTENSION ".lm"
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -44,6 +44,7 @@ typedef struct modelDataInfo {
     int n;                  // total tokens for each attention head
     int h;                  // height of MQ, MK and columns of MV, MH
     int l;                  // layers of mlp
+    int matheight;          // height of MQ, MK and columns of MV, MH
     int totalParams;        // total parameters of transformer
     int totalContext;       // total tokenLimit -> t*count m * n
     float learning;         // learning rate
@@ -72,8 +73,9 @@ public:
     bool toTrain;           // if training of model, set to 1, or use of model, set to 0
     transformer T;         // model with 1 transformer
     modelDataInfo info;     // model info
-    FILE *file;             // file where all data is to be stored
+    FILE *file;             // file handle for the metadata (.txt) file
     FILE *chat;             // .txt file to save chat
+    std::string currentChatLogPath; // Stores the path of the currently open chat log file
 
 // using these strings, embeddings are provided to the transformer t (for training and application)
     std::string userPrompt;                 // user prompt
@@ -92,14 +94,17 @@ public:
     OpenCLContext& clcontext;   // reference to class for opencl context for accessing all kernels
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab);
     model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
-    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);
-    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, bool toTrainModel);
+    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, 
+            bool toTrainModel);
+    model(OpenCLContext& context, int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, 
+            bool isSelfAttention, bool toTrainModel);
 #elif USE_CUDA || USE_CPU
     model() = default;
     model(int m, int x, int y, int n, int d, int h, int l, int vocab);
     model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab);
     model(int m, int x, int y, int n, int d, int h, int l, int vocab, bool isSelfAttention, bool toTrainModel);
-    model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, bool toTrainModel);
+    model(int m, int x, int y, int n, int d, int h, int l, float learning, int vocab, bool isSelfAttention, 
+            bool toTrainModel);
 #endif
 
     void setLearning(float learning);
@@ -111,12 +116,7 @@ public:
     void setLicense(std::string& license);
     void setInfo(modelDataInfo& info);
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
-                    std::string& license, std::string& trainingData);
-
-    // model related functions
-    void create(std::string& locationOfModel);
-    void save();
-    void save(std::string& locationOfModel);
+            std::string& license, std::string& trainingData);
 
     // for common knowledge training usin first block
     void train1stBlock(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string> rString);
@@ -131,13 +131,27 @@ public:
     void test(const std::string& testDataFolder);
     void validate(const std::string& validationDataFolder);
 
+    // model related functions
+    void create(std::string& locationOfModel);
+    void serialise(mat& a, const std::string& locationOfBin);
+    void serialise(mlp& a, const std::string& locationOfBin);
+    void serialise();
+    void serialise(std::string& locationOfModel);
+    void deserialise(mat& a, int blockCount, int row, int col, int offset, const std::string& locationOfBin);
+    void deserialise(mlp& a, int blockCount, int row, int col, int offset, const std::string& locationOfBin);
+    void deserialise();
+    void deserialise(std::string& locationOfModel);
+    void addMetadataToFile(); // Function to write metadata to the .txt file
+    void save();
+    void save(std::string& locationOfModel);
+
     // chat with model
     void runModel();  // run transformer for conversation
     void takeInput();       // take required input for transformer
     void newChat();         // for new chat clear everything and set all to 0
     void endChat();         // end chat, save parameters and clear all the memory, exit transformer
     void saveChat();        // save chat to file
-    void loadChat();        // load chat from file
+    // void loadChat();        // load chat from file
 
     // default destructor
     ~model() = default;

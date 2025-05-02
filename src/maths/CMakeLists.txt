@@ -7,37 +7,37 @@ include_directories(include)
 
 add_library(maths STATIC
     # basic files
-    basic/activations.cpp
-    basic/vect.cpp
-    basic/weights.cpp
+    src/basic/activations.cpp
+    src/basic/vect.cpp
+    src/basic/weights.cpp
 
-    basic/cu/activations.cu
-    basic/cu/vect.cu
+    src/basic/cu/activations.cu
+    src/basic/cu/vect.cu
 
-    basic/cl/activations.cl
-    basic/cl/vect.cl
+    src/basic/cl/activations.cl
+    src/basic/cl/vect.cl
 
     # mat files
-    mat/det.cpp
-    mat/inverse.cpp
-    mat/operators.cpp
-    mat/prop.cpp
-    mat/submat.cpp
+    src/mat/det.cpp
+    src/mat/inverse.cpp
+    src/mat/operators.cpp
+    src/mat/prop.cpp
+    src/mat/submat.cpp
 
-    mat/cl/det.cl
-    mat/cl/operators.cl
-    mat/cl/inverse.cl
+    src/mat/cl/det.cl
+    src/mat/cl/operators.cl
+    src/mat/cl/inverse.cl
 
-    mat/cu/det.cu
-    mat/cu/operators.cu
-    mat/cu/inverse.cu
+    src/mat/cu/det.cu
+    src/mat/cu/operators.cu
+    src/mat/cu/inverse.cu
 
     # stats files
-    stats/basic.cpp
+    src/stats/basic.cpp
 
-    stats/cl/basic.cl
+    src/stats/cl/basic.cl
 
-    stats/cu/basic.cu
+    src/stats/cu/basic.cu
 )
 
 target_link_libraries(maths

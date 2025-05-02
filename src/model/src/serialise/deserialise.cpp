@@ -1,161 +1,184 @@
 
-#include "include/model_fs.hpp"
 #include <iostream>
-#include <cstdio>
+#include <fstream>      // For file stream operations
 #include <stdexcept>
+#include <vector>       // For std::vector
+#include <filesystem>   // For path joining (C++17)
+#include <string>       // For std::string
+#include "include/model.hpp"
 
 /**
- * @brief Deserialize matrix from binary file
- * @param a matrix to deserialize into
- * @param file FILE pointer to read from
+ * @brief Deserialise a mat object (matrix or cache) from a specific offset within a binary file.
+ *        Assumes dimensions are stored at the calculated offset.
+ * @param a The mat object to load data into.
+ * @param blockCount Index 'i' of the block (for offset calculation).
+ * @param rows Index 'j' of the block (for offset calculation).
+ * @param cols Index 'k' of the block (for offset calculation).
+ * @param offset Number of float values in a single instance of this component.
+ * @param locationOfBin The path to the input binary file.
  */
-void deserialiseMAT(mat& a, FILE* file, int row, int col) {
-    if (!file) {
-        throw std::runtime_error("File pointer is null");
+void model::deserialise(mat& a, int blockCount, int rows, int cols, int offset, const std::string& locationOfBin) {
+    std::ifstream inFile(locationOfBin, std::ios::binary | std::ios::in);
+
+    // Calculate the starting block index and byte offset
+    // Using long long for byte_offset to prevent potential integer overflow
+    long long blockCountndex = static_cast<long long>((blockCount+1) * x * y) + static_cast<long long>(rows * y) + static_cast<long long>(cols);
+    long long byte_offset = blockCountndex * offset * sizeof(float);
+
+    if (!inFile.is_open()) {
+        throw std::runtime_error("Error: Could not open file for reading mat: " + locationOfBin);
     }
-    
-    // Read matrix elements row by row with size verification
-    for (int i = 0; i < row; i++) {
-        if (a.a[i].size() != static_cast<size_t>(col)) {
-            a.a[i].resize(col);
-        }
-        size_t read = fread(a.a[i].data(), sizeof(float), col, file);
-        if (read != static_cast<size_t>(a.col)) {
-            throw std::runtime_error("Matrix data read error: expected " + 
-                                   std::to_string(a.col) + " elements, got " + 
-                                   std::to_string(read));
+
+    int file_rows, file_cols;
+    // Read dimensions from the file
+    inFile.seekg(byte_offset, std::ios::beg); // Seek to the calculated position
+    if (inFile.fail()) {
+        inFile.close();
+        throw std::runtime_error("Error: Failed to seek to offset " + std::to_string(byte_offset) + " in file: " + locationOfBin);
+    }
+
+    inFile.read(reinterpret_cast<char*>(&file_rows), sizeof(int));
+    if (inFile.fail()) { inFile.close(); throw std::runtime_error("Error: Failed to read rows from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin); }
+    inFile.read(reinterpret_cast<char*>(&file_cols), sizeof(int));
+    if (inFile.fail()) {
+         inFile.close();
+         throw std::runtime_error("Error: Failed to read cols from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin);
+    }
+
+    // Resize the matrix object
+    // Note: This assumes the matrix 'a' passed in might not have the correct size yet.
+    // If 'a' is guaranteed to be correctly sized beforehand, you could verify dimensions instead:
+    // if (file_rows != a.row || file_cols != a.col) { /* throw error */ }
+    a.resize(file_rows, file_cols); // Use resize method from mat.hpp
+
+    // Read matrix data row by row
+    for (int i = 0; i < file_rows; ++i) {
+        inFile.read(reinterpret_cast<char*>(a.a[i].data()), file_cols * sizeof(float));
+        if (inFile.fail()) {
+            inFile.close();
+            throw std::runtime_error("Error: Failed to read data for row " + std::to_string(i) + " from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin);
         }
     }
+    // inFile closes automatically when it goes out of scope
 }
 
-
 /**
- * @brief Deserialize MLP from binary file
- * @param a MLP to deserialize into
- * @param file FILE pointer to read from
+ * @brief Deserialise an mlp object from a specific offset within a binary file.
+ *        Assumes dimensions and weights are stored starting at the calculated offset.
+ * @param network The mlp object to load data into.
+ * @param blockCount Index 'i' of the block (for offset calculation).
+ * @param rows Index 'j' of the block (for offset calculation).
+ * @param cols Index 'k' of the block (for offset calculation).
+ * @param offset Number of float values in a single instance of this component's weights.
+ * @param locationOfBin The path to the input binary file.
  */
-void deserialiseMLP(mlp& a, FILE* file, int layers, int neurons) {
-    if (!file) {
-        throw std::runtime_error("File pointer is null");
+void model::deserialise(mlp& network, int blockCount, int rows, int cols, int offset, const std::string& locationOfBin) {
+    std::ifstream inFile(locationOfBin, std::ios::binary | std::ios::in);
+
+    // Calculate the starting block index and byte offset
+    // Using long long for byte_offset to prevent potential integer overflow
+    long long blockCountndex = static_cast<long long>((blockCount+1) * x * y) + static_cast<long long>(rows * y) + static_cast<long long>(cols);
+    long long byte_offset = blockCountndex * offset * sizeof(float);
+
+    if (!inFile.is_open()) {
+        throw std::runtime_error("Error: Could not open file for reading mlp: " + locationOfBin);
     }
 
-    // Ensure weights vector is properly sized
-    if (a.weights.size() != layers) {
-        a.weights.resize(layers);
-        for (auto& layer : a.weights) {
-            layer.resize(neurons, std::vector<float>(neurons));
-        }
-    }
-    
-    // Read weights layer by layer with verification
-    for (unsigned int l = 0; l < layers; ++l) {
-        for (unsigned int i = 0; i < neurons; ++i) {
-            if (a.weights[l][i].size() != neurons) {
-                a.weights[l][i].resize(neurons);
-            }
-            size_t read = fread(a.weights[l][i].data(), sizeof(float), neurons, file);
-            if (read != neurons) {
-                throw std::runtime_error("MLP weights read error at layer " + std::to_string(l) + 
-                                            ", neuron " + std::to_string(i));
-            }
-        }
-    }
-}
-
-#ifndef USE_OPENCL
-
-/**
- * @brief Deserialize model from binary file
- * @param a model to deserialize into
- */
-void deserialiseModel(model& a) {
-    if (!a.file) {
-        throw std::runtime_error("Model file pointer is null");
+    // 1. Read the number of weight matrices (outer dimension)
+    size_t num_matrices;
+    inFile.seekg(byte_offset, std::ios::beg); // Seek to the calculated position
+    if (inFile.fail()) {
+        inFile.close();
+        throw std::runtime_error("Error: Failed to seek to offset " + std::to_string(byte_offset) + " in file: " + locationOfBin);
     }
 
-    FILE* file = a.file;
+    inFile.read(reinterpret_cast<char*>(&num_matrices), sizeof(size_t));
+    if (inFile.fail()) { inFile.close(); throw std::runtime_error("Error reading num_matrices from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin); }
 
-    // Read model metadata
-    fread(&a.m, sizeof(int), 1, file);            // number of blocks
-    fread(&a.x, sizeof(int), 1, file);            // incomplete attentions
-    fread(&a.y, sizeof(int), 1, file);            // layers of partial attention
-    fread(&a.n, sizeof(int), 1, file);            // total tokens
-    fread(&a.d, sizeof(int), 1, file);            // token dimension
-    fread(&a.h, sizeof(int), 1, file);            // height of matrices
-    fread(&a.l, sizeof(int), 1, file);            // layers of mlp
-    fread(&a.totalParams, sizeof(int), 1, file);  // total parameters
-    fread(&a.total, sizeof(int), 1, file);        // total token limit
-    
-    // Initialize the transformer based on read parameters
-    a.T = transformer(a.m, a.x, a.y, a.n, a.d, a.h, a.l);
-    
-    // Deserialize transformer by deserializing attention class
-    for (auto& block : a.T.t) {
-        // For each block, deserialize its attention layers
-        for (auto& alay : block.b) {
-            // For each attention layer, deserialize each attention's 4mat and 2mlp
-            for (auto& att : alay) {
-                // Deserialize matrices
-                deserialiseMAT(att.MQ, file, a.d, a.h);   // qkrow * qkcol
-                deserialiseMAT(att.MK, file, a.d, a.h);   // qkrow * qkcol
-                deserialiseMAT(att.MV, file, a.h, a.d);   // vhrow * vhcol
-                deserialiseMAT(att.MH, file, a.h, a.d);   // vhrow * vhcol
+    network.weights.resize(num_matrices); // Resize the outer vector
 
-                // Deserialize MLPs
-                deserialiseMLP(att.ver, file, a.l, a.d);  // (d * d) * l
-                deserialiseMLP(att.hor, file, a.l, a.d);  // (d * d) * l
-            }
-        }
-    }
-    std::cout << "Model deserialized successfully." << std::endl;
-}
+    // 2. Iterate through each weight matrix
+    for (size_t i = 0; i < num_matrices; ++i) {
+        // 2a. Read the number of rows for this matrix (middle dimension)
+        size_t rows;
+        inFile.read(reinterpret_cast<char*>(&rows), sizeof(size_t));
+        if (inFile.fail()) { inFile.close(); throw std::runtime_error("Error reading rows for matrix " + std::to_string(i) + " from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin); }
 
-#else
+        network.weights[i].resize(rows); // Resize the middle vector
 
-/**
- * @brief Deserialize model from binary file
- * @param a model to deserialize into
- */
-void deserialiseModel(model& a, OpenCLContext& context) {
-    if (!a.file) {
-        throw std::runtime_error("Model file pointer is null");
-    }
+        // 2b. Read the number of columns for this matrix
+        size_t cols;
+        inFile.read(reinterpret_cast<char*>(&cols), sizeof(size_t));
+        if (inFile.fail()) { inFile.close(); throw std::runtime_error("Error reading cols for matrix " + std::to_string(i) + " from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin); }
 
-    FILE* file = a.file;
-
-    // Read model metadata
-    fread(&a.m, sizeof(int), 1, file);            // number of blocks
-    fread(&a.x, sizeof(int), 1, file);            // incomplete attentions
-    fread(&a.y, sizeof(int), 1, file);            // layers of partial attention
-    fread(&a.n, sizeof(int), 1, file);            // total tokens
-    fread(&a.d, sizeof(int), 1, file);            // token dimension
-    fread(&a.h, sizeof(int), 1, file);            // height of matrices
-    fread(&a.l, sizeof(int), 1, file);            // layers of mlp
-    fread(&a.totalParams, sizeof(int), 1, file);  // total parameters
-    fread(&a.total, sizeof(int), 1, file);        // total token limit
-
-    // Deserialize transformer by deserializing attention class
-    // block = t[k]
-    for (auto& block : a.T.t) { // t -> vector<blocks>
-        // For each block, deserialize its attention layers
-        // alay = block.b[i]
-        for (auto& alay : block.b) { // b -> vector<vector<attention>>
-            // For each attention layer, deserialize each attention's 4mat and 2mlp
-            // att = block.b[i][j]
-            for (auto& att : alay) {
-                // Deserialize matrices
-                deserialiseMAT(att.MQ, file, a.d, a.h);   // qkrow * qkcol
-                deserialiseMAT(att.MK, file, a.d, a.h);   // qkrow * qkcol
-                deserialiseMAT(att.MV, file, a.h, a.d);   // vhrow * vhcol
-                deserialiseMAT(att.MH, file, a.h, a.d);   // vhrow * vhcol
-
-                // Deserialize MLPs
-                deserialiseMLP(att.ver, file, a.l, a.d);  // (d * d) * l
-                deserialiseMLP(att.hor, file, a.l, a.d);  // (d * d) * l
+        // 2c. Read the data for each row
+        for (size_t j = 0; j < rows; ++j) {
+            network.weights[i][j].resize(cols); // Resize the inner vector (row)
+            inFile.read(reinterpret_cast<char*>(network.weights[i][j].data()), cols * sizeof(float));
+            if (inFile.fail()) {
+                inFile.close();
+                throw std::runtime_error("Error reading data for matrix " + std::to_string(i) + ", row " + std::to_string(j) + " from offset " + std::to_string(byte_offset) + " in file: " + locationOfBin);
             }
         }
     }
-    std::cout << "Model deserialized successfully." << std::endl;
+    // inFile closes automatically
 }
 
-#endif
+/**
+ * @brief Deserialise whole model (matrices, caches, mlps) - Placeholder.
+ */
+void model::deserialise() {
+    std::string defaultPath = "./model_data"; // Define the default path relative to the executable
+    try {
+        std::filesystem::create_directories(defaultPath); // Ensure the directory exists (Requires C++17)
+        deserialise(defaultPath); // Call the overload that takes a path
+    } 
+    catch (const std::filesystem::filesystem_error& e) {
+        throw std::runtime_error("Error creating default directory '" + defaultPath + "': " + e.what());
+    }
+}
+
+/**
+ * @brief Deserialise the entire model's state (matrices, caches, MLPs) from binary files
+ *        within the specified directory.
+ * @param locationOfModel The directory path where the .bin files are located.
+ */
+void model::deserialise(std::string& locationOfModel) {
+    std::filesystem::path basePath = locationOfModel; // Requires C++17
+
+    // Determine expected dimensions based on model parameters (d, h, l)
+    // These are no longer strictly needed here if dimensions are read from the file within helpers,
+    // but can be useful for understanding the expected structure.
+    // int mat_qk_rows = h; // Assuming h is height of MQ/MK
+    // int mat_qk_cols = d; // Assuming d is embedding dimension / width
+    // int mat_vh_rows = d; // Assuming d is embedding dimension / width
+    // int mat_vh_cols = h; // Assuming h is height of MV/MH
+    int cache_dim = d;   // Assuming caches are d x d
+
+    // Loop through the blocks/layers as defined in the model structure
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < x; ++j) {
+            for (int k = 0; k < y; ++k) {
+                // Deserialise Matrices for block (i, j, k)
+                // Pass block indices (i, j, k) and the size of one matrix component (MATOFFSET)
+                // The helper function will calculate the byte offset and seek.
+
+                // Assuming files are overwritten (current state):
+                deserialise(T.t[i].b[j][k].MQ, i, j, k, MATOFFSET, (basePath / "MQ.bin").string());
+                deserialise(T.t[i].b[j][k].MK, i, j, k, MATOFFSET, (basePath / "MK.bin").string());
+                deserialise(T.t[i].b[j][k].MV, i, j, k, MATOFFSET, (basePath / "MV.bin").string());
+                deserialise(T.t[i].b[j][k].MH, i, j, k, MATOFFSET, (basePath / "MH.bin").string());
+
+                // Deserialise Caches for block (i, j, k)
+                deserialise(T.t[i].b[j][k].qkCache, i, j, k, CACHEOFFSET, (basePath / "QK.bin").string());
+                deserialise(T.t[i].b[j][k].khCache, i, j, k, CACHEOFFSET, (basePath / "KH.bin").string());
+                deserialise(T.t[i].b[j][k].qvCache, i, j, k, CACHEOFFSET, (basePath / "QV.bin").string());
+
+                // Deserialise MLPs for block (i, j, k)
+                // Pass block indices (i, j, k) and the size of one MLP component (MLPOFFSET)
+                deserialise(T.t[i].b[j][k].hor, i, j, k, MLPOFFSET, (basePath / "hor.bin").string());
+                deserialise(T.t[i].b[j][k].ver, i, j, k, MLPOFFSET, (basePath / "ver.bin").string());
+            }
+        }
+    }
+}

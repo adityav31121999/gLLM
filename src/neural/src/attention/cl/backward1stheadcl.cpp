@@ -1,6 +1,5 @@
 #ifdef USE_OPENCL
 
-#define CL_HPP_ENABLE_EXCEPTIONS // Enable exceptions before including cl.hpp
 #include "include/attention.hpp" // Includes mlp.hpp and maths.hpp indirectly or directly
 #include <vector>
 #include <string>
