@@ -5,13 +5,13 @@
 
 ## INTRO
 - Library for LLMs
-- **VERSION**: 0.0.0.1
+- **VERSION**: 0.1.0.1 (Memory mapped matrices)
 - **LICENSE**: MIT License
 - **PROGRAMMING LANGUAGES**: C, C++, OpenCL, CUDA
   - *C VERSION*: 17
   - *C++ VERSION*: 20
   - *OpenCL VERSION*: 300
-  - *CUDA*: 12.6
+  - *CUDA*: 12.9
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
   - Attention Mechanism: Shady
@@ -22,6 +22,9 @@
 - **maths**: Mathematical Library for LLM
 - **neural**: Neural Network Library for LLM
 - **model**: Model Library for LLM
+
+### src/memorymap
+- 
 
 ### src/maths
 - *basic.hpp*: Basic Mathematical Functions
