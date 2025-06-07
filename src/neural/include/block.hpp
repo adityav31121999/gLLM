@@ -28,6 +28,36 @@
 #include "mlp.hpp"
 #include "attention.hpp"
 
+// Helper struct to manage device pointers for one head's worth of data
+struct HeadDevicePointers {
+    // Attention related
+    float *d_expected_h = nullptr, *d_EH = nullptr, *d_EV = nullptr;
+    float *d_grad_EH = nullptr, *d_grad_EV_scaled = nullptr;
+    float *d_grad_dh = nullptr, *d_grad_dv = nullptr;
+    float *d_KdotQ = nullptr, *d_head = nullptr;
+    float *d_K = nullptr, *d_Q = nullptr;
+    float *d_pre_MH = nullptr, *d_pre_MV = nullptr;
+    float *d_MH_a = nullptr, *d_MV_a = nullptr, *d_MQ_a = nullptr, *d_MK_a = nullptr;
+    float *d_grad_MH = nullptr, *d_grad_MV = nullptr;
+    float *d_grad_head = nullptr;
+    float *d_lota_deriv = nullptr;
+    float *d_grad_KdotQ = nullptr;
+    float *d_grad_K = nullptr, *d_grad_Q = nullptr;
+    float *d_grad_MQ = nullptr, *d_grad_MK = nullptr;
+
+    // MLP Internals
+    std::vector<float*> d_hor_activations;
+    std::vector<float*> d_hor_weights;
+    std::vector<float*> d_hor_gweights;
+    std::vector<float*> d_hor_deltas;
+    std::vector<float*> d_ver_activations;
+    std::vector<float*> d_ver_weights;
+    std::vector<float*> d_ver_gweights;
+    std::vector<float*> d_ver_deltas;
+
+    HeadDevicePointers() = default; // Default constructor for vector initialization
+};
+
 
 /**
  * @brief block for complete attention (local context)
@@ -91,8 +121,10 @@ public:
     void cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
     // for single parallel
     void cu1ParallelBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno);
+    void cu1ParallelBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno);
     void cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
     void cu1ParallelBackward(std::vector<float>& expectedH, int& in, int& layers, int layno);
+    void cu1ParallelBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno);
     void cu1ParallelBackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno);
     // for complete block
     void cuBackward1stBlock(std::vector<float>& expectedH, int& in, int& layers);

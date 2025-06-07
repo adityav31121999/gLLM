@@ -428,13 +428,18 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             // if(host_indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && tokens[host_indexForToken] == rString[i])
             if(tokens[this->indexForToken] == rString[i])
             {
-                std::cout << "class index " << this->indexForToken << "and host index: " << host_indexForToken << std::endl;
+                std::cout << "indexForToken: " << this->indexForToken << " <---> host_indexForToken: " << host_indexForToken << std::endl;
                 std::cout << "Computed token is " << tokens[host_indexForToken] << " with error " << current_error << std::endl;
                 CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, response[i].data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
                 break;
             }
+            else if(j == epochs - 1) {
+                std::cout << "Computed token is <" << tokens[host_indexForToken] << "> with error " << current_error << std::endl;
+                std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                epochs += 10;
+            }
             else {
-                if(j == epochs - 1) epochs += 10;
+                std::cout << "Computed token is " << tokens[host_indexForToken] << " with error " << current_error << std::endl;
             }
 
             cuBackward(response[i], current_block_idx);

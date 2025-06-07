@@ -67,7 +67,9 @@ add_library(neural STATIC
     # CUDA
     src/block/cu/kdotq.cu
     src/block/cu/forward.cu
-    src/block/cu/partialback.cu
+    src/block/cu/partialbackH.cu
+    src/block/cu/partialbackiH.cu
+    src/block/cu/partialbackV.cu
     src/block/cu/backward.cu
     src/block/cu/infer.cu
     # OpenCL

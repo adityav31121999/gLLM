@@ -80,14 +80,10 @@ foreach(projects IN LISTS subProjects)
     endif()
 endforeach()
 
-# List ALL source files needed for the executable
-# Define the executable with its main source file
-add_executable(gLLM main.cpp kernels.cpp gllm.h)
-
 # Link libraries based on the selected backend
 if(USE_OPENCL)
     target_link_libraries(gLLM PRIVATE OpenCL::OpenCL)
 endif()
 
 # Link the executable against the libraries from subdirectories
-target_link_libraries(gLLM PRIVATE memorymap maths neural model)
+#target_link_libraries(${PROJECT_NAME} PRIVATE memorymap maths neural model)

@@ -460,9 +460,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         try {
             kq_kernel = cl::Kernel(this->clcontext.program, "kernelCompute_single_kq_vector", &cl_err); CL_CHECK(cl_err);
         } 
-        catch (const cl::Error& err) {
-            std::cerr << "OpenCL Error creating kernel 'kernelCompute_single_kq_vector': " 
-                      << err.what() << " (" << err.err() << ")" << std::endl;
+        catch (const std::runtime_error& e) { // Catch runtime errors from CL_CHECK
+            std::cerr << "OpenCL Error creating kernel 'kernelCompute_single_kq_vector': " << e.what() << std::endl;
             this->epochs = initial_epochs;
             throw;
         }

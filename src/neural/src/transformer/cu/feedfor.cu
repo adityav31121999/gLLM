@@ -147,7 +147,7 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
                           << ". Token is: " << tokens[indexForToken] << "." << std::endl;
             } 
             else {
-                std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << "." << std::endl;
+                std::cout << "cuForward: cuComputeOutput finished. Predicted index: < " << indexForToken << " >" << std::endl;
             }
             // Separate warning for vocabsize, similar to clForward
             if (indexForToken < 0 || indexForToken >= vocabsize) {

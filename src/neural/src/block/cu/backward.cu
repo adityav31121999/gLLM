@@ -37,16 +37,20 @@ void block::cuBackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
                 this->cu1ParallelBackward1stBlock(expectedH, in, layers, j);
             }
             else if(j > 0 && j < this->y-1) {
+                // for columns inbetween
+                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < this->x; i++) {
-                    // for columns inbetween
-                    b[i][j].cuBackward(b[i][j+1].EH, in, layers);
+                    exp2h[i] = b[i][j+1].EH;
                 }
+                this->cu1ParallelBackward1stBlock(exp2h, in, layers, j);
             }
             else if(j == 0){
                 // for first column
+                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < this->x; i++) {
-                    b[i][0].cuBackward1stHead(b[i][1].EH, in, layers);
+                    exp2h[i] = b[i][1].EH;
                 }
+                this->cu1ParallelBackward1stBlock(exp2h, in, layers, j);
             }
         }
         catch (const std::exception& e) {
@@ -84,21 +88,24 @@ void block::cuBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
             // Call the partial backward function for the current column j
             if(j == this->y-1) {
                 // for last column
-                for(int i = 0; i < this->x; i++) {
-                    // for columns inbetween
-                    b[i][y-1].cuBackward(expectedH[i], in, layers);
-                }
+                this->cu1ParallelBackward1stBlock(expectedH, in, layers, j);
             }
-            else if(j > 1 && j < this->y-2) {
+            else if(j > 0 && j < this->y-1) {
+                // for columns inbetween
+                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < this->x; i++) {
-                    // for columns inbetween
-                    b[i][j].cuBackward(b[i+1][j].EH, in, layers);
+                    exp2h[i] = b[i][j+1].EH;
                 }
+                this->cu1ParallelBackward1stBlock(exp2h, in, layers, j);
             }
             else if(j == 0){
+                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
+                for(int i = 0; i < this->x; i++) {
+                    exp2h[i] = b[i][1].EH;
+                }
                 // for first column
                 for(int i = 0; i < this->x; i++) {
-                    b[0][j].cuBackward1stHead(b[1][j].EH, in, layers);
+                    b[i][0].cuBackward1stHead(b[i][1].EH, in, layers);
                 }
             }
         }

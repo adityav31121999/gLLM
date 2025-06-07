@@ -109,7 +109,7 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         size_t totalElementsLOTA = static_cast<size_t>(n) * n;
         if (totalElementsLOTA > 0) {
             size_t global_lota_raw = totalElementsLOTA;
-            size_t local_lota_clamped = std::min(global_lota_raw, local_work_size_1d);
+            size_t local_lota_clamped = std::min<size_t>(global_lota_raw, local_work_size_1d);
             if (local_lota_clamped == 0) local_lota_clamped = 1;
             size_t global_lota_padded = ((global_lota_raw + local_lota_clamped - 1) / local_lota_clamped) * local_lota_clamped;
             cl::NDRange global_lota(global_lota_padded);
@@ -240,10 +240,16 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         CL_CHECK(queue.enqueueReadBuffer(d_EH, CL_TRUE, 0, embed_bytes, EH.data()));
         CL_CHECK(queue.enqueueReadBuffer(d_EV_buffer, CL_TRUE, 0, ev_full_bytes, EV.mapped_data));
 
-    } catch (const cl::Error& err) {
+    }
+    catch (const std::runtime_error& e) { // Catch runtime errors from CL_CHECK
+        std::cerr << "OpenCL Error in clInferHead(..., tokenCount): " << e.what() << std::endl;
+        throw;
+    } 
+    /*catch (const cl::Error& err) {
         std::cerr << "OpenCL Error in clInferHead(..., tokenCount): " << err.what() << " (" << err.err() << ")" << std::endl;
         throw;
-    } catch (const std::exception& e) {
+    } */
+    catch (const std::exception& e) {
         std::cerr << "Standard Exception in clInferHead(..., tokenCount): " << e.what() << std::endl;
         throw;
     }
@@ -263,7 +269,7 @@ void attention::clInferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embeddi
     int& blockIdx, int& contextWindowSize)
 {
     if (blockIdx == 0) {
-        int firstBlockTokenCount = std::min(totalTokenCount, contextWindowSize);
+        int firstBlockTokenCount = std::min<int>(totalTokenCount, contextWindowSize);
         clInferHead(tokForBlock, d_embedding, layers_mlp, firstBlockTokenCount);
         return;
     }
@@ -272,8 +278,8 @@ void attention::clInferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embeddi
     const int context_win_size_this_ev = EV.row; // For this->EV update
 
     int start_idx_in_full_context = (blockIdx - 1) * contextWindowSize;
-    int end_idx_in_full_context = std::min(totalTokenCount, blockIdx * contextWindowSize);
-    const int currentBlockTokenCount = std::max(0, end_idx_in_full_context - start_idx_in_full_context);
+    int end_idx_in_full_context = std::min<int>(totalTokenCount, blockIdx * contextWindowSize);
+    const int currentBlockTokenCount = std::max<int>(0, end_idx_in_full_context - start_idx_in_full_context);
 
     if (d != d_embedding) {
         throw std::runtime_error("Embedding dimension mismatch (EMBEDDING vs d_embedding).");
@@ -364,7 +370,7 @@ void attention::clInferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embeddi
         size_t totalElementsLOTA = static_cast<size_t>(currentBlockTokenCount) * currentBlockTokenCount;
          if (totalElementsLOTA > 0) {
             size_t global_lota_raw = totalElementsLOTA;
-            size_t local_lota_clamped = std::min(global_lota_raw, local_work_size_1d);
+            size_t local_lota_clamped = std::min<int>(global_lota_raw, local_work_size_1d);
             if (local_lota_clamped == 0) local_lota_clamped = 1;
             size_t global_lota_padded = ((global_lota_raw + local_lota_clamped - 1) / local_lota_clamped) * local_lota_clamped;
             cl::NDRange global_lota(global_lota_padded); cl::NDRange local_lota(local_lota_clamped);
@@ -473,10 +479,8 @@ void attention::clInferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embeddi
         CL_CHECK(queue.enqueueReadBuffer(d_EH, CL_TRUE, 0, embed_bytes, EH.data()));
         CL_CHECK(queue.enqueueReadBuffer(d_this_EV_buffer, CL_TRUE, 0, this_ev_bytes, EV.mapped_data));
 
-    } catch (const cl::Error& err) {
-        std::cerr << "OpenCL Error in clInferHead(..., blockIdx): " << err.what() << " (" << err.err() << ")" << std::endl;
-        throw;
-    } catch (const std::exception& e) {
+    } 
+    catch (const std::exception& e) {
         std::cerr << "Standard Exception in clInferHead(..., blockIdx): " << e.what() << std::endl;
         throw;
     }
