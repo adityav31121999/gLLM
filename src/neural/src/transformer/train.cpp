@@ -19,7 +19,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
 {
     // for first block
     if(blockCount == 1 && currentTokenCount < CONTEXT_WIN) {
-        // compute the kdotQ for each head of the block
+        /*// compute the kdotQ for each head of the block
         for(int i = 0; i < x; i++) {
             for(int j = 0; j < y; j++) {
                 for(int k = 0; k < currentTokenCount; k++) {
@@ -40,7 +40,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
                     setRow(t[0].b[i][j].EV, k, current_token_embed_vec);
                 }
             }
-        }
+        }*/
         computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         // train from here
         forward(blockCount, currentTokenCount, promptCount);
@@ -68,7 +68,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
     }
     // for next blocks
     else if(blockCount > 1 && currentTokenCount >= CONTEXT_WIN) {
-        // assign tokForBlock embeddings
+        /*// assign tokForBlock embeddings
         // Assuming currentTokenCount here refers to tokens within the current local window (up to CONTEXT_WIN)
         // And tokForBlock is for the current block (blockCount-1)
         for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
@@ -95,7 +95,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
                     setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
                 }
             }
-        }
+        }*/
         computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         // train from here
         forward(blockCount, currentTokenCount, promptCount);
@@ -303,10 +303,56 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
             if(blockCount == 1) {
                 // make queries using compute KorQ: t[0].Q[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MQ)
                 // make keys using compute KorQ: t[0].K[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MK)
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < currentTokenCount; k++) {
+                            std::vector<float> current_token_embed_vec(this->d);
+                            for(int m = 0; m < this->d; m++) {
+                                current_token_embed_vec[m] = tokenEmbed(k,m);
+                            }
+
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MQ, q_output_vec);
+                            setRow(t[0].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MK, k_output_vec);
+                            setRow(t[0].b[i][j].K, k, k_output_vec);
+
+                            // Update EV for the current head with the current token's embedding
+                            setRow(t[0].b[i][j].EV, k, current_token_embed_vec);
+                        }
+                    }
+                }
             }
             else {
                 // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
                 // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+                for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
+                    int global_token_idx = (blockCount-2)*CONTEXT_WIN + token_idx_in_block; // token from previous block's full context window
+                    if (global_token_idx < this->currentTokenCount) { // Ensure we don't read past actual currentTokenCount
+                        std::vector<float> prev_token_embed_row = getRow(tokenEmbed, global_token_idx);
+                        setRow(t[blockCount-1].tokForBlock, token_idx_in_block, prev_token_embed_row);
+                    }
+                }
+                // compute the KdotQ for each head of block using EVs of previous blocks
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < CONTEXT_WIN; k++) { // Iterate through tokens in the window for this block
+                            std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[i][j].EV, k);
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(prev_block_ev_row, t[blockCount-1].b[i][j].MQ, q_output_vec);
+                            setRow(t[blockCount-1].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, k);
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_block_token_row, t[blockCount-1].b[i][j].MK, k_output_vec);
+                            setRow(t[blockCount-1].b[i][j].K, k, k_output_vec);
+                            // EV for the current block (blockCount-1) at token k is updated with its own token from tokForBlock
+                            setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
+                        }
+                    }
+                }
             }
             // compute the KdotQ for each head of block using EVs of previous blocks
             computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
@@ -367,6 +413,60 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                 // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
                 // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
             }
+            if(blockCount == 1) {
+                // make queries using compute KorQ: t[0].Q[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MQ)
+                // make keys using compute KorQ: t[0].K[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MK)
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < currentTokenCount; k++) {
+                            std::vector<float> current_token_embed_vec(this->d);
+                            for(int m = 0; m < this->d; m++) {
+                                current_token_embed_vec[m] = tokenEmbed(k,m);
+                            }
+
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MQ, q_output_vec);
+                            setRow(t[0].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MK, k_output_vec);
+                            setRow(t[0].b[i][j].K, k, k_output_vec);
+
+                            // Update EV for the current head with the current token's embedding
+                            setRow(t[0].b[i][j].EV, k, current_token_embed_vec);
+                        }
+                    }
+                }
+            }
+            else {
+                // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
+                // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+                for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
+                    int global_token_idx = (blockCount-2)*CONTEXT_WIN + token_idx_in_block; // token from previous block's full context window
+                    if (global_token_idx < this->currentTokenCount) { // Ensure we don't read past actual currentTokenCount
+                        std::vector<float> prev_token_embed_row = getRow(tokenEmbed, global_token_idx);
+                        setRow(t[blockCount-1].tokForBlock, token_idx_in_block, prev_token_embed_row);
+                    }
+                }
+                // compute the KdotQ for each head of block using EVs of previous blocks
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < CONTEXT_WIN; k++) { // Iterate through tokens in the window for this block
+                            std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[i][j].EV, k);
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(prev_block_ev_row, t[blockCount-1].b[i][j].MQ, q_output_vec);
+                            setRow(t[blockCount-1].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, k);
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_block_token_row, t[blockCount-1].b[i][j].MK, k_output_vec);
+                            setRow(t[blockCount-1].b[i][j].K, k, k_output_vec);
+                            // EV for the current block (blockCount-1) at token k is updated with its own token from tokForBlock
+                            setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
+                        }
+                    }
+                }
+            }
         }
         // for prompt size larger than available tokens in local context
         else if(prompt.size() > c) {
@@ -388,6 +488,60 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
             else {
                 // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
                 // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+            }
+            if(blockCount == 1) {
+                // make queries using compute KorQ: t[0].Q[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MQ)
+                // make keys using compute KorQ: t[0].K[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MK)
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < currentTokenCount; k++) {
+                            std::vector<float> current_token_embed_vec(this->d);
+                            for(int m = 0; m < this->d; m++) {
+                                current_token_embed_vec[m] = tokenEmbed(k,m);
+                            }
+
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MQ, q_output_vec);
+                            setRow(t[0].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MK, k_output_vec);
+                            setRow(t[0].b[i][j].K, k, k_output_vec);
+
+                            // Update EV for the current head with the current token's embedding
+                            setRow(t[0].b[i][j].EV, k, current_token_embed_vec);
+                        }
+                    }
+                }
+            }
+            else {
+                // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
+                // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+                for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
+                    int global_token_idx = (blockCount-2)*CONTEXT_WIN + token_idx_in_block; // token from previous block's full context window
+                    if (global_token_idx < this->currentTokenCount) { // Ensure we don't read past actual currentTokenCount
+                        std::vector<float> prev_token_embed_row = getRow(tokenEmbed, global_token_idx);
+                        setRow(t[blockCount-1].tokForBlock, token_idx_in_block, prev_token_embed_row);
+                    }
+                }
+                // compute the KdotQ for each head of block using EVs of previous blocks
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < CONTEXT_WIN; k++) { // Iterate through tokens in the window for this block
+                            std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[i][j].EV, k);
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(prev_block_ev_row, t[blockCount-1].b[i][j].MQ, q_output_vec);
+                            setRow(t[blockCount-1].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, k);
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_block_token_row, t[blockCount-1].b[i][j].MK, k_output_vec);
+                            setRow(t[blockCount-1].b[i][j].K, k, k_output_vec);
+                            // EV for the current block (blockCount-1) at token k is updated with its own token from tokForBlock
+                            setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
+                        }
+                    }
+                }
             }
             for(int i = 0; i < m2; i++) {
                 // Assuming tokForBlock for new block is indexed from 0
@@ -430,11 +584,173 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                 // shift to next block
                 // make Query from t[blockCount-2].EV(i): t[blockCount-2].Q[currentTokenCount%CONTEXT_WIN] = t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-1].MQ
                 // make key of response(i): t[blockCount-2].K[(currentTokenCount-CONTEXT_WIN)%CONTEXT_WIN] = response(i) * t[blockCount-1].MK
+                if(blockCount == 1) {
+                    // make queries using compute KorQ: t[0].Q[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MQ)
+                    // make keys using compute KorQ: t[0].K[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MK)
+                    for(int i = 0; i < x; i++) {
+                        for(int j = 0; j < y; j++) {
+                            for(int k = 0; k < resp_idx+1; k++) {
+                                std::vector<float> current_token_embed_vec(this->d);
+                                for(int m = 0; m < this->d; m++) {
+                                    current_token_embed_vec[m] = response[k][m];
+                                }
+
+                                std::vector<float> q_output_vec(this->h);
+                                computeKorQ(current_token_embed_vec, t[0].b[i][j].MQ, q_output_vec);
+                                setRow(t[0].b[i][j].Q, currentTokenCount + k, q_output_vec);
+
+                                std::vector<float> k_output_vec(this->h);
+                                computeKorQ(current_token_embed_vec, t[0].b[i][j].MK, k_output_vec);
+                                setRow(t[0].b[i][j].K, currentTokenCount + k, k_output_vec);
+
+                                // Update EV for the current head with the current token's embedding
+                                setRow(t[0].b[i][j].EV, currentTokenCount + k, current_token_embed_vec);
+                            }
+                        }
+                    }
+                }
+                else {
+                    // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
+                    // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+                    for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
+                        int global_token_idx = (blockCount-2)*CONTEXT_WIN + token_idx_in_block; // token from previous block's full context window
+                        if (global_token_idx < this->currentTokenCount) { // Ensure we don't read past actual currentTokenCount
+                            std::vector<float> prev_token_embed_row = getRow(tokenEmbed, global_token_idx);
+                            setRow(t[blockCount-1].tokForBlock, token_idx_in_block, prev_token_embed_row);
+                        }
+                    }
+                    // compute the KdotQ for each head of block using EVs of previous blocks
+                    for(int i = 0; i < x; i++) {
+                        for(int j = 0; j < y; j++) {
+                            for(int k = 0; k < CONTEXT_WIN; k++) { // Iterate through tokens in the window for this block
+                                std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[i][j].EV, k);
+                                std::vector<float> q_output_vec(this->h);
+                                computeKorQ(prev_block_ev_row, t[blockCount-1].b[i][j].MQ, q_output_vec);
+                                setRow(t[blockCount-1].b[i][j].Q, k, q_output_vec);
+
+                                std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, k);
+                                std::vector<float> k_output_vec(this->h);
+                                computeKorQ(current_block_token_row, t[blockCount-1].b[i][j].MK, k_output_vec);
+                                setRow(t[blockCount-1].b[i][j].K, k, k_output_vec);
+                                // EV for the current block (blockCount-1) at token k is updated with its own token from tokForBlock
+                                setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
+                            }
+                        }
+                    }
+                }
+                if(blockCount == 1) {
+                    // make queries using compute KorQ: t[0].Q[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MQ)
+                    // make keys using compute KorQ: t[0].K[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MK)
+                    for(int i = 0; i < x; i++) {
+                        for(int j = 0; j < y; j++) {
+                            for(int k = 0; k < currentTokenCount; k++) {
+                                std::vector<float> current_token_embed_vec(this->d);
+                                for(int m = 0; m < this->d; m++) {
+                                    current_token_embed_vec[m] = tokenEmbed(k,m);
+                                }
+
+                                std::vector<float> q_output_vec(this->h);
+                                computeKorQ(current_token_embed_vec, t[0].b[i][j].MQ, q_output_vec);
+                                setRow(t[0].b[i][j].Q, k, q_output_vec);
+
+                                std::vector<float> k_output_vec(this->h);
+                                computeKorQ(current_token_embed_vec, t[0].b[i][j].MK, k_output_vec);
+                                setRow(t[0].b[i][j].K, k, k_output_vec);
+
+                                // Update EV for the current head with the current token's embedding
+                                setRow(t[0].b[i][j].EV, k, current_token_embed_vec);
+                            }
+                        }
+                    }
+                }
+                else {
+                    // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
+                    // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+                    for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
+                        int global_token_idx = (blockCount-2)*CONTEXT_WIN + token_idx_in_block; // token from previous block's full context window
+                        if (global_token_idx < this->currentTokenCount) { // Ensure we don't read past actual currentTokenCount
+                            std::vector<float> prev_token_embed_row = getRow(tokenEmbed, global_token_idx);
+                            setRow(t[blockCount-1].tokForBlock, token_idx_in_block, prev_token_embed_row);
+                        }
+                    }
+                    // compute the KdotQ for each head of block using EVs of previous blocks
+                    for(int i = 0; i < x; i++) {
+                        for(int j = 0; j < y; j++) {
+                            for(int k = 0; k < CONTEXT_WIN; k++) { // Iterate through tokens in the window for this block
+                                std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[i][j].EV, k);
+                                std::vector<float> q_output_vec(this->h);
+                                computeKorQ(prev_block_ev_row, t[blockCount-1].b[i][j].MQ, q_output_vec);
+                                setRow(t[blockCount-1].b[i][j].Q, k, q_output_vec);
+
+                                std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, k);
+                                std::vector<float> k_output_vec(this->h);
+                                computeKorQ(current_block_token_row, t[blockCount-1].b[i][j].MK, k_output_vec);
+                                setRow(t[blockCount-1].b[i][j].K, k, k_output_vec);
+                                // EV for the current block (blockCount-1) at token k is updated with its own token from tokForBlock
+                                setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
+                            }
+                        }
+                    }
+                }
                 continue;
             }
             // same block
             // make Query from t[blockCount-2].EV(i): Q[currentTokenCount%CONTEXT_WIN] = t[blockCount-1].EV(i) * M
             // make key of tokenEmbed(i): K[(currentTokenCount-CONTEXT_WIN)%CONTEXT_WIN] = response(i) * MK
+            if(blockCount == 1) {
+                // make queries using compute KorQ: t[0].Q[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MQ)
+                // make keys using compute KorQ: t[0].K[currentTokenCount%CONTEXT_WIN] = (prompt(i) * t[0].MK)
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < currentTokenCount; k++) {
+                            std::vector<float> current_token_embed_vec(this->d);
+                            for(int m = 0; m < this->d; m++) {
+                                current_token_embed_vec[m] = tokenEmbed(k,m);
+                            }
+
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MQ, q_output_vec);
+                            setRow(t[0].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_token_embed_vec, t[0].b[i][j].MK, k_output_vec);
+                            setRow(t[0].b[i][j].K, k, k_output_vec);
+
+                            // Update EV for the current head with the current token's embedding
+                            setRow(t[0].b[i][j].EV, k, current_token_embed_vec);
+                        }
+                    }
+                }
+            }
+            else {
+                // make queries using compute KorQ: t[blockCount-1].Q = (t[blockCount-2].EV(currentTokenCount%CONTEXT_WIN) * t[blockCount-2].MQ)
+                // make keys using compute KorQ: t[blockCount-1].K = (prompt(i) * t[blockCount-2].MK)
+                for(int token_idx_in_block = 0; token_idx_in_block < CONTEXT_WIN; token_idx_in_block++) {
+                    int global_token_idx = (blockCount-2)*CONTEXT_WIN + token_idx_in_block; // token from previous block's full context window
+                    if (global_token_idx < this->currentTokenCount) { // Ensure we don't read past actual currentTokenCount
+                        std::vector<float> prev_token_embed_row = getRow(tokenEmbed, global_token_idx);
+                        setRow(t[blockCount-1].tokForBlock, token_idx_in_block, prev_token_embed_row);
+                    }
+                }
+                // compute the KdotQ for each head of block using EVs of previous blocks
+                for(int i = 0; i < x; i++) {
+                    for(int j = 0; j < y; j++) {
+                        for(int k = 0; k < CONTEXT_WIN; k++) { // Iterate through tokens in the window for this block
+                            std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[i][j].EV, k);
+                            std::vector<float> q_output_vec(this->h);
+                            computeKorQ(prev_block_ev_row, t[blockCount-1].b[i][j].MQ, q_output_vec);
+                            setRow(t[blockCount-1].b[i][j].Q, k, q_output_vec);
+
+                            std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, k);
+                            std::vector<float> k_output_vec(this->h);
+                            computeKorQ(current_block_token_row, t[blockCount-1].b[i][j].MK, k_output_vec);
+                            setRow(t[blockCount-1].b[i][j].K, k, k_output_vec);
+                            // EV for the current block (blockCount-1) at token k is updated with its own token from tokForBlock
+                            setRow(t[blockCount-1].b[i][j].EV, k, current_block_token_row);
+                        }
+                    }
+                }
+            }
         }
     }
 }

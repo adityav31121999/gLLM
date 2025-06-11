@@ -103,6 +103,12 @@ void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSent
     subSentences.clear();
     std::string current_sub_sentence;
     const std::locale loc;
+    // We use subSentences.size() to determine the 0-based index 
+    // of the sub-sentence *before* it's added.
+    // 1st sentence: index 0 (subSentences.size() == 0) -> odd-positioned
+    // 2nd sentence: index 1 (subSentences.size() == 1) -> even-positioned
+    // 3rd sentence: index 2 (subSentences.size() == 2) -> odd-positioned
+    // So, add "@#0" if (subSentences.size() % 2 == 1)
 
     for (char c : line) {
         current_sub_sentence += c;
@@ -111,19 +117,45 @@ void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSent
             bool contains_non_whitespace = false;
             for (char sentence_char : current_sub_sentence) {
                 if (!std::isspace(sentence_char, loc)) {
-                    contains_non_whitespace = true; // containes characters
+                    contains_non_whitespace = true; // contains characters
                     break;
                 }
             }
             if (contains_non_whitespace) {
+                if (subSentences.size() % 2 == 1) { // Even-positioned (2nd, 4th, etc.)
+                    // current_sub_sentence += "@#0";
+                }
                 subSentences.push_back(current_sub_sentence);
             }
             current_sub_sentence.clear();
         }
     }
     // Add any remaining part as the last sub-sentence if it's not empty
+    // and contains non-whitespace characters.
     if (!current_sub_sentence.empty()) {
-        subSentences.push_back(current_sub_sentence);
+        bool tail_contains_non_whitespace = false;
+        for (char char_in_remaining : current_sub_sentence) {
+            if (!std::isspace(char_in_remaining, loc)) {
+                tail_contains_non_whitespace = true;
+                break;
+            }
+        }
+        if (tail_contains_non_whitespace) {
+            if (subSentences.size() % 2 == 1) { // Even-positioned (2nd, 4th, etc.)
+                // current_sub_sentence += "@#0";
+            }
+            subSentences.push_back(current_sub_sentence);
+        }
+    }
+
+    // If, after collecting all valid sub-sentences, there's an odd number
+    // and more than one, concatenate the last two.
+    // This aims to create pairs for prompt/response processing.
+    if (subSentences.size() > 1 && subSentences.size() % 2 == 1) {
+        std::string last_sentence_to_merge = subSentences.back();
+        subSentences.pop_back(); // Remove the original last element
+        // Append the (original) last sentence to the (new) last element
+        subSentences.back() += last_sentence_to_merge;
     }
 }
 
@@ -247,7 +279,7 @@ void tokenize(std::string &line, std::vector<std::string> &tokensOfFile, std::ve
                     } 
                     else {
                         evenSentence.push_back(current_sub_sentence_tokens);
-                        evenSentence.back().push_back("@#0");   // terminator to end response
+                        // evenSentence.back().push_back("@#0");   // terminator to end response
                     }
                     current_sub_sentence_tokens.clear();
                     sub_sentence_count++;
@@ -282,6 +314,8 @@ void tokenize(std::string &line, std::vector<std::string> &tokensOfFile, std::ve
  */
 void model::makeEmbedding(std::string &path2file)
 {
+    const std::string special_token = "@#0";
+
     std::ifstream file(path2file);
     if (!file.is_open()) {
         std::cerr << "Error: Could not open file: " << path2file << std::endl;
@@ -318,6 +352,9 @@ void model::makeEmbedding(std::string &path2file)
     if (this->T.tokens.empty()) {
         std::cout << "Info: Initializing vocabulary from: " << path2file << std::endl;
         
+        // Ensure the special token is included during initialization
+        unique_tokens_from_current_file.insert(special_token);
+
         std::vector<std::string> sorted_unique_tokens(unique_tokens_from_current_file.begin(), unique_tokens_from_current_file.end());
         std::sort(sorted_unique_tokens.begin(), sorted_unique_tokens.end());
 
@@ -360,32 +397,55 @@ void model::makeEmbedding(std::string &path2file)
         }
 
         // Identify genuinely new tokens to add
+        // These are tokens in unique_tokens_from_current_file but not in T.tokens yet
         std::set<std::string> existing_vocab_set_for_check(this->T.tokens.begin(), this->T.tokens.end());
-        std::vector<std::string> new_tokens_to_actually_add;
+        std::vector<std::string> new_tokens_from_file;
         for (const auto& token_from_file : unique_tokens_from_current_file) {
             if (existing_vocab_set_for_check.find(token_from_file) == existing_vocab_set_for_check.end()) {
-                new_tokens_to_actually_add.push_back(token_from_file);
+                new_tokens_from_file.push_back(token_from_file);
             }
         }
 
-        if (new_tokens_to_actually_add.empty()) {
-            std::cout << "Info: No new unique tokens from " << path2file << " to add to the existing vocabulary." << std::endl;
-            // Vocabulary exists and is sorted, no new tokens, so no need to re-sort or change embeddings.
-            return;
+        bool new_file_tokens_were_added = !new_tokens_from_file.empty();
+
+        if (new_file_tokens_were_added) {
+            std::cout << "Info: Found " << new_tokens_from_file.size() << " new unique tokens from file to add." << std::endl;
+            for (const auto& new_token : new_tokens_from_file) {
+                std::vector<float> random_embedding_row(this->T.d);
+                for (int j = 0; j < this->T.d; ++j) {
+                    random_embedding_row[j] = dist_uniform(rng);
+                }
+                combined_token_embeddings.push_back({new_token, random_embedding_row});
+            }
         }
 
-        std::cout << "Info: Found " << new_tokens_to_actually_add.size() << " new unique tokens to add." << std::endl;
+        // Ensure special_token "@#0" is present in the combined list
+        bool special_token_found_in_combined = false;
+        for (const auto& pair : combined_token_embeddings) {
+            if (pair.first == special_token) {
+                special_token_found_in_combined = true;
+                break;
+            }
+        }
 
-        // Add new tokens with random embeddings
-        for (const auto& new_token : new_tokens_to_actually_add) {
+        bool special_token_was_explicitly_added = false;
+        if (!special_token_found_in_combined) {
+            std::cout << "Info: Special token '" << special_token << "' not found. Adding it to vocabulary." << std::endl;
             std::vector<float> random_embedding_row(this->T.d);
             for (int j = 0; j < this->T.d; ++j) {
                 random_embedding_row[j] = dist_uniform(rng);
             }
-            combined_token_embeddings.push_back({new_token, random_embedding_row});
+            combined_token_embeddings.push_back({special_token, random_embedding_row});
+            special_token_was_explicitly_added = true;
         }
 
-        // Sort the combined list by token string
+        // If no new tokens from file and special token didn't need explicit adding, vocabulary is unchanged.
+        if (!new_file_tokens_were_added && !special_token_was_explicitly_added) {
+            std::cout << "Info: No new unique tokens from " << path2file << " and special token '" << special_token << "' already exists or was part of file tokens. Vocabulary structure unchanged." << std::endl;
+            return;
+        }
+
+        // Sort the combined list by token string if changes were made
         std::sort(combined_token_embeddings.begin(), combined_token_embeddings.end(),
                   [](const auto& a, const auto& b) {
                       return a.first < b.first;
@@ -402,7 +462,7 @@ void model::makeEmbedding(std::string &path2file)
             for (int j = 0; j < this->T.d; ++j) {
                 try {
                     this->T.embeddings(i, j) = combined_token_embeddings[i].second[j];
-                } 
+                }
                 catch (const std::exception& e) {
                     std::cerr << "Error writing combined embedding to T.embeddings(" << i << "," << j << ") for token '" << this->T.tokens[i] << "': " << e.what() << std::endl;
                 }

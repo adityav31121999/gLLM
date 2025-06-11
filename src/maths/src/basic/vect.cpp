@@ -680,6 +680,31 @@ float MSE(std::vector<float>& a, std::vector<float>& b) {
 }
 
 /**
+ * @brief Calculates the Cross-Entropy loss between two probability distributions.
+ * @details This function computes the Cross-Entropy loss, which is commonly used as a loss function
+ * in classification tasks. It measures the difference between the predicted probability distribution
+ * (y_pred) and the true probability distribution (y_true).
+ * The formula for Cross-Entropy is: -sum(y_true[i] * log(y_pred[i]))
+ * A small epsilon is added to y_pred to prevent taking the logarithm of zero.
+ * @param[in] y_true The true probability distribution (vector of floats).
+ * @param[in] y_pred The predicted probability distribution (vector of floats).
+ * @return The Cross-Entropy loss.
+ * @throws std::runtime_error if the vector sizes do not match.
+ */
+float crossEntropy(std::vector<float>& y_true, std::vector<float>& y_pred) {
+    if (y_true.size() != y_pred.size()) {
+        throw std::runtime_error("crossEntropy: Vector sizes do not match.");
+    }
+    float loss = 0.0f;
+    float epsilon = 1e-15f; // Small value to prevent log(0)
+    for (size_t i = 0; i < y_true.size(); ++i) {
+        // Ensure y_pred[i] is not zero before taking log
+        loss -= y_true[i] * std::log(std::max(y_pred[i], epsilon));
+    }
+    return loss;
+}
+
+/**
  * @brief Calculates the error between two vectors as a fraction of the first vector.
  * @param v1 The first vector: expected.
  * @param v2 The second vector: produced.

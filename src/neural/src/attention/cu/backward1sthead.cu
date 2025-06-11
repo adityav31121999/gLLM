@@ -28,7 +28,7 @@
 * @param layers Number of layers in the MLPs
 * @param first Boolean flag - Determines if EH is updated. (Now implicitly true in this overload)
 */
-void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& layers)
+void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
@@ -60,7 +60,7 @@ void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& la
     const size_t mlp_weights_elements = static_cast<size_t>(this->hor.weights[0].row) * this->hor.weights[0].col;
     const size_t mlp_weights_bytes = mlp_weights_elements * sizeof(float);
     const size_t ev_elements = static_cast<size_t>(this->EV.row) * this->EV.col; // Should be context_win * embedding_dim
-    bool first = true; // This overload implies first=true for EH update
+    bool update_EH = (headnumber > 1) ? 1 : 0; // for first head it should be false
 
     // Validation
     if (embedding_dim != in) throw std::runtime_error("Embedding dimension mismatch");
@@ -75,7 +75,8 @@ void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& la
     if (this->K.row != context_win || this->K.col != mat_heights) throw std::runtime_error("K dimensions mismatch");
     if (this->Q.row != context_win || this->Q.col != mat_heights) throw std::runtime_error("Q dimensions mismatch");
     if (this->EV.row != context_win || this->EV.col != embedding_dim) throw std::runtime_error("EV dimensions mismatch");
-    if (this->hor.weights[0].row != embedding_dim || this->hor.weights[0].col != embedding_dim) throw std::runtime_error("MLP hor.weights[0] dimensions mismatch");
+    if (this->hor.weights[0].row != embedding_dim || this->hor.weights[0].col != embedding_dim) 
+        throw std::runtime_error("MLP hor.weights[0] dimensions mismatch");
 
     // --- Device Pointers (Attention) ---
     float *d_expected_h = nullptr, *d_EH = nullptr, *d_EV = nullptr; // Added d_EV
@@ -354,9 +355,8 @@ void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& la
         kernelUpdateWeights_1stHead_H<<<gridDimMatrix, blockDim1D>>>(
             d_MH_a, d_MV_a, d_MQ_a, d_MK_a, d_EH,
             d_grad_MH, d_grad_MV, d_grad_MQ, d_grad_MK, d_grad_EH,
-            learning_rate, first, // Pass the 'first' flag (always true here)
-            mat_heights, embedding_dim
-        );
+            learning_rate, update_EH, // Use determined flag for EH update
+            mat_heights, embedding_dim);
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize()); // Sync before D->H copy
 
@@ -376,7 +376,8 @@ void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& la
         // The current code only copies weights and gweights.
 
         // Copy updated Attention parameters back
-        if (first) { // Always true in this overload
+        if (update_EH == 1) {
+            // not for first head
             CUDA_CHECK(cudaMemcpy(this->EH.data(), d_EH, embed_bytes, cudaMemcpyDeviceToHost));
         }
         // Note: EV is not updated in this kernel (kernelUpdateWeights_1stHead_H)
@@ -671,11 +672,10 @@ void attention::cuBackward1stHead(std::vector<std::vector<float>>& expectedV, in
         CUDA_CHECK(cudaGetLastError());
 
         // --- Step 8: Compute grad_MQ and grad_MK_correction (Complex) ---
-        // float* actual_d_K_embed = nullptr; // Replace if available
-        float* actual_d_Q_embed = nullptr; // Replace if available
-        // if (!actual_d_K_embed || !actual_d_Q_embed) {
-        //     std::cerr << "Warning: Complex grad_MQ/MK calculation in cuBackward1stHead(expectedV,...) might be incorrect without K_embed/Q_embed." << std::endl;
-        // }
+                // Pass d_Q. The kernel kernelComputeGradMQ_V will use embedding_dim for column indexing,
+        // effectively using the first embedding_dim columns of Q.
+        // d_K is used by kernelComputeGradMKCorrection as is (token_count x mat_heights)
+        float* actual_d_Q_embed = d_Q; 
         kernelComputeGradMQ_V<<<gridDimMatrix2D, blockDim2D>>>(d_grad_Q, actual_d_Q_embed, d_grad_MQ, token_count, mat_heights, embedding_dim);
         CUDA_CHECK(cudaGetLastError());
         kernelComputeGradMKCorrection<<<gridDimMatrix2D, blockDim2D>>>(d_grad_MQ, d_Q, d_K, d_grad_MK_correction, token_count, mat_heights, embedding_dim);

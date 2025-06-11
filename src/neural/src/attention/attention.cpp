@@ -41,7 +41,7 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode) :
         if (MK.row == 0) MK = mat(h, d);
         if (MV.row == 0) MV = mat(d, h);
         if (MH.row == 0) MH = mat(d, h);
-        params = hor.params + ver.params + (4*h*d) + d + (n*n) + (3*n*d);   // + 3*d*d
+        params = hor.params + ver.params + (4*h*d) + d + (n*n) + (n*d) + (2*n*h);
     }
     else {
         if (qkCache.row == 0) qkCache = mat(d, d);
@@ -95,13 +95,13 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
         if (MK.row == 0) MK = mat(h, d);
         if (MV.row == 0) MV = mat(d, h);
         if (MH.row == 0) MH = mat(d, h);
-        params = hor.params + ver.params + (4*h*d) + d + (n*n) + (3*n*d);   // + 3*d*d
+        params = hor.params + ver.params + (4*h*d) + d + (n*n) + (n*d) + (2*n*h);
     }
     else {
         if (qkCache.row == 0) qkCache = mat(d, d);
         if (khCache.row == 0) khCache = mat(d, d);
         if (qvCache.row == 0) qvCache = mat(d, d);
-        params = hor.params + ver.params + d + (n*n) + (n*d) + (3*d*d);     // + 4*h*d
+        params = hor.params + ver.params + (3*d*d) + d + (n*n) + (n*d);
     }
     std::cout << "ATTENTION constructed with OpenCL."<< std::endl;
 }

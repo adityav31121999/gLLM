@@ -535,10 +535,11 @@ __kernel void kernelUpdateWeights_EH_EV(__global float* mh_a, __global float* mv
                                         __global const float* grad_mh, __global const float* grad_mv,
                                         __global const float* grad_mq, __global const float* grad_mk,
                                         __global const float* grad_eh, __global const float* grad_ev_scaled,
-                                        float learning_rate,
+                                        float learning_rate, int update_eh, int update_ev,
                                         int mat_heights, int embedding_dim, int context_win)
 {
     int idx = get_global_id(0);
+    int ev_size = context_win * embedding_dim; // Define ev_size
     int matrix_size = mat_heights * embedding_dim;
     if (idx < matrix_size) {
         mh_a[idx] -= learning_rate * grad_mh[idx];
@@ -546,14 +547,15 @@ __kernel void kernelUpdateWeights_EH_EV(__global float* mh_a, __global float* mv
         mq_a[idx] -= learning_rate * grad_mq[idx];
         mk_a[idx] -= learning_rate * grad_mk[idx];
     }
-    if (idx < embedding_dim) {
+    if (update_eh != 0 && idx < embedding_dim) {
         eh[idx] -= learning_rate * grad_eh[idx];
     }
-    int ev_size = context_win * embedding_dim;
-    if (idx < ev_size) {
-        int embed_idx = idx % embedding_dim;
-        ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
-    }
+    if (update_ev != 0) {
+        if (idx < ev_size) {
+            int embed_idx = idx % embedding_dim;
+            ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
+        }
+    } 
 }
 
 __kernel void kernelComputeGradientsEV_V(__global const float* ev, __global const float* expected_v,
@@ -651,13 +653,15 @@ __kernel void kernelComputeGradMQ_V(__global const float* grad_q, __global const
                                     __global float* grad_mq,
                                     int token_count, int mat_heights, int embedding_dim)
 {
-    int h = get_global_id(1);
-    int d = get_global_id(0);
+    int h = get_global_id(0); // Parallelize over mat_heights
+    int d = get_global_id(1); // Parallelize over embedding_dim
     if (h < mat_heights && d < embedding_dim) {
         float sum_mq_hd = 0.0f;
-        for (int i = 0; i < token_count; ++i) {
-            // The host should ensure 'q' (representing q_embed) is a valid buffer.
-            sum_mq_hd += grad_q[i * mat_heights + h] * q[i * embedding_dim + d];
+        if (q != NULL) { // Check if q (q_embed) is not NULL
+            for (int i = 0; i < token_count; ++i) {
+                // The host should ensure 'q' (representing q_embed) is a valid buffer.
+                sum_mq_hd += grad_q[i * mat_heights + h] * q[i * embedding_dim + d];
+            }
         }
         grad_mq[h * embedding_dim + d] = sum_mq_hd;
     }
@@ -665,8 +669,9 @@ __kernel void kernelComputeGradMQ_V(__global const float* grad_q, __global const
 
 __kernel void kernelComputeGradMKCorrection(__global const float* grad_mq, __global const float* q, __global const float* k,
                                             __global float* grad_mk_correction,
-                                            int token_count, int mat_heights, int embedding_dim)
+                                            int token_count, int mat_heights, int embedding_dim) // grad_mq is mat_heights x embedding_dim
 {
+    // q and k are token_count x mat_heights
     int h = get_global_id(1);
     int d = get_global_id(0);
     if (h < mat_heights && d < embedding_dim) {
@@ -682,11 +687,11 @@ __kernel void kernelComputeGradMKCorrection(__global const float* grad_mq, __glo
 }
 
 __kernel void kernelUpdateWeights_EV_V(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
-                                       __global const float* grad_mv, __global const float* grad_mq,
-                                       __global const float* grad_mk_correction,
+                                       __global const float* grad_mv, __global const float* grad_mq, // grad_mv, grad_mq are mat_heights x embedding_dim
+                                       __global const float* grad_mk_correction, // grad_mk_correction is mat_heights x embedding_dim
                                        __global const float* grad_ev_full,
                                        float learning_rate,
-                                       int mat_heights, int embedding_dim, int context_win)
+                                       int update_ev, int mat_heights, int embedding_dim, int context_win)
 {
     int idx = get_global_id(0);
     int matrix_size = mat_heights * embedding_dim;
@@ -695,9 +700,12 @@ __kernel void kernelUpdateWeights_EV_V(__global float* mv_a, __global float* mq_
         mq_a[idx] -= learning_rate * grad_mq[idx];
         mk_a[idx] -= learning_rate * grad_mk_correction[idx];
     }
-    int ev_size = context_win * embedding_dim;
-    if (idx < ev_size) {
-        ev[idx] -= learning_rate * grad_ev_full[idx];
+    // update for all blocks, except first block
+    if (update_ev != 0) {
+        int ev_size = context_win * embedding_dim;
+        if (idx < ev_size) {
+            ev[idx] -= learning_rate * grad_ev_full[idx];
+        }
     }
 }
 
@@ -730,8 +738,8 @@ __kernel void kernelComputeGradMK_MQ_Simplified(__global const float* grad_k, __
                                                 __global float* grad_mk, __global float* grad_mq,
                                                 int token_count, int mat_heights, int embedding_dim)
 {
-    int h = get_global_id(1);
-    int d = get_global_id(0);
+    int d = get_global_id(0); // Corresponds to embedding_dim (width-like)
+    int h = get_global_id(1); // Corresponds to mat_heights (height-like)
     if (h < mat_heights && d < embedding_dim) {
         float sum_mk_hd = 0.0f;
         float sum_mq_hd = 0.0f;
@@ -764,6 +772,7 @@ __kernel void kernelUpdateWeights_1stHead_H(__global float* mh_a, __global float
         if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
         if(grad_mk != NULL) mk_a[idx] -= learning_rate * grad_mk[idx];
     }
+    // only update EH when updateEH is true, this for all heads of blocks,except first column
     if (update_eh != 0 && idx < embedding_dim) {
         if(grad_eh != NULL) eh[idx] -= learning_rate * grad_eh[idx];
     }
@@ -808,11 +817,8 @@ __kernel void kernelUpdateSimple(__global float* weights_to_update, __global con
     }
 }
 
-__kernel void accumulateEVRowsKernelCL(
-    __global const float* d_EV,
-    __global float* d_output,
-    int num_rows,
-    int col_size)
+__kernel void accumulateEVRowsKernelCL(__global const float* d_EV, __global float* d_output,
+    int num_rows, int col_size)
 {
     int col_idx = get_global_id(0); // Each work-item computes one element of d_output
 
@@ -825,11 +831,8 @@ __kernel void accumulateEVRowsKernelCL(
     }
 }
 
-__kernel void updateEVRowsKernelCL(
-    __global float* d_EV_rows,
-    __global const float* d_vector_to_add,
-    int num_rows_to_update,
-    int num_cols)
+__kernel void updateEVRowsKernelCL(__global float* d_EV_rows, __global const float* d_vector_to_add,
+    int num_rows_to_update, int num_cols)
 {
     int row_idx = get_global_id(0); // Each work-item handles one row
 
@@ -840,12 +843,11 @@ __kernel void updateEVRowsKernelCL(
     }
 }
 
-__kernel void kernelCompute_single_kq_vector(
-    __global const float* d_token_embedding,  // Input: token vector (size: embedding_dim)
-    __global const float* d_projection_matrix, // Input: MQ or MK matrix (size: mat_heights x embedding_dim)
-    __global float* d_output_kq_vector,     // Output: K or Q vector (size: mat_heights)
-    int embedding_dim,
-    int mat_heights)
+__kernel void kernelCompute_single_kq_vector( __global const float* d_token_embedding,  // Input: token vector (size: embedding_dim)
+                                            __global const float* d_projection_matrix, // Input: MQ or MK matrix (size: mat_heights x embedding_dim)
+                                            __global float* d_output_kq_vector,     // Output: K or Q vector (size: mat_heights)
+                                            int embedding_dim,
+                                            int mat_heights)
 {
     // This kernel is intended to be launched with a single global work-item.
     // It computes: d_output_kq_vector[i] = dot(d_token_embedding, d_projection_matrix_row_i)

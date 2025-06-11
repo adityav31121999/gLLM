@@ -92,10 +92,10 @@ public:
 
     void cuforprop(int& in, int& layers, int& tokenCount);
     void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void cuBackward(std::vector<float>& expected, int& in, int& layers);
-    void cuBackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers);
+    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber);
     void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber);
+    void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber);
     // inference
     void cuInferHead(const mat& tokens, int& in, int& layers, int& tokenCount);
     void cuInferHead(const mat& EVp_mat, const mat& tokForBlock, int& d_embedding, int& layers_mlp, int& totalTokenCount,
@@ -113,10 +113,10 @@ public:
 
     void clforprop(int& in, int& layers, int& tokenCount);
     void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void clbackward(std::vector<float>& expected, int& in, int& layers);
-    void clbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers);
+    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber);
     void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber);
+    void clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber);
     // inference
     void clInferHead(const mat& tokens, int &in, int &layers, int &tokenCount);
     void clInferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embedding, int& layers_mlp, int& totalTokenCount,
@@ -129,14 +129,13 @@ public:
     void forprop(int& in, int& layers, int& tokenCount);
     void forprop(const mat& EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     // backward propagation
-    void backward(std::vector<float>& expected, int& in, int& layers);
-    void backward(std::vector<std::vector<float>>& expectedV, int& layers);
-    void backward1stHead(std::vector<float>& expected, int& in, int& layers, bool& first);
+    void backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber);
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
+    void backward(std::vector<float>& expected, int& in, int& layers, int headnumber);
+    void backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber);
     // inference
     void inferHead(const mat& tokens, int &in, int &layers, int &tokenCount);
-    void inferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embedding, int& layers_mlp, int& totalTokenCount,
-            int& blockIdx, int& contextWindowSize);
+    void inferHead(const mat& EVp, const mat& tokForBlock, int &in, int &layers, int &tokenCount, int &blockCount, int &n);
 
 #endif
 

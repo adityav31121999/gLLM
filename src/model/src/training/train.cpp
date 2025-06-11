@@ -4,6 +4,7 @@
 #include <fstream>
 #include <neural.hpp>
 #include <maths.hpp>
+#include <chrono>
 
 #ifdef USE_CUDA
     #include <cuda.h>
@@ -66,7 +67,6 @@ void model::trainBlock(const std::string& txtFileLocation)
     if (std::filesystem::path(txtFileLocation).extension() != ".txt") {
         throw std::runtime_error("Training data file must be a .txt file: " + txtFileLocation);
     }
-
     // open file and read line by line
     std::ifstream file(txtFileLocation);
     if (!file.is_open()) {
@@ -79,7 +79,10 @@ void model::trainBlock(const std::string& txtFileLocation)
     std::cout << "Total training lines: " << numberOfLines << std::endl;
     std::string line;
 
-    // get tokens 
+    // Start timing here
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    // get tokens
     std::vector<std::string> linesOfFile, tokensOfFile;
     while (std::getline(file, line)) {
         if(line.empty() == 1) {
@@ -127,6 +130,8 @@ void model::trainBlock(const std::string& txtFileLocation)
         for(int i = 0; i < num_pairs; i++) {
             tokenize_with_numbers(tokensOfFile[2*i], oddSentence[i]);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
             tokenize_with_numbers(tokensOfFile[2*i+1], evenSentence[i]); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
+            evenSentence.resize(evenSentence.size() + 1);
+            evenSentence.back().push_back("@#0");
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -173,12 +178,19 @@ void model::trainBlock(const std::string& txtFileLocation)
         newChat();
     }
     std::cout << "Training complete for file " << txtFileLocation << std::endl;
+    
     T.t[0].serialise(T.t[0].blockFilePath);
     // copy to other blocks and serialise
     copy1toOhterBlocks();
     // for(int i = 1; i < m; i++) {
     //     T.t[i].serialise(T.t[i].blockFilePath);
     // }
+
+    // End timing here
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "Total training time for file " << txtFileLocation << ": " << duration.count() << " ms" << std::endl;
+
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
 }
 
@@ -211,6 +223,8 @@ void model::trainModel(const std::string& txtFile)
     }
     std::cout << "Total training lines: " << numberOfLines << std::endl;
     std::string line;
+    // Start timing here
+    auto startTime = std::chrono::high_resolution_clock::now();
 
     // get tokens 
     std::vector<std::string> linesOfFile, tokensOfFile;
@@ -279,5 +293,10 @@ void model::trainModel(const std::string& txtFile)
         T.t[i].serialise(T.t[i].blockFilePath);
     }
     serialise();
+        // End timing here
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "Total training time for file " << txtFile << ": " << duration.count() << " ms" << std::endl;
+
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
 }

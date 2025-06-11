@@ -434,7 +434,7 @@ __kernel void clLOTA1d(__global float* y, __global float* out, int size) {
 }
 
 __kernel void clLOTA2d(__global float* y, __global float* out, int rows, int cols) {
-    int global_id = get_global_id(0); // Flat index over rows*cols
+    int global_id = get_global_id(0);
     int local_id = get_local_id(0);
     uint local_size = get_local_size(0);
     int size = rows * cols;
@@ -544,7 +544,8 @@ __kernel void clLOTA2dmasking(__global float* y, __global float* out, int rows, 
                 // No active elements, or sum is zero with no active elements (should not happen if is_active_element is true)
                 out[global_id] = 0.0f; // Default to 0
             }
-        } else {
+        }
+        else {
             // Element is outside the relevant region, set output to 0
             out[global_id] = 0.0f;
         }

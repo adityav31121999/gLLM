@@ -14,12 +14,12 @@
 
 /**
  * @brief OpenCL Backward Propagation using gradients from expected Horizontal output.
- *      Updates MH, MV, MQ, MK, EH, and EV.
+ *      Updates MH, MV, MQ, MK, EH, and EV. 
  * @param expected Expected output vector (target embedding for next token prediction)
  * @param in Input size (embedding dimension)
- * @param layers Number of layers in the MLPs
+ * @param layers Number of activation layers in the MLPs (for weights = layers - 1)
  */
-void attention::clbackward(std::vector<float>& expected, int& in, int& layers)
+void attention::clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
@@ -41,10 +41,10 @@ void attention::clbackward(std::vector<float>& expected, int& in, int& layers)
     // Validation
     if (embedding_dim != in) throw std::runtime_error("Embedding dimension mismatch");
     if (expected.size() != embedding_dim) throw std::runtime_error("Expected vector size mismatch");
-    if (this->K.row != CONTEXT_WIN || this->K.col != EMBEDDING) throw std::runtime_error("K dimensions mismatch");
-    if (this->Q.row != CONTEXT_WIN || this->Q.col != EMBEDDING) throw std::runtime_error("Q dimensions mismatch");
+    if (this->K.row != CONTEXT_WIN || this->K.col != MATHEIGHTS) throw std::runtime_error("K dimensions mismatch");
+    if (this->Q.row != CONTEXT_WIN || this->Q.col != MATHEIGHTS) throw std::runtime_error("Q dimensions mismatch");
     if (this->KdotQ.row != CONTEXT_WIN || this->KdotQ.col != CONTEXT_WIN) throw std::runtime_error("KdotQ dimensions mismatch");
-    if (this->MH.row != EMBEDDING || this->MH.col != MATHEIGHTS) throw std::runtime_error("MH dimensions mismatch");
+    if (this->MH.row != MATHEIGHTS || this->MH.col != EMBEDDING) throw std::runtime_error("MH dimensions mismatch");
     if (this->EV.row != CONTEXT_WIN || this->EV.col != EMBEDDING) throw std::runtime_error("EV dimensions mismatch");
     if (!this->hor.weights.empty() && (this->hor.weights[0].row != EMBEDDING || this->hor.weights[0].col != EMBEDDING))
         throw std::runtime_error("MLP hor.weights dimensions mismatch");
@@ -54,7 +54,9 @@ void attention::clbackward(std::vector<float>& expected, int& in, int& layers)
         return;
     }
 
-    cl_int cl_err; // For OpenCL error codes
+    int update_ev = 1;      // int update_ev = (blocknumber > 1) ? 1 : 0;
+    int update_eh = (headnumber == 0) ? 1 : 0;
+    cl_int cl_err;          // For OpenCL error codes
     
     OpenCLContext& context_obj = this->clcontext;
     cl::Context context = context_obj.context;
@@ -384,9 +386,11 @@ void attention::clbackward(std::vector<float>& expected, int& in, int& layers)
         CL_CHECK(update_weights_eh_ev_kernel.setArg(10, d_grad_EH)); // Use original grad_EH
         CL_CHECK(update_weights_eh_ev_kernel.setArg(11, d_grad_EV_scaled)); // Use scaled grad for EV update
         CL_CHECK(update_weights_eh_ev_kernel.setArg(12, learning_rate));
-        CL_CHECK(update_weights_eh_ev_kernel.setArg(13, mat_heights));
-        CL_CHECK(update_weights_eh_ev_kernel.setArg(14, embedding_dim));
-        CL_CHECK(update_weights_eh_ev_kernel.setArg(15, context_win));
+        CL_CHECK(update_weights_eh_ev_kernel.setArg(13, update_eh));
+        CL_CHECK(update_weights_eh_ev_kernel.setArg(14, update_ev));
+        CL_CHECK(update_weights_eh_ev_kernel.setArg(15, mat_heights));
+        CL_CHECK(update_weights_eh_ev_kernel.setArg(16, embedding_dim));
+        CL_CHECK(update_weights_eh_ev_kernel.setArg(17, context_win));
         // Launch with a grid size covering the largest update target (likely EV)
         CL_CHECK(queue.enqueueNDRangeKernel(update_weights_eh_ev_kernel, cl::NullRange, global_ev, local_1d));
         CL_CHECK(queue.finish());
@@ -425,7 +429,7 @@ void attention::clbackward(std::vector<float>& expected, int& in, int& layers)
  * @param in Input size (embedding dimension - used for MLP)
  * @param layers Number of layers in the MLPs
  */
-void attention::clbackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers)
+void attention::clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
@@ -448,8 +452,8 @@ void attention::clbackward(std::vector<std::vector<float>>& expectedV, int& in, 
     if (expectedV.size() != context_win || (!expectedV.empty() && expectedV[0].size() != embedding_dim)) {
         throw std::runtime_error("ExpectedV dimensions mismatch");
     }
-    if (this->K.row != CONTEXT_WIN || this->K.col != EMBEDDING) throw std::runtime_error("K dimensions mismatch");
-    if (this->Q.row != CONTEXT_WIN || this->Q.col != EMBEDDING) throw std::runtime_error("Q dimensions mismatch");
+    if (this->K.row != CONTEXT_WIN || this->K.col != MATHEIGHTS) throw std::runtime_error("K dimensions mismatch");
+    if (this->Q.row != CONTEXT_WIN || this->Q.col != MATHEIGHTS) throw std::runtime_error("Q dimensions mismatch");
     if (this->KdotQ.row != CONTEXT_WIN || this->KdotQ.col != CONTEXT_WIN) throw std::runtime_error("KdotQ dimensions mismatch");
     if (this->MV.row != MATHEIGHTS || this->MV.col != EMBEDDING) throw std::runtime_error("MV dimensions mismatch");
     if (this->EV.row != CONTEXT_WIN || this->EV.col != EMBEDDING) throw std::runtime_error("EV dimensions mismatch");
@@ -460,6 +464,8 @@ void attention::clbackward(std::vector<std::vector<float>>& expectedV, int& in, 
         std::cerr << "Warning: clbackward(expectedV,...) called with token_count <= 0. Skipping." << std::endl;
         return;
     }
+
+    int update_ev = (blocknumber == 1) ? 0 : 1;
 
     cl_int cl_err; // For OpenCL error codes
 
@@ -726,9 +732,10 @@ void attention::clbackward(std::vector<std::vector<float>>& expectedV, int& in, 
         CL_CHECK(update_weights_ev_v_kernel.setArg(6, d_grad_MK_correction));
         CL_CHECK(update_weights_ev_v_kernel.setArg(7, d_grad_EV_full)); // Use full EV gradient
         CL_CHECK(update_weights_ev_v_kernel.setArg(8, learning_rate));
-        CL_CHECK(update_weights_ev_v_kernel.setArg(9, mat_heights));
-        CL_CHECK(update_weights_ev_v_kernel.setArg(10, embedding_dim));
-        CL_CHECK(update_weights_ev_v_kernel.setArg(11, context_win));
+        CL_CHECK(update_weights_ev_v_kernel.setArg(9, update_ev));
+        CL_CHECK(update_weights_ev_v_kernel.setArg(10, mat_heights));
+        CL_CHECK(update_weights_ev_v_kernel.setArg(11, embedding_dim));
+        CL_CHECK(update_weights_ev_v_kernel.setArg(12, context_win));
         // Launch with grid size covering largest update target (EV)
         CL_CHECK(queue.enqueueNDRangeKernel(update_weights_ev_v_kernel, cl::NullRange, global_ev, local_1d));
         CL_CHECK(queue.finish());

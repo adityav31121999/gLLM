@@ -45,8 +45,8 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
                                  ", but got rows = " + std::to_string(EV.row) + " and cols = " + std::to_string(EV.col));
     }
 
-    if (K.row != n || K.col != d ||
-        Q.row != n || Q.col != d ||
+    if (K.row != n || K.col != h || // K and Q are n x h (tokenCount x MATHEIGHTS)
+        Q.row != n || Q.col != h || // K and Q are n x h (tokenCount x MATHEIGHTS)
         KdotQ.row != n || KdotQ.col != n ||
         MH.row != d || MH.col != h || // MH is mat(d,h)
         MV.row != d || MV.col != h || // MV is mat(d,h)
@@ -429,6 +429,7 @@ void attention::clforprop(std::vector<std::vector<float>> /* EVp */, int& d_embe
     }
 
     // Use constants defined in attention.hpp for clarity
+    const int n = CONTEXT_WIN;      // context window
     const int d = EMBEDDING;        // Embedding dimension
     const int h = MATHEIGHTS;       // Height dimension of K/Q, projection matrices
     // Number of EV rows to process, matching CPU/CUDA logic for EV.sumRows(totalTokenCount) and EV.addToRows(totalTokenCount, ...)
@@ -458,13 +459,13 @@ void attention::clforprop(std::vector<std::vector<float>> /* EVp */, int& d_embe
     }
 
     // ** Assumption: K, Q, KdotQ members are pre-populated with data relevant to this block (size 'count') **
-    if (K.row != count || K.col != h ||
-    Q.row != count || Q.col != h ||
-    KdotQ.row != count || KdotQ.col != count ||
-    MH.row != d || MH.col != h || // MH is mat(d,h)
-    MV.row != d || MV.col != h || // MV is mat(d,h)
-    EH.size() != static_cast<size_t>(d) ||
-    hor.hlayers.empty() || ver.hlayers.empty() || hor.weights.empty() || ver.weights.empty())
+    if (K.row != n || K.col != h || // K and Q are n x h (tokenCount x MATHEIGHTS)
+        Q.row != n || Q.col != h || // K and Q are n x h (tokenCount x MATHEIGHTS)
+        KdotQ.row != count || KdotQ.col != count ||
+        MH.row != d || MH.col != h || // MH is mat(d,h)
+        MV.row != d || MV.col != h || // MV is mat(d,h)
+        EH.size() != static_cast<size_t>(d) ||
+        hor.hlayers.empty() || ver.hlayers.empty() || hor.weights.empty() || ver.weights.empty())
     {
         throw std::runtime_error("Attention component dimension mismatch or uninitialized member in clforprop(..., blockIdx). Check K/Q/KdotQ size matches calculated 'count'.");
     }

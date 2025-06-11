@@ -10,13 +10,12 @@
 
 
 /**
- * @brief Backward propagation for 1st head of block. This provide changes needed to EV when it is
- *  not part of first block but of subsequent blocks
+ * @brief Backward propagation for heads of first block. Use in training of first block.
  * @param expected Expected output vector (target embedding for next token prediction).
  * @param in Input size (embedding dimension)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward1stHead(std::vector<float>& expected, int& in, int& layers, bool& first) 
+void attention::backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber) 
 {
     // Check dimensions before starting
     if (expected.size() != EMBEDDING || EH.size() != EMBEDDING) {
@@ -233,13 +232,16 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
     }
 
     // Step 10: Update EH and EV using gradients
-    if(!first) {
-        for(int i = 0; i < CONTEXT_WIN; i++) {
+    if(headnumber > 1) {
+        for (int i = 0; i < EMBEDDING; i++) {
+            EH[i] -= LEARNING * grad_EH[i];
+        }
+        /*for(int i = 0; i < CONTEXT_WIN; i++) {
         if (i >= EV.row) break; // Check EV row bounds
             for(int j = 0; j < EMBEDDING; j++) {
                 if (j < EV.col) EV(i, j) -= LEARNING * grad_EV[j];
             }
-        }
+        }*/
     }
 }
 
@@ -395,14 +397,14 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
     }
 
     // Step 8: Compute gradients w.r.t. MQ and MK correction
-    mat grad_MQ(MATHEIGHTS, EMBEDDING);
+    mat grad_MQ(EMBEDDING, MATHEIGHTS);
     std::fill_n(grad_MQ.mapped_data, grad_MQ.row * grad_MQ.col, 0.0f);
     for (int i = 0; i < this->tokenCount; i++) {
         std::vector<float> grad_Q_row_i = getRow(grad_Q, i);
         std::vector<float> Q_row_i = getRow(Q, i);
 
-        for (int h = 0; h < MATHEIGHTS; h++) {
-            for (int d = 0; d < EMBEDDING; d++) {
+        for (int h = 0; h < EMBEDDING; h++) {
+            for (int d = 0; d < MATHEIGHTS; d++) {
                 float Q_proxy_d = (d < Q_row_i.size()) ? Q_row_i[d] : 0.0f;
                 if (h < grad_Q_row_i.size()) {
                      grad_MQ(h, d) += grad_Q_row_i[h] * Q_proxy_d;
@@ -438,9 +440,14 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
     float learning_rate = LEARNING;
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
+            MK(i, j) -= learning_rate * grad_MK_correction(i, j);
+        }
+    }
+
+    for (int i = 0; i < EMBEDDING; i++) {
+        for (int j = 0; j < MATHEIGHTS; j++) {
             MV(i, j) -= learning_rate * grad_MV(i, j);
             MQ(i, j) -= learning_rate * grad_MQ(i, j);
-            MK(i, j) -= learning_rate * grad_MK_correction(i, j);
         }
     }
 }

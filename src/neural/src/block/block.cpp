@@ -98,7 +98,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     }
 
     rewind(blockFile);
-    std::cout << "BLOCK " << blockCount << " file prepared. With parameters: " << params << std::endl;
+    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << params * sizeof(float) / (1024 * 1024) << " MB." << std::endl;
 }
 
 #else
@@ -164,7 +164,8 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
             throw std::runtime_error("Could not open existing block file for read/write: " + this->blockFilePath);
         }
         std::cout << "BLOCK " << blockCount << " opened existing file: " << this->blockFilePath << std::endl;
-    } else { // File does not exist, or exists but size mismatches
+    }
+    else { // File does not exist, or exists but size mismatches
         blockFile = fopen(this->blockFilePath.c_str(), "wb+");
         if (!blockFile) {
             throw std::runtime_error("Could not create/truncate block file for writing: " + this->blockFilePath);
@@ -188,13 +189,14 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
         
         if (test_file) { // File existed but size mismatched
             std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << this->blockFilePath << std::endl;
-        } else { // File did not exist
+        }
+        else { // File did not exist
             std::cout << "BLOCK " << blockCount << " created new file: " << this->blockFilePath << std::endl;
         }
     }
 
     rewind(blockFile);
-    std::cout << "BLOCK " << blockCount << " file prepared. With parameters: " << params << std::endl;
+    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << params * sizeof(float) / (1024 * 1024) << " MB." << std::endl;
 }
 
 #endif

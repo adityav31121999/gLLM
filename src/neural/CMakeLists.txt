@@ -42,7 +42,7 @@ add_library(neural STATIC
     src/attention/backward.cpp
     src/attention/backward1sthead.cpp
     src/attention/writeatt.cpp
-    src/attention/infer.cpp
+    src/attention/inferhead.cpp
     # CUDA
     src/attention/cu/forward.cu
     src/attention/cu/backward.cu
@@ -54,7 +54,7 @@ add_library(neural STATIC
     src/attention/cl/forwardcl.cpp
     src/attention/cl/backward1stheadcl.cpp
     src/attention/cl/backwardcl.cpp
-    src/attention/cl/infercl.cpp
+    src/attention/cl/inferheadcl.cpp
 
 # block
     # C++
@@ -63,7 +63,7 @@ add_library(neural STATIC
     src/block/partialback.cpp
     src/block/backward.cpp
     src/block/writeblock.cpp
-    src/block/infer.cpp
+    src/block/inferblock.cpp
     # CUDA
     src/block/cu/kdotq.cu
     src/block/cu/forward.cu
@@ -75,9 +75,11 @@ add_library(neural STATIC
     # OpenCL
     src/block/cl/kdotqcl.cpp
     src/block/cl/forwardcl.cpp
-    src/block/cl/partialbackcl.cpp
+    src/block/cl/partialbackHcl.cpp
+    src/block/cl/partialbackiHcl.cpp
+    src/block/cl/partialbackVcl.cpp
     src/block/cl/backwardcl.cpp
-    src/block/cl/infercl.cpp
+    src/block/cl/inferblockcl.cpp
 
 # transformer
     # C++

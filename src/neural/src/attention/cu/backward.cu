@@ -25,7 +25,7 @@
  * @param in Input size (embedding dimension) - Corresponds to EMBEDDING
  * @param layers Number of layers in the MLPs
  */
-void attention::cuBackward(std::vector<float>& expected, int& in, int& layers)
+void attention::cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber)
 {
     // get values for all kernels and functions
     const int embedding_dim = EMBEDDING; // Should match 'in'
@@ -344,10 +344,14 @@ void attention::cuBackward(std::vector<float>& expected, int& in, int& layers)
         CUDA_CHECK(cudaGetLastError());
 
         // --- Step 8: Compute gradients w.r.t. MQ and MK ---
-        kernelComputeGradMK_MQ<<<gridDimMatrix2D, blockDim2D>>>(d_grad_K, d_grad_Q, d_K, d_Q, d_grad_MK, d_grad_MQ, token_count, mat_heights, embedding_dim);
+        // Use the simplified kernel that expects K_embed and Q_embed (token_count x embedding_dim)
+        // Pass d_K and d_Q (token_count x mat_heights). The kernel will use embedding_dim for column indexing.
+        kernelComputeGradMK_MQ_Simplified<<<gridDimMatrix2D, blockDim2D>>>(
+            d_grad_K, d_grad_Q, d_K, d_Q, d_grad_MK, d_grad_MQ, 
+            token_count, mat_heights, embedding_dim);
         CUDA_CHECK(cudaGetLastError());
 
-        // --- Step 9 & 10: Update weights MH, MV, MQ, MK and EH, EV ---
+        // --- Step 9: Update weights MH, MV, MQ, MK ---
         // Update MH, MV, MQ, MK
         kernelUpdateSimple<<<gridDimMatrix, blockDim1D>>>(d_MH_a, d_grad_MH, learning_rate, proj_mat_elements);
         CUDA_CHECK(cudaGetLastError());
@@ -358,10 +362,13 @@ void attention::cuBackward(std::vector<float>& expected, int& in, int& layers)
         kernelUpdateSimple<<<gridDimMatrix, blockDim1D>>>(d_MK_a, d_grad_MK, learning_rate, proj_mat_elements);
         CUDA_CHECK(cudaGetLastError());
 
-        // Update EH and EV
-        kernelUpdateSimple<<<gridDimEmbed, blockDim1D>>>(d_EH, d_grad_dh, learning_rate, embedding_dim);
-        CUDA_CHECK(cudaGetLastError());
-
+        // --- Step 10: Update EH and EV ---
+        // Update EH conditionally using d_grad_EH (gradient before hor MLP)
+        if (headnumber > 1) { // Align with C++ logic
+            kernelUpdateSimple<<<gridDimEmbed, blockDim1D>>>(d_EH, d_grad_EH, learning_rate, embedding_dim);
+            CUDA_CHECK(cudaGetLastError());
+        }
+        // Update EV by broadcasting d_grad_EV_scaled
         // Update EV: d_EV[r*embed_dim + c] -= lr * d_grad_EV_scaled[c] for r in [0, context_win-1]
         // This requires a kernel that broadcasts d_grad_EV_scaled to all rows of d_EV.
         // Example: kernelUpdateEVBroadcasted<<<gridDimEV, blockDim1D>>>(d_EV, d_grad_EV_scaled, learning_rate, context_win, embedding_dim);
@@ -456,7 +463,7 @@ void attention::cuBackward(std::vector<float>& expected, int& in, int& layers)
  * @param in Input size (number of tokens) - Corresponds to tokenCount (used indirectly via member)
  * @param layers Number of layers in the MLPs
  */
-void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& in, int& layers)
+void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber)
 {
     // get values for all kernels and functions
     const int embedding_dim = EMBEDDING;
@@ -698,8 +705,10 @@ void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& in, 
         CUDA_CHECK(cudaGetLastError());
 
 
-        // --- Step 9 & 10: Update weights MV, MQ, MK and EV ---
-        // Update MV, MQ, MK
+        // --- Step 9: Update weights MV, MQ, MK ---
+        // Note: C++ updates MK first, then MV, MQ. Order for independent updates doesn't strictly matter
+        // as long as correct gradients are used.
+        // kernelUpdateWeights_EV_V from backward1sthead.cu is more specific, but kernelUpdateSimple is used here.
         kernelUpdateSimple<<<gridDimMatrix, blockDim1D>>>(d_MV_a, d_grad_MV, learning_rate, proj_mat_elements);
         CUDA_CHECK(cudaGetLastError());
         kernelUpdateSimple<<<gridDimMatrix, blockDim1D>>>(d_MQ_a, d_grad_MQ, learning_rate, proj_mat_elements);
@@ -707,9 +716,11 @@ void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& in, 
         kernelUpdateSimple<<<gridDimMatrix, blockDim1D>>>(d_MK_a, d_grad_MK_correction, learning_rate, proj_mat_elements); // Update MK with correction
         CUDA_CHECK(cudaGetLastError());
 
-        // Update EV
-        // The original kernelUpdateWeights_EV_V used d_grad_EV_full.
-        kernelUpdateSimple<<<gridDimEV, blockDim1D>>>(d_EV, d_grad_EV_full, learning_rate, ev_elements); // Update full EV using full gradient
+        // --- Step 10: Update EV (conditionally) ---
+        if (blocknumber > 1) { // Align with C++ logic
+            kernelUpdateSimple<<<gridDimEV, blockDim1D>>>(d_EV, d_grad_EV_full, learning_rate, ev_elements); // Update full EV using full gradient
+            CUDA_CHECK(cudaGetLastError());
+        }
         CUDA_CHECK(cudaGetLastError());
         CUDA_CHECK(cudaDeviceSynchronize());
 

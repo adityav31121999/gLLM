@@ -50,9 +50,9 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         return; // No heads to process
     }
     if (promptCount < 0) {
-         fprintf(stderr, "Warning in clParallelKdotQs: promptCount is negative (%d). Setting to 0.\n", promptCount);
-         // Decide if we should proceed with promptCount = 0 or return. Let's return for safety.
-         return;
+        fprintf(stderr, "Warning in clParallelKdotQs: promptCount is negative (%d). Setting to 0.\n", promptCount);
+        // Decide if we should proceed with promptCount = 0 or return. Let's return for safety.
+        return;
     }
 
     // --- Pre-computation and Setup ---
@@ -67,7 +67,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         fprintf(stderr, "Error: Invalid dimensions (context_win_size=%d, embedding_dim=%d)\n", context_win_size, embedding_dim);
         return;
     }
-    const size_t k_q_ev_head_elems = static_cast<size_t>(context_win_size) * embedding_dim;    // n * d
+    const size_t k_q_ev_head_elems = static_cast<size_t>(context_win_size) * MATHEIGHTS;    // n * d
     const size_t kdotq_head_elems = static_cast<size_t>(context_win_size) * context_win_size;  // n * n
     const size_t qkcache_head_elems = static_cast<size_t>(embedding_dim) * embedding_dim;      // d * d
 
@@ -203,8 +203,8 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
 
                 if (blockCount > 1) {
                     if (!prev_block_ptr) {
-                         fprintf(stderr, "Error: prev_block_ptr is null for blockCount > 1.\n");
-                         return; // Should not happen based on blockCount check
+                        fprintf(stderr, "Error: prev_block_ptr is null for blockCount > 1.\n");
+                        return; // Should not happen based on blockCount check
                     }
                     // Ensure previous block has the required head structure
                     if (i >= static_cast<int>(prev_block_ptr->b.size()) || column >= static_cast<int>(prev_block_ptr->b[i].size())) {
@@ -470,7 +470,8 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     // Re-assigning will call mat's move assignment or create a new mat and assign.
                     // This will create a new backing file for KdotQ.
                     head.KdotQ = mat(context_win_size, context_win_size);
-                } catch (const std::exception& e) {
+                }
+                catch (const std::exception& e) {
                     fprintf(stderr, "Error re-initializing KdotQ for head (%d, %d) in clParallelKdotQs: %s. Skipping update for this head.\n", i, column, e.what());
                     continue; // Skip to the next head
                 }

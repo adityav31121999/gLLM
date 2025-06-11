@@ -1,3 +1,4 @@
+#ifdef USE_CPU
 
 // backward propagation for attention class
 #include "include/attention.hpp"
@@ -5,11 +6,14 @@
 #ifdef USE_CPU
 
 /**
- * @brief Backward propagation for subsequent heads in blocks.
+ * @brief Backward propagation for subsequent heads in each rows of blocks blocks.
+ *  This is good for starting backpropagation when in subsequent blocks. For 2nd 
+ *  to last head of each row of non-first blocks.
  * @param in Input size (embedding dimension)
  * @param layers Number of layers in the MLPs
+ * @param headnumber 1-based index of position of head in local context
  */
-void attention::backward(std::vector<float>& expected, int& in, int& layers) 
+void attention::backward(std::vector<float>& expected, int& in, int& layers, int headnumber)
 {
     // Ensure tokenCount is valid and matrices are mapped
     if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) {
@@ -38,7 +42,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers)
     hor.backprop(in, layers, LEARNING);
     ver.backward(in, layers, LEARNING);
 
-    if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
+    if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || 
+        ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
         throw std::runtime_error("MLP gweights not initialized in backward (H)");
     }
 
@@ -169,29 +174,28 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers)
     }
 
     // Step 10: Update EH and EV using gradients
-    for (int i = 0; i < EMBEDDING; i++) {
-        EH[i] -= LEARNING * grad_EH[i];
+    if(headnumber > 1) {
+        for (int i = 0; i < EMBEDDING; i++) {
+            EH[i] -= LEARNING * grad_EH[i];
+        }
     }
     for(int i = 0; i < CONTEXT_WIN; i++) {
         if (i >= EV.row) 
             break; // Check EV row bounds
         for(int j = 0; j < EMBEDDING; j++) {
-            if (j < EV.col) EV(i, j) -= LEARNING * grad_EV[j];
+            if (j < EV.col) 
+                EV(i, j) -= LEARNING * grad_EV[j];
         }
     }
 }
 
 
 /**
- * @brief Backward Propagation for the attention class using gradients from expected Vertical output only.
- *      Used for all Blocks and repetitions (applicabel when there is continuation from  previous blocks 
- *      and repetitions). This is to adjust MQ and MV so that there is no loss for context retention and 
- *      matrices for Horizontal pass remain un-affected from these changes i.e., no change in MK and MH
- *      (for blocks between first and last or kth block).
+ * @brief Bac
  * @param expectedV Vertical retention vector (target context)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers) 
+void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber) 
 {
     if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || 
         KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || 
@@ -319,7 +323,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
 
     // Step 7.5: Removed redundant/incorrect grad_KdotQ recalculation
     // Step 8: Compute gradients w.r.t. MQ and MK (more sophisticated)
-    mat grad_MQ(MATHEIGHTS, EMBEDDING);
+    mat grad_MQ(EMBEDDING, MATHEIGHTS);
     mat grad_MK_correction(MATHEIGHTS, EMBEDDING);
     std::fill_n(grad_MQ.mapped_data, grad_MQ.row * grad_MQ.col, 0.0f);
     std::fill_n(grad_MK_correction.mapped_data, grad_MK_correction.row * grad_MK_correction.col, 0.0f);
@@ -327,8 +331,8 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     // Calculate grad_MQ first (using Q as proxy for T)
     for (int i = 0; i < this->tokenCount; i++) {
         if (i >= Q.row || i >= grad_Q.row) continue;
-        for (int h = 0; h < MATHEIGHTS; h++) {
-            for (int d = 0; d < EMBEDDING; d++) {
+        for (int h = 0; h < EMBEDDING; h++) {
+            for (int d = 0; d < MATHEIGHTS; d++) {
                 grad_MQ(h, d) += grad_Q(i, h) * Q(i, d);
             }
         }
@@ -356,22 +360,32 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
-            if (i < MV.row && j < MV.col) MV(i, j) -= LEARNING * grad_MV(i, j);
-            if (i < MQ.row && j < MQ.col) MQ(i, j) -= LEARNING * grad_MQ(i, j);
             if (i < MK.row && j < MK.col) MK(i, j) -= LEARNING * grad_MK_correction(i, j);
         }
     }
 
+    for (int i = 0; i < EMBEDDING; i++) {
+        for (int j = 0; j < MATHEIGHTS; j++) {
+            if (i < MV.row && j < MV.col) MV(i, j) -= LEARNING * grad_MV(i, j);
+            if (i < MQ.row && j < MQ.col) MQ(i, j) -= LEARNING * grad_MQ(i, j);
+        }
+    }
+
     // Step 10: Update EV using element-wise gradients
-    for(int i = 0; i < CONTEXT_WIN; i++) {
-        if (i >= EV.row || i >= grad_EV_mat.row) 
-            break;
-        for(int j = 0; j < EMBEDDING; j++) {
-            if (j >= EV.col || j >= grad_EV_mat.col) 
+    // this when the 2nd to last head of each row of first block
+    if(blocknumber != 1) {
+        for(int i = 0; i < CONTEXT_WIN; i++) {
+            if (i >= EV.row || i >= grad_EV_mat.row) 
                 break;
-            EV(i, j) -= LEARNING * grad_EV_mat(i, j);
+            for(int j = 0; j < EMBEDDING; j++) {
+                if (j >= EV.col || j >= grad_EV_mat.col) 
+                    break;
+                EV(i, j) -= LEARNING * grad_EV_mat(i, j);
+            }
         }
     }
 }
+
+#endif
 
 #endif

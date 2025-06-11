@@ -128,6 +128,7 @@ mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, un
 
 #endif // USE_OPENCL
 
+
 // clear all values
 void mlp::clearValues() {
     std::fill(input.begin(), input.end(), 0.0f);
@@ -166,10 +167,10 @@ void mlp::serialise4train(const std::string& locationWithFileName) {
     }
 
     // serialise each file
-    for(int i = 0; i < num_layers; i++) {
+    for(size_t i = 0; i < weights.size(); ++i) { // Iterate based on actual size
         write2filefrommat(weights[i], locationWithFileName);
     }
-    for(int i = 0; i < num_layers; i++) {
+    for(size_t i = 0; i < gweights.size(); ++i) { // Iterate based on actual size
         write2filefrommat(gweights[i], locationWithFileName);
     }
 
@@ -192,7 +193,7 @@ void mlp::serialise4use(const std::string& locationWithFileName) {
     }
 
     // serialise each file
-    for(int i = 0; i < num_layers; i++) {
+    for(size_t i = 0; i < weights.size(); ++i) { // Iterate based on actual size
         write2filefrommat(weights[i], locationWithFileName);
     }
 

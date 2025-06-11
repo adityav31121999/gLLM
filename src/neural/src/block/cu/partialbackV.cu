@@ -49,6 +49,7 @@ struct HeadDevicePointersV {
     std::vector<float*> d_ver_weights, d_ver_gweights, d_ver_deltas;
 };
 
+
 /**
  * @brief CUDA backward propagation for a single column in the FIRST block,
  *        driven by vertical error (EV). Processes heads b[row][layno].
@@ -58,7 +59,7 @@ struct HeadDevicePointersV {
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno)
+void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -334,7 +335,10 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<floa
                     learning_rate, mat_heights, embedding_dim
                 );
                 CUDA_CHECK(cudaGetLastError());
-                // EV is updated outside this kernel for 1st head V-path, using full gradient
+                // EV update for the absolute first head (i=0, layno=0) of the first block,
+                // driven by vertical error, should use the full gradient.
+                // This aligns with attention::cuBackward1stHead(expectedV, ...) which uses kernelUpdateWeights_EV_V
+                // that internally updates EV with grad_EV_full.
                 kernelUpdateSimple<<<gridDimEV, blockDim1D, 0, current_stream>>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_full, learning_rate, ev_total_elements);
                 CUDA_CHECK(cudaGetLastError());
             } else {
@@ -344,8 +348,10 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<floa
                 CUDA_CHECK(cudaGetLastError());
                 kernelUpdateSimple<<<gridDimEV, blockDim1D, 0, current_stream>>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_full, learning_rate, ev_total_elements);
                 CUDA_CHECK(cudaGetLastError());
+                // For other heads in the first block, EV is NOT updated if we follow attention::cuBackward's
+                // blocknumber > 1 condition (first block's blocknumber is effectively 0 or 1).
+                // So, no EV update here for `else` branch of `is_first_head`.
             }
-
             // --- Data Transfer D->H (Async) ---
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
                 CUDA_CHECK(cudaMemcpyAsync(head_obj.ver.weights[l].mapped_data, device_ptrs.d_ver_weights[l], mlp_weights_bytes, cudaMemcpyDeviceToHost, current_stream));
@@ -401,7 +407,7 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<std::vector<floa
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cu1ParallelBackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno)
+void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, int layno)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -640,8 +646,11 @@ void block::cu1ParallelBackward(std::vector<std::vector<std::vector<float>>>& ex
             kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MQ_a, device_ptrs.d_grad_MQ, learning_rate, proj_mat_elements);
             kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MK_a, device_ptrs.d_grad_MK_correction, learning_rate, proj_mat_elements);
             CUDA_CHECK(cudaGetLastError());
+            // For non-first blocks, EV is updated. This aligns with attention::cuBackward(expectedV, ..., blocknumber > 1).
+            // The 'blocknumber' for this block::cu1ParallelBackward is implicitly > 0 (or > 1 if 1-indexed).
             kernelUpdateSimple<<<gridDimEV, blockDim1D, 0, current_stream>>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_full, learning_rate, ev_total_elements);
             CUDA_CHECK(cudaGetLastError());
+
 
             // --- Data Transfer D->H (Async) ---
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {

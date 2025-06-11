@@ -87,6 +87,7 @@ void block::serialise(const std::string& locationofbinfile) {
                     + (b[i][j].KdotQ.row*b[i][j].KdotQ.col);
         }
     }
+    std::cout << "Serialised block to file: " << locationofbinfile << std::endl;
 }
 
 

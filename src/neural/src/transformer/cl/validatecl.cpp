@@ -283,6 +283,31 @@ void transformer::clValidate(std::vector<std::vector<float>>& prompt, std::vecto
         throw std::runtime_error("clValidate(prompt-response): tokenEmbed (mat) is not properly initialized to FULL_CONTEXT for zero-filling.");
     }
 
+    // For K/Q computation
+    cl::Buffer d_Q_cl, d_K_cl, d_mQ_cl, d_mK_cl, d_tok_cl;
+    int embedding_dim_cl = d; // EMBEDDING is 'd'
+    int mat_heights_cl = MATHEIGHTS;
+    cl::Kernel kq_kernel;
+    cl_int cl_err_kq;
+
+    if (mat_heights_cl > 0 && x > 0 && y > 0) { // Only if attention is meaningful
+        try {
+            kq_kernel = cl::Kernel(this->clcontext.program, "kernelCompute_single_kq_vector", &cl_err_kq); CL_CHECK(cl_err_kq);
+        } catch (const std::runtime_error& e) {
+            std::cerr << "OpenCL Error creating kernel 'kernelCompute_single_kq_vector' in clValidate(prompt-response): " << e.what() << std::endl;
+            throw;
+        }
+        size_t matheights_bytes_kq = static_cast<size_t>(mat_heights_cl) * sizeof(float);
+        size_t embedding_bytes_loc_kq = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
+        size_t projection_matrix_bytes_kq = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
+
+        d_Q_cl = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, matheights_bytes_kq, nullptr, &cl_err_kq); CL_CHECK(cl_err_kq);
+        d_K_cl = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, matheights_bytes_kq, nullptr, &cl_err_kq); CL_CHECK(cl_err_kq);
+        d_mQ_cl = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, projection_matrix_bytes_kq, nullptr, &cl_err_kq); CL_CHECK(cl_err_kq);
+        d_mK_cl = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, projection_matrix_bytes_kq, nullptr, &cl_err_kq); CL_CHECK(cl_err_kq);
+        d_tok_cl = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc_kq, nullptr, &cl_err_kq); CL_CHECK(cl_err_kq);
+    }
+
     // --- Process Prompt (Add to host context only, device context handled in clValidate single) ---
     for (size_t p = 0; p < prompt.size(); ++p) {
         if (this->currentTokenCount >= FULL_CONTEXT) {
@@ -312,6 +337,85 @@ void transformer::clValidate(std::vector<std::vector<float>>& prompt, std::vecto
     // promptCount for the *first* prediction is the size of the prompt just added.
     this->promptCount = this->currentTokenCount; // Assuming prompt fits in first block or handled correctly
 
+    // --- K/Q Calculation for Prompt Tokens ---
+    if (mat_heights_cl > 0 && x > 0 && y > 0) {
+        size_t num_prompt_tokens = prompt.size();
+        // blockCount is already updated based on currentTokenCount (which is num_prompt_tokens)
+        int num_blocks_spanned_by_prompt = this->blockCount;
+        
+        size_t embedding_bytes_loc_kq = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
+        size_t projection_matrix_bytes_kq = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
+        size_t matheights_bytes_kq = static_cast<size_t>(mat_heights_cl) * sizeof(float);
+
+        for (int b_idx = 0; b_idx < num_blocks_spanned_by_prompt; ++b_idx) {
+            for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
+                for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
+                    auto& current_block_attention = t[b_idx].b[layer_idx][parallel_idx];
+                    CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mQ_cl, CL_TRUE, 0, projection_matrix_bytes_kq, current_block_attention.MQ.mapped_data));
+                    CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mK_cl, CL_TRUE, 0, projection_matrix_bytes_kq, current_block_attention.MK.mapped_data));
+
+                    // Calculate K for prompt tokens in this block b_idx
+                    size_t start_prompt_token_idx_for_block = static_cast<size_t>(b_idx) * CONTEXT_WIN;
+                    size_t end_prompt_token_idx_for_block = std::min(num_prompt_tokens, (static_cast<size_t>(b_idx) + 1) * CONTEXT_WIN);
+
+                    for (size_t p_glob = start_prompt_token_idx_for_block; p_glob < end_prompt_token_idx_for_block; ++p_glob) {
+                        size_t p_local = p_glob % CONTEXT_WIN;
+                        size_t host_offset = p_local * mat_heights_cl;
+                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, prompt[p_glob].data()));
+
+                        kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
+                        kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
+                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                        if (current_block_attention.K.mapped_data && (host_offset + mat_heights_cl) <= (current_block_attention.K.row * current_block_attention.K.col)) {
+                            CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_K_cl, CL_TRUE, 0, matheights_bytes_kq, current_block_attention.K.mapped_data + host_offset));
+                        } 
+                        else { 
+                            std::cerr << "Error: Host K buffer invalid or out of bounds for prompt K, block " << b_idx << " in clValidate." << std::endl; 
+                        }
+                    }
+
+                    // Calculate Q
+                    if (b_idx == 0) { // For prompt tokens in block 0
+                        for (size_t p_glob = start_prompt_token_idx_for_block; p_glob < end_prompt_token_idx_for_block; ++p_glob) {
+                            size_t p_local = p_glob % CONTEXT_WIN;
+                            size_t host_offset = p_local * mat_heights_cl;
+                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, prompt[p_glob].data()));
+                            
+                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                            // Args 3,4 already set
+                            CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                            if (current_block_attention.Q.mapped_data && (host_offset + mat_heights_cl) <= (current_block_attention.Q.row * current_block_attention.Q.col)) {
+                                CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes_kq, current_block_attention.Q.mapped_data + host_offset));
+                            } 
+                            else { 
+                                std::cerr << "Error: Host Q buffer invalid or out of bounds for prompt Q, block 0 in clValidate." << std::endl; 
+                            }
+                        }
+                    } 
+                    else { // Q from previous block's EV for b_idx > 0
+                        auto& prev_block_attention_for_ev = t[b_idx - 1].b[layer_idx][parallel_idx];
+                        for (int k_ev = 0; k_ev < CONTEXT_WIN; ++k_ev) {
+                            size_t host_q_offset = static_cast<size_t>(k_ev) * mat_heights_cl;
+                            if (!prev_block_attention_for_ev.EV.mapped_data || (static_cast<size_t>(k_ev) * embedding_dim_cl + embedding_dim_cl) > (prev_block_attention_for_ev.EV.row * prev_block_attention_for_ev.EV.col)) {
+                                std::cerr << "Warning: Prev block EV data invalid or out of bounds for index " << k_ev << " in clValidate K/Q for prompt." << std::endl; continue;
+                            }
+                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, prev_block_attention_for_ev.EV.mapped_data + static_cast<size_t>(k_ev) * embedding_dim_cl));
+                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                            CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                            if (current_block_attention.Q.mapped_data && (host_q_offset + mat_heights_cl) <= (current_block_attention.Q.row * current_block_attention.Q.col)) {
+                                CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes_kq, current_block_attention.Q.mapped_data + host_q_offset));
+                            } 
+                            else { 
+                                std::cerr << "Error: Host Q buffer invalid or out of bounds for EV Q, block " << b_idx << " in clValidate." << std::endl; 
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        this->clcontext.queue.finish();
+    }
+
     // --- Validate for Response ---
     for (size_t i = 0; i < response.size(); ++i) {
         if (this->currentTokenCount >= FULL_CONTEXT) {
@@ -337,6 +441,43 @@ void transformer::clValidate(std::vector<std::vector<float>>& prompt, std::vecto
              }
         }
 
+        // --- K/Q Calculation for the processed response token ---
+        if (mat_heights_cl > 0 && x > 0 && y > 0) {
+            // currentTokenCount was incremented by clValidate(single-token call)
+            // The token just added to context is expected_vec (response[i])
+            // Its global index in this validation run is this->currentTokenCount - 1
+            int target_block_idx_resp = (this->currentTokenCount - 1) / CONTEXT_WIN;
+            size_t qk_idx_in_block_resp = (static_cast<size_t>(this->currentTokenCount - 1) % CONTEXT_WIN);
+            size_t host_offset_resp = qk_idx_in_block_resp * mat_heights_cl;
+            
+            size_t embedding_bytes_loc_kq = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
+            size_t projection_matrix_bytes_kq = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
+            size_t matheights_bytes_kq = static_cast<size_t>(mat_heights_cl) * sizeof(float);
+
+            if (target_block_idx_resp < 0 || static_cast<size_t>(target_block_idx_resp) >= t.size()) {
+                 std::cerr << "Error: target_block_idx_resp out of range for K/Q recomputation of response token in clValidate." << std::endl;
+            } 
+            else {
+                for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
+                    for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
+                        auto& attention_head = t[target_block_idx_resp].b[layer_idx][parallel_idx];
+                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mQ_cl, CL_TRUE, 0, projection_matrix_bytes_kq, attention_head.MQ.mapped_data));
+                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mK_cl, CL_TRUE, 0, projection_matrix_bytes_kq, attention_head.MK.mapped_data));
+                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, expected_vec.data()));
+
+                        kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                        kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
+                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                        if (attention_head.Q.mapped_data && (host_offset_resp + mat_heights_cl) <= (attention_head.Q.row * attention_head.Q.col)) CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes_kq, attention_head.Q.mapped_data + host_offset_resp)); else {std::cerr << "Error: Host Q invalid for response K/Q, block " << target_block_idx_resp << " in clValidate." << std::endl;}
+
+                        kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
+                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                        if (attention_head.K.mapped_data && (host_offset_resp + mat_heights_cl) <= (attention_head.K.row * attention_head.K.col)) CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_K_cl, CL_TRUE, 0, matheights_bytes_kq, attention_head.K.mapped_data + host_offset_resp)); else {std::cerr << "Error: Host K invalid for response K/Q, block " << target_block_idx_resp << " in clValidate." << std::endl;}
+                    }
+                }
+                this->clcontext.queue.finish();
+            }
+        }
         // After the first response token prediction, subsequent predictions are based on a single preceding token context shift.
         this->promptCount = 1;
 

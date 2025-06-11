@@ -45,6 +45,7 @@ float gradientdesc1(std::vector<float>, std::vector<float>);
 float vdotv2val(std::vector<float>, std::vector<float>);
 float vdotv2scal(std::vector<float> , std::vector<float>);
 float MSE(std::vector<float>&, std::vector<float>&);
+float crossEntropy(std::vector<float>&, std::vector<float>&);
 float sum(std::vector<float>);
 float sum(std::vector<std::vector<float>>);
 float product(std::vector<float>);
@@ -149,7 +150,7 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
 
 #elif USE_OPENCL
 
-#define CL_HPP_ENABLE_EXCEPTIONS // Define before including cl.hpp
+#define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_TARGET_OPENCL_VERSION 300
 #include <CL/cl.hpp>
 // #pragma OPENCL EXTENSION cl_khr_fp32 : enable // Keep if needed by kernels
@@ -352,20 +353,26 @@ public:
                 error_message += "\n--- Build Log ---";
                 std::string build_log_details;
                 // Use the non-template getBuildInfo that returns cl_int
-                cl_int log_err = program.getBuildInfo(device, CL_PROGRAM_BUILD_LOG, &build_log_details);
-                if (log_err == CL_SUCCESS) {
+                cl_int build_log_err = program.getBuildInfo(device, CL_PROGRAM_BUILD_LOG, &build_log_details);
+                if (build_log_err == CL_SUCCESS) {
                     // This line should be fine as device.getInfo<CL_DEVICE_NAME>() returns std::string,
                     // breaking any problematic const char* + const char* chain.
                     error_message += "\nDevice " + device.getInfo<CL_DEVICE_NAME>() + " Log:\n" + build_log_details;
                 } 
                 else {
                     // Ensure string concatenation is safe
-                    error_message += std::string("\nFailed to retrieve build log: ") + oclErrorString(log_err) +
-                                        std::string(" [") + std::to_string(log_err) + std::string("]");
+                    error_message += std::string("\nFailed to retrieve build log: ") + oclErrorString(build_log_err) +
+                                        std::string(" [") + std::to_string(build_log_err) + std::string("]");
                 }
+                // Also print directly to cerr for immediate visibility
+                std::cerr << "OpenCL Program Build Failed. Build Log:" << std::endl;
+                std::cerr << "--------------------------------------------------------" << std::endl;
+                std::cerr << build_log_details << std::endl; // Print whatever was retrieved, even if getBuildInfo failed (might be empty)
+                std::cerr << "--------------------------------------------------------" << std::endl;
             }
             throw std::runtime_error(error_message);
         }
+
 
         // --- Create and store kernels (No changes needed) ---
         if (kernelNames.empty()) {

@@ -28,18 +28,24 @@
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cu1ParallelBackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno)
+void block::cupartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
     // Validate column number
     if (layno < 0 || layno >= y) {
-        throw std::out_of_range("cu1ParallelBackward1stBlock(H): Column index 'layno' (" + std::to_string(layno) + 
+        throw std::out_of_range("cupartialbackward1stBlock(H2d): Column index 'layno' (" + std::to_string(layno) + 
             ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
-    if (expectedH.size() != EMBEDDING) {
-        throw std::runtime_error("ExpectedH vector size mismatch in cu1ParallelBackward1stBlock(H). Expected " + 
-            std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH.size()));
+    if (expectedH.size() != static_cast<size_t>(num_heads_to_process)) {
+        throw std::runtime_error("ExpectedH outer vector size mismatch in cupartialbackward1stBlock(std::vector<std::vector<float>>). Expected " +
+            std::to_string(num_heads_to_process) + ", got " + std::to_string(expectedH.size()));
+    }
+    for(int i = 0; i < num_heads_to_process; ++i) {
+        if(expectedH[i].size() != EMBEDDING) {
+            throw std::runtime_error("cupartialbackward1stBlock(H): ExpectedH inner vector size mismatch: Size is " + std::to_string(expectedH[i].size()) + 
+                ", expected " + std::to_string(EMBEDDING) + ".");
+        }
     }
     if (EMBEDDING != in) {
         throw std::runtime_error("Embedding dimension mismatch: EMBEDDING vs in");
@@ -108,167 +114,167 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<float>>& expecte
     std::vector<cudaStream_t> streams(num_heads_to_process, nullptr);
     std::vector<HeadDevicePointers> head_gpu_data(num_heads_to_process);
 
-        try {
-            // --- Allocate Aggregate Memory ---
-            CUDA_CHECK(cudaMalloc(&agg_d_expected_h, num_heads_to_process * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_to_process * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_EV, num_heads_to_process * ev_single_head_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_EH, num_heads_to_process * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_scaled, num_heads_to_process * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_dh, num_heads_to_process * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_dv, num_heads_to_process * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_KdotQ, num_heads_to_process * max_head_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_head, num_heads_to_process * max_head_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_K, num_heads_to_process * max_k_q_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_Q, num_heads_to_process * max_k_q_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_pre_MH, num_heads_to_process * pre_mh_mv_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_pre_MV, num_heads_to_process * pre_mh_mv_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_MH_a, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_MV_a, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_MQ_a, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_MK_a, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_MH, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_MV, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_head_storage, num_heads_to_process * max_head_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_lota_deriv, num_heads_to_process * max_head_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_KdotQ, num_heads_to_process * max_head_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_K, num_heads_to_process * max_k_q_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_Q, num_heads_to_process * max_k_q_bytes_per_head));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_MQ, num_heads_to_process * proj_mat_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_grad_MK, num_heads_to_process * proj_mat_bytes));
+    try {
+        // --- Allocate Aggregate Memory ---
+        CUDA_CHECK(cudaMalloc(&agg_d_expected_h, num_heads_to_process * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_to_process * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_EV, num_heads_to_process * ev_single_head_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_EH, num_heads_to_process * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_scaled, num_heads_to_process * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_dh, num_heads_to_process * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_dv, num_heads_to_process * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_KdotQ, num_heads_to_process * max_head_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_head, num_heads_to_process * max_head_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_K, num_heads_to_process * max_k_q_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_Q, num_heads_to_process * max_k_q_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_pre_MH, num_heads_to_process * pre_mh_mv_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_pre_MV, num_heads_to_process * pre_mh_mv_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_MH_a, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MV_a, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MQ_a, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MK_a, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_MH, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_MV, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_head_storage, num_heads_to_process * max_head_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_lota_deriv, num_heads_to_process * max_head_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_KdotQ, num_heads_to_process * max_head_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_K, num_heads_to_process * max_k_q_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_Q, num_heads_to_process * max_k_q_bytes_per_head));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_MQ, num_heads_to_process * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_grad_MK, num_heads_to_process * proj_mat_bytes));
 
-            CUDA_CHECK(cudaMalloc(&agg_d_hor_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_ver_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_hor_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_ver_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_hor_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_ver_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_hor_deltas_storage, num_heads_to_process * num_weight_matrices_mlp * embed_bytes));
-            CUDA_CHECK(cudaMalloc(&agg_d_ver_deltas_storage, num_heads_to_process * num_weight_matrices_mlp * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_hor_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_hor_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_hor_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_hor_deltas_storage, num_heads_to_process * num_weight_matrices_mlp * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_deltas_storage, num_heads_to_process * num_weight_matrices_mlp * embed_bytes));
 
-            // --- Create Streams and Setup Per-Head Pointers ---
-            for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
-                CUDA_CHECK(cudaStreamCreateWithFlags(&streams[head_idx], cudaStreamNonBlocking));
-                // Initialize HeadDevicePointers with correct MLP layer counts
-                head_gpu_data[head_idx] = HeadDevicePointers(); // Use default constructor
-                head_gpu_data[head_idx].d_hor_activations.resize(num_neuron_layers_mlp);
-                head_gpu_data[head_idx].d_hor_weights.resize(num_weight_matrices_mlp);
-                head_gpu_data[head_idx].d_hor_gweights.resize(num_weight_matrices_mlp);
-                head_gpu_data[head_idx].d_hor_deltas.resize(num_weight_matrices_mlp);
-                head_gpu_data[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
-                head_gpu_data[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
-                head_gpu_data[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);
-                head_gpu_data[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp);
-                
-                HeadDevicePointers& current_ptrs = head_gpu_data[head_idx];
-                current_ptrs.d_expected_h = agg_d_expected_h + head_idx * embedding_dim;
-                current_ptrs.d_EH = agg_d_EH + head_idx * embedding_dim;
-                current_ptrs.d_EV = agg_d_EV + head_idx * ev_single_head_elements;
-                current_ptrs.d_grad_EH = agg_d_grad_EH + head_idx * embedding_dim;
-                current_ptrs.d_grad_EV_scaled = agg_d_grad_EV_scaled + head_idx * embedding_dim;
-                current_ptrs.d_grad_dh = agg_d_grad_dh + head_idx * embedding_dim;
-                current_ptrs.d_grad_dv = agg_d_grad_dv + head_idx * embedding_dim;
-                current_ptrs.d_KdotQ = agg_d_KdotQ + head_idx * max_head_elements_per_head;
-                current_ptrs.d_head = agg_d_head + head_idx * max_head_elements_per_head;
-                current_ptrs.d_K = agg_d_K + head_idx * max_k_q_elements_per_head;
-                current_ptrs.d_Q = agg_d_Q + head_idx * max_k_q_elements_per_head;
-                current_ptrs.d_pre_MH = agg_d_pre_MH + head_idx * pre_mh_mv_elements_per_head;
-                current_ptrs.d_pre_MV = agg_d_pre_MV + head_idx * pre_mh_mv_elements_per_head;
-                current_ptrs.d_MH_a = agg_d_MH_a + head_idx * proj_mat_elements;
-                current_ptrs.d_MV_a = agg_d_MV_a + head_idx * proj_mat_elements;
-                current_ptrs.d_MQ_a = agg_d_MQ_a + head_idx * proj_mat_elements;
-                current_ptrs.d_MK_a = agg_d_MK_a + head_idx * proj_mat_elements;
-                current_ptrs.d_grad_MH = agg_d_grad_MH + head_idx * proj_mat_elements;
-                current_ptrs.d_grad_MV = agg_d_grad_MV + head_idx * proj_mat_elements;
-                current_ptrs.d_grad_head = agg_d_grad_head_storage + head_idx * max_head_elements_per_head;
-                current_ptrs.d_lota_deriv = agg_d_lota_deriv + head_idx * max_head_elements_per_head;
-                current_ptrs.d_grad_KdotQ = agg_d_grad_KdotQ + head_idx * max_head_elements_per_head;
-                current_ptrs.d_grad_K = agg_d_grad_K + head_idx * max_k_q_elements_per_head;
-                current_ptrs.d_grad_Q = agg_d_grad_Q + head_idx * max_k_q_elements_per_head;
-                current_ptrs.d_grad_MQ = agg_d_grad_MQ + head_idx * proj_mat_elements;
-                current_ptrs.d_grad_MK = agg_d_grad_MK + head_idx * proj_mat_elements;
+        // --- Create Streams and Setup Per-Head Pointers ---
+        for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
+            CUDA_CHECK(cudaStreamCreateWithFlags(&streams[head_idx], cudaStreamNonBlocking));
+            // Initialize HeadDevicePointers with correct MLP layer counts
+            head_gpu_data[head_idx] = HeadDevicePointers(); // Use default constructor
+            head_gpu_data[head_idx].d_hor_activations.resize(num_neuron_layers_mlp);
+            head_gpu_data[head_idx].d_hor_weights.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_hor_gweights.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_hor_deltas.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
+            head_gpu_data[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp);
+            
+            HeadDevicePointers& current_ptrs = head_gpu_data[head_idx];
+            current_ptrs.d_expected_h = agg_d_expected_h + head_idx * embedding_dim;
+            current_ptrs.d_EH = agg_d_EH + head_idx * embedding_dim;
+            current_ptrs.d_EV = agg_d_EV + head_idx * ev_single_head_elements;
+            current_ptrs.d_grad_EH = agg_d_grad_EH + head_idx * embedding_dim;
+            current_ptrs.d_grad_EV_scaled = agg_d_grad_EV_scaled + head_idx * embedding_dim;
+            current_ptrs.d_grad_dh = agg_d_grad_dh + head_idx * embedding_dim;
+            current_ptrs.d_grad_dv = agg_d_grad_dv + head_idx * embedding_dim;
+            current_ptrs.d_KdotQ = agg_d_KdotQ + head_idx * max_head_elements_per_head;
+            current_ptrs.d_head = agg_d_head + head_idx * max_head_elements_per_head;
+            current_ptrs.d_K = agg_d_K + head_idx * max_k_q_elements_per_head;
+            current_ptrs.d_Q = agg_d_Q + head_idx * max_k_q_elements_per_head;
+            current_ptrs.d_pre_MH = agg_d_pre_MH + head_idx * pre_mh_mv_elements_per_head;
+            current_ptrs.d_pre_MV = agg_d_pre_MV + head_idx * pre_mh_mv_elements_per_head;
+            current_ptrs.d_MH_a = agg_d_MH_a + head_idx * proj_mat_elements;
+            current_ptrs.d_MV_a = agg_d_MV_a + head_idx * proj_mat_elements;
+            current_ptrs.d_MQ_a = agg_d_MQ_a + head_idx * proj_mat_elements;
+            current_ptrs.d_MK_a = agg_d_MK_a + head_idx * proj_mat_elements;
+            current_ptrs.d_grad_MH = agg_d_grad_MH + head_idx * proj_mat_elements;
+            current_ptrs.d_grad_MV = agg_d_grad_MV + head_idx * proj_mat_elements;
+            current_ptrs.d_grad_head = agg_d_grad_head_storage + head_idx * max_head_elements_per_head;
+            current_ptrs.d_lota_deriv = agg_d_lota_deriv + head_idx * max_head_elements_per_head;
+            current_ptrs.d_grad_KdotQ = agg_d_grad_KdotQ + head_idx * max_head_elements_per_head;
+            current_ptrs.d_grad_K = agg_d_grad_K + head_idx * max_k_q_elements_per_head;
+            current_ptrs.d_grad_Q = agg_d_grad_Q + head_idx * max_k_q_elements_per_head;
+            current_ptrs.d_grad_MQ = agg_d_grad_MQ + head_idx * proj_mat_elements;
+            current_ptrs.d_grad_MK = agg_d_grad_MK + head_idx * proj_mat_elements;
 
-                for (int l = 0; l < num_neuron_layers_mlp; ++l) {
-                    current_ptrs.d_hor_activations[l] = agg_d_hor_activations_storage + (head_idx * num_neuron_layers_mlp + l) * embedding_dim;
-                    current_ptrs.d_ver_activations[l] = agg_d_ver_activations_storage + (head_idx * num_neuron_layers_mlp + l) * embedding_dim;
-                }
-                for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                    current_ptrs.d_hor_weights[l] = agg_d_hor_weights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
-                    current_ptrs.d_ver_weights[l] = agg_d_ver_weights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
-                    current_ptrs.d_hor_gweights[l] = agg_d_hor_gweights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
-                    current_ptrs.d_ver_gweights[l] = agg_d_ver_gweights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
-                    current_ptrs.d_hor_deltas[l] = agg_d_hor_deltas_storage + (head_idx * num_weight_matrices_mlp + l) * embedding_dim;
-                    current_ptrs.d_ver_deltas[l] = agg_d_ver_deltas_storage + (head_idx * num_weight_matrices_mlp + l) * embedding_dim;
-                }
+            for (int l = 0; l < num_neuron_layers_mlp; ++l) {
+                current_ptrs.d_hor_activations[l] = agg_d_hor_activations_storage + (head_idx * num_neuron_layers_mlp + l) * embedding_dim;
+                current_ptrs.d_ver_activations[l] = agg_d_ver_activations_storage + (head_idx * num_neuron_layers_mlp + l) * embedding_dim;
+            }
+            for (int l = 0; l < num_weight_matrices_mlp; ++l) {
+                current_ptrs.d_hor_weights[l] = agg_d_hor_weights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
+                current_ptrs.d_ver_weights[l] = agg_d_ver_weights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
+                current_ptrs.d_hor_gweights[l] = agg_d_hor_gweights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
+                current_ptrs.d_ver_gweights[l] = agg_d_ver_gweights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
+                current_ptrs.d_hor_deltas[l] = agg_d_hor_deltas_storage + (head_idx * num_weight_matrices_mlp + l) * embedding_dim;
+                current_ptrs.d_ver_deltas[l] = agg_d_ver_deltas_storage + (head_idx * num_weight_matrices_mlp + l) * embedding_dim;
+            }
+        }
+
+        // Iterate backwards through the rows (parallels/layers) for the specified column
+        for (int i = num_heads_to_process - 1; i >= 0; --i) { // 'i' is the row index, also used as head_idx
+            attention& head_obj = b[i][layno]; // Reference to the current head object
+            HeadDevicePointers& device_ptrs = head_gpu_data[i]; // Device pointers for this head
+            cudaStream_t current_stream = streams[i];
+
+            const int token_count = head_obj.tokenCount;
+            bool att = head_obj.isSelfAttention;
+            const size_t active_head_elements = static_cast<size_t>(token_count) * token_count;
+            const size_t active_head_bytes = active_head_elements * sizeof(float);
+            const size_t active_k_q_elements = static_cast<size_t>(token_count) * mat_heights;
+            const size_t active_k_q_bytes = active_k_q_elements * sizeof(float);
+            // Adjust 2D grids based on token_count
+            dim3 gridDimHead2D((token_count + blockDim2D.x - 1) / blockDim2D.x, (token_count + blockDim2D.y - 1) / blockDim2D.y);
+            dim3 gridDimKQGrad2D((mat_heights + blockDim2D.x - 1) / blockDim2D.x, (token_count + blockDim2D.y - 1) / blockDim2D.y);
+            int blocksPerGridHead = (static_cast<int>(active_head_elements) + threadsPerBlock1D - 1) / threadsPerBlock1D;
+            dim3 gridDimHead(blocksPerGridHead);
+
+            bool is_first_head = (i == 0 && layno == 0);
+
+            // --- Data Transfer H->D (Async Attention) ---
+            if (!head_obj.EV.mapped_data || !head_obj.K.mapped_data || !head_obj.Q.mapped_data || !head_obj.KdotQ.mapped_data ||
+                !head_obj.MH.mapped_data || !head_obj.MV.mapped_data || !head_obj.MQ.mapped_data || !head_obj.MK.mapped_data) {
+                throw std::runtime_error("One or more attention mat objects have null mapped_data for head [" + std::to_string(i) + "][" + std::to_string(layno) + "]");
+            }
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_expected_h, expectedH[i].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_EH, head_obj.EH.data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_EV, head_obj.EV.mapped_data, ev_single_head_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MH_a, head_obj.MH.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MV_a, head_obj.MV.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MQ_a, head_obj.MQ.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MK_a, head_obj.MK.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
+            if (token_count > 0) {
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_KdotQ, head_obj.KdotQ.mapped_data, active_head_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_K, head_obj.K.mapped_data, active_k_q_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_Q, head_obj.Q.mapped_data, active_k_q_bytes, cudaMemcpyHostToDevice, current_stream));
             }
 
-            // Iterate backwards through the rows (parallels/layers) for the specified column
-            for (int i = num_heads_to_process - 1; i >= 0; --i) { // 'i' is the row index, also used as head_idx
-                attention& head_obj = b[i][layno]; // Reference to the current head object
-                HeadDevicePointers& device_ptrs = head_gpu_data[i]; // Device pointers for this head
-                cudaStream_t current_stream = streams[i];
-
-                const int token_count = head_obj.tokenCount;
-                bool att = head_obj.isSelfAttention;
-                const size_t active_head_elements = static_cast<size_t>(token_count) * token_count;
-                const size_t active_head_bytes = active_head_elements * sizeof(float);
-                const size_t active_k_q_elements = static_cast<size_t>(token_count) * mat_heights;
-                const size_t active_k_q_bytes = active_k_q_elements * sizeof(float);
-                // Adjust 2D grids based on token_count
-                dim3 gridDimHead2D((token_count + blockDim2D.x - 1) / blockDim2D.x, (token_count + blockDim2D.y - 1) / blockDim2D.y);
-                dim3 gridDimKQGrad2D((mat_heights + blockDim2D.x - 1) / blockDim2D.x, (token_count + blockDim2D.y - 1) / blockDim2D.y);
-                int blocksPerGridHead = (static_cast<int>(active_head_elements) + threadsPerBlock1D - 1) / threadsPerBlock1D;
-                dim3 gridDimHead(blocksPerGridHead);
-
-                bool is_first_head = (i == 0 && layno == 0);
-
-                // --- Data Transfer H->D (Async Attention) ---
-                if (!head_obj.EV.mapped_data || !head_obj.K.mapped_data || !head_obj.Q.mapped_data || !head_obj.KdotQ.mapped_data ||
-                    !head_obj.MH.mapped_data || !head_obj.MV.mapped_data || !head_obj.MQ.mapped_data || !head_obj.MK.mapped_data) {
-                    throw std::runtime_error("One or more attention mat objects have null mapped_data for head [" + std::to_string(i) + "][" + std::to_string(layno) + "]");
+            // --- Data Transfer H->D (Async MLP Internals) ---
+            if(head_obj.hor.activations.size() != static_cast<size_t>(num_neuron_layers_mlp) ||
+                head_obj.ver.activations.size() != static_cast<size_t>(num_neuron_layers_mlp)) {
+                throw std::runtime_error("MLP host activations vector size mismatch.");
+            }
+            for (int l = 0; l < num_neuron_layers_mlp; ++l) {
+                if (head_obj.hor.activations[l].empty() || head_obj.ver.activations[l].empty()) {
+                    throw std::runtime_error("MLP activation vector is empty for head [" + std::to_string(i) + "][" + std::to_string(layno) + "], layer " + std::to_string(l));
                 }
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_expected_h, expectedH[i].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_EH, head_obj.EH.data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_EV, head_obj.EV.mapped_data, ev_single_head_bytes, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MH_a, head_obj.MH.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MV_a, head_obj.MV.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MQ_a, head_obj.MQ.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_MK_a, head_obj.MK.mapped_data, proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
-                if (token_count > 0) {
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_KdotQ, head_obj.KdotQ.mapped_data, active_head_bytes, cudaMemcpyHostToDevice, current_stream));
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_K, head_obj.K.mapped_data, active_k_q_bytes, cudaMemcpyHostToDevice, current_stream));
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_Q, head_obj.Q.mapped_data, active_k_q_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_hor_activations[l], head_obj.hor.activations[l].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_ver_activations[l], head_obj.ver.activations[l].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
+            }
+            if(head_obj.hor.weights.size() != static_cast<size_t>(num_weight_matrices_mlp) ||
+                head_obj.ver.weights.size() != static_cast<size_t>(num_weight_matrices_mlp)) {
+                throw std::runtime_error("MLP host weights vector size mismatch.");
+            }
+            for (int l = 0; l < num_weight_matrices_mlp; ++l) {
+                if (!head_obj.hor.weights[l].mapped_data || head_obj.hor.weights[l].row != embedding_dim || head_obj.hor.weights[l].col != embedding_dim ||
+                    !head_obj.ver.weights[l].mapped_data || head_obj.ver.weights[l].row != embedding_dim || head_obj.ver.weights[l].col != embedding_dim ||
+                    !head_obj.hor.gweights[l].mapped_data || head_obj.hor.gweights[l].row != embedding_dim || head_obj.hor.gweights[l].col != embedding_dim ||
+                    !head_obj.ver.gweights[l].mapped_data || head_obj.ver.gweights[l].row != embedding_dim || head_obj.ver.gweights[l].col != embedding_dim) {
+                    throw std::runtime_error("Invalid MLP weight/gweight mat for head [" + std::to_string(i) + "][" + std::to_string(layno) + "], layer " + std::to_string(l));
                 }
-
-                // --- Data Transfer H->D (Async MLP Internals) ---
-                if(head_obj.hor.activations.size() != static_cast<size_t>(num_neuron_layers_mlp) ||
-                   head_obj.ver.activations.size() != static_cast<size_t>(num_neuron_layers_mlp)) {
-                    throw std::runtime_error("MLP host activations vector size mismatch.");
-                }
-                for (int l = 0; l < num_neuron_layers_mlp; ++l) {
-                    if (head_obj.hor.activations[l].empty() || head_obj.ver.activations[l].empty()) {
-                        throw std::runtime_error("MLP activation vector is empty for head [" + std::to_string(i) + "][" + std::to_string(layno) + "], layer " + std::to_string(l));
-                    }
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_hor_activations[l], head_obj.hor.activations[l].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_ver_activations[l], head_obj.ver.activations[l].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
-                }
-                if(head_obj.hor.weights.size() != static_cast<size_t>(num_weight_matrices_mlp) ||
-                   head_obj.ver.weights.size() != static_cast<size_t>(num_weight_matrices_mlp)) {
-                    throw std::runtime_error("MLP host weights vector size mismatch.");
-                }
-                for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                    if (!head_obj.hor.weights[l].mapped_data || head_obj.hor.weights[l].row != embedding_dim || head_obj.hor.weights[l].col != embedding_dim ||
-                        !head_obj.ver.weights[l].mapped_data || head_obj.ver.weights[l].row != embedding_dim || head_obj.ver.weights[l].col != embedding_dim ||
-                        !head_obj.hor.gweights[l].mapped_data || head_obj.hor.gweights[l].row != embedding_dim || head_obj.hor.gweights[l].col != embedding_dim ||
-                        !head_obj.ver.gweights[l].mapped_data || head_obj.ver.gweights[l].row != embedding_dim || head_obj.ver.gweights[l].col != embedding_dim) {
-                        throw std::runtime_error("Invalid MLP weight/gweight mat for head [" + std::to_string(i) + "][" + std::to_string(layno) + "], layer " + std::to_string(l));
-                    }
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_hor_weights[l], head_obj.hor.weights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_ver_weights[l], head_obj.ver.weights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
-                    // Copy gweights if they carry state (e.g., momentum)
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_hor_gweights[l], head_obj.hor.gweights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
-                    CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_ver_gweights[l], head_obj.ver.gweights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
-                }
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_hor_weights[l], head_obj.hor.weights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_ver_weights[l], head_obj.ver.weights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
+                // Copy gweights if they carry state (e.g., momentum)
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_hor_gweights[l], head_obj.hor.gweights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_ver_gweights[l], head_obj.ver.gweights[l].mapped_data, mlp_weights_bytes, cudaMemcpyHostToDevice, current_stream));
+            }
 
             // --- Backpropagation Steps (Async Kernels) ---
             // Step 1: Compute grad_EH and grad_EV_scaled
@@ -356,10 +362,11 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<float>>& expecte
             // --- Step 9 & 10: Update Weights ---
             if (is_first_head) {
                 // Use kernelUpdateWeights_1stHead_H (updates MH, MV, MQ, MK, EH)
-                kernelUpdateWeights_1stHead_H<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(
+                bool update_eh_flag = (layno > 0) ? 1 : 0; // EH updated if not the very first column of the block
+                kernelUpdateWeights_1stHead_H<<<gridDimProjMat, blockDim1D, 0, current_stream>>>( // gridDimProjMat
                     device_ptrs.d_MH_a, device_ptrs.d_MV_a, device_ptrs.d_MQ_a, device_ptrs.d_MK_a, device_ptrs.d_EH,
                     device_ptrs.d_grad_MH, device_ptrs.d_grad_MV, device_ptrs.d_grad_MQ, device_ptrs.d_grad_MK, device_ptrs.d_grad_EH,
-                    learning_rate, true, // update_eh = true
+                    learning_rate, update_eh_flag, // update_eh = true
                     mat_heights, embedding_dim
                 );
                 CUDA_CHECK(cudaGetLastError());
@@ -372,10 +379,12 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<float>>& expecte
                 kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MQ_a, device_ptrs.d_grad_MQ, learning_rate, proj_mat_elements);
                 kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MK_a, device_ptrs.d_grad_MK, learning_rate, proj_mat_elements);
                 CUDA_CHECK(cudaGetLastError());
-                // Update EH (using d_grad_EH, which is the gradient w.r.t. EH after ReLU)
-                kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_EH, learning_rate, embedding_dim);
-                CUDA_CHECK(cudaGetLastError());
-                // Update EV using d_grad_EV_scaled (broadcasted)
+                // For non-first heads in the first block, behave like attention::cuBackward
+                if (layno > 0) { // Corresponds to headnumber > 1 in attention::cuBackward
+                    kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_EH, learning_rate, embedding_dim);
+                    CUDA_CHECK(cudaGetLastError());
+                }
+                // Update EV using d_grad_EV_scaled (0.1f * d_grad_EH)
                 kernelUpdateEVBroadcasted<<< (context_win + threadsPerBlock1D -1) / threadsPerBlock1D, blockDim1D, 0, current_stream >>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_scaled, learning_rate, context_win, embedding_dim);
                 CUDA_CHECK(cudaGetLastError());
             }
@@ -448,15 +457,22 @@ void block::cu1ParallelBackward1stBlock(std::vector<std::vector<float>>& expecte
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cu1ParallelBackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno)
+void block::cupartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
     if (layno < 0 || layno >= y) {
         throw std::out_of_range("cu1ParallelBackward(H): Column index 'layno' (" + std::to_string(layno) + ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
-    if (expectedH.size() != EMBEDDING) {
-        throw std::runtime_error("ExpectedH vector size mismatch in cu1ParallelBackward(H). Expected " + std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH.size()));
+    if (expectedH.size() != static_cast<size_t>(num_heads_to_process)) {
+        throw std::runtime_error("ExpectedH outer vector size mismatch in cu1ParallelBackward1stBlock(std::vector<std::vector<float>>). Expected " +
+            std::to_string(num_heads_to_process) + ", got " + std::to_string(expectedH.size()));
+    }
+    for(int i = 0; i < num_heads_to_process; ++i) {
+        if(expectedH[i].size() != EMBEDDING) {
+            throw std::runtime_error("ExpectedH inner vector size mismatch: Size is " + std::to_string(expectedH[i].size()) + 
+                ", expected " + std::to_string(EMBEDDING) + ".");
+        }
     }
     if (EMBEDDING != in) {
         throw std::runtime_error("Embedding dimension mismatch: EMBEDDING vs in");
@@ -639,7 +655,7 @@ void block::cu1ParallelBackward(std::vector<std::vector<float>>& expectedH, int&
                 if (!head_obj.EV.mapped_data || !head_obj.K.mapped_data || !head_obj.Q.mapped_data || !head_obj.KdotQ.mapped_data ||
                     !head_obj.MH.mapped_data || !head_obj.MV.mapped_data || !head_obj.MQ.mapped_data || !head_obj.MK.mapped_data) {
                     throw std::runtime_error("One or more attention mat objects have null mapped_data for head [" + std::to_string(i) + "][" + std::to_string(layno) + "]");
-                }
+                } // expectedH[i] is the specific expected vector for this head
                 CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_expected_h, expectedH[i].data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
                 CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_EH, head_obj.EH.data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
                 CUDA_CHECK(cudaMemcpyAsync(device_ptrs.d_EV, head_obj.EV.mapped_data, ev_single_head_bytes, cudaMemcpyHostToDevice, current_stream));
@@ -733,8 +749,15 @@ void block::cu1ParallelBackward(std::vector<std::vector<float>>& expectedH, int&
             kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MK_a, device_ptrs.d_grad_MK, learning_rate, proj_mat_elements);
             CUDA_CHECK(cudaGetLastError());
             kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_dh, learning_rate, embedding_dim); // EH updated using grad_dh
-            CUDA_CHECK(cudaGetLastError());
-            kernelUpdateEVBroadcasted<<< (context_win + threadsPerBlock1D -1) / threadsPerBlock1D, blockDim1D, 0, current_stream >>>(device_ptrs.d_EV, device_ptrs.d_grad_dv, learning_rate, context_win, embedding_dim); // EV updated using grad_dv
+            // Update EH using d_grad_EH (initial gradient 2*(EH-expectedH))
+            // Conditional on layno, similar to headnumber in attention::cuBackward
+            if (layno > 0) { // If layno is 0-indexed, this means not the very first column in a sequence of blocks.
+                             // This matches attention::cuBackward's headnumber > 1 condition.
+                kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_EH, learning_rate, embedding_dim);
+                CUDA_CHECK(cudaGetLastError());
+            }
+            // Update EV using d_grad_EV_scaled (0.1f * d_grad_EH)
+            kernelUpdateEVBroadcasted<<< (context_win + threadsPerBlock1D -1) / threadsPerBlock1D, blockDim1D, 0, current_stream >>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_scaled, learning_rate, context_win, embedding_dim);
             CUDA_CHECK(cudaGetLastError());
 
             // --- Data Transfer D->H (Async) ---

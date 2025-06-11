@@ -14,12 +14,12 @@
 
 /**
 * @brief OpenCL Backward Propagation (for first head) using gradients from expected Horizontal output.
-*      Updates MH, MV, MQ, MK, and EH.
+*      Updates MH, MV, MQ, MK, and EH. When layno = 0, EH and EV is not upgraded.
 * @param expected Expected output vector (target embedding for next token prediction)
 * @param in Input size (embedding dimension)
 * @param layers Number of layers in the MLPs
 */
-void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& layers)
+void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
@@ -38,7 +38,7 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
     const size_t mlp_weights_bytes = (this->hor.weights.empty()) ? 0 :
                                    static_cast<size_t>(this->hor.weights[0].row) * this->hor.weights[0].col * sizeof(float);
 
-    bool first = true;
+    bool first = (headnumber > 0) ? 1 : 0;
 
     // Validation
     if (embedding_dim != in) throw std::runtime_error("Embedding dimension mismatch");
@@ -47,10 +47,10 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
         std::cerr << "Warning: clbackward1stHead(expectedH,...) called with token_count <= 0. Skipping." << std::endl;
         return;
     }
-    if (this->K.row != CONTEXT_WIN || this->K.col != EMBEDDING) throw std::runtime_error("K dimensions mismatch");
-    if (this->Q.row != CONTEXT_WIN || this->Q.col != EMBEDDING) throw std::runtime_error("Q dimensions mismatch");
+    if (this->K.row != CONTEXT_WIN || this->K.col != MATHEIGHTS) throw std::runtime_error("K dimensions mismatch");
+    if (this->Q.row != CONTEXT_WIN || this->Q.col != MATHEIGHTS) throw std::runtime_error("Q dimensions mismatch");
     if (this->KdotQ.row != CONTEXT_WIN || this->KdotQ.col != CONTEXT_WIN) throw std::runtime_error("KdotQ dimensions mismatch");
-    if (this->MH.row != EMBEDDING || this->MH.col != MATHEIGHTS) throw std::runtime_error("MH dimensions mismatch");
+    if (this->MH.row != MATHEIGHTS || this->MH.col != EMBEDDING) throw std::runtime_error("MH dimensions mismatch");
     if (this->EV.row != CONTEXT_WIN || this->EV.col != EMBEDDING) throw std::runtime_error("EV dimensions mismatch");
     if (!this->hor.weights.empty() && (this->hor.weights[0].row != EMBEDDING || this->hor.weights[0].col != EMBEDDING))
         throw std::runtime_error("MLP hor.weights dimensions mismatch");
@@ -146,7 +146,7 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
         CL_CHECK(queue.enqueueWriteBuffer(d_hor_gweights[l], CL_TRUE, 0, mlp_weights_bytes, this->hor.gweights[l].mapped_data)); // Also copy gweights if they are input
     }
     // this->ver.weights and d_ver_weights should have 'layers-1' elements
-    for (int l = 0; l < layers-1; ++l) {
+    for (int l = 0; l < layers - 1; ++l) {
         CL_CHECK(queue.enqueueWriteBuffer(d_ver_weights[l], CL_TRUE, 0, mlp_weights_bytes, this->ver.weights[l].mapped_data));
         CL_CHECK(queue.enqueueWriteBuffer(d_ver_gweights[l], CL_TRUE, 0, mlp_weights_bytes, this->ver.gweights[l].mapped_data)); // Also copy gweights if they are input
     }
@@ -244,7 +244,6 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
         for (int l = 0; l < layers - 1; ++l) { // Corrected loop bound
             // Assuming this->ver.activations[0] is the input to the ver MLP.
             cl::Buffer& d_prev_activations_ver = (l == 0) ? d_ver_activations[0] : d_ver_activations[l-1];
-            int prev_layer_size = (l == 0) ? embedding_dim : embedding_dim;
 
             CL_CHECK(update_weights_kernel.setArg(0, d_ver_deltas[l]));
             CL_CHECK(update_weights_kernel.setArg(1, d_prev_activations_ver));
@@ -252,7 +251,7 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
             CL_CHECK(update_weights_kernel.setArg(3, d_ver_gweights[l])); // d_ver_gweights also has layers-1 elements
             // Arg 4 (learning_rate) is already set
             CL_CHECK(update_weights_kernel.setArg(5, embedding_dim));
-            CL_CHECK(update_weights_kernel.setArg(6, prev_layer_size));
+            CL_CHECK(update_weights_kernel.setArg(6, embedding_dim));
             CL_CHECK(queue.enqueueNDRangeKernel(update_weights_kernel, cl::NullRange, global_embed_2d, local_2d));
             CL_CHECK(queue.finish());
         }
@@ -336,7 +335,6 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
         if (this->KdotQ.row * this->KdotQ.col > 0) {
             CL_CHECK(queue.enqueueNDRangeKernel(lota_deriv_kernel, cl::NullRange, global_lota, local_lota));
         }
-
 
         cl::Kernel grad_kdotq_kernel = context_obj.kernels.at("kernelComputeGradKdotQ_LOTA"); // Assumed name
         CL_CHECK(grad_kdotq_kernel.setArg(0, d_grad_head));
@@ -423,9 +421,9 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
 
 
 /**
-* @brief OpenCL Backward Propagation (for first head) using gradients from expected Vertical output only.
-*      Adjusts MQ, MV, and MK (correction). No update to EH/EV.
-*      Uses the clContext member for OpenCL resources.
+* @brief OpenCL Backward Propagation (for first head) using gradients from expected 
+         Vertical output only. Adjusts MQ, MV, and MK (correction). No update to EH/EV.
+*        Uses the clContext member for OpenCL resources.
 * @param expectedV vertical retention vector (host)
 * @param in Input size (embedding dimension - used for MLP)
 * @param layers Number of layers in the MLPs

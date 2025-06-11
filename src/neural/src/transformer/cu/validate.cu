@@ -262,6 +262,14 @@ void transformer::cuValidate(std::vector<std::vector<float>>& prompt, std::vecto
     size_t tokenEmbedBytes = totalTokenEmbedFloats * sizeof(float);
     CUDA_CHECK(cudaMalloc(&d_tokenEmbed, tokenEmbedBytes));
     CUDA_CHECK(cudaMemset(d_tokenEmbed, 0, tokenEmbedBytes)); // Zero out the buffer initially
+    
+    float* dQ; float* dK; float* mQ; float* mK; float* tok;
+    // int threadsPerBlock = 256;
+    CUDA_CHECK(cudaMalloc(&dQ, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
+    CUDA_CHECK(cudaMalloc(&dK, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
+    CUDA_CHECK(cudaMalloc(&mQ, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MQ is MATHEIGHTS x EMBEDDING
+    CUDA_CHECK(cudaMalloc(&mK, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MK is MATHEIGHTS x EMBEDDING
+    CUDA_CHECK(cudaMalloc(&tok, static_cast<size_t>(MATHEIGHTS) * sizeof(float))); // Output of matrix-vector product (MATHEIGHTS elements)
 
     // --- Process Prompt (Host context and Device context) ---
     for (size_t p = 0; p < prompt.size(); ++p) {
@@ -281,6 +289,7 @@ void transformer::cuValidate(std::vector<std::vector<float>>& prompt, std::vecto
         }
         this->currentTokenCount++;
     }
+
     // tokenEmbed should have FULL_CONTEXT rows from initialization.
     // This check is more of an assertion. If it fails, something is wrong with initialization.
     if (static_cast<size_t>(this->tokenEmbed.row) != FULL_CONTEXT) {
@@ -292,6 +301,52 @@ void transformer::cuValidate(std::vector<std::vector<float>>& prompt, std::vecto
     this->promptCount = this->currentTokenCount; // Size of the prompt just added
 
     try {
+        std::cout << "Queries and Keys calculation for prompts" << std::endl;
+        if(blockCount == 1) {
+            for(int i = 0; i < x; i++) {
+                for(int j_head = 0; j_head < y; j_head++) { // Renamed 'j' to 'j_head' to avoid confusion if 'j' is used elsewhere
+                    CUDA_CHECK(cudaMemcpy(mQ, t[0].b[i][j_head].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    CUDA_CHECK(cudaMemcpy(mK, t[0].b[i][j_head].MK.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    for(int k = 0; k < prompt.size(); k++) {
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dQ, prompt[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        CUDA_CHECK(cudaMemcpy(dK, prompt[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[0].b[i][j_head].Q.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                        // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[0].b[i][j_head].K.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                }
+            }
+        }
+        else {
+            for(int i = 0; i < x; i++) {
+                for(int j = 0; j < y; j++) {
+                    CUDA_CHECK(cudaMemcpy(mQ, t[blockCount-1].b[i][j].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    CUDA_CHECK(cudaMemcpy(mK, t[blockCount-1].b[i][j].MK.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    for(int k = 0; k < prompt.size(); k++) {
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dK, prompt[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[i][j].K.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                    for(int k = 0; k < CONTEXT_WIN; k++) {
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dQ, t[blockCount-1].b[i][j].EV(k).data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS); // tok is output, mQ matrix, dQ input
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[i][j].Q.mapped_data + k*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                }
+            }
+        }
+
         // --- Validate Response ---
         for (size_t i = 0; i < response.size(); ++i) {
             if (this->currentTokenCount >= FULL_CONTEXT) {
@@ -332,9 +387,47 @@ void transformer::cuValidate(std::vector<std::vector<float>>& prompt, std::vecto
                     break; // Stop processing if buffer bounds exceeded
                 }
             }
-
+            if(blockCount == 1) {
+                // same block
+                for(int k = 0; k < x; k++) {
+                    for(int j = 0; j < y; j++) {
+                        CUDA_CHECK(cudaMemcpy(mQ, t[0].b[k][j].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS*EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                        CUDA_CHECK(cudaMemcpy(mK, t[0].b[k][j].MK.mapped_data, static_cast<size_t>(MATHEIGHTS*EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dQ, response[i].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        CUDA_CHECK(cudaMemcpy(dK, response[i].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[0].b[k][j].Q.mapped_data + (currentTokenCount%CONTEXT_WIN)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                        // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[0].b[k][j].K.mapped_data + (currentTokenCount%CONTEXT_WIN)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                }
+            }
+            else {
+                // shift to next block
+                for(int k = 0; k < x; k++) {
+                    for(int j = 0; j < y; j++) {
+                        CUDA_CHECK(cudaMemcpy(mQ, t[blockCount-1].b[k][j].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS*EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                        CUDA_CHECK(cudaMemcpy(mK, t[blockCount-1].b[k][j].MK.mapped_data, static_cast<size_t>(MATHEIGHTS*EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                        // H -> D
+                        CUDA_CHECK(cudaMemcpy(dQ, response[i].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice)); // Assuming response[k] is the source
+                        CUDA_CHECK(cudaMemcpy(dK, response[i].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice)); // Assuming response[k] is the source
+                        // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[k][j].Q.mapped_data + (currentTokenCount%CONTEXT_WIN)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                        // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[k][j].K.mapped_data + (currentTokenCount%CONTEXT_WIN)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                }
+            }
         } // End loop over response
-
     }
     catch (const std::exception& e) {
         std::cerr << "Exception in cuValidate(prompt-response): " << e.what() << std::endl;
