@@ -4,9 +4,9 @@
  * helps in maintining continuity for context in next blcok keeps producing tokens
  * till context limit for each block is reached. After all blocks are processed, the 
  * last of EVs are then used to continue the context for next iteration on command.
- *                                                                Complete Attention
- *                                                                        |
- * ----------------------------------------------------------------------\/------------
+ *                                                                   Complete Attention
+ *                                                                           |
+ * -------------------------------------------------------------------------\/---------
  * (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention
  * (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention
  * (Attention Head - Attention Head ----- - Attention Head -> E') --> Partial attention

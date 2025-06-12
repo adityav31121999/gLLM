@@ -318,7 +318,8 @@ void transformer::clRun(std::vector<std::vector<float>> &prompt)
                 }
             } // End of response generation loop
         }
-    } catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
+    }
+    catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
         std::cerr << "Error in transformer::clRun: " << e.what() << std::endl;
         // Cleanup is handled by RAII for cl::Buffer
         throw; // Re-throw

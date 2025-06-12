@@ -103,7 +103,8 @@ void transformer::clTest(int& promptCount, int& currentTokenCount, int& blockCou
              if (h_otok_buffer.size() != static_cast<size_t>(d)) {
                  throw std::runtime_error("clTest(single): EH buffer from block " + std::to_string(current_block_idx) + " has incorrect size.");
              }
-        } else {
+        } 
+        else {
              throw std::runtime_error("clTest(single): Invalid block index (" + std::to_string(current_block_idx) + ") before clComputeOutput.");
         }
 
@@ -153,7 +154,8 @@ void transformer::clTest(int& promptCount, int& currentTokenCount, int& blockCou
 
         // Host tokenEmbed managed by caller
 
-    } catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
+    }
+    catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
         std::cerr << "Standard Exception in clTest(single): " << e.what() << std::endl;
         throw;
     }
@@ -232,7 +234,7 @@ void transformer::clTest(std::vector<std::vector<float>>& sentence, std::vector<
 
 
 /**
- * @brief (OpenCL) Test the transformer for prompt and response.
+ * @brief (OpenCL) Test the transformer for prompt and response (set inTraining or toTrain to 0).
  * @param prompt Prompt token embeddings (on host).
  * @param response Response token embeddings (on host).
  * @param rString Tokens of the response (on host).
@@ -269,7 +271,8 @@ void transformer::clTest(std::vector<std::vector<float>>& prompt, std::vector<st
     if (mat_heights_cl > 0 && x > 0 && y > 0) { // Only if attention is meaningful
         try {
             kq_kernel = cl::Kernel(this->clcontext.program, "kernelCompute_single_kq_vector", &cl_err_kq); CL_CHECK(cl_err_kq);
-        } catch (const std::runtime_error& e) {
+        } 
+        catch (const std::runtime_error& e) {
             std::cerr << "OpenCL Error creating kernel 'kernelCompute_single_kq_vector' in clTest(prompt-response): " << e.what() << std::endl;
             throw;
         }
@@ -331,7 +334,9 @@ void transformer::clTest(std::vector<std::vector<float>>& prompt, std::vector<st
                         size_t host_offset = p_local * mat_heights_cl;
                         CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, prompt[p_glob].data()));
 
-                        kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
+                        kq_kernel.setArg(0, d_tok_cl); 
+                        kq_kernel.setArg(1, d_mK_cl); 
+                        kq_kernel.setArg(2, d_K_cl);
                         kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
                         CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
                         if (current_block_attention.K.mapped_data && (host_offset + mat_heights_cl) <= (current_block_attention.K.row * current_block_attention.K.col)) {
@@ -346,7 +351,9 @@ void transformer::clTest(std::vector<std::vector<float>>& prompt, std::vector<st
                             size_t host_offset = p_local * mat_heights_cl;
                             CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, prompt[p_glob].data()));
                             
-                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                            kq_kernel.setArg(0, d_tok_cl);
+                            kq_kernel.setArg(1, d_mQ_cl); 
+                            kq_kernel.setArg(2, d_Q_cl);
                             // Args 3,4 already set
                             CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
                             if (current_block_attention.Q.mapped_data && (host_offset + mat_heights_cl) <= (current_block_attention.Q.row * current_block_attention.Q.col)) {
@@ -365,7 +372,9 @@ void transformer::clTest(std::vector<std::vector<float>>& prompt, std::vector<st
                                 std::cerr << "Warning: Prev block EV data invalid or out of bounds for index " << k_ev << " in clTest K/Q for prompt." << std::endl; continue;
                             }
                             CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc_kq, prev_block_attention_for_ev.EV.mapped_data + static_cast<size_t>(k_ev) * embedding_dim_cl));
-                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                            kq_kernel.setArg(0, d_tok_cl); 
+                            kq_kernel.setArg(1, d_mQ_cl); 
+                            kq_kernel.setArg(2, d_Q_cl);
                             CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
                             if (current_block_attention.Q.mapped_data && (host_q_offset + mat_heights_cl) <= (current_block_attention.Q.row * current_block_attention.Q.col)) {
                                 CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes_kq, current_block_attention.Q.mapped_data + host_q_offset));
@@ -417,7 +426,7 @@ void transformer::clTest(std::vector<std::vector<float>>& prompt, std::vector<st
             size_t embedding_bytes_loc_kq = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
             size_t projection_matrix_bytes_kq = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
             size_t matheights_bytes_kq = static_cast<size_t>(mat_heights_cl) * sizeof(float);
-
+            // t is vector of block
             if (target_block_idx_resp < 0 || static_cast<size_t>(target_block_idx_resp) >= t.size()) {
                 std::cerr << "Error: target_block_idx_resp out of range for K/Q recomputation of response token in clTest." << std::endl;
             } 

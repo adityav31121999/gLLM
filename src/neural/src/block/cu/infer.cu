@@ -368,17 +368,33 @@ void block::cuInferParallel(const std::vector<mat>& expectedV, const mat& tokFor
 }
 
 
-void block::cuInfer(const mat& tokens, int& in, int& tokenCount, int& layers) {
-    for(int i = 0; i < y; i++) {
-        cuInferParallel(tokens, in, tokenCount, layers, i);
+
+void block::cuInfer(const mat& tokens, int& in, int& tokenCount, int& layers) 
+{
+    for(int j = 0; j < y-1; j++) {
+        // parallel execution
+        cuInferParallel(tokens, in, tokenCount, layers, j);
+        if(j == y-1) break;
+        for(int i = 0; i < x-1; i++) {
+            b[i][j+1].EH = b[i][j].EH;
+        }
     }
 }
 
 
-void block::cuInfer(const std::vector<std::vector<mat>>& expectedV, const mat& tokForBlock, int& in, int& tokenCount, int& blockCount, int& layers, 
-        int& n, int& parallelNumber)
+void block::cuInfer(const std::vector<std::vector<mat>>& expectedV, const mat& tokForBlock, int& in, 
+    int& tokenCount, int& blockCount, int& layers, int& n, int& parallelNumber) 
 {
-    for(int i = 0; i < y; i++) {
-        cuInferParallel(expectedV[i], tokForBlock, in, tokenCount, layers, blockCount, n, i);
+    for(int j = 0; j < y-1; j++) {
+        std::vector<mat> eV(x, mat(CONTEXT_WIN, EMBEDDING));
+        for(int i = 0; i < x-1; i++) {
+            eV[i] = expectedV[i][j];
+        }
+        // parallel execution
+        cuInferParallel(eV, tokForBlock, in, tokenCount, blockCount, layers, n, j);
+        if(j == y-1) break;
+        for(int i = 0; i < x-1; i++) {
+            b[i][j+1].EH = b[i][j].EH;
+        }
     }
 }

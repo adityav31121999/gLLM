@@ -273,8 +273,8 @@ void block::cl1parallelForprop(int& in_dim_param, int& tokenCount_param, int col
 
             // --- Kernel Launches (Copied from attention::clforprop) ---
             const size_t local_work_size_1d = 256;
-            cl::Kernel lota_kernel = get_kernel_with_check(context_obj, "clLOTA2d");
-            size_t totalElementsLOTA = static_cast<size_t>(n_tokens) * n_tokens;
+            cl::Kernel lota_kernel = get_kernel_with_check(context_obj, "clLOTA2dmasking");
+            size_t totalElementsLOTA = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN;
             if (totalElementsLOTA > 0) {
                 size_t global_lota_raw = totalElementsLOTA; //NOLINT
                 size_t local_lota_clamped = (std::min)(global_lota_raw, local_work_size_1d);
@@ -284,27 +284,43 @@ void block::cl1parallelForprop(int& in_dim_param, int& tokenCount_param, int col
                 cl::NDRange local_lota(local_lota_clamped);
                 CL_CHECK(lota_kernel.setArg(0, current_gpu_bufs.d_KdotQ));
                 CL_CHECK(lota_kernel.setArg(1, current_gpu_bufs.d_head_attention));
-                CL_CHECK(lota_kernel.setArg(2, n_tokens));
-                CL_CHECK(lota_kernel.setArg(3, n_tokens));
+                CL_CHECK(lota_kernel.setArg(2, CONTEXT_WIN));
+                CL_CHECK(lota_kernel.setArg(3, CONTEXT_WIN));
+                CL_CHECK(lota_kernel.setArg(4, n_tokens));
+                cl_int cl_att_is_self_lota = this->isSelfAttention ? 1 : 0;
+                CL_CHECK(lota_kernel.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_queue.enqueueNDRangeKernel(lota_kernel, cl::NullRange, global_lota, local_lota));
             } //NOLINT
+
             cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "computeHeadSumsMaskedKernel");
-            size_t global_sums_raw = static_cast<size_t>(n_tokens); size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d); cl_int cl_isSelfAttention = head_cpu.isSelfAttention;
-            CL_CHECK(sums_kernel.setArg(0, current_gpu_bufs.d_head_attention)); CL_CHECK(sums_kernel.setArg(1, current_gpu_bufs.d_row_sums)); CL_CHECK(sums_kernel.setArg(2, current_gpu_bufs.d_col_sums)); CL_CHECK(sums_kernel.setArg(3, n_tokens)); CL_CHECK(sums_kernel.setArg(4, cl_isSelfAttention));
+            size_t global_sums_raw = static_cast<size_t>(n_tokens); 
+            size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
+            cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d); 
+            cl_int cl_isSelfAttention = head_cpu.isSelfAttention;
+            CL_CHECK(sums_kernel.setArg(0, current_gpu_bufs.d_head_attention)); 
+            CL_CHECK(sums_kernel.setArg(1, current_gpu_bufs.d_row_sums)); 
+            CL_CHECK(sums_kernel.setArg(2, current_gpu_bufs.d_col_sums)); 
+            CL_CHECK(sums_kernel.setArg(3, n_tokens)); 
+            CL_CHECK(sums_kernel.setArg(4, cl_isSelfAttention));
             CL_CHECK(current_queue.enqueueNDRangeKernel(sums_kernel, cl::NullRange, global_sums, local_sums));
+
             cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "accumulateWeightedVectorsKernel");
-            size_t global_accum_raw = static_cast<size_t>(n_tokens); size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_accum(global_accum_padded); cl::NDRange local_accum(local_work_size_1d);
+            size_t global_accum_raw = static_cast<size_t>(n_tokens); 
+            size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_accum(global_accum_padded); cl::NDRange local_accum(local_work_size_1d);
             CL_CHECK(accum_kernel.setArg(0, current_gpu_bufs.d_row_sums)); CL_CHECK(accum_kernel.setArg(1, current_gpu_bufs.d_col_sums)); CL_CHECK(accum_kernel.setArg(2, current_gpu_bufs.d_K)); CL_CHECK(accum_kernel.setArg(3, current_gpu_bufs.d_Q)); CL_CHECK(accum_kernel.setArg(4, current_gpu_bufs.d_dh_accum)); CL_CHECK(accum_kernel.setArg(5, current_gpu_bufs.d_dv_accum)); CL_CHECK(accum_kernel.setArg(6, n_tokens)); CL_CHECK(accum_kernel.setArg(7, h_attention));
             CL_CHECK(current_queue.enqueueNDRangeKernel(accum_kernel, cl::NullRange, global_accum, local_accum));
+
             cl::Kernel proj_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
             size_t global_proj_raw = static_cast<size_t>(d_embedding); size_t global_proj_padded = ((global_proj_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_proj(global_proj_padded); cl::NDRange local_proj(local_work_size_1d);
             CL_CHECK(proj_kernel.setArg(3, h_attention)); CL_CHECK(proj_kernel.setArg(4, d_embedding));
             CL_CHECK(proj_kernel.setArg(0, current_gpu_bufs.d_dh_accum)); CL_CHECK(proj_kernel.setArg(1, current_gpu_bufs.d_MH_hxd)); CL_CHECK(proj_kernel.setArg(2, current_gpu_bufs.d_dh)); CL_CHECK(current_queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
             CL_CHECK(proj_kernel.setArg(0, current_gpu_bufs.d_dv_accum)); CL_CHECK(proj_kernel.setArg(1, current_gpu_bufs.d_MV_hxd)); CL_CHECK(proj_kernel.setArg(2, current_gpu_bufs.d_dv)); CL_CHECK(current_queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
             CL_CHECK(current_queue.finish()); // Intermediate sync for this head
+
             cl::Kernel add_kernel = get_kernel_with_check(context_obj, "vectorAddKernel");
             size_t global_add_raw = static_cast<size_t>(d_embedding); size_t global_add_padded = ((global_add_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_add(global_add_padded); cl::NDRange local_add(local_work_size_1d); CL_CHECK(add_kernel.setArg(3, d_embedding));
             CL_CHECK(add_kernel.setArg(0, current_gpu_bufs.d_EH)); CL_CHECK(add_kernel.setArg(1, current_gpu_bufs.d_dh)); CL_CHECK(add_kernel.setArg(2, current_gpu_bufs.d_hor_inputs)); CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
+            
             cl::Kernel accum_ev_kernel = get_kernel_with_check(context_obj, "accumulateEVRowsKernelCL");
             CL_CHECK(accum_ev_kernel.setArg(0, current_gpu_bufs.d_EV_processed_data)); CL_CHECK(accum_ev_kernel.setArg(1, current_gpu_bufs.d_ver_accumulated_ev)); CL_CHECK(accum_ev_kernel.setArg(2, n_tokens)); CL_CHECK(accum_ev_kernel.setArg(3, d_embedding));
             CL_CHECK(current_queue.enqueueNDRangeKernel(accum_ev_kernel, cl::NullRange, global_add, local_add));
@@ -316,6 +332,7 @@ void block::cl1parallelForprop(int& in_dim_param, int& tokenCount_param, int col
             cl::Kernel sigmoid_kernel = get_kernel_with_check(context_obj, "clSigmoid1d");
             CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_hor_inputs, current_gpu_bufs.d_mlp_bufferA_hor, 0, 0, embed_bytes_ph));
             CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_ver_inputs, current_gpu_bufs.d_mlp_bufferA_ver, 0, 0, embed_bytes_ph));
+            
             cl::Buffer& current_in_hor = current_gpu_bufs.d_mlp_bufferA_hor; cl::Buffer& current_out_hor = current_gpu_bufs.d_mlp_bufferB_hor;
             cl::Buffer& current_in_ver = current_gpu_bufs.d_mlp_bufferA_ver; cl::Buffer& current_out_ver = current_gpu_bufs.d_mlp_bufferB_ver;
             size_t num_weight_matrices = head_cpu.hor.weights.size();
@@ -591,8 +608,8 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
             // --- Kernel Launches
             const size_t local_work_size_1d = 256;
-            cl::Kernel lota_kernel = get_kernel_with_check(context_obj, "clLOTA2d");
-            size_t totalElementsLOTA = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block;
+            cl::Kernel lota_kernel = get_kernel_with_check(context_obj, "clLOTA2dmasking");
+            size_t totalElementsLOTA = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN;
             if (totalElementsLOTA > 0) {
                 size_t global_lota_raw = totalElementsLOTA; //NOLINT
                 size_t local_lota_clamped = (std::min)(global_lota_raw, local_work_size_1d);
@@ -600,7 +617,13 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
                 size_t global_lota_padded = ((global_lota_raw + local_lota_clamped - 1) / local_lota_clamped) * local_lota_clamped;
                 cl::NDRange global_lota(global_lota_padded);
                 cl::NDRange local_lota(local_lota_clamped);
-                CL_CHECK(lota_kernel.setArg(0, current_gpu_bufs.d_KdotQ)); CL_CHECK(lota_kernel.setArg(1, current_gpu_bufs.d_head_attention)); CL_CHECK(lota_kernel.setArg(2, count_tokens_in_block)); CL_CHECK(lota_kernel.setArg(3, count_tokens_in_block));
+                CL_CHECK(lota_kernel.setArg(0, current_gpu_bufs.d_KdotQ));
+                CL_CHECK(lota_kernel.setArg(1, current_gpu_bufs.d_head_attention)); 
+                CL_CHECK(lota_kernel.setArg(2, CONTEXT_WIN)); 
+                CL_CHECK(lota_kernel.setArg(3, CONTEXT_WIN));
+                CL_CHECK(lota_kernel.setArg(4, tokenCount));
+                cl_int cl_att_is_self_lota = this->isSelfAttention ? 1 : 0;
+                CL_CHECK(lota_kernel.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_queue.enqueueNDRangeKernel(lota_kernel, cl::NullRange, global_lota, local_lota));
             } //NOLINT
 

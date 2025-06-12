@@ -299,7 +299,8 @@ void tokenize(std::string &line, std::vector<std::string> &tokensOfFile, std::ve
     if (!current_sub_sentence_tokens.empty()) {
         if (sub_sentence_count % 2 == 0) {
             oddSentence.push_back(current_sub_sentence_tokens);
-        } else {
+        } 
+        else {
             current_sub_sentence_tokens.push_back("@#0");
             evenSentence.push_back(current_sub_sentence_tokens);
         }

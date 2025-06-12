@@ -1,14 +1,3 @@
-/**
- * @file mlp.hpp
- * Header file for the Multi-layer Perceptron (MLP) class and its related functions.
- * This file contains the declaration of the MLP class, which is used to create
- * and manage a multi-layer perceptron neural network. The file also includes
- * necessary headers and dependencies required for the MLP class.
- * Dependencies:
- * - <maths.hpp>: For activation functions and the shared OpenCLContext.
- * The MLP class provides methods to initialize the network, perform forward
- * propagation, and apply activation functions to the network layers.
- */
 
 #ifndef MLP_HPP
 #define MLP_HPP 1
@@ -31,7 +20,7 @@ public:
     unsigned int num_layers;    // Total number of layers (including input and output)
     std::vector<unsigned int> layer_sizes; // Number of neurons in each layer
     unsigned int epochs;        // Training epochs
-    float learning_rate;    // Learning rate
+    float learning_rate;        // Learning rate
 // member containers
     std::vector<float> input;      // input vector
     std::vector<float> output;     // output vector

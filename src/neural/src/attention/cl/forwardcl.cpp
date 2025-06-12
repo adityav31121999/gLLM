@@ -137,8 +137,8 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
 
         // 1. Calculate Attention Weights: head = LOTA(KdotQ)
         // Use clLOTA2d as KdotQ is 2D
-        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2d");
-        size_t totalElementsLOTA = static_cast<size_t>(n) * n;
+        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2dmasking");
+        size_t totalElementsLOTA = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN;
         size_t global_work_size_lota[1] = { (totalElementsLOTA + local_work_size_1d - 1) / local_work_size_1d * local_work_size_1d };
         size_t local_work_size_lota[1] = { local_work_size_1d };
         if (totalElementsLOTA > 0) {
@@ -152,10 +152,12 @@ void attention::clforprop(int& d_embedding, int& layers_mlp, int& currentTokenCo
 
             CL_CHECK(lota_kernel.setArg(0, d_KdotQ));
             CL_CHECK(lota_kernel.setArg(1, d_head));
-            CL_CHECK(lota_kernel.setArg(2, n)); // rows
-            CL_CHECK(lota_kernel.setArg(3, n)); // cols
+            CL_CHECK(lota_kernel.setArg(2, CONTEXT_WIN)); // rows
+            CL_CHECK(lota_kernel.setArg(3, CONTEXT_WIN)); // cols
+            CL_CHECK(lota_kernel.setArg(4, n)); // cols
+            cl_int cl_att_is_self_lota = this->isSelfAttention ? 1 : 0;
+            CL_CHECK(lota_kernel.setArg(5, cl_att_is_self_lota));
             CL_CHECK(queue.enqueueNDRangeKernel(lota_kernel, cl::NullRange, global_lota, local_lota));
-            
 
             // 2. Compute Head Row/Column Sums (Masked)
             cl::Kernel sums_kernel = context_obj.kernels.at("computeHeadSumsMaskedKernel"); // Use the new kernel
@@ -546,8 +548,8 @@ void attention::clforprop(std::vector<std::vector<float>> /* EVp */, int& d_embe
         const size_t local_work_size_1d = 256;
 
         // 1. Calculate Attention Weights: head = LOTA(KdotQ)
-        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2d");
-        size_t totalElementsLOTA = static_cast<size_t>(count) * count;
+        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2dmasking");
+        size_t totalElementsLOTA = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN;
         if (totalElementsLOTA > 0) {
             // Same launch considerations as in the first overload, using 'count'
             size_t global_lota_raw = totalElementsLOTA;
@@ -560,8 +562,11 @@ void attention::clforprop(std::vector<std::vector<float>> /* EVp */, int& d_embe
 
             CL_CHECK(lota_kernel.setArg(0, d_KdotQ));
             CL_CHECK(lota_kernel.setArg(1, d_head));
-            CL_CHECK(lota_kernel.setArg(2, count)); // rows
-            CL_CHECK(lota_kernel.setArg(3, count)); // cols
+            CL_CHECK(lota_kernel.setArg(2, CONTEXT_WIN)); // rows
+            CL_CHECK(lota_kernel.setArg(3, CONTEXT_WIN)); // cols
+            CL_CHECK(lota_kernel.setArg(4, count)); // cols
+            cl_int cl_att_is_self_lota = this->isSelfAttention ? 1 : 0;
+            CL_CHECK(lota_kernel.setArg(5, cl_att_is_self_lota));
             CL_CHECK(queue.enqueueNDRangeKernel(lota_kernel, cl::NullRange, global_lota, local_lota));
         }
         // Removed the 'else' block that was here, as the if (totalElementsLOTA > 0) covers the skip logic.

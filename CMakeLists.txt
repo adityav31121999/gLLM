@@ -4,8 +4,9 @@ cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 
 # project and version
 project(gLLM C CXX)
-set(VERSION 0.0.0.1)
-message("Project Name: ${PROJECT_NAME} ${VERSION}")
+set(VERSION 0.1.0.1)
+message("Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
+message("DCA Experimental Project for structure and logic verification")
 
 # language settings
 enable_language(C CXX)
@@ -29,7 +30,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
 set(USE_OPENCL OFF)
-set(USE_CUDA ON)
+set(USE_CUDA OFF)
 # set(USE_CPU OFF)
 
 # set compile definitions
@@ -80,10 +81,14 @@ foreach(projects IN LISTS subProjects)
     endif()
 endforeach()
 
+# List ALL source files needed for the executable
+# Define the executable with its main source file
+add_executable(gLLM main.cpp kernels.cpp gllm.h)
+
 # Link libraries based on the selected backend
 if(USE_OPENCL)
     target_link_libraries(gLLM PRIVATE OpenCL::OpenCL)
 endif()
 
 # Link the executable against the libraries from subdirectories
-#target_link_libraries(${PROJECT_NAME} PRIVATE memorymap maths neural model)
+target_link_libraries(gLLM PRIVATE memorymap maths neural model)

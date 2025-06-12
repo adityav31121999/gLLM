@@ -105,8 +105,8 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
 
         const size_t local_work_size_1d = 256;
 
-        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2d");
-        size_t totalElementsLOTA = static_cast<size_t>(n) * n;
+        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2dmasking");
+        size_t totalElementsLOTA = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN;
         if (totalElementsLOTA > 0) {
             size_t global_lota_raw = totalElementsLOTA;
             size_t local_lota_clamped = std::min<size_t>(global_lota_raw, local_work_size_1d);
@@ -114,8 +114,13 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
             size_t global_lota_padded = ((global_lota_raw + local_lota_clamped - 1) / local_lota_clamped) * local_lota_clamped;
             cl::NDRange global_lota(global_lota_padded);
             cl::NDRange local_lota(local_lota_clamped);
-            CL_CHECK(lota_kernel.setArg(0, d_KdotQ)); CL_CHECK(lota_kernel.setArg(1, d_head));
-            CL_CHECK(lota_kernel.setArg(2, n)); CL_CHECK(lota_kernel.setArg(3, n));
+            CL_CHECK(lota_kernel.setArg(0, d_KdotQ)); 
+            CL_CHECK(lota_kernel.setArg(1, d_head));
+            CL_CHECK(lota_kernel.setArg(2, CONTEXT_WIN)); 
+            CL_CHECK(lota_kernel.setArg(3, CONTEXT_WIN));
+            CL_CHECK(lota_kernel.setArg(4, tokenCount));
+            cl_int cl_att_is_self_lota = this->isSelfAttention ? 1 : 0;
+            CL_CHECK(lota_kernel.setArg(5, cl_att_is_self_lota));
             CL_CHECK(queue.enqueueNDRangeKernel(lota_kernel, cl::NullRange, global_lota, local_lota));
         }
 
@@ -125,8 +130,10 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         cl::NDRange global_sums(global_sums_padded);
         cl::NDRange local_sums(local_work_size_1d);
         cl_int cl_isSelfAttention = isSelfAttention;
-        CL_CHECK(sums_kernel.setArg(0, d_head)); CL_CHECK(sums_kernel.setArg(1, d_row_sums));
-        CL_CHECK(sums_kernel.setArg(2, d_col_sums)); CL_CHECK(sums_kernel.setArg(3, n));
+        CL_CHECK(sums_kernel.setArg(0, d_head)); 
+        CL_CHECK(sums_kernel.setArg(1, d_row_sums));
+        CL_CHECK(sums_kernel.setArg(2, d_col_sums)); 
+        CL_CHECK(sums_kernel.setArg(3, n));
         CL_CHECK(sums_kernel.setArg(4, cl_isSelfAttention));
         CL_CHECK(queue.enqueueNDRangeKernel(sums_kernel, cl::NullRange, global_sums, local_sums));
 
@@ -135,10 +142,14 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
         cl::NDRange global_accum_d(global_accum_padded); // For d-sized outputs
         cl::NDRange local_accum_d(local_work_size_1d);
-        CL_CHECK(accum_kernel.setArg(0, d_row_sums)); CL_CHECK(accum_kernel.setArg(1, d_col_sums));
-        CL_CHECK(accum_kernel.setArg(2, d_K)); CL_CHECK(accum_kernel.setArg(3, d_Q));
-        CL_CHECK(accum_kernel.setArg(4, d_dh_accum)); CL_CHECK(accum_kernel.setArg(5, d_dv_accum));
-        CL_CHECK(accum_kernel.setArg(6, n)); CL_CHECK(accum_kernel.setArg(7, d)); // h_dim is d
+        CL_CHECK(accum_kernel.setArg(0, d_row_sums)); 
+        CL_CHECK(accum_kernel.setArg(1, d_col_sums));
+        CL_CHECK(accum_kernel.setArg(2, d_K)); 
+        CL_CHECK(accum_kernel.setArg(3, d_Q));
+        CL_CHECK(accum_kernel.setArg(4, d_dh_accum)); 
+        CL_CHECK(accum_kernel.setArg(5, d_dv_accum));
+        CL_CHECK(accum_kernel.setArg(6, n)); 
+        CL_CHECK(accum_kernel.setArg(7, d)); // h_dim is d
         CL_CHECK(queue.enqueueNDRangeKernel(accum_kernel, cl::NullRange, global_accum_d, local_accum_d));
 
         cl::Kernel proj_kernel = context_obj.kernels.at("kernelLayerForward");
@@ -146,11 +157,14 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         size_t global_proj_padded = ((global_proj_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
         cl::NDRange global_proj(global_proj_padded);
         cl::NDRange local_proj(local_work_size_1d);
-        CL_CHECK(proj_kernel.setArg(0, d_dh_accum)); CL_CHECK(proj_kernel.setArg(1, d_khCache));
-        CL_CHECK(proj_kernel.setArg(2, d_dh)); CL_CHECK(proj_kernel.setArg(3, d)); // input_size d
+        CL_CHECK(proj_kernel.setArg(0, d_dh_accum)); 
+        CL_CHECK(proj_kernel.setArg(1, d_khCache));
+        CL_CHECK(proj_kernel.setArg(2, d_dh)); 
+        CL_CHECK(proj_kernel.setArg(3, d)); // input_size d
         CL_CHECK(proj_kernel.setArg(4, d)); // output_size d
         CL_CHECK(queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
-        CL_CHECK(proj_kernel.setArg(0, d_dv_accum)); CL_CHECK(proj_kernel.setArg(1, d_qvCache));
+        CL_CHECK(proj_kernel.setArg(0, d_dv_accum)); 
+        CL_CHECK(proj_kernel.setArg(1, d_qvCache));
         CL_CHECK(proj_kernel.setArg(2, d_dv)); // Args 3,4 already d
         CL_CHECK(queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
 
@@ -159,16 +173,21 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         size_t global_add_padded = ((global_add_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
         cl::NDRange global_add(global_add_padded);
         cl::NDRange local_add(local_work_size_1d);
-        CL_CHECK(add_kernel.setArg(0, d_EH)); CL_CHECK(add_kernel.setArg(1, d_dh));
-        CL_CHECK(add_kernel.setArg(2, d_hor_inputs)); CL_CHECK(add_kernel.setArg(3, d));
+        CL_CHECK(add_kernel.setArg(0, d_EH)); 
+        CL_CHECK(add_kernel.setArg(1, d_dh));
+        CL_CHECK(add_kernel.setArg(2, d_hor_inputs)); 
+        CL_CHECK(add_kernel.setArg(3, d));
         CL_CHECK(queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
 
         cl::Kernel accum_ev_kernel = context_obj.kernels.at("accumulateEVRowsKernelCL");
-        CL_CHECK(accum_ev_kernel.setArg(0, d_EV_buffer)); CL_CHECK(accum_ev_kernel.setArg(1, d_ver_accumulated_ev));
-        CL_CHECK(accum_ev_kernel.setArg(2, n)); CL_CHECK(accum_ev_kernel.setArg(3, d)); // Sum first n rows
+        CL_CHECK(accum_ev_kernel.setArg(0, d_EV_buffer)); 
+        CL_CHECK(accum_ev_kernel.setArg(1, d_ver_accumulated_ev));
+        CL_CHECK(accum_ev_kernel.setArg(2, n)); 
+        CL_CHECK(accum_ev_kernel.setArg(3, d)); // Sum first n rows
         CL_CHECK(queue.enqueueNDRangeKernel(accum_ev_kernel, cl::NullRange, global_add, local_add)); // global_add is for size d
 
-        CL_CHECK(add_kernel.setArg(0, d_ver_accumulated_ev)); CL_CHECK(add_kernel.setArg(1, d_dv));
+        CL_CHECK(add_kernel.setArg(0, d_ver_accumulated_ev)); 
+        CL_CHECK(add_kernel.setArg(1, d_dv));
         CL_CHECK(add_kernel.setArg(2, d_ver_inputs)); // Arg 3 already d
         CL_CHECK(queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
         CL_CHECK(queue.finish());
@@ -193,21 +212,28 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
             // Hor
             CL_CHECK(queue.enqueueWriteBuffer(d_mlp_weights, CL_FALSE, 0, mlp_weights_bytes, weights_hor_mat.mapped_data));
             cl::Buffer& target_hor = is_last_layer ? d_hor_output : d_mlp_pre_activation;
-            CL_CHECK(mlp_fwd_kernel.setArg(0, current_in_hor)); CL_CHECK(mlp_fwd_kernel.setArg(1, d_mlp_weights));
-            CL_CHECK(mlp_fwd_kernel.setArg(2, target_hor)); CL_CHECK(mlp_fwd_kernel.setArg(3, mlp_io_size)); CL_CHECK(mlp_fwd_kernel.setArg(4, mlp_io_size));
+            CL_CHECK(mlp_fwd_kernel.setArg(0, current_in_hor)); 
+            CL_CHECK(mlp_fwd_kernel.setArg(1, d_mlp_weights));
+            CL_CHECK(mlp_fwd_kernel.setArg(2, target_hor)); 
+            CL_CHECK(mlp_fwd_kernel.setArg(3, mlp_io_size)); 
+            CL_CHECK(mlp_fwd_kernel.setArg(4, mlp_io_size));
             CL_CHECK(queue.enqueueNDRangeKernel(mlp_fwd_kernel, cl::NullRange, global_proj, local_proj));
             if (!is_last_layer) {
-                CL_CHECK(sigmoid_kernel.setArg(0, d_mlp_pre_activation)); CL_CHECK(sigmoid_kernel.setArg(1, current_out_hor)); CL_CHECK(sigmoid_kernel.setArg(2, mlp_io_size));
+                CL_CHECK(sigmoid_kernel.setArg(0, d_mlp_pre_activation)); 
+                CL_CHECK(sigmoid_kernel.setArg(1, current_out_hor)); 
+                CL_CHECK(sigmoid_kernel.setArg(2, mlp_io_size));
                 CL_CHECK(queue.enqueueNDRangeKernel(sigmoid_kernel, cl::NullRange, global_proj, local_proj));
                 std::swap(current_in_hor, current_out_hor);
             }
             // Ver
             CL_CHECK(queue.enqueueWriteBuffer(d_mlp_weights, CL_FALSE, 0, mlp_weights_bytes, weights_ver_mat.mapped_data)); // Non-blocking
             cl::Buffer& target_ver = is_last_layer ? d_ver_output : d_mlp_pre_activation; // Reuse d_mlp_pre_activation
-            CL_CHECK(mlp_fwd_kernel.setArg(0, current_in_ver)); CL_CHECK(mlp_fwd_kernel.setArg(1, d_mlp_weights)); CL_CHECK(mlp_fwd_kernel.setArg(2, target_ver));
+            CL_CHECK(mlp_fwd_kernel.setArg(0, current_in_ver)); 
+            CL_CHECK(mlp_fwd_kernel.setArg(1, d_mlp_weights)); CL_CHECK(mlp_fwd_kernel.setArg(2, target_ver));
             CL_CHECK(queue.enqueueNDRangeKernel(mlp_fwd_kernel, cl::NullRange, global_proj, local_proj));
             if (!is_last_layer) {
-                CL_CHECK(sigmoid_kernel.setArg(0, d_mlp_pre_activation)); CL_CHECK(sigmoid_kernel.setArg(1, current_out_ver));
+                CL_CHECK(sigmoid_kernel.setArg(0, d_mlp_pre_activation)); 
+                CL_CHECK(sigmoid_kernel.setArg(1, current_out_ver));
                 CL_CHECK(queue.enqueueNDRangeKernel(sigmoid_kernel, cl::NullRange, global_proj, local_proj));
                 std::swap(current_in_ver, current_out_ver);
             }
@@ -216,14 +242,17 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         // --- End MLPs ---
 
         cl::Kernel relu_kernel = context_obj.kernels.at("clReLU1d");
-        CL_CHECK(relu_kernel.setArg(0, d_hor_output)); CL_CHECK(relu_kernel.setArg(1, d_relu_hor_output));
+        CL_CHECK(relu_kernel.setArg(0, d_hor_output)); 
+        CL_CHECK(relu_kernel.setArg(1, d_relu_hor_output));
         CL_CHECK(relu_kernel.setArg(2, d));
         CL_CHECK(queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add));
-        CL_CHECK(relu_kernel.setArg(0, d_ver_output)); CL_CHECK(relu_kernel.setArg(1, d_relu_ver_output));
+        CL_CHECK(relu_kernel.setArg(0, d_ver_output)); 
+        CL_CHECK(relu_kernel.setArg(1, d_relu_ver_output));
         CL_CHECK(queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add));
         CL_CHECK(queue.finish());
 
-        CL_CHECK(add_kernel.setArg(0, d_EH)); CL_CHECK(add_kernel.setArg(1, d_relu_hor_output));
+        CL_CHECK(add_kernel.setArg(0, d_EH)); 
+        CL_CHECK(add_kernel.setArg(1, d_relu_hor_output));
         CL_CHECK(add_kernel.setArg(2, d_EH)); // Update d_EH in-place
         CL_CHECK(queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
 
@@ -232,8 +261,10 @@ void attention::clInferHead(const mat& tokens, int& d_embedding, int& layers_mlp
         size_t global_update_ev_padded = ((global_update_ev_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
         cl::NDRange global_update_ev(global_update_ev_padded);
         cl::NDRange local_update_ev(local_work_size_1d);
-        CL_CHECK(update_ev_kernel.setArg(0, d_EV_buffer)); CL_CHECK(update_ev_kernel.setArg(1, d_relu_ver_output));
-        CL_CHECK(update_ev_kernel.setArg(2, context_win_size)); CL_CHECK(update_ev_kernel.setArg(3, d));
+        CL_CHECK(update_ev_kernel.setArg(0, d_EV_buffer)); 
+        CL_CHECK(update_ev_kernel.setArg(1, d_relu_ver_output));
+        CL_CHECK(update_ev_kernel.setArg(2, context_win_size)); 
+        CL_CHECK(update_ev_kernel.setArg(3, d));
         CL_CHECK(queue.enqueueNDRangeKernel(update_ev_kernel, cl::NullRange, global_update_ev, local_update_ev));
         CL_CHECK(queue.finish());
 
@@ -366,16 +397,21 @@ void attention::clInferHead(mat& EVp_mat, const mat& tokForBlock, int& d_embeddi
         const size_t local_work_size_1d = 256;
 
         // Kernels for LOTA, sums, accumulation (use currentBlockTokenCount for K,Q,KdotQ related sizes)
-        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2d");
-        size_t totalElementsLOTA = static_cast<size_t>(currentBlockTokenCount) * currentBlockTokenCount;
+        cl::Kernel lota_kernel = context_obj.kernels.at("clLOTA2dMasking");
+        size_t totalElementsLOTA = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN;
          if (totalElementsLOTA > 0) {
             size_t global_lota_raw = totalElementsLOTA;
             size_t local_lota_clamped = std::min<int>(global_lota_raw, local_work_size_1d);
             if (local_lota_clamped == 0) local_lota_clamped = 1;
             size_t global_lota_padded = ((global_lota_raw + local_lota_clamped - 1) / local_lota_clamped) * local_lota_clamped;
             cl::NDRange global_lota(global_lota_padded); cl::NDRange local_lota(local_lota_clamped);
-            CL_CHECK(lota_kernel.setArg(0, d_KdotQ)); CL_CHECK(lota_kernel.setArg(1, d_head));
-            CL_CHECK(lota_kernel.setArg(2, currentBlockTokenCount)); CL_CHECK(lota_kernel.setArg(3, currentBlockTokenCount));
+            CL_CHECK(lota_kernel.setArg(0, d_KdotQ)); 
+            CL_CHECK(lota_kernel.setArg(1, d_head));
+            CL_CHECK(lota_kernel.setArg(2, CONTEXT_WIN)); 
+            CL_CHECK(lota_kernel.setArg(3, CONTEXT_WIN));
+            CL_CHECK(lota_kernel.setArg(4, tokenCount));
+            cl_int cl_att_is_self_lota = this->isSelfAttention ? 1 : 0;
+            CL_CHECK(lota_kernel.setArg(5, cl_att_is_self_lota));
             CL_CHECK(queue.enqueueNDRangeKernel(lota_kernel, cl::NullRange, global_lota, local_lota));
         }
 

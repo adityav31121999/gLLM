@@ -29,18 +29,18 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     // Step 2: Backprop through MLPs (hor for EH, ver for EV)
-    std::vector<float> grad_hor_input(EMBEDDING, 0.0f);
-    std::vector<float> grad_ver_input(EMBEDDING, 0.0f);
+    std::vector<float> grad_hor_output(EMBEDDING, 0.0f);
+    std::vector<float> grad_ver_output(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_hor_input[i] = grad_EH[i] * (hor.output[i] > 0 ? 1.0f : 0.0f);
-        grad_ver_input[i] = grad_EV[i] * (ver.output[i] > 0 ? 1.0f : 0.0f);
+        grad_hor_output[i] = grad_EH[i] * (hor.output[i] > 0 ? 1.0f : 0.0f);
+        grad_ver_output[i] = grad_EV[i] * (ver.output[i] > 0 ? 1.0f : 0.0f);
     }
 
     // Set MLP inputs for backprop
-    hor.expected = grad_hor_input;
-    ver.expected = grad_ver_input;
+    hor.expected = grad_hor_output;
+    ver.expected = grad_ver_output;
     hor.backprop(in, layers, LEARNING);
-    ver.backward(in, layers, LEARNING);
+    ver.backprop(in, layers, LEARNING);
 
     if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || 
         ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
