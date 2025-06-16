@@ -87,7 +87,7 @@ public:
     std::vector<std::string> tinput;        // token input
     std::vector<std::string> expected;      // expected token output
     std::vector<std::string> toutput;       // predicted token output
-    std::vector<std::string> token;         // Input + Expected/Output + Terminator
+    std::vector<std::string> chatToken;     // Input + Expected/Output + Terminator
 
     long long int matOffset;                // matrix offset
     long long int mlpOffset;                // mlp offset
@@ -152,9 +152,6 @@ public:
     void newChat();         // for new chat clear everything and set all to 0
     void endChat();         // end chat, save parameters and clear all the memory, exit transformer
     void saveChat();        // save chat to file
-    void inferenceAttention();
-    void inferenceParallel();
-    void inferenceBlock();
 
     // Destructor to ensure modelFILE is closed
     ~model() {
@@ -175,10 +172,7 @@ static bool is_sub_sentence_delimiter(char c);
 static bool is_digit(char c);
 void textSplit(std::string& path2file, std::vector<std::string>& tokensOfFile, std::vector<std::vector<std::string>>& oddSentence, 
                 std::vector<std::vector<std::string>>& evenSentence);
-void tokenize(const std::string& str, std::vector<std::string>& tokens);
 void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens);
-void tokenize(std::string& line, std::vector<std::string>& tokensOfFile, std::vector<std::vector<std::string>>& oddSentence, 
-                std::vector<std::vector<std::string>>& evenSentence);
 void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
 
 
@@ -191,7 +185,6 @@ void create(std::string &locationOfALLbins, int totalBlocks);
 
 long long int countLinesInCSV(const std::string& filename);
 int countLineInTXT(const std::string& filename);
-void makeTXTfromCSV(const std::string& csvFilePath, std::vector<std::string>& txtFilePath, long long int totalLines, int totalGroups);
 void makeCSV(std::vector<std::string>& tokens, mat& tokenEmbed, const std::string& csvFilePath);
 
 #endif

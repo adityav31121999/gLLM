@@ -81,7 +81,7 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, int & voc, int & index)
+void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index)
 {
     std::vector<float> pred(voc, 0.0f);     // hold predictions
     for(int i = 0; i < voc; i++) {
@@ -107,7 +107,7 @@ void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& 
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void computeOutput(const std::vector<float>& output, const mat& embeddings, int & voc, int & index)
+void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index)
 {
     if (output.size() != static_cast<size_t>(embeddings.col) || voc != embeddings.row) {
         throw std::invalid_argument("computeOutput: Dimension mismatch. output size (" + std::to_string(output.size()) + ") != embeddings.col (" + std::to_string(embeddings.col) + ") or voc (" + std::to_string(voc) + ") != embeddings.row (" + std::to_string(embeddings.row) + ")");

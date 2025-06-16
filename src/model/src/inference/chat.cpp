@@ -5,20 +5,18 @@
 #include <iostream>
 #include <cstdio>
 #include <string>
-#include <filesystem> // Required for std::filesystem::rename and path operations
-#include <limits>     // Required for std::numeric_limits
-#include <stdexcept>  // Required for std::runtime_error
+#include <filesystem>
+#include <limits>
+#include <stdexcept>
 
 // take prompt as input
 void model::takeInput() {
     std::getline(std::cin, userPrompt);
     // tokenise sentence into words and punctuations
+    std::vector<std::vector<float>> promptEmbed;
     
-    this->T.promptCount = this->T.tokenise(userPrompt, this->T.mTokens, this->T.currentTokenCount) + 1;
-    if(this->T.promptCount == 0) {
-        std::cerr<< "Prompt cannot be empty" << std::endl;
-        return;
-    }
+    tokenize_with_numbers(userPrompt, tinput);
+    T.promptCount = tinput.size();
 
     // Write the user prompt to the chat log file
     if (this->chat != nullptr) {
@@ -31,6 +29,7 @@ void model::takeInput() {
         std::cerr << "Warning: Chat log file is not open." << std::endl;
     }
 }
+
 
 // for new chat clear and set all to 0
 void model::newChat() {
@@ -59,12 +58,14 @@ void model::newChat() {
     if (err != 0 || this->chat == nullptr) {
         std::cerr << "Error: Could not open active chat log file: " << this->currentChatLogPath << std::endl;
         this->currentChatLogPath.clear(); // Clear path if open failed
-    } else {
+    } 
+    else {
         fprintf(this->chat, "--- New Chat Session Started ---\n");
         fflush(this->chat);
     }
     this->T.clearValues();
 }
+
 
 // end chat and clear all the values, exit transformer
 void model::endChat() {
@@ -78,6 +79,7 @@ void model::endChat() {
     }
     this->T.clearValues();
 }
+
 
 // save chat in txt file
 void model::saveChat() {
@@ -119,7 +121,5 @@ void model::saveChat() {
         std::cerr << "Error saving chat: Failed to move file from '"
                   << this->currentChatLogPath << "' to '" << destinationPath.string()
                   << "'. Reason: " << e.what() << std::endl;
-        // Attempt to reopen the original file? Or leave it closed?
-        // For now, we leave chat and currentChatLogPath cleared/null.
     }
 }

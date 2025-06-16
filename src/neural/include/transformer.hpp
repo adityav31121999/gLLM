@@ -38,12 +38,11 @@ public:
     int h;                  // height of MQ, MK and columns of MV, MH
     int l;                  // layers of mlp
     int epochs;             // number of epochs for MLPs and Blocks
-    // int totalParams;        // total parameters of transformer
     float learning;         // learning rate for MLPs
-    
-    int cacheOffset;        // for extracting caches
-    int matOffset;          // for extracting matrices
-    int mlpOffset;          // for extracting MLPs
+
+    long long int cacheOffset;      // for extracting caches
+    long int matOffset;             // for extracting matrices
+    long int mlpOffset;             // for extracting MLPs
 
 // these are variables that change during training
     int blockCount;         // which block is working
@@ -51,22 +50,20 @@ public:
     int promptCount;        // number of tokens in the prompt
     int currentTokenCount;  // current count of tokens in full context
     int indexForToken;      // this is to set token index from embedding list
+    int resCount;           // response count for every prompt
 
 // these are variables that change during runtime
     float error;            // error for transformer
     long long int trainCount;       // total training count
     long long int vocabsize;        // size of vocabulary
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
-    float testError, validationError;
-    float testMSE, validationMSE;
-    int testCount, validationCount;
 
 // containers
     std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
     std::vector<std::string> mTokens;   // prompts and response tokens
     std::vector<float> otok;            // output token (vector, size d)
-    mat embeddings;                     // all glove embeddings (Mapped, vocabsize x d)
+    mat embeddings;                     // all trained embeddings (Mapped, vocabsize x d)
     mat tokenEmbed;                     // token embedding (prompt + response) (Mapped, currentTokenCount x d)
     FILE* promptNresponse;              // prompt and response text file
     // when model is in inference, hold EV of ith block here
@@ -107,7 +104,6 @@ public:
     void cuValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void cuRun(std::vector<std::vector<float>>& prompt);
     void cuRun();
 
 #elif USE_OPENCL
@@ -129,7 +125,6 @@ public:
     void clValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void clRun(std::vector<std::vector<float>>& prompt);
     void clRun();
 
 #else
@@ -152,7 +147,6 @@ public:
     void validate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void validate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void run(std::vector<std::vector<float>>& prompt);
     void run();
 
 #endif
@@ -165,7 +159,6 @@ public:
     void getcache(int blockCount, int i, int j, mat& q, std::string path2file);
     void getmat(int blockCount, int i, int j, mat& q, std::string path2file, int& row, int& column);
     void getmlp(int blockCount, int i, int j, std::vector<mat>& weights, std::string path2file);
-    int tokenise(std::string &words, std::vector<std::string>& mTokens, int currentTokenCount);
     void getEmbedding(std::string& word, std::vector<float>& embed);
     void clearValues();
 

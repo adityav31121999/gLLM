@@ -56,64 +56,6 @@ int countLineInTXT(const std::string& filename)
 }
 
 /**
- * @brief Create a TXT file from a CSV file.
- * @param csvFilePath The path to the CSV file.
- * @param txtFilesPath The path to the TXT files.
- * @param totalLines The total number of lines in the CSV file.
- * @param totalGroups The number of groups to split the data into.
- */
-void makeTXTfromCSV(const std::string& csvFilePath, std::vector<std::string>& txtFilesPath, long long int totalLines, 
-    int totalGroups) 
-{
-    if (totalLines <= 0) {
-        std::cout << "No lines to process from CSV." << std::endl;
-        return;
-    }
-    if (totalGroups <= 0) {
-        std::cerr << "Error: totalGroups must be positive." << std::endl;
-        return;
-    }
-    if (txtFilesPath.empty()) {
-        std::cerr << "Error: txtFilesPath is empty, no output files specified." << std::endl;
-        return;
-    }
-
-    std::ifstream csvFile(csvFilePath);
-    if (!csvFile.is_open()) {
-        std::cerr << "Error: Could not open CSV file: " << csvFilePath << std::endl;
-        return;
-    }
-
-    long long int linesPerGroup = totalLines / totalGroups;         // Lines per group (integer division)
-    long long int linesRemaining = totalLines % totalGroups;        // = totalLines - (linesPerGroup * totalGroups)
-
-    std::string line;
-    int groupIndex = 0;
-    long long int overallLineCount = 0; // 1-based counter for total lines processed from CSV
-    for(groupIndex = 0; groupIndex <= totalGroups; ++groupIndex) {
-        // check for txt file path
-        std::ofstream txtFile(txtFilesPath[groupIndex]);
-        if (!txtFile.is_open()) {
-            std::cerr << "Error: Could not open TXT file: " << txtFilesPath[groupIndex] << std::endl;
-            continue;
-        }
-        std::cout << "Writing to file: " << txtFilesPath[groupIndex] << std::endl;
-
-        long long int linesToWrite = (groupIndex == totalGroups) ? linesRemaining : linesPerGroup;
-        for (long long int j = 0; j < linesToWrite && std::getline(csvFile, line); ++j) {
-            txtFile << line << "\n\n"; // Write the line to the TXT file
-            overallLineCount++;
-        }
-
-        txtFile.close();
-        if(!csvFile) 
-            break;
-    }
-
-    csvFile.close();
-}
-
-/**
  * @brief Create a CSV file from token embeddings.
  * @param tokens The vector of tokens.
  * @param tokenEmbed The vector of token embeddings.

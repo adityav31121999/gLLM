@@ -26,8 +26,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param),
     d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), 
     inTraining(inTraining_param), learning(LEARNING), epochs(EPOCHS), error(0.0f), trainCount(0),
-    testError(0.0f), validationError(0.0f), testMSE(0.0f), validationMSE(0.0f), testCount(0), 
-    validationCount(0), epochCount(0), promptNresponse(nullptr)
+    epochCount(0), promptNresponse(nullptr)
 {
     if(this->inTraining) {
         t.reserve(this->m); // Reserve space
@@ -91,8 +90,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param),
     d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param),
     inTraining(inTraining_param), learning(learning_rate_param), epochs(EPOCHS), error(0.0f),
-    trainCount(0), testError(0.0f), validationError(0.0f), testMSE(0.0f), validationMSE(0.0f),
-    testCount(0), validationCount(0), epochCount(0), promptNresponse(nullptr), embeddings(this->vocabsize, d),
+    trainCount(0), epochCount(0), promptNresponse(nullptr), embeddings(this->vocabsize, d),
     tokenEmbed(this->n * this->m, d)
 {
     if(this->inTraining) {
@@ -156,8 +154,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
     clcontext(context_param), m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), 
     y(y_param), n(n_param), d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), 
     isSelf(attentionType_param), inTraining(inTraining_param), learning(LEARNING), epochs(EPOCHS),
-    error(0.0f), trainCount(0), testError(0.0f), validationError(0.0f), testMSE(0.0f), 
-    validationMSE(0.0f), testCount(0), validationCount(0), epochCount(0), promptNresponse(nullptr),
+    error(0.0f), trainCount(0), epochCount(0), promptNresponse(nullptr),
     embeddings(vocab_param, d_param), tokenEmbed(m_param * n_param, d_param)
 {
     std::cout << "TRANSFORMER constructed with OpenCL context using device: "
@@ -229,8 +226,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
     clcontext(context_param), m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param),
     y(y_param), n(n_param), d(d_param), h(h_param), l(l_param), vocabsize(vocab_param),
     isSelf(attentionType_param),  inTraining(inTraining_param), learning(learning_rate_param),
-    epochs(EPOCHS), error(0.0f), trainCount(0), testError(0.0f), validationError(0.0f), testMSE(0.0f),
-    validationMSE(0.0f), testCount(0), validationCount(0), epochCount(0), promptNresponse(nullptr),
+    epochs(EPOCHS), error(0.0f), trainCount(0), epochCount(0), promptNresponse(nullptr),
     embeddings(vocab_param, d_param), tokenEmbed(m_param * n_param, d_param)
 {
     std::cout << "TRANSFORMER constructed with OpenCL context using device: "

@@ -17,13 +17,8 @@
     #define CL_HPP_ENABLE_EXCEPTIONS // Define before including cl.hpp
     #define CL_HPP_TARGET_OPENCL_VERSION 300
     #include <CL/cl.hpp>
-
     extern std::vector<std::string> kernelSourceFiles;
     extern std::vector<std::string> kernelNames;
-
 #endif
-
-void printCrown();
-void printBase();
 
 #endif

@@ -101,8 +101,8 @@ void model::testBlock(const std::string& txtFileLocation)
         int tok = 0;
         // get embeddings and response
         for(int i = 0; i < oddSentence.size(); i++) {
-            tokenize(tokensOfFile[2*i-1], oddSentence[i]);
-            tokenize(tokensOfFile[2*i], evenSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i]);
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -198,8 +198,8 @@ void model::testModel(const std::string& txtFileLocation)
         int tok = 0;
         // get embeddings and response
         for(int i = 0; i < oddSentence.size(); i++) {
-            tokenize(tokensOfFile[2*i-1], oddSentence[i]);
-            tokenize(tokensOfFile[2*i], evenSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i]);
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt

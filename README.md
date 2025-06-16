@@ -11,7 +11,7 @@
   - *C VERSION*: 17
   - *C++ VERSION*: 20
   - *OpenCL VERSION*: 300
-  - *CUDA*: 12.9
+  - *CUDA*: 12.6
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
   - Attention Mechanism: Shady
@@ -19,12 +19,13 @@
   - Neural Connections: Dense
 
 ## Project Structure
+- **memorymap**: Memory Mapping for large objects like mat and mlp
 - **maths**: Mathematical Library for LLM
 - **neural**: Neural Network Library for LLM
 - **model**: Model Library for LLM
 
 ### src/memorymap
-- 
+- *memory_map.h*: Provides C functions for memory-mapping files, enabling efficient file I/O by mapping file contents directly into the process's address space. Includes functions to open, create/resize, and close mapped files.
 
 ### src/maths
 - *basic.hpp*: Basic Mathematical Functions
@@ -60,90 +61,106 @@
 ### Components
 **MLP**:
 - Multilayer Perceptron defined in mlp.hpp
-- Specifically for this architecture
-- weights: hold hidden layer weights of mlp
-- hlayers: hidden layer results
-- activations: activated hlayers
-- gweights: gradient weights
+- `status`: Boolean, 1 if completely trained, 0 otherwise.
+- `num_layers`: Total number of layers (input, hidden, output).
+- `layer_sizes`: Vector storing the number of neurons in each layer.
+- `epochs`: Number of training epochs.
+- `learning_rate`: Learning rate for training.
+- `input`, `output`, `expected`: Vectors for input data, model output, and expected output.
+- `weights`: Vector of `mat` objects, representing weight matrices between layers (memory-mapped).
+- `hlayers`: Vector of vectors for hidden layer outputs (typically RAM-based).
+- `activations`: Vector of vectors for activations of each layer.
+- `gweights`: Vector of `mat` objects for gradient matrices corresponding to weights (memory-mapped).
+- `params`: Total number of parameters in the MLP.
+- `initializeWeightsFromSharedMap()`: Method to initialize weights from a shared memory-mapped region, allowing MLPs to use segments of a larger pre-allocated file.
 
 **HEAD**:
 - Attention class defined in attention.hpp
-- MQ, MK: Query and Key matrices
-- MV, MH: Vertical and Horizontal retention matrices
-- hor, ver: MLPs for horizontal and vertical propagation
-- qkCache, qvCache, khCache: Caches for model operation
-- K, Q: vectors of Key and Query vectors
-- KdotQ: grid for dot product of Key and Query
-- EH: horizontal retention vector for token prediction
-- EV: vector of vertical retention vectors for context retention
-- dh: delta for EH
-- dv: delta for EV[i] where i is the current iteration
-- isSelf: boolean to check attention type (1 for self, 0 for cross)
-- inTraining: boolean to check training (1) or use (0)
-- tokenCount: current tokenCount in the context window of head
+- `isSelfAttention`: Boolean, 1 for self-attention, 0 for cross-attention.
+- `inTraining`: Boolean, 1 during training, 0 during inference.
+- `tokenCount`: Integer, current number of tokens processed by this head within its context window.
+- `MQ`, `MK`: `mat` objects, projection matrices. As per `modelDataInfo` and common interpretation for `K_vec = Token_vec * MK_matrix`, these are `EMBEDDING x MATHEIGHTS` (i.e., `d x h`). Stored as `MATHEIGHTS x EMBEDDING` if `modelDataInfo` dictates storage format.
+- `MV`, `MH`: `mat` objects, projection matrices, typically `EMBEDDING x MATHEIGHTS` (i.e., `d x h`). Stored as `EMBEDDING x MATHEIGHTS`.
+- `ver`, `hor`: `mlp` objects for vertical and horizontal propagation paths. MLPs typically operate on `EMBEDDING` dimension vectors.
+- `qkCache`, `qvCache`, `khCache`: `mat` objects storing pre-computed matrix products for inference. Based on `attention.hpp` comments and typical usage, these are `EMBEDDING x EMBEDDING` (i.e., `d x d`).
+- `K`, `Q`: `mat` objects storing Key and Query vectors derived from input tokens (e.g., `CONTEXT_WIN x MATHEIGHTS`). These are memory-mapped.
+- `KdotQ`: `mat` object storing the attention scores (dot products of K and Q vectors), typically `CONTEXT_WIN x CONTEXT_WIN`. This is memory-mapped.
+- `EH`: `std::vector<float>` (e.g., size `EMBEDDING`), the horizontal retention vector.
+- `EV`: `mat` object (e.g., `CONTEXT_WIN x EMBEDDING`), the vertical retention matrix.
+- `dh`, `dv`: `std::vector<float>` (e.g., size `EMBEDDING`), deltas for backpropagation.
+- `learning_rate`: Learning rate specific to the attention mechanism.
+- `params`: Total number of parameters within this attention head.
 
 **BLOCK**:
 - Attention block defined in block.hpp
-- Refered as LOCAL CONTEXT in function comments
-- x, y: number of rows and columns
-- error: error for block
-- isSelfattention: boolean to check attention type (1 for self, 0 for cross)
-- inTraining: boolean to check training (1) or use (0)
-- EH: combined or concatanated value of partial attention for token prediction
-- EV: collection of all Head EVs
-- tokForBlock: local context specific token embeddings for KdotQ calculation while training
-- probability: probability vector for token prediction
-- b: 2d vector of Heads (attention class) of dimension 'x' rows (Partial Attentions) and 'y' columns (Parallels)
+- Referred to as LOCAL CONTEXT.
+- `x`, `y`: Integers representing the dimensions of the attention head grid (x: partial attention layers, y: parallels/heads per layer).
+- `tokenCount`: Number of tokens currently processed within this block's context window (e.g., `CONTEXT_WIN`).
+- `error`: Floating point value for block error.
+- `isSelfAttention`: Boolean, for all heads within the block.
+- `inTraining`: Boolean, mode for the block.
+- `EV`: `std::vector<std::vector<std::vector<std::vector<float>>>>`, manages vertical retention data from heads.
+- `tokForBlock`: `mat` object (e.g., `CONTEXT_WIN x EMBEDDING`), stores token embeddings for this block.
+- `b`: `std::vector<std::vector<attention>>`, a 2D vector of `attention` head objects.
+- `blockFilePath`, `blockOffset`: String and long int for data persistence.
+- `params`: Total number of parameters within this block.
 
 **TRANSFORMER**:
 - Transformer defined in transformer.hpp
-- Refered as FULL CONTEXT in function comments
-- m: number of blocks
-- x: number of rows
-- y: number of columns
-- n: context window for each head
-- d: token embedding dimension
-- h: rows of MQ, MK and columns of MV, MH
-- l: hidden weight layers of mlp
-- epochs: allowable iteration for training of block and mlp
-- totalParams: total parameters of transformer
-- learning: rate of learning for training of mlp and transformer
-- error: error for transformer
-- isSelf: boolean to check attention type (1 for self, 0 for cross)
-- inTraining: boolean to check training (1) or use (0)
-- isTerminate: 1 for terminate ('@#0') and 0 for continuation
-- blockCount: position of block which is in use in Full Context
-- epochCount: epoch counter for training
-- promptCount: tokens in user prompt
-- currentTokenCount: number of tokens generated or in use in full context
-
-### Training
-
-### Inference
+- Referred to as FULL CONTEXT.
+- `isSelf`: Boolean, global attention type.
+- `inTraining`: Boolean, global mode.
+- `m`: Integer, number of `block` objects.
+- `x`: Integer, partial attention layers per `block`.
+- `y`: Integer, parallel attention heads per partial attention layer.
+- `n`: Integer, context window size per head (e.g., `CONTEXT_WIN`).
+- `d`: Integer, token embedding dimension (e.g., `EMBEDDING`).
+- `h`: Integer, dimension for projection matrices (e.g., `MATHEIGHTS`).
+- `l`: Integer, number of layers in MLPs (e.g., `LAYERS_MLP`).
+- `epochs`: Default training epochs.
+- `learning`: Default learning rate.
+- `blockCount`: Tracks active block.
+- `promptCount`: Number of prompt tokens.
+- `currentTokenCount`: Total tokens in transformer's context.
+- `error`: Aggregated transformer error.
+- `vocabsize`: Vocabulary size.
+- `isTerminate`: Termination flag.
+- `t`: `std::vector<block>`, sequence of blocks.
+- `tokens`: `std::vector<std::string>`, vocabulary.
+- `embeddings`: `mat` (`vocabsize x d`), memory-mapped token embeddings.
+- `tokenEmbed`: `mat` (`currentTokenCount x d`), memory-mapped current sequence embeddings.
+- `EVuse`: Stores vertical retention vectors from the last block for multi-turn context.
+- `tokForBlock`: `mat` (`n x d`), memory-mapped tokens for the current block during inference.
+- `params`: Long long int, total parameters.
 
 ## MODEL STRUCTURE
 
 **MODEL**:
-- All data related to model
-- Files for chat and metadata information
-- userPrompt string for prompt input
+- `m, x, y, n, d, l`: Integers defining transformer architecture (blocks, attention layout, context window, embedding dim, MLP layers).
+- `matheight`: Corresponds to `h` (MATHEIGHTS) in transformer/attention.
+- `learning`: Default learning rate.
+- `isSelf`: Boolean, default attention type.
+- `toTrain`: Boolean, indicates if model is for training or inference.
+- `T`: The main `transformer` object.
+- `info`: `modelDataInfo` struct holding metadata.
+- `metadata`, `chat`: `FILE*` pointers for model metadata and chat log.
+- `baseDir`: String, base directory for model files.
+- `currentChatLogPath`: Path to current chat log.
+- `userPrompt`, `tinput`, `expected`, `toutput`, `token`: `std::vector<std::string>` for tokenized inputs/outputs.
+- `matOffset`, `mlpOffset`, `cacheOffset`, `attentionOffset`, `blockOffset`: Offsets for organizing data within a single large model binary file (primarily for training with memory-mapped components).
+- `totalParams`: Total parameters of the model.
+- `vocabsize`: Vocabulary size.
+- `calculateAndSetLayout()`: Method to determine memory layout for components.
+- Manages model lifecycle, training, inference, and serialization.
 
 **MODEL METADATA**:
-```
-{
-  "name": "user-defined-name",
-  "version": "user-defined-version",
-  "license": "user-defined-license",
-  "description": "user-defined-description",
-  "author": "user-defined-author",
-  "architecture": "Dual Pseudo-Attention Mechanism",
-  "data": {
-    "data_type": "can be any of following:
-        int2, int4, int8, int16, int32, int64,
-        float16, float32, float64, double
-  }
-}
-```
+- Stored in a `modelDataInfo` struct, typically at the beginning of the main model binary file or a separate metadata file.
+- Contains: `modelName`, `version`, `author`, `date`, `attentionMech`, `modelArch`, `license`.
+- Dimensions: `d` (embedding), `vocab` (vocabulary size).
+- Matrix dimensions: `qkrow`, `qkcol` (for MQ/MK, e.g., `MATHEIGHTS`, `EMBEDDING`).
+- Matrix dimensions: `vhrow`, `vhcol` (for MV/MH, e.g., `EMBEDDING`, `MATHEIGHTS`).
+- Transformer structure: `m, x, y, n, h, l` (blocks, attention layout, context window, `MATHEIGHTS`, MLP layers).
+- Other info: `totalParams`, `totalContext` (`m * n`), `tokens` (dataset size), `learning` rate, `attentionType`.
 
 **MODEL SERIALISATION**:
 - Model have specifically named files for Matrices, MLPs and caches and store the values represented by their name in binary format
@@ -161,14 +178,15 @@
 |MK  |h   |d   |1   |x.y.m   |h.d.x.y.m       |h*d          |h.d.x.y     |
 |MV  |d   |h   |1   |x.y.m   |d.h.x.y.m       |d*h          |d.h.x.y     |
 |MH  |d   |h   |1   |x.y.m   |d.h.x.y.m       |d*h          |d.h.x.y     |
-|hor |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d * l * d    |d.d.l.x.y   |
-|ver |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d * l * d    |d.d.l.x.y   |
+|hor |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d* d *l      |d.d.l.x.y   |
+|ver |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d* d *l      |d.d.l.x.y   |
 |QK  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
 |QV  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
 |KH  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
 --------------------------------------------------------------------------
 - Here single offset refers to total number of values in single object i.e., Matrix, MLP or cache
 - Block Offset refers to total number of values of specific object in the single block i.e., number of object (matrix or mlp or cache) * single offset = x * y * single offset
+- In the table: `h` refers to `MATHEIGHTS` (e.g., 1024), `d` refers to `EMBEDDING` dimension (e.g., 64), and `l` refers to the number of weight matrices in an MLP (e.g., `LAYERS_MLP - 1`).
 - Following is the serialisation of MQ.bin file as example:
   - Q[i][j][k] represent MQ of kth head of jth row of ith block
 ```
@@ -185,52 +203,16 @@ M[2][1][1] = --------------------------------------------------------------
 M[m][x][y] = --------------------------------------------------------------
 ```
 
-### NOTE: for making an application with this library
-While making application based on this mechanism and project, just use main CMakeLists.txt and update it with following code and add a folder to create the application with a main.cpp file.
-
-```
-# add executable
-add_executable(project_name "main.cpp" 
-                "gLLM.h"
-                "gLLM/src/model/include/maths.hpp"
-                "gLLM/src/neural/include/neural.hpp"
-                "gLLM/src/model/include/model.hpp"
-                "gLLM/src/script/include/script.hpp"
-)
-
-# bind private libraries
-target_include_directories(gLLM
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/maths/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/neural/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/model/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/gLLM//src/script/include
-)
-
-# link 3rd party libraries
-target_link_libraries(gLLM
-  PRIVATE
-    ${OpenCL_LIBRARIES}
-    ${CUDAToolkit LIBS}
-  maths
-  model
-  neural
-  script
-)
-```
-
 ## IMPORTANT NOTE:
 
 - I would like to give huge credits to AI models and AgenticIDEs that I have used to build cuda and opencl operations.
 - GROK: For Backpropagation of blocks (A big problem was that how should I reflect the change from error to mlp to the matrices like MQ, MK, MV and MH from block to block and most of the time without affecting the horizontal operations)
 - FOR CUDA AND OPENCL:
-  - GEMINI and GEMINI code assist
-  - CLAUDE SONNET in TRAE, WINDSURF and CURSOR (not much due to paywall)
-  - DEEPSEEK in TRAE and WINDSURF
+  - GEMINI code assist
+  - CLAUDE SONNET and DEEPSEEK in TRAE, WINDSURF
   - MISTRAL
   - ChatGPT
   - COPILOT
 
 ## Refernce
-
-- 
+- // provide refernce to Attention is all you need paper

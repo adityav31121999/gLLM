@@ -128,18 +128,3 @@
         "kernelKdotQBlockNCross_Inference",
     };
 #endif
-
-void printCrown() {
-    std::cout << "                           /^\\                           " << std::endl;
-    std::cout << "                          /   \\                          " << std::endl;
-    std::cout << "                       --       --                        " << std::endl;
-    std::cout << "                      /           \\                      " << std::endl;
-    std::cout << "          _ _ _ _ _ _/             \\_ _ _ _ _ _          " << std::endl;
-    std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:<-GO->:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
-}
-
-void printBase() {
-    std::cout << "----------------------------------------------------------" << std::endl;;
-    std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:<DONE>:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;;
-}

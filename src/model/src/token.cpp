@@ -23,36 +23,6 @@ static bool is_sub_sentence_delimiter(char c) {
     return c == '.' || c == '!' || c == '?' || c == ':';
 }
 
-/**
- * @brief Tokenize a string into words  and punctuations.
- * @param str The string to tokenize.
- * @param tokens The vector to store the tokens.
- */
-void tokenize(const std::string& str, std::vector<std::string>& tokens)
-{
-    std::stringstream ss(str);
-    std::string chunk;
-    static const std::string delimiters = " .,!?;:-~_+=/@#$&*`%^\\|\"\'(){}[]<>";
-
-    while (ss >> chunk) {
-        std::string current_word_part;
-        for (char c : chunk) {
-            if (delimiters.find(c) != std::string::npos) {
-                if (!current_word_part.empty()) {
-                    tokens.push_back(current_word_part);
-                    current_word_part.clear();
-                }
-                tokens.push_back(std::string(1, c));
-            }
-            else {
-                current_word_part.push_back(c);
-            }
-        }
-        if (!current_word_part.empty()) {
-            tokens.push_back(current_word_part);
-        }
-    }
-}
 
 /**
  * @brief Tokenize a string into words, numbers (digit by digit), and punctuations.
@@ -108,7 +78,6 @@ void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSent
     // 1st sentence: index 0 (subSentences.size() == 0) -> odd-positioned
     // 2nd sentence: index 1 (subSentences.size() == 1) -> even-positioned
     // 3rd sentence: index 2 (subSentences.size() == 2) -> odd-positioned
-    // So, add "@#0" if (subSentences.size() % 2 == 1)
 
     for (char c : line) {
         current_sub_sentence += c;
@@ -226,83 +195,6 @@ void textSplit(std::string &path2file, std::vector<std::string> &tokensOfFile, s
         } 
         else {
             evenSentence.push_back(sentence_vec);
-        }
-    }
-}
-
-/**
- * 
- */
-void tokenize(std::string &line, std::vector<std::string> &tokensOfFile, std::vector<std::vector<std::string>> &oddSentence, 
-                std::vector<std::vector<std::string>> &evenSentence)
-{
-    if (line.empty()) {
-        return;
-    }
-
-    // Ensure output vectors are clear before populating
-    tokensOfFile.clear();
-    oddSentence.clear();
-    evenSentence.clear();
-
-    std::string current_word;
-    std::vector<std::string> current_sub_sentence_tokens;
-    int sub_sentence_count = 0; // To alternate between odd and even for sub-sentences within this line
-
-    const std::locale loc; // For character classification (isalnum, isspace)
-
-    for (size_t i = 0; i < line.length(); ++i) {
-        char c = line[i];
-
-        if (std::isalnum(c, loc)) {
-            current_word += c;
-        }
-        else {
-            // End of a potential word
-            if (!current_word.empty()) {
-                current_sub_sentence_tokens.push_back(current_word);
-                tokensOfFile.push_back(current_word);
-                current_word.clear();
-            }
-
-            if (!std::isspace(c, loc)) {
-                std::string punc_token(1, c);
-                current_sub_sentence_tokens.push_back(punc_token);
-                tokensOfFile.push_back(punc_token);
-            }
-
-            if (is_sub_sentence_delimiter(c)) {
-                // End of a sub-sentence
-                if (!current_sub_sentence_tokens.empty()) {
-                    if (sub_sentence_count % 2 == 0) {
-                        oddSentence.push_back(current_sub_sentence_tokens);
-                    } 
-                    else {
-                        evenSentence.push_back(current_sub_sentence_tokens);
-                        // evenSentence.back().push_back("@#0");   // terminator to end response
-                    }
-                    current_sub_sentence_tokens.clear();
-                    sub_sentence_count++;
-                }
-            }
-        }
-    }
-
-    // After the loop, handle any remaining word
-    if (!current_word.empty()) {
-        current_sub_sentence_tokens.push_back(current_word);
-        tokensOfFile.push_back(current_word);
-    }
-
-    // Handle any remaining tokens in current_sub_sentence_tokens 
-    // if the line didn't end with a delimiter or if it's the last sub-sentence.
-    if (!current_sub_sentence_tokens.empty()) {
-        if (sub_sentence_count % 2 == 0) {
-            oddSentence.push_back(current_sub_sentence_tokens);
-        } 
-        else {
-            current_sub_sentence_tokens.push_back("@#0");
-            evenSentence.push_back(current_sub_sentence_tokens);
         }
     }
 }
