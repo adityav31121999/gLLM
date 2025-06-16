@@ -488,10 +488,38 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data));
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MQ_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MQ.mapped_data));
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
+            CL_CHECK(current_stream_cl.finish());
         } // End loop over heads
 
         // --- Synchronize all OpenCL command queues ---
         // This ensures all device operations launched asynchronously are completed before function returns.
+        // Explicitly release all aggregate OpenCL buffers before final sync
+        agg_d_expected_v_buf = cl::Buffer();
+        agg_d_EV_buf = cl::Buffer();
+        agg_d_grad_EV_full_buf = cl::Buffer();
+        agg_d_grad_EV_summed_buf = cl::Buffer();
+        agg_d_grad_EV_scaled_buf = cl::Buffer();
+        agg_d_grad_dv_buf = cl::Buffer();
+        agg_d_KdotQ_buf = cl::Buffer();
+        agg_d_head_storage_buf = cl::Buffer();
+        agg_d_K_buf = cl::Buffer();
+        agg_d_Q_buf = cl::Buffer();
+        agg_d_pre_MV_buf = cl::Buffer();
+        agg_d_MV_a_buf = cl::Buffer();
+        agg_d_MQ_a_buf = cl::Buffer();
+        agg_d_MK_a_buf = cl::Buffer();
+        agg_d_grad_MV_buf = cl::Buffer();
+        agg_d_grad_head_storage_buf = cl::Buffer();
+        agg_d_lota_deriv_buf = cl::Buffer();
+        agg_d_grad_KdotQ_buf = cl::Buffer();
+        agg_d_grad_Q_storage_buf = cl::Buffer();
+        agg_d_grad_MQ_buf = cl::Buffer();
+        agg_d_grad_MK_correction_buf = cl::Buffer();
+        agg_d_ver_activations_storage_buf = cl::Buffer();
+        agg_d_ver_weights_storage_buf = cl::Buffer();
+        agg_d_ver_gweights_storage_buf = cl::Buffer();
+        agg_d_ver_deltas_storage_buf = cl::Buffer();
+
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CL_CHECK(streams_cl[head_idx].finish());
         }
@@ -847,7 +875,35 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data));
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MQ_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MQ.mapped_data));
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
+            CL_CHECK(current_stream_cl.finish());
         }
+
+        // Explicitly release all aggregate OpenCL buffers before final sync
+        agg_d_expected_v_buf = cl::Buffer();
+        agg_d_EV_buf = cl::Buffer();
+        agg_d_grad_EV_full_buf = cl::Buffer();
+        agg_d_grad_EV_summed_buf = cl::Buffer();
+        agg_d_grad_EV_scaled_buf = cl::Buffer();
+        agg_d_grad_dv_buf = cl::Buffer();
+        agg_d_KdotQ_buf = cl::Buffer();
+        agg_d_head_storage_buf = cl::Buffer();
+        agg_d_K_buf = cl::Buffer();
+        agg_d_Q_buf = cl::Buffer();
+        agg_d_pre_MV_buf = cl::Buffer();
+        agg_d_MV_a_buf = cl::Buffer();
+        agg_d_MQ_a_buf = cl::Buffer();
+        agg_d_MK_a_buf = cl::Buffer();
+        agg_d_grad_MV_buf = cl::Buffer();
+        agg_d_grad_head_storage_buf = cl::Buffer();
+        agg_d_lota_deriv_buf = cl::Buffer();
+        agg_d_grad_KdotQ_buf = cl::Buffer();
+        agg_d_grad_Q_storage_buf = cl::Buffer();
+        agg_d_grad_MQ_buf = cl::Buffer();
+        agg_d_grad_MK_correction_buf = cl::Buffer();
+        agg_d_ver_activations_storage_buf = cl::Buffer();
+        agg_d_ver_weights_storage_buf = cl::Buffer();
+        agg_d_ver_gweights_storage_buf = cl::Buffer();
+        agg_d_ver_deltas_storage_buf = cl::Buffer();
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CL_CHECK(streams_cl[head_idx].finish());

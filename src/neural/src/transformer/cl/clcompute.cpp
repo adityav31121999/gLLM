@@ -500,9 +500,24 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             // Copy the flat data (already in row-major order) directly into the memory-mapped region of KdotQ
             memcpy(head.KdotQ.mapped_data, head_kdotq_flat.data(), required_bytes_for_kdotq);
         }
-
+        d_all_kdotq = cl::Buffer();
+        d_all_keys = cl::Buffer();
+        d_all_querys = cl::Buffer();
+        d_all_M = cl::Buffer();
+        d_all_EVp = cl::Buffer();
+        d_transformer_tokenEmbed_flat = cl::Buffer();
+        d_block_tokForBlock_flat = cl::Buffer();
     }
     catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
+        // Explicitly release all aggregate OpenCL buffers in case of an exception
+        // before re-throwing or returning.
+        d_all_kdotq = cl::Buffer();
+        d_all_keys = cl::Buffer();
+        d_all_querys = cl::Buffer();
+        d_all_M = cl::Buffer();
+        d_all_EVp = cl::Buffer();
+        d_transformer_tokenEmbed_flat = cl::Buffer();
+        d_block_tokForBlock_flat = cl::Buffer();
         fprintf(stderr, "Standard exception during clParallelKdotQs: %s\n", e.what());
         // cl::Buffer RAII will handle cleanup automatically
         return;
