@@ -9,9 +9,7 @@
 #ifdef USE_CUDA
     #include <cuda.h>
     #include <cuda_runtime.h>
-
-    #define CUDA_CHECK(call)                                                        \
-    do {                                                                            \
+    #define CUDA_CHECK(call) do {                                                   \
         cudaError_t err = call;                                                     \
         if (err != cudaSuccess) {                                                   \
             fprintf(stderr, "CUDA Error in %s at line %d: %s\n",                    \
@@ -20,7 +18,6 @@
             throw std::runtime_error("CUDA Error: " + std::string(cudaGetErrorString(err)));    \
         }                                                                           \
     } while (0)
-
 #elif USE_OPENCL
     #include <CL/cl.hpp>
 #endif
@@ -185,12 +182,10 @@ void model::trainBlock(const std::string& txtFileLocation)
     // for(int i = 1; i < m; i++) {
     //     T.t[i].serialise(T.t[i].blockFilePath);
     // }
-
     // End timing here
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "Total training time for file " << txtFileLocation << ": " << duration.count() << " ms" << std::endl;
-
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
 }
 
@@ -286,6 +281,7 @@ void model::trainModel(const std::string& txtFile)
                 this->T.train(promptEmbeddings, responseEmbeddings, responseTokens);
             #endif
             totalTokens += tok;
+            std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
         }
     }
     // serialise all matrices and mlps to discrete .bin files
@@ -293,10 +289,9 @@ void model::trainModel(const std::string& txtFile)
         T.t[i].serialise(T.t[i].blockFilePath);
     }
     serialise();
-        // End timing here
+    // End timing here
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "Total training time for file " << txtFile << ": " << duration.count() << " ms" << std::endl;
-
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
 }

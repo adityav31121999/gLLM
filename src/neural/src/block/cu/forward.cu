@@ -314,8 +314,8 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             CUDA_CHECK(cudaMemcpyAsync(d_EV_processed_data, head_cpu.EV.mapped_data, ev_processed_bytes_ph, cudaMemcpyHostToDevice, current_stream));
 
             const int threadsPerBlock = 256;
-            // Kernel: Perform scaled dot-product attention (lower triangular masked)
-            cuLOTA<<<( (n_tokens * n_tokens) + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_KdotQ, d_head_attention, n_tokens, n_tokens); CUDA_CHECK(cudaGetLastError());
+            // Kernel: Perform score normalisation (and masking if needed)
+            cuLOTA<<<( (n_tokens * n_tokens) + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_KdotQ, d_head_attention, CONTEXT_WIN, CONTEXT_WIN, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
             // Kernel: Compute row and column sums of the attention matrix
             computeHeadSumsMaskedKernel<<<(n_tokens + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
             // Kernel: Accumulate weighted K and Q vectors based on attention sums

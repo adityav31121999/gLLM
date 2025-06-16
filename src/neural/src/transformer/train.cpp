@@ -272,10 +272,6 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
             else {
                 std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
             }
-            // if error is not corrected even after epochs, then increase epochs
-            if(errorofv(otok, response[i]) > 0.01 && j_epoch == epochs) {
-                epochs += 10;
-            }
 
             j_epoch++;
             backward(response[i], blockCount);
@@ -290,11 +286,7 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                             // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
                             t[0].b[i_pa][j_head].K(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MK);
                         }
-                    }
-                }
-                if(resCount > 0) {
-                    for(int m = 0; m < x; m++) {
-                        for(int n = 0; n < y; n++) {
+                        if(resCount > 0) {
                             for(int k = 0; k < resCount; k++) {
                                 // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MQ
                                 t[0].b[m][n].Q(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[0].b[m][n].MQ);
@@ -316,11 +308,7 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                             // make queries using compute KorQ: t[0].b[i][j].K[i] = prompt(i) * t[blockCount-1].b[i][j].MK
                             t[blockCount-1].b[i_pa][j_head].K(k) = dot(t[blockCount-1].b[i_pa][j_head].EV(k), t[0].b[i_pa][j_head].MQ);
                         }
-                    }
-                }
-                if(resCount > 0) {
-                    for(int m = 0; m < x; m++) {
-                        for(int n = 0; n < y; n++) {
+                        if(resCount > 0) {
                             for(int k = 0; k < resCount; k++) {
                                 // make queries using compute KorQ: t[blockCount-1].b[i][j].Q[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MQ
                                 t[blockCount-1].b[m][n].Q(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[blockCount-1].b[m][n].MQ);
@@ -331,7 +319,7 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                     }
                 }
             }
-            forward(blockCount, currentTokenCount, promptCount);
+            // forward(blockCount, currentTokenCount, promptCount);
         }
         // update variables
         resCount++;

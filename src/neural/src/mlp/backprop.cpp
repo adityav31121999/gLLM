@@ -1,60 +1,67 @@
+#ifdef USE_CPU
 
 // backprop.cpp: backward propagation functions for mlp
 #include "include/mlp.hpp"
 #include <iostream>
+#include <vector>
 #include <maths.hpp>
 
-#ifdef USE_CPU
 
 /**
  * @brief The backward propagation function. This function performs the
  * backward propagation and calculates the error.
  * @param in dimension of input, output and size of weight layers
- * @param layers number of weight layers
+ * @param layers_param number of weight layers (Note: This parameter is now unused, logic relies on class members)
  * @param learning learning rate for mlp
  */
-void mlp::backward(int in, int layers, float learning) {
+void mlp::backward(int in_param, int layers_param, float learning) {
+    // Parameters in_param and layers_param are ignored in favor of class members
+    // num_layers and layer_sizes for robustness and consistency.
 
     if (num_layers < 2) return;
+
+    // Initialize deltas for each layer
     std::vector<std::vector<float>> layer_deltas(num_layers);
     for(size_t i = 0; i < num_layers; ++i) {
         layer_deltas[i].resize(layer_sizes[i], 0.0f);
     }
 
+    // Calculate deltas for the output layer
+    // Delta = (output - expected) * f'(output_activation)
     size_t output_layer_idx = num_layers - 1;
-    for (unsigned int i = 0; i < layer_sizes[output_layer_idx]; i++) {
-        layer_deltas[output_layer_idx][i] = (output[i] - expected[i]) * sigmoidder(output[i]);
+    for (unsigned int i = 0; i < layer_sizes[output_layer_idx]; ++i) {
+        // Assuming output[i] is the activated value from the output layer
+        // and sigmoidder(activated_value) computes activated_value * (1 - activated_value)
+        layer_deltas[output_layer_idx][i] = (this->output[i] - this->expected[i]) * sigmoidder(this->activations[output_layer_idx][i]);
     }
 
-    for (unsigned int i = 0; i < in; i++) {
-        layer_deltas[layers - 1][i] = (output[i] - expected[i]) * sigmoidder(output[i]);
-    }
-
-    for (int l = num_layers - 2; l >= 1; l--) {
+    // Calculate deltas for hidden layers (from right to left)
+    for (int l = num_layers - 2; l >= 1; --l) { // Iterate from the second to last layer down to the first hidden layer
         size_t current_layer_size = layer_sizes[l];
         size_t next_layer_size = layer_sizes[l+1];
-        const mat& next_weights = weights[l];
-        for (unsigned int i = 0; i < current_layer_size; i++) {
-            float error_sum = 0.0;
+        const mat& weights_to_next_layer = weights[l]; // weights[l] connects layer l to l+1
+        const std::vector<float>& current_hidden_layer_activations = activations[l];
 
-            for (unsigned int j = 0; j < next_layer_size; j++) {
-                error_sum += layer_deltas[l + 1][j] * next_weights(j, i);
+        for (unsigned int i = 0; i < current_layer_size; ++i) { // For each neuron 'i' in current hidden layer 'l'
+            float error_sum = 0.0;
+            for (unsigned int k = 0; k < next_layer_size; ++k) { // For each neuron 'k' in next layer 'l+1'
+                error_sum += layer_deltas[l + 1][k] * weights_to_next_layer(k, i);
             }
-            layer_deltas[l][i] = error_sum * sigmoidder(hlayers[l-1][i]);
+            layer_deltas[l][i] = error_sum * sigmoidder(current_hidden_layer_activations[i]);
         }
     }
 
     // Update weights for all layers
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        size_t current_layer_size = layer_sizes[l+1];
-        size_t prev_layer_size = layer_sizes[l];
+        size_t to_layer_size = layer_sizes[l+1];   // Number of neurons in the layer weights[l] projects TO (layer l+1)
+        size_t from_layer_size = layer_sizes[l]; // Number of neurons in the layer weights[l] projects FROM (layer l)
         mat& current_weights = weights[l];
+        const std::vector<float>& from_layer_activations = activations[l]; // Activations of layer 'l'
 
-        const std::vector<float>& prev_layer_output = (l == 0) ? input : hlayers[l-1];
-
-        for (unsigned int i = 0; i < current_layer_size; ++i) {
-            for (unsigned int j = 0; j < prev_layer_size; ++j) {
-                current_weights(i, j) -= learning * layer_deltas[l + 1][i] * prev_layer_output[j];
+        for (unsigned int i = 0; i < to_layer_size; ++i) { // Neuron 'i' in layer 'l+1'
+            for (unsigned int j = 0; j < from_layer_size; ++j) { // Neuron 'j' in layer 'l'
+                // Weight W_ij connects neuron j (from_layer) to neuron i (to_layer)
+                current_weights(i, j) -= learning * layer_deltas[l + 1][i] * from_layer_activations[j];
             }
         }
     }
@@ -63,9 +70,13 @@ void mlp::backward(int in, int layers, float learning) {
 
 /**
  * @brief Backward propagation with gradients, uses gradients to update weights.
+ * @param in dimension of input and output vectors, size of each square layer
+ * @param layers number of activation layers
+ * @param learning learning rate for mlp
  */
 void mlp::backprop(int in, int layers, float learning) {
-    if (num_layers < 2) return; // Need at least input and output layer
+    if (num_layers < 2) 
+        return; // Need at least input and output layer
 
     // --- Initialize deltas for each layer ---
     std::vector<std::vector<float>> layer_deltas(num_layers);
@@ -82,7 +93,7 @@ void mlp::backprop(int in, int layers, float learning) {
         // 'this->output' contains the final activations of the output layer
         // and 'this->expected' contains the target values.
         // The derivative of sigmoid (if output is sigmoid activated) is output * (1 - output)
-        layer_deltas[output_layer_idx][i] = (this->output[i] - this->expected[i]) * (this->activations[output_layer_idx][i] * (1.0f - this->activations[output_layer_idx][i]));
+        layer_deltas[output_layer_idx][i] = (this->output[i] - this->expected[i]) * this->activations[output_layer_idx][i] * (1.0f - this->activations[output_layer_idx][i]);
     }
 
     // --- Calculate deltas for hidden layers (from right to left) ---
@@ -314,7 +325,7 @@ void mlp::backprop2in(int in, int layers, float learning) {
         size_t prev_layer_size = layer_sizes[l];
         mat& current_weights = weights[l]; 
         mat& current_gweights = gweights[l];
-        const std::vector<float>& prev_activations = (l == 0) ? input : activations[l-1];
+        const std::vector<float>& prev_activations = activations[l]; // Use activations[l] as it includes input at index 0
 
         for (unsigned int i = 0; i < current_layer_size; ++i) {
             for (unsigned int j = 0; j < prev_layer_size; ++j) {

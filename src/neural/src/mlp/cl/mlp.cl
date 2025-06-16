@@ -373,7 +373,7 @@ __kernel void kernelLayerForward(__global const float* inputs,
         // Perform dot product: inputs . weights_row_j
         // weights are row-major: weights[row * num_cols + col]
         // Here: row = neuron_idx, num_cols = input_size, col = i (input dimension)
-        for (int i = 0; i < input_size; i++) {
+        for (int i = 0; i < input_size; i++) { // input_size is the number of columns in the weights matrix for the current row
             sum += inputs[i] * weights[neuron_idx * input_size + i];
         }
         // Store the weighted sum (pre-activation value)

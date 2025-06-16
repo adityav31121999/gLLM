@@ -796,13 +796,13 @@ __global__ void kernelComputeGradK_Q(const float* grad_kdotq, const float* k, co
 
         // Calculate grad_K[i][h] = sum_j (grad_KdotQ[i][j] * Q[j][h])
         for (int j = 0; j < token_count; ++j) {
-            sum_for_grad_k_ih += grad_kdotq[i * token_count + j] * q[j * mat_heights + h];
+            sum_for_grad_k_ih += grad_kdotq[i * token_count + j] * k[j * mat_heights + h];
         }
 
         // Calculate grad_Q[i][h] = sum_j (K[j][h] * grad_KdotQ[j][i]) (Note: 'i' is column index of grad_KdotQ)
         // Equivalent to: grad_Q[token_idx][h] = sum_j (K[j][h] * grad_KdotQ[j][token_idx]) where token_idx = i
         for (int j = 0; j < token_count; ++j) {
-            sum_for_grad_q_ih += k[j * mat_heights + h] * grad_kdotq[j * token_count + i];
+            sum_for_grad_q_ih += q[j * mat_heights + h] * grad_kdotq[j * token_count + i];
         }
 
         // Store results using row-major indexing

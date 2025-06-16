@@ -133,6 +133,7 @@ void transformer::cuRun(std::vector<std::vector<float>> &prompt) {
                 for (int col = 0; col < y; ++col) {
                     // Pass the count of *new* prompt tokens and the total count *before* the prompt
                     int effectivePromptCount = promptCount;
+
                     cuParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
                 }
                 CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ calculation is done
@@ -149,7 +150,7 @@ void transformer::cuRun(std::vector<std::vector<float>> &prompt) {
                         int effectivePromptCount = m2;
                         cuParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
                     }
-                        CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ for m2 is done
+                    CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ for m2 is done
                 }
 
                 // --- Transition to the next block ---
@@ -309,7 +310,8 @@ void transformer::cuRun(std::vector<std::vector<float>> &prompt) {
             } // End of response generation loop
             rCount += 1;
         }
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         std::cerr << "Error in transformer::cuRun: " << e.what() << std::endl;
         // --- Cleanup on Error ---
         cudaFree(d_tokenEmbed);
@@ -538,7 +540,7 @@ void transformer::cuRun() {
                         // Pass the new blockCount
                         cuParallelKdotQs(effectivePromptCount, start_of_new_block_count, blockCount, col, isSelf, inTraining);
                     }
-                     CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ for m1 is done
+                    CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ for m1 is done
                 }
             }
 

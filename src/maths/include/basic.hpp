@@ -44,6 +44,7 @@ float errorofv(std::vector<float>&, std::vector<float>&);
 float gradientdesc1(std::vector<float>, std::vector<float>);
 float vdotv2val(std::vector<float>, std::vector<float>);
 float vdotv2scal(std::vector<float> , std::vector<float>);
+float MAE(std::vector<float>&, std::vector<float>&);
 float MSE(std::vector<float>&, std::vector<float>&);
 float crossEntropy(std::vector<float>&, std::vector<float>&);
 float sum(std::vector<float>);

@@ -668,6 +668,26 @@ float errorofv(std::vector<float>& v1, std::vector<float>& v2) {
  * @param b The second vector.
  * @return The mean squared error between the two vectors.
  */
+float MAE(std::vector<float>& a, std::vector<float>& b) {
+    if(a.size() != b.size())
+        throw std::runtime_error("Same Size Vectors are ALLOWED only");
+    float sum = 0.0;
+    for(int i = 0; i < a.size(); i++) {
+        // Calculate the squared difference between the elements of the two vectors
+        sum += std::abs(a[i] - b[i]);
+    }
+    return sum / a.size();
+}
+
+/**
+ * @brief Calculate the Mean Squared Error (MSE) between two vectors. This function 
+ * takes two vectors as input and returns the mean squared error between them.
+ * The mean squared error is calculated as the average of the squared differences 
+ * between the corresponding elements of the two vectors.
+ * @param a The first vector.
+ * @param b The second vector.
+ * @return The mean squared error between the two vectors.
+ */
 float MSE(std::vector<float>& a, std::vector<float>& b) {
     if(a.size() != b.size())
         throw std::runtime_error("Same Size Vectors are ALLOWED only");

@@ -426,8 +426,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
             current_error = MSE(h_otok_buffer, response[i]); // Compare against target response[i]
             // if(host_indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && tokens[host_indexForToken] == rString[i])
-            if(tokens[this->indexForToken] == rString[i])
-            {
+            if(tokens[this->indexForToken] == rString[i]) {
                 std::cout << "indexForToken: " << this->indexForToken << " <---> host_indexForToken: " << host_indexForToken << std::endl;
                 std::cout << "Computed token is -> " << tokens[host_indexForToken] << " <- with error " << current_error << std::endl;
                 CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, response[i].data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
@@ -592,7 +591,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         }
         // copy response to d_tokenEmbed from response[i]
         CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, response[i].data(), d * sizeof(float), cudaMemcpyHostToDevice));
-        std::cout << "To next token" << std::endl;
+        std::cout << "--------------------To next token------------->>>>>>>>>>>" << std::endl;
     }
 
     // --- Free temporary device memory ---

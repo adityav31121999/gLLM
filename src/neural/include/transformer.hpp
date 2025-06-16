@@ -3,6 +3,11 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
+/**
+ * For training and testing of model, use trainable weight matrices, process just like training
+ * For validation of model, use compressed weights cache, process just like inferencing
+ */
+
 #include <string>
 #include <cmath>
 #include <vector>
@@ -96,13 +101,9 @@ public:
     void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void cuTest(std::vector<float>&, std::string&);
-    void cuTest(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
              std::vector<std::vector<std::string>>& rString);
-    void cuValidate(std::vector<float>&, std::string&);
-    void cuValidate(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
@@ -122,13 +123,9 @@ public:
     void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void clTest(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string& expString);
-    void clTest(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
              std::vector<std::vector<std::string>>& rString);
-    void clValidate(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string& expString);
-    void clValidate(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
@@ -149,13 +146,9 @@ public:
     void train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void test(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
-    void test(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void test(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void test(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void validate(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string&);
-    void validate(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void validate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void validate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
@@ -164,7 +157,7 @@ public:
 
 #endif
 
-    void setDims(int m, int x, int y, int n, int d, int h, int l);  // set dimension of transformer
+    void setDims(int m, int x, int y, int n, int d, int h, int l);      // set dimension of transformer
     void setLearning(float learning);           // set learning rate for MLPs
     void setEpochs(int epochs);                 // set epochs for MLPs
     void setAttention(bool attentionType);      // set self attention (1) or cross attention (0)

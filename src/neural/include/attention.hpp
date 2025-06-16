@@ -25,7 +25,8 @@
 
 // macros for models
 #define TERMINATE "@#O"                     // end of conversation (And Its Over)
-#define LEARNING 0.01                       // learning rate for MLPs
+#define LEARNING 0.01                       // learning rate for transformer, except mlp
+#define LEARNING_MLP 0.05                   // learning rate for MLPs only
 #define MATHEIGHTS 1024                     // weight matrix heights
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head
 #define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt

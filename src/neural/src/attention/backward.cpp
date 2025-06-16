@@ -97,7 +97,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
         int limit_j = this->tokenCount;
         limit_j = std::min(limit_j, grad_head.col);
         for (int j = 0; j < limit_j; j++) {
-            if (i >= K.row || j >= Q.row) continue;
+            if (i >= K.row || j >= Q.row) 
+                continue;
             float grad_dh_sum = 0.0f;
             float grad_dv_sum = 0.0f;
             for (int d = 0; d < EMBEDDING; d++) {
@@ -106,7 +107,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
                     grad_dv_sum += Q(j, h) * MV(h, d) * grad_dv[d];
                 }
             }
-            grad_head(i, j) = grad_dh_sum;
+            grad_head(i, j) = grad_dh_sum + grad_dv_sum;
+            // grad_head_h(i, j) = grad_dh_sum; grad_head_v(i, j) = grad_dv_sum;
         }
     }
 
@@ -141,8 +143,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
         limit_j = std::min({limit_j, grad_KdotQ.row, grad_KdotQ.col, K.row, Q.row});
         for (int j = 0; j < limit_j; j++) {
             for (int h = 0; h < MATHEIGHTS; h++) {
-                grad_K(i, h) += grad_KdotQ(i, j) * Q(j, h);
-                grad_Q(i, h) += grad_KdotQ(j, i) * K(j, h);
+                grad_K(i, h) += grad_KdotQ(i, j) * K(j, h);
+                grad_Q(i, h) += grad_KdotQ(j, i) * Q(j, h);
             }
         }
     }
@@ -157,8 +159,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
         if (i >= K.row || i >= Q.row || i >= grad_K.row || i >= grad_Q.row) continue;
         for (int h = 0; h < MATHEIGHTS; h++) {
             for (int d = 0; d < EMBEDDING; d++) {
-                grad_MK(h, d) += grad_K(i, h) * K(i, d);
-                grad_MQ(h, d) += grad_Q(i, h) * Q(i, d);
+                grad_MK(h, d) += grad_K(i, h) * K(i, h);
+                grad_MQ(h, d) += grad_Q(i, h) * Q(i, h);
             }
         }
     }
@@ -172,6 +174,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
             if (i < MK.row && j < MK.col) MK(i, j) -= LEARNING * grad_MK(i, j);
         }
     }
+    
 
     // Step 10: Update EH and EV using gradients
     if(headnumber > 1) {

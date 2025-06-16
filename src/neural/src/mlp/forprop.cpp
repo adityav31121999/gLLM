@@ -11,66 +11,70 @@
  * forward propagation and calculates the activations of each layer.
  */
 void mlp::forward(int in, int layers) {
-    if (hlayers.size() != layers || activations.size() != layers) {
-        hlayers.resize(layers, std::vector<float>(in, 0.0));
-        activations.resize(layers, std::vector<float>(in, 0.0));
-    }
-    const unsigned int num_input_neurons = input.size();
-
-    for (unsigned int j = 0; j < layer_sizes[1]; ++j) {
-        if (!weights[0].mapped_data) {
-            throw std::runtime_error("Weights[0] not mapped.");
+    if (this->num_layers < 2) {
+        if (this->num_layers == 1 && !this->input.empty()) {
+            this->output = this->input; // Or apply activation if input layer has one
         }
-
-        float sum = 0.0f;
-        for (unsigned int k = 0; k < num_input_neurons; ++k) {
-            size_t weight_index = static_cast<size_t>(k) * weights[0].col + j;
-            if (weight_index >= weights[0].mapped_size / sizeof(float)) {
-                throw std::out_of_range("Weight index out of range.");
-            }
-            sum += input[k] * weights[0].mapped_data[weight_index];
-        }
-
-        hlayers[0][j] = sum;
-        activations[0][j] = sigmoid(sum);
+        return;
     }
 
-    for (unsigned int i = 1; i < layers; i++) {
-        if (!weights[i].mapped_data) {
-            throw std::runtime_error("Weights[" + std::to_string(i) + "] not mapped.");
+    // Ensure input is copied to activations[0]
+    if (this->activations[0].size() != this->layer_sizes[0]) {
+        this->activations[0].resize(this->layer_sizes[0]);
+    }
+    if (this->input.size() == this->layer_sizes[0]) {
+        this->activations[0] = this->input;
+    } 
+    else {
+        throw std::runtime_error("MLP forward: Input vector size mismatch with input layer size.");
+    }
+
+    // Iterate through weight matrices: weights[0] to weights[num_layers - 2]
+    // `l_idx` is the index for the weight matrix, hlayer, and the *previous* activation layer.
+    for (unsigned int l_idx = 0; l_idx < this->num_layers - 1; ++l_idx) {
+        const mat& current_weights = this->weights[l_idx]; // Connects layer l_idx to l_idx+1
+                                                       // Dimensions: (layer_sizes[l_idx+1], layer_sizes[l_idx])
+        const std::vector<float>& prev_layer_activations = this->activations[l_idx];
+        std::vector<float>& current_hlayer_values = this->hlayers[l_idx]; // For layer l_idx+1
+        std::vector<float>& current_output_activations = this->activations[l_idx+1]; // For layer l_idx+1
+
+        if (!current_weights.mapped_data) {
+            throw std::runtime_error("Weights[" + std::to_string(l_idx) + "] not mapped.");
         }
 
-        for (unsigned int j = 0; j < layer_sizes[i + 1]; ++j) {
+        // Ensure hlayers and activations for the current output layer are correctly sized
+        if (current_hlayer_values.size() != this->layer_sizes[l_idx+1]) {
+            current_hlayer_values.resize(this->layer_sizes[l_idx+1]);
+        }
+        if (current_output_activations.size() != this->layer_sizes[l_idx+1]) {
+            current_output_activations.resize(this->layer_sizes[l_idx+1]);
+        }
+
+        // For each neuron 'j' in the current output layer (layer l_idx+1)
+        for (unsigned int j = 0; j < this->layer_sizes[l_idx+1]; ++j) {
             float sum = 0.0f;
-            for (unsigned int k = 0; k < layer_sizes[i]; ++k) {
-                size_t weight_index = static_cast<size_t>(k) * weights[i].col + j;
-
-                if (weight_index >= weights[i].mapped_size / sizeof(float)) {
-                    throw std::out_of_range("Weight index out of range.");
+            // For each neuron 'k' in the previous layer (layer l_idx)
+            for (unsigned int k = 0; k < this->layer_sizes[l_idx]; ++k) {
+                // Weight from neuron k (prev layer) to neuron j (current output layer)
+                // is weightsl_idx
+                // Access: current_weights.mapped_data[j * current_weights.col + k]
+                // current_weights.col is layer_sizes[l_idx]
+                size_t weight_index = static_cast<size_t>(j) * current_weights.col + k;
+                if (weight_index >= current_weights.mapped_size / sizeof(float)) {
+                    throw std::out_of_range("Weight index out of range for weights[" + std::to_string(l_idx) + "]. Accessing index " + std::to_string(weight_index) + " with size " + std::to_string(current_weights.mapped_size / sizeof(float)));
                 }
-                sum += activations[i - 1][k] * weights[i].mapped_data[weight_index];
+                sum += prev_layer_activations[k] * current_weights.mapped_data[weight_index];
             }
-            hlayers[i][j] = sum;
-            activations[i][j] = sigmoid(sum);
+            current_hlayer_values[j] = sum;
+            current_output_activations[j] = sigmoid(sum);
         }
     }
 
-    output.resize(layer_sizes.back(), 0.0f);
-    if (!weights[layers].mapped_data) {
-        throw std::runtime_error("Weights[" + std::to_string(layers) + "] not mapped.");
+    // The final output is in activations[num_layers - 1]
+    if (this->output.size() != this->layer_sizes.back()) {
+        this->output.resize(this->layer_sizes.back());
     }
-
-    for (unsigned int i = 0; i < layer_sizes.back(); ++i) {
-        float sum = 0.0f;
-        for (unsigned int k = 0; k < layer_sizes[layers]; ++k) {
-            size_t weight_index = static_cast<size_t>(k) * weights[layers].col + i;
-
-            if (weight_index >= weights[layers].mapped_size / sizeof(float)) {
-                throw std::out_of_range("Weight index out of range.");
-            }
-            sum += activations[layers - 1][k] * weights[layers].mapped_data[weight_index];
-        }
-        output[i] = sigmoid(sum);
-    }
+    this->output = this->activations[this->num_layers - 1];
 }
+
 #endif

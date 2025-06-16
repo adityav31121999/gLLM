@@ -52,11 +52,12 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         // Step 1: Compute KdotQ matrices
         // Step 2 & 3: Perform forward propagation for the relevant block using its OpenCL method
         if (blockCount == 1) {
+            std::cout << "-> clForward: Executing clForprop for Block 1..." << std::endl;
             // t[0].deserialise(t[0].blockFilePath);
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);
             }
-            std::cout << "-> clForward: Executing clForprop for Block 1..." << std::endl;
+            std::cout << "clForward: Scaled Dot Products Calculated" << std::endl;
             t[0].clForprop(d, currentTokenCount, l);
             std::cout << "clForward: Block 1 clForprop finished." << std::endl;
         }
@@ -69,6 +70,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);
             }
+            std::cout << "clForward: Scaled Dot Products Calculated" << std::endl;
             t[blockCount-1].clForprop(t[blockCount - 1].EV, d, currentTokenCount, blockCount, l, n);
             std::cout << "clForward: Block " << blockCount << " clForprop finished." << std::endl;
         }
@@ -143,7 +145,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &this->indexForToken));
 
             std::cout << "clForward: kernelComputePredictionIndex finished. Predicted index: " << this->indexForToken \
-                      << ". Token is: " << tokens[this->indexForToken] << "." << std::endl;
+                      << ". Token is: " << tokens[this->indexForToken] << std::endl;
         }
         catch (const std::exception& e) {
             std::cerr << "Standard Exception during prediction kernel execution: " << e.what() << std::endl;
