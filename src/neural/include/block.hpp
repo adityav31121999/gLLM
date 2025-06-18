@@ -134,11 +134,6 @@ public:
     void cubackward(std::vector<float>& expectedH, int& in, int& layers, int blockCount);
     void cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount);
     void cubackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount);
-    // for inference
-    void cuInferParallel(const mat& tokens, int& in, int& tokenCount, int& layers, int& parallelNumber);
-    void cuInferParallel(const std::vector<mat>& expectedV, const mat& tokForBlock, int& in, int& tokenCount, int& blockCount, int& layers, int& n, int& parallelNumber);
-    void cuInfer(const mat& tokens, int& in, int& tokenCount, int& layers);
-    void cuInfer(const std::vector<std::vector<mat>>& expectedV, const mat& tokForBlock, int& in, int& tokenCount, int& blockCount, int& layers, int& n, int& parallelNumber);
 
 #elif USE_OPENCL
 
@@ -167,11 +162,6 @@ public:
     void clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount);
     void clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount);
     void clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount);
-    // for inference
-    void clInferParallel(const mat& tokens, int& in, int& tokenCount, int& layers, int& parallelNumber);
-    void clInferParallel(std::vector<mat>& expectedV, const mat& tokForBlock, int& in, int& tokenCount, int& blockCount, int& layers, int& n, int& parallelNumber);
-    void clInfer(const mat& tokens, int& in, int& tokenCount, int& layers);
-    void clInfer(const std::vector<std::vector<mat>>& expectedV, const mat& tokForBlock, int& in, int& tokenCount, int& blockCount, int& layers, int& n, int& parallelNumber);
 
 #else
 
@@ -199,9 +189,6 @@ public:
     void backward(std::vector<float>& expectedH, int& in, int& layers, int blockCount);
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount);
     void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount);
-    // for inference
-    void inferParallel(const mat& tokens, int &in, int &tokenCount, int &layers, int& parallelNumber);
-    void inferParallel(std::vector<mat>& expectedV, const mat& tokForBlock, int& in, int& tokenCount, int& blockCount, int& layers, int& n, int& parallelNumber);
 
 #endif
 
