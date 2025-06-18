@@ -397,7 +397,15 @@ __kernel void kernelComputeGradientsEH_EV(__global const float* eh, __global con
 {
     int idx = get_global_id(0);
     if (idx < embedding_dim) {
-        float grad = 2.0f * (eh[idx] - expected_h[idx]);
+        float pred = eh[idx];
+        float label = expected_h[idx];
+
+        // Clamp to avoid division by zero or log(0)
+        pred = fmax(fmin(pred, 1.0f - 1e-7f), 1e-7f);
+
+        // BCE gradient: (p - y) / [p * (1 - p)]
+        float grad = (pred - label) / (pred * (1.0f - pred));
+
         grad_eh[idx] = grad;
         grad_ev_scaled[idx] = grad * 0.1f;
     }
@@ -568,7 +576,16 @@ __kernel void kernelComputeGradientsEV_V(__global const float* ev, __global cons
         float sum_grad_embed = 0.0f;
         for (int win_idx = 0; win_idx < context_win; ++win_idx) {
             int idx = win_idx * embedding_dim + embed_idx;
-            float grad = 2.0f * (ev[idx] - expected_v[idx]);
+
+            float pred = ev[idx];
+            float label = expected_v[idx];
+
+            // Clamp to avoid division by zero or log(0)
+            pred = fmax(fmin(pred, 1.0f - 1e-7f), 1e-7f);
+
+            // BCE gradient: (p - y) / (p * (1 - p))
+            float grad = (pred - label) / (pred * (1.0f - pred));
+
             grad_ev_full[idx] = grad;
             sum_grad_embed += grad;
         }

@@ -46,12 +46,6 @@ void transformer::validate(std::vector<std::vector<std::vector<float>>>& prompts
     }
 
     std::cout << "\n--- Overall Chat Validation Summary (from cumulative transformer stats for this session) ---" << std::endl;
-    if (this->validationCount > 0) {
-        std::cout << "  (Refer to individual turn summaries for accuracy if not tracked globally for chat validation)" << std::endl;
-        std::cout << "  Cumulative validationCount: " << this->validationCount << ", Cumulative validationMSE: " << this->validationMSE << std::endl;
-    } else {
-        std::cout << "  No tokens were validated in this chat session." << std::endl;
-    }
     std::cout << "==================================================" << std::endl;
     this->inTraining = originalInTraining; // Restore original state
 }

@@ -579,15 +579,21 @@ __global__ void kernelComputeGradDhDv_1stHead(const float* d_hor_gweights0, cons
  * @param[in] embedding_dim The dimension of the embedding vectors.
  */
 __global__ void kernelComputeGradientsEH_EV(const float* eh, const float* expected_h,
-                        float* grad_eh, float* grad_ev_scaled, int embedding_dim) 
+                                            float* grad_eh, float* grad_ev_scaled, int embedding_dim) 
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < embedding_dim) {
-        // Assuming Mean Squared Error loss: dL/d(eh) = d/d(eh) [(eh - expected_h)^2] = 2 * (eh - expected_h)
-        float grad = 2.0f * (eh[idx] - expected_h[idx]);
+        float pred = eh[idx];             // predicted probability (assumed sigmoid output)
+        float label = expected_h[idx];    // true label (0 or 1)
+
+        // Clamp predicted value to avoid division by 0 or log(0)
+        pred = fminf(fmaxf(pred, 1e-7f), 1.0f - 1e-7f);
+
+        // Compute BCE gradient
+        float grad = (pred - label) / (pred * (1.0f - pred));
+
         grad_eh[idx] = grad;
-        // Apply scaling factor for the vertical path gradient (as seen in C++ code)
-        grad_ev_scaled[idx] = grad * 0.1f;
+        grad_ev_scaled[idx] = grad * 0.1f;  // scale for vertical path
     }
 }
 
@@ -947,13 +953,21 @@ __global__ void kernelComputeGradientsEV_V(const float* ev, const float* expecte
         // Iterate through the context window for the current embedding dimension
         for (int win_idx = 0; win_idx < context_win; ++win_idx) {
             int idx = win_idx * embedding_dim + embed_idx; // Flat index for ev[win_idx][embed_idx]
-            // Assuming Mean Squared Error loss
-            float grad = 2.0f * (ev[idx] - expected_v[idx]);
-            grad_ev_full[idx] = grad; // Store the gradient for this specific element
-            sum_grad_embed += grad;   // Accumulate the gradient for this embedding dimension
+
+            float pred = ev[idx];              // prediction
+            float label = expected_v[idx];     // true label (0 or 1)
+
+            // Clamp pred to avoid division by zero
+            pred = fminf(fmaxf(pred, 1e-7f), 1.0f - 1e-7f);
+
+            // Binary Cross Entropy gradient
+            float grad = (pred - label) / (pred * (1.0f - pred));
+
+            grad_ev_full[idx] = grad;       // Store element-wise gradient
+            sum_grad_embed += grad;         // Accumulate for this embed dimension
         }
+
         grad_ev_summed[embed_idx] = sum_grad_embed;
-        // Scale the summed gradient by learning rate (as done in C++ step 1 for this path)
         grad_ev_scaled[embed_idx] = sum_grad_embed * learning_rate;
     }
 }

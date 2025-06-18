@@ -57,9 +57,9 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);
             }
-            std::cout << "clForward: Scaled Dot Products Calculated" << std::endl;
+            // std::cout << "clForward: Scaled Dot Products Calculated" << std::endl;
             t[0].clForprop(d, currentTokenCount, l);
-            std::cout << "clForward: Block 1 clForprop finished." << std::endl;
+            // std::cout << "clForward: Block 1 clForprop finished." << std::endl;
         }
         else {
             if (static_cast<size_t>(blockCount - 1) >= t.size()) {
@@ -70,13 +70,13 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);
             }
-            std::cout << "clForward: Scaled Dot Products Calculated" << std::endl;
+            // std::cout << "clForward: Scaled Dot Products Calculated" << std::endl;
             t[blockCount-1].clForprop(t[blockCount - 1].EV, d, currentTokenCount, blockCount, l, n);
-            std::cout << "clForward: Block " << blockCount << " clForprop finished." << std::endl;
+            // std::cout << "clForward: Block " << blockCount << " clForprop finished." << std::endl;
         }
 
         // Step 3.5: Accumulate EH from the last column of the current block (HOST-SIDE)
-        std::cout << "clForward: Accumulating EH from last column (y-1=" << y-1 << ") of Block " << blockCount << " on host..." << std::endl;
+        // std::cout << "clForward: Accumulating EH from last column (y-1=" << y-1 << ") of Block " << blockCount << " on host..." << std::endl;
         if (y > 0) {
             for (int j = 0; j < x; ++j) {
                 const std::vector<float>& eh_vector = t[blockCount-1].b[j][y - 1].EH;
@@ -89,7 +89,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
                     otok[k] += eh_vector[k];
                 }
             }
-            std::cout << "clForward: Host EH accumulation finished." << std::endl;
+            // std::cout << "clForward: Host EH accumulation finished." << std::endl;
         } 
         else {
             std::cerr << "Warning: clForward called with y=0 columns. Cannot accumulate EH." << std::endl;
@@ -98,7 +98,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         // ====================================================================
         // Step 4: Compute Output Token Index using kernelComputePredictionIndex
         // ====================================================================
-        std::cout << "clForward: Computing output token index using kernelComputePredictionIndex..." << std::endl;
+        // std::cout << "clForward: Computing output token index using kernelComputePredictionIndex..." << std::endl;
         cl::Buffer d_otok_buffer;
         cl::Buffer d_embeddings_buffer;
         cl::Buffer d_result_index_buffer; // Buffer for the single integer result
@@ -144,8 +144,8 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(predictionKernel, cl::NullRange, global_size, local_size));
             CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &this->indexForToken));
 
-            std::cout << "clForward: kernelComputePredictionIndex finished. Predicted index: " << this->indexForToken \
-                      << ". Token is: " << tokens[this->indexForToken] << std::endl;
+            // std::cout << "clForward: kernelComputePredictionIndex finished. Predicted index: " << this->indexForToken \
+            //           << ". Token is: " << tokens[this->indexForToken] << std::endl;
         }
         catch (const std::exception& e) {
             std::cerr << "Standard Exception during prediction kernel execution: " << e.what() << std::endl;

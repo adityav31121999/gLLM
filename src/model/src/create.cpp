@@ -32,11 +32,26 @@ void create(std::string &locationOfALLbins)
     std::ofstream qkFile(locationOfALLbins + "/bin/QK.bin", std::ios::binary);
     std::ofstream khFile(locationOfALLbins + "/bin/KH.bin", std::ios::binary);
     std::ofstream qvFile(locationOfALLbins + "/bin/QV.bin", std::ios::binary);
-    
+
     // Initialize files with correct dimensions
-    size_t mat_size = static_cast<size_t>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS);
-    size_t mlp_size = static_cast<size_t>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
-    size_t cache_size = static_cast<size_t>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
+    long long int mat_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS);
+    long long int mlp_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
+    long long int cache_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
+    long long int totalParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+                               + 2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
+                               + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
+    long long int trainableParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+                                   + 2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
+    long long int inferenceParams = (2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
+                                   + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
+
+    std::cout << "      PARAMETERS          COUNT          SIZE(MiBs)        " << std::endl;
+    std::cout << "Trained Weight Matrix:  " << mat_size << "\t    " << static_cast<float>(sizeof(float)*mat_size)/(1000*1000) << std::endl;
+    std::cout << "Trained MLP Weight   :  " << mlp_size << "\t\t    " << static_cast<float>(sizeof(float)*mlp_size)/(1000*1000) << std::endl;
+    std::cout << "Compressed Weight    :  " << cache_size << "\t\t    " << static_cast<float>(sizeof(float)*cache_size)/(1000*1000) << std::endl;
+    std::cout << "Total trainable      :  " << trainableParams << "\t    " << static_cast<float>(sizeof(float)*trainableParams)/(1000*1000) << std::endl;
+    std::cout << "Total inference      :  " << inferenceParams << "\t    " << static_cast<float>(sizeof(float)*inferenceParams)/(1000*1000) << std::endl;
+    std::cout << "Total trained        :  " << totalParams << "\t    " << static_cast<float>(sizeof(float)*totalParams)/(1000*1000) << std::endl;
 
     // Initialize MQ, MK, MH, MV files
     std::vector<float> mq_data(mat_size, 0.0f);
@@ -44,12 +59,12 @@ void create(std::string &locationOfALLbins)
     mkFile.write(reinterpret_cast<char*>(mq_data.data()), mat_size * sizeof(float));
     mhFile.write(reinterpret_cast<char*>(mq_data.data()), mat_size * sizeof(float));
     mvFile.write(reinterpret_cast<char*>(mq_data.data()), mat_size * sizeof(float));
-    
+
     // Initialize hor, ver files
     std::vector<float> mlp_data(mlp_size, 0.0f);
     horFile.write(reinterpret_cast<char*>(mlp_data.data()), mlp_size * sizeof(float));
     verFile.write(reinterpret_cast<char*>(mlp_data.data()), mlp_size * sizeof(float));
-    
+
     // Initialize QK, KH, QV files
     std::vector<float> cache_data(cache_size, 0.0f);
     qkFile.write(reinterpret_cast<char*>(cache_data.data()), cache_size * sizeof(float));

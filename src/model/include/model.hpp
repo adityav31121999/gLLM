@@ -7,23 +7,7 @@
 #include <vector>
 #include <maths.hpp>
 #include <neural.hpp>
-
-/**
- * Model parameters are stored in a single binary file pointed to by `modelPath`.
- * This file, managed by modelFILE, is used for training, contains:
- * 1. `modelDataInfo` struct: Metadata about the model, stored at the beginning of the file.
- * 2. `transformer T` data: All matrices and MLP weights for the main transformer, memory-mapped.
- * 3. `block b` data: All matrices and MLP weights for the common block, memory-mapped.
- * All `mat` and `mlp` objects within these components will map to specific regions
- * within this single `modelFILE`.
- * The actual numerical parameters are stored in separate .bin files for inference:
- * 1. Matrices: MQ.bin, MK.bin, MH.bin, MV.bin
- * 2. MLPs: hor.bin, ver.bin
- * 3. Caches: QK.bin, KH.bin, QV.bin
- */
-
-#define MECH "SHADY-ATTENTION"      // attention mechanism
-#define ARCH "DIVIDED-CONTEXT"      // model architecture
+#include <chrono>
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -57,6 +41,83 @@ typedef struct modelDataInfo {
     bool attentionType;     // if self attention or cross attention
 } modelDataInfo;
 
+// for training session data
+struct TrainingSessionData {
+    std::string lastTrainingFileName;
+    int linesProcessedInLastFile = 0;               // Lines processed in the lastTrainingFileName
+    int totalLines = 0;                             // total lines available in last training file
+    long long cumulativeTotalLinesTrained = 0;      // Total lines trained across all files/sessions
+    long long cumulativeTotalTokensProcessed = 0;   // Total tokens processed (model::totalTokens)
+    int lastBlockCountState = 0;                    // Snapshot of T.blockCount at last save
+    int lastEpochCountState = 0;                    // Snapshot of T.epochCount at last save
+    long long cumulativeTotalTrainCount = 0;        // Total train count (T.trainCount)
+    long long vocabSizeSnapshot = 0;                // Snapshot of T.vocabsize
+    float cumulativeError = 0;                      // total error throughout training
+    std::string lastSaveTimestamp;
+
+    bool load(const std::string& filepath) {
+        std::ifstream ifs(filepath);
+        if (!ifs.is_open()) return false;
+        std::string line;
+        
+        // Read data in the order it's saved
+        if (std::getline(ifs, line)) lastTrainingFileName = line; else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> linesProcessedInLastFile; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> totalLines; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeTotalLinesTrained; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeTotalTokensProcessed; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lastBlockCountState; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lastEpochCountState; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeTotalTrainCount; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> vocabSizeSnapshot; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeError; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) lastSaveTimestamp = line; else return false;
+        
+        return ifs.eof() || ifs.peek() == EOF; // Ensure all expected data was read
+    }
+
+    void save(const std::string& filepath) {
+        std::ofstream ofs(filepath);
+        if (!ofs.is_open()) {
+            std::cerr << "Error: Could not open session data file for writing: " << filepath << std::endl;
+            return;
+        }
+        ofs << lastTrainingFileName << std::endl;
+        ofs << linesProcessedInLastFile << std::endl;
+        ofs << totalLines << std::endl;
+        ofs << cumulativeTotalLinesTrained << std::endl;
+        ofs << cumulativeTotalTokensProcessed << std::endl;
+        ofs << lastBlockCountState << std::endl;
+        ofs << lastEpochCountState << std::endl;
+        ofs << cumulativeTotalTrainCount << std::endl;
+        ofs << vocabSizeSnapshot << std::endl;
+        ofs << cumulativeError << std::endl;
+        
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        std::stringstream ss_time;
+        ss_time << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S");
+        ofs << ss_time.str() << std::endl;
+    }
+};
+
+/**
+ * Model parameters are stored in a single binary file pointed to by `modelPath`.
+ * This file, managed by modelFILE, is used for training, contains:
+ * 1. `modelDataInfo` struct: Metadata about the model, stored at the beginning of the file.
+ * 2. `transformer T` data: All matrices and MLP weights for the main transformer, memory-mapped.
+ * 3. `block b` data: All matrices and MLP weights for the common block, memory-mapped.
+ * All `mat` and `mlp` objects within these components will map to specific regions
+ * within this single `modelFILE`.
+ * The actual numerical parameters are stored in separate .bin files for inference:
+ * 1. Matrices: MQ.bin, MK.bin, MH.bin, MV.bin
+ * 2. MLPs: hor.bin, ver.bin
+ * 3. Caches: QK.bin, KH.bin, QV.bin
+ */
+
+#define MECH "SHADY-ATTENTION"      // attention mechanism
+#define ARCH "DIVIDED-CONTEXT"      // model architecture
+
 /**
  * @brief Model Class for storing transformers. Uses transformer class to store all the parametes
  * trained and to be trained. This helps in keeping all values together and accessing the values 
@@ -77,6 +138,7 @@ public:
     bool toTrain;           // if training of model, set to 1, or use of model, set to 0
     transformer T;          // model with 1 transformer
     modelDataInfo info;     // model info
+    TrainingSessionData trainInfo;  // training session data
     FILE *metadata = nullptr;       // .txt file for model metadata
     FILE *chat = nullptr;           // .txt file to save chat
     std::string baseDir;            // Base directory for model files (e.g., D:/train)
@@ -123,12 +185,16 @@ public:
     void setEmbeddingFromBin(const std::string& path2file);
     void makeEmbedding(std::string& path2file);
 
-    // for common knowledge training usin first block
-    void train1stBlock(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string> rString);
-    void test1stBlock(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string> rString);
-    void validate1stBlock(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string> rString);
+    void trainforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
+    void trainforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
     void trainBlock(const std::string& trainingDataFolder);
+
+    void testforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
+    void testforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
     void testBlock(const std::string& testDataFolder);
+
+    void validateforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
+    void validateforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
     void validateBlock(const std::string& validationDataFolder);
     void copy1toOhterBlocks();
 
@@ -174,7 +240,6 @@ void textSplit(std::string& path2file, std::vector<std::string>& tokensOfFile, s
                 std::vector<std::vector<std::string>>& evenSentence);
 void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens);
 void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
-
 
 // binary files
 

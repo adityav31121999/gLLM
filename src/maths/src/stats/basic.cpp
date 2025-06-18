@@ -1,6 +1,7 @@
 
 // basic functions of statistics
 #include "stats.hpp"
+#include <cmath>
 #include <functional>
 #include <algorithm>
 #include <numeric>

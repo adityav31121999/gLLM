@@ -5,7 +5,7 @@
 #include <stdexcept>  // For std::runtime_error
 #include <cstdint>    // For uint64_t
 #include <algorithm>  // For std::copy
-
+#include <cstring>
 
 /**
  * @brief Constructor for matrix of size x*y

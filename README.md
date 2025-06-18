@@ -3,6 +3,8 @@
 
 ![alt text](gLLMicon.svg)
 
+- This idea is due to the need to train a AI Model on gaming gpu without causing heavy burden on VRAM and GPU compute capability.
+
 ## INTRO
 - Library for LLMs
 - **VERSION**: 0.1.0.1 (Memory mapped matrices)
@@ -14,7 +16,7 @@
   - *CUDA*: 12.6
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
-  - Attention Mechanism: Shady
+  - Attention Mechanism: Retention Mechanism
   - Transformer Architecture: Divided context
   - Neural Connections: Dense
 
@@ -49,6 +51,8 @@
 ## Mechanism
 - This mechanism is a modification to Attention Mechanism defined in paper "Attention Is All You Need" by VASWANI et. al. (2017).
 - Also, I would direct all the readers to 3BLUE1BROWN YouTube channel where the Deep Learning Playlist is available and the main inspiration about the idea came from there.
+- This modification provides retention of context via horizontal flow using EH and vertical flow using EV.
+- The losses are decreased through multiple iterations of EV for maximum retention. While EH keeps updating Head by Head, EV is processed and updated at every head and all its rows get ReLUed MLP output.
 
 ### Main IDEA:
 - The main idea is to break long context into various small equal parts (Context Window) and introduce two new matrices for Horizontal and Vertical retention in place of Value matrix, having horizontal retention vector for token prediction and vertical retention vectors for context retention in next block.
@@ -191,17 +195,22 @@
   - Q[i][j][k] represent MQ of kth head of jth row of ith block
 ```
 .bin File:
-M[1][1][1] = --------------------------------------------------------------
-M[1][1][2] = --------------------------------------------------------------
-M[1][1][3] = --------------------------------------------------------------
+Q[1][1][1] = --------------------------------------------------------------
+Q[1][1][2] = --------------------------------------------------------------
+Q[1][1][3] = --------------------------------------------------------------
     |               |               |               |               |
-M[1][x][y] = --------------------------------------------------------------
-M[2][1][1] = --------------------------------------------------------------
-M[2][1][2] = --------------------------------------------------------------
-M[2][1][1] = --------------------------------------------------------------
+Q[1][x][y] = --------------------------------------------------------------
+Q[2][1][1] = --------------------------------------------------------------
+Q[2][1][2] = --------------------------------------------------------------
+Q[2][1][1] = --------------------------------------------------------------
     |               |               |               |               |
-M[m][x][y] = --------------------------------------------------------------
+Q[m][x][y] = --------------------------------------------------------------
 ```
+- Similarly, all other matrices and MLP weights are serialised.
+
+## Advantage
+- In transformers, where to increase context means, you have to increase attention score grid and computation linearly, this can cause toll on RAM/VRAM. If the Using DCA, the context can be increased without increasing the memory requirement, and also computation gets reduced.
+- Another way to look at this is that, if we want to create a long context LLM, we can make DCA based model with multiple smalled context, and get a model with similar context length without causing load on GPUs for computation.
 
 ## IMPORTANT NOTE:
 

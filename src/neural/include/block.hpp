@@ -80,10 +80,10 @@ public:
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
-    block(OpenCLContext& context, int x, int y, int n, int d, int h, int l, long long int vocab, bool attentionType, bool inTraining, int blockCount, const std::string& blockFilePath);
+    block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param);
 #elif USE_CUDA || USE_CPU
     block() = default;
-    block(int x, int y, int n, int d, int h, int l, long long int vocab, bool attentionType, bool inTraining, int blockCount, const std::string blockFilePath_param);
+    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param);
 #endif
 
     // assignment operator to copy block

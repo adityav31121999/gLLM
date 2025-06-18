@@ -52,7 +52,6 @@ public:
     int indexForToken;      // this is to set token index from embedding list
     int resCount;           // response count for every prompt
 
-// these are variables that change during runtime
     float error;            // error for transformer
     long long int trainCount;       // total training count
     long long int vocabsize;        // size of vocabulary

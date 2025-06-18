@@ -8,11 +8,10 @@
 extern "C" {
 #endif
 
-// Opaque structure to hold platform-specific mapping details
-typedef struct MappedFile MappedFile;
+typedef struct MappedFile MappedFile; // Forward declaration for opaque type
 
 /**
- * @brief Maps a file into memory.
+ * @brief Ensures a file exists and is at least the specified size.
  *
  * Opens the specified file and maps its contents into the process's
  * address space.
@@ -28,23 +27,22 @@ typedef struct MappedFile MappedFile;
  * @param size_out Pointer to a size_t. On success, this will contain the size
  *                 of the mapped region (file size).
  * @return 0 on success, non-zero on failure.
+ *         Specific error codes are platform-dependent.
  */
 int open_mapped_file(const char* filepath, bool read_write, MappedFile** mapped_file_out, void** mapped_ptr_out, size_t* size_out);
 
 /**
- * @brief Ensures a file exists and is at least the specified size.
- *
  * Creates the file if it doesn't exist. If it exists but is smaller
  * than required_size, it extends the file to required_size.
  * @param filepath Path to the file.
  * @param required_size The minimum desired size of the file in bytes.
  * @return 0 on success, non-zero on failure.
+ *         Specific error codes are platform-dependent.
  */
 int create_or_resize_file(const char* filepath, size_t required_size);
 
 /**
  * @brief Unmaps the memory region and closes associated resources.
- *
  * @param mapped_file The MappedFile structure obtained from open_mapped_file.
  */
 void close_mapped_file(MappedFile* mapped_file);

@@ -27,7 +27,6 @@
 #define TERMINATE "@#O"                     // end of conversation (And Its Over)
 #define LEARNING 0.01                       // learning rate for transformer, except mlp
 #define LEARNING_MLP 0.05                   // learning rate for MLPs only
-#define MATHEIGHTS 1024                     // weight matrix heights
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head
 #define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt
 #define EMBEDDING 64                        // embedding dimension for each token
@@ -37,6 +36,7 @@
 #define NUMBER_OF_PA 6                      // number of Partial Attentions in one Block
 #define NUMBER_OF_HEADS 16                  // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
+#define MATHEIGHTS CONTEXT_WIN*2            // weight matrix heights
 #define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS       // maximum tokens for full context
 
 

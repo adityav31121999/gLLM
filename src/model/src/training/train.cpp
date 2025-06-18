@@ -1,6 +1,8 @@
 
 #include "include/model.hpp"
 #include <filesystem>
+#include <sstream> // For std::istringstream
+#include <iomanip> // For std::put_time
 #include <fstream>
 #include <neural.hpp>
 #include <maths.hpp>
@@ -9,42 +11,9 @@
 #ifdef USE_CUDA
     #include <cuda.h>
     #include <cuda_runtime.h>
-    #define CUDA_CHECK(call) do {                                                   \
-        cudaError_t err = call;                                                     \
-        if (err != cudaSuccess) {                                                   \
-            fprintf(stderr, "CUDA Error in %s at line %d: %s\n",                    \
-                    __FILE__, __LINE__, cudaGetErrorString(err));                   \
-            /* Consider throwing an exception or exiting */                         \
-            throw std::runtime_error("CUDA Error: " + std::string(cudaGetErrorString(err)));    \
-        }                                                                           \
-    } while (0)
 #elif USE_OPENCL
     #include <CL/cl.hpp>
 #endif
-
-
-/**
- * @brief train the first block of transformer
- * @param prompt prompt embeddings for model
- * @param response expected response embeddings from model
- * @param rString tokens of response
- */
-void model::train1stBlock(std::vector<std::vector<float>> &prompt, std::vector<std::vector<float>> &response, std::vector<std::string> rString)
-{
-    if(this->T.currentTokenCount + prompt.size() + response.size() < CONTEXT_WIN) 
-    {
-        #ifdef USE_CUDA
-            this->T.cuTrain(prompt, response, rString);
-        #elif USE_OPENCL
-            this->T.clTrain(prompt, response, rString);
-        #elif USE_CPU
-            this->T.train(prompt, response, rString);
-        #endif
-    }
-    else {
-        throw std::runtime_error("LOCAL CONTEXT LIMIT of REACHED");
-    }
-}
 
 
 /**
@@ -64,6 +33,70 @@ void model::trainBlock(const std::string& txtFileLocation)
     if (std::filesystem::path(txtFileLocation).extension() != ".txt") {
         throw std::runtime_error("Training data file must be a .txt file: " + txtFileLocation);
     }
+
+    TrainingSessionData sessionData;
+    bool sessionFileExistsAndIsValid = false;
+    int startLineForCurrentFile = 0;
+
+    // Attempt to load session data
+    if (!currentChatLogPath.empty() && std::filesystem::exists(currentChatLogPath)) {
+        if (std::filesystem::is_regular_file(currentChatLogPath)) {
+            std::ifstream tempInfoFile(currentChatLogPath);
+            if (tempInfoFile.is_open()) {
+                if (tempInfoFile.peek() != std::ifstream::traits_type::eof()) { // Check if file is not empty
+                    if (sessionData.load(currentChatLogPath)) {
+                        sessionFileExistsAndIsValid = true;
+                        std::cout << "Successfully loaded session data from: " << currentChatLogPath << std::endl;
+                        std::cout << " \nPrevious file: " << sessionData.lastTrainingFileName
+                                  << ",\nLines processed in it: " << sessionData.linesProcessedInLastFile << std::endl;
+                        std::cout << "\nCumulative Lines Trained: " << sessionData.cumulativeTotalLinesTrained
+                                  << ",\nTokens: " << sessionData.cumulativeTotalTokensProcessed
+                                  << ",\nTrainCount: " << sessionData.cumulativeTotalTrainCount << std::endl;
+                        std::cout << "\nLast VocabSize: " << sessionData.vocabSizeSnapshot
+                                  << ",\nLast BlockCount: " << sessionData.lastBlockCountState
+                                  << ",\nLast EpochCount: " << sessionData.lastEpochCountState << std::endl;
+                    }
+                     else {
+                        std::cerr << "Warning: Failed to parse session data from " << currentChatLogPath 
+                                  << ". Starting with fresh session values." << std::endl;
+                    }
+                } 
+                else {
+                    std::cout << "Session data file " << currentChatLogPath << " is empty. Starting with fresh session values." << std::endl;
+                }
+                tempInfoFile.close();
+            } 
+            else {
+                std::cerr << "Warning: Could not open session data file " << currentChatLogPath 
+                          << " for reading. Starting with fresh session values." << std::endl;
+            }
+        } 
+        else {
+             std::cerr << "Warning: Session data path " << currentChatLogPath 
+                       << " is not a regular file. Starting with fresh session values." << std::endl;
+        }
+    } 
+    else {
+        if (currentChatLogPath.empty()) {
+            std::cout << "Session data file path (currentChatLogPath) is not set. Starting with fresh session values." << std::endl;
+        } 
+        else {
+            std::cout << "Session data file " << currentChatLogPath << " not found. Starting with fresh session values." << std::endl;
+        }
+    }
+
+    // Initialize model state based on session data or defaults
+    this->totalTokens = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalTokensProcessed : 0;
+    this->T.trainCount = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalTrainCount : 0;
+    this->T.blockCount = 0;
+    this->T.epochCount = 0;
+    int currentLine = 0;
+
+    if (sessionFileExistsAndIsValid && sessionData.lastTrainingFileName == txtFileLocation) {
+        startLineForCurrentFile = sessionData.linesProcessedInLastFile;
+        std::cout << "Resuming training for " << txtFileLocation << " from line " << startLineForCurrentFile << "." << std::endl;
+    }
+
     // open file and read line by line
     std::ifstream file(txtFileLocation);
     if (!file.is_open()) {
@@ -76,6 +109,10 @@ void model::trainBlock(const std::string& txtFileLocation)
     std::cout << "Total training lines: " << numberOfLines << std::endl;
     std::string line;
 
+    if (startLineForCurrentFile >= numberOfLines && sessionFileExistsAndIsValid && sessionData.lastTrainingFileName == txtFileLocation) {
+        std::cout << "All lines in " << txtFileLocation << " were already processed according to session data. Skipping." << std::endl;
+        return;
+    }
     // Start timing here
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -88,7 +125,10 @@ void model::trainBlock(const std::string& txtFileLocation)
         linesOfFile.push_back(line);
     }
     std::vector<std::vector<std::string>> oddSentence, evenSentence;
-    for(int k = 0; k < numberOfLines; k++)
+
+    long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
+    long long linesProcessedInThisRun = 0;
+    for(int k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfFile.clear();
         oddSentence.clear();
@@ -161,8 +201,10 @@ void model::trainBlock(const std::string& txtFileLocation)
                     std::cout << "Using CUDA Implementation" << std::endl;
                     this->T.cuTrain(promptEmbeddings, responseEmbeddings, responseTokens);
                 #elif USE_OPENCL
+                    std::cout << "Using OpenCL Implementation" << std::endl;
                     this->T.clTrain(promptEmbeddings, responseEmbeddings, responseTokens);
                 #elif USE_CPU
+                    std::cout << "Using C++ Implementation" << std::endl;
                     this->T.train(promptEmbeddings, responseEmbeddings, responseTokens);
                 #endif
             }
@@ -171,12 +213,36 @@ void model::trainBlock(const std::string& txtFileLocation)
             }
             totalTokens += tok;
         }
+        linesProcessedInThisRun++;
         std::cout << "complete " << k << "th part." << std::endl;
+        if(T.blockCount == 1) T.t[0].serialise(T.t[0].blockFilePath);
         newChat();
     }
     std::cout << "Training complete for file " << txtFileLocation << std::endl;
     
-    T.t[0].serialise(T.t[0].blockFilePath);
+    // Update session data for saving
+    sessionData.lastTrainingFileName = txtFileLocation;
+    sessionData.linesProcessedInLastFile = startLineForCurrentFile + linesProcessedInThisRun;
+
+    if (sessionFileExistsAndIsValid && sessionData.lastTrainingFileName == txtFileLocation && startLineForCurrentFile > 0) {
+        // Resumed this file: initialCumulativeLinesTrainedForSession included 'startLineForCurrentFile' lines from it.
+        // Subtract those, then add the total lines now processed in this file.
+        sessionData.cumulativeTotalLinesTrained = initialCumulativeLinesTrainedForSession - startLineForCurrentFile + sessionData.linesProcessedInLastFile;
+    }
+    else {
+        // New file, or fresh start for this file. Add lines from this run to the prior total.
+        sessionData.cumulativeTotalLinesTrained = initialCumulativeLinesTrainedForSession + linesProcessedInThisRun;
+    }
+    sessionData.cumulativeTotalTokensProcessed = this->totalTokens;
+    sessionData.cumulativeTotalTrainCount = this->T.trainCount;
+    sessionData.lastBlockCountState = this->T.blockCount;
+    sessionData.lastEpochCountState = this->T.epochCount;
+    sessionData.vocabSizeSnapshot = this->T.vocabsize;
+    if (!currentChatLogPath.empty()) {
+        sessionData.save(currentChatLogPath);
+        std::cout << "Training session data saved to: " << currentChatLogPath << std::endl;
+    }
+
     // copy to other blocks and serialise
     copy1toOhterBlocks();
     // for(int i = 1; i < m; i++) {
@@ -294,4 +360,55 @@ void model::trainModel(const std::string& txtFile)
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "Total training time for file " << txtFile << ": " << duration.count() << " ms" << std::endl;
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
+}
+
+
+/**
+ * @brief train the first block of model for local context
+ * @param strings embeddings for model
+ * @param rString tokens
+ */
+void model::trainforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString)
+{
+    if(strings.size() < CONTEXT_WIN) 
+    {
+        #ifdef USE_CUDA
+            this->T.cuTrain(strings, rString);
+        #elif USE_OPENCL
+            this->T.clTrain(strings, rString);
+        #elif USE_CPU
+            this->T.train(strings, rString);
+        #endif
+        T.t[0].serialise(T.t[0].blockFilePath);
+    }
+    else {
+        throw std::runtime_error("LOCAL CONTEXT LIMIT of REACHED");
+    }
+}
+
+
+/**
+ * @brief train the model for Full Context
+ * @param strings prompt embeddings for model
+ * @param rString tokens
+ */
+void model::trainforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString)
+{
+    if(strings.size() < FULL_CONTEXT) 
+    {
+        #ifdef USE_CUDA
+            this->T.cuTrain(strings, rString);
+        #elif USE_OPENCL
+            this->T.clTrain(strings, rString);
+        #elif USE_CPU
+            this->T.train(strings, rString);
+        #endif
+        for(int i = 0; i < m; i++) {
+            T.t[i].serialise(T.t[i].blockFilePath);
+        }
+        serialise();
+    }
+    else {
+        throw std::runtime_error("LOCAL CONTEXT LIMIT of REACHED");
+    }
 }

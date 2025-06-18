@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <limits>
 #include <fstream>
+#include <cstring>
 #include "include/basic.hpp"
 #include <memory_map.h>
 

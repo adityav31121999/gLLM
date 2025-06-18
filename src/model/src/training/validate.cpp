@@ -9,44 +9,9 @@
 #ifdef USE_CUDA
     #include <cuda.h>
     #include <cuda_runtime.h>
-
-    #define CUDA_CHECK(call)                                                     \
-    do {                                                                         \
-        cudaError_t err = call;                                                  \
-        if (err != cudaSuccess) {                                                \
-            fprintf(stderr, "CUDA Error in %s at line %d: %s\n",                 \
-                    __FILE__, __LINE__, cudaGetErrorString(err));                \
-            /* Consider throwing an exception or exiting */                      \
-            throw std::runtime_error("CUDA Error: " + std::string(cudaGetErrorString(err)));    \
-        }                                                                        \
-    } while (0)
-
 #elif USE_OPENCL
     #include <CL/cl.hpp>
 #endif
-
-/**
- * @brief validate the first block of transformer
- * @param prompt prompt embeddings for model
- * @param response expected response embeddings from model
- * @param rString tokens of response
- */
-void model::validate1stBlock(std::vector<std::vector<float>> &prompt, std::vector<std::vector<float>> &response, std::vector<std::string> rString)
-{
-    if(this->T.currentTokenCount + prompt.size() + response.size() < CONTEXT_WIN) 
-    {
-        #ifdef USE_CUDA
-            this->T.cuValidate(prompt, response, rString);
-        #elif USE_OPENCL
-            this->T.clValidate(prompt, response, rString);
-        #elif USE_CPU
-            this->T.validate(prompt, response, rString);
-        #endif
-    }
-    else {
-        throw std::runtime_error("LOCAL CONTEXT LIMIT of REACHED");
-    }
-}
 
 
 /**

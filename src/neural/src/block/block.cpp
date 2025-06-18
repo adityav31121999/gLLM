@@ -50,14 +50,19 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     bool open_for_read_write_existing = false;
     FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
 
-    if (test_file) { // File exists
-        if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-            long long int existing_file_size = _ftelli64(test_file);
-            if (existing_file_size == totalBlockSize) {
-                open_for_read_write_existing = true;
+    if (test_file) {
+        #if defined(_WIN32)
+            if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
+                long long int existing_file_size = _ftelli64(test_file);
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
+                long long int existing_file_size = ftello64(test_file);
+        #endif
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
             }
-        }
-        fclose(test_file);
+            fclose(test_file);
     }
 
     if (open_for_read_write_existing) {
@@ -74,7 +79,11 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
         }
 
         if (totalBlockSize > 0) {
+        #if defined(_WIN32)
             if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+        #endif
                 fclose(blockFile);
                 throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
             }
@@ -98,7 +107,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     }
 
     rewind(blockFile);
-    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << params * sizeof(float) / (1024 * 1024) << " MB." << std::endl;
+    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs." << std::endl;
 }
 
 #else
@@ -149,8 +158,13 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
 
     if (test_file) { // File exists
-        if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-            long long int existing_file_size = _ftelli64(test_file);
+        #if defined(_WIN32)
+            if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
+                long long int existing_file_size = _ftelli64(test_file);
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
+                long long int existing_file_size = ftello64(test_file);
+        #endif
             if (existing_file_size == totalBlockSize) {
                 open_for_read_write_existing = true;
             }
@@ -172,10 +186,15 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
         }
 
         if (totalBlockSize > 0) {
+        #if defined(_WIN32)
             if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+        #endif
                 fclose(blockFile);
-                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
+                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
             }
+
             if (fputc(0, blockFile) == EOF) {
                 fclose(blockFile);
                 throw std::runtime_error("fputc failed to write byte for preallocation: " + this->blockFilePath);
@@ -196,7 +215,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     }
 
     rewind(blockFile);
-    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << params * sizeof(float) / (1024 * 1024) << " MB." << std::endl;
+    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << params * sizeof(float) / (1000 * 1000) << " MiBs." << std::endl;
 }
 
 #endif

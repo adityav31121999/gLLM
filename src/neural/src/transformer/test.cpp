@@ -51,17 +51,6 @@ void transformer::test(std::vector<std::vector<std::vector<float>>>& prompts, st
     }
 
     std::cout << "\n--- Overall Chat Test Summary (from cumulative transformer stats for this session) ---" << std::endl;
-    if (this->testCount > 0) { // Check if any tokens were processed in this chat test
-        // If we reset stats at start of this chat test:
-        // float accuracy = (this->testCount > 0) ? (static_cast<float>(total_correct_for_chat_session) / this->testCount) * 100.0f : 0.0f;
-        // std::cout << "  Total tokens tested in chat: " << this->testCount << std::endl;
-        // std::cout << "  Overall Average MSE for chat: " << (this->testMSE / this->testCount) << std::endl;
-        // std::cout << "  Overall Accuracy for chat: " << accuracy << "%" << std::endl; // Needs total_correct_for_chat_session
-        std::cout << "  (Refer to individual turn summaries for accuracy if not tracked globally for chat)" << std::endl;
-         std::cout << "  Cumulative testCount: " << this->testCount << ", Cumulative testMSE: " << this->testMSE << std::endl;
-    } else {
-        std::cout << "  No tokens were tested in this chat session." << std::endl;
-    }
     std::cout << "=========================================" << std::endl;
     this->inTraining = originalInTraining; // Restore original state
 }

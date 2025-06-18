@@ -54,11 +54,21 @@ void model::newChat() {
     this->currentChatLogPath = activeChatPath;
 
     // Open the new chat log file at the standard path, overwriting if it exists
+#if defined(_WIN32)
     errno_t err = fopen_s(&this->chat, this->currentChatLogPath.c_str(), "w"); // "w" truncates/creates
     if (err != 0 || this->chat == nullptr) {
-        std::cerr << "Error: Could not open active chat log file: " << this->currentChatLogPath << std::endl;
-        this->currentChatLogPath.clear(); // Clear path if open failed
-    } 
+        // Consider logging the error code 'err' for Windows
+        throw std::runtime_error("Failed to open new chat log file: " + this->currentChatLogPath + " (Error: " + std::to_string(err) + ")");
+    }
+#else // POSIX systems (Linux, macOS, etc.)
+    this->chat = fopen(this->currentChatLogPath.c_str(), "w"); // "w" truncates/creates
+    if (this->chat == nullptr) {
+        // On POSIX, errno is set by fopen on failure.
+        // #include <cstring> for strerror
+        // #include <cerrno> for errno
+        throw std::runtime_error("Failed to open new chat log file: " + this->currentChatLogPath + " (Error: " + strerror(errno) + ")");
+    }
+#endif
     else {
         fprintf(this->chat, "--- New Chat Session Started ---\n");
         fflush(this->chat);

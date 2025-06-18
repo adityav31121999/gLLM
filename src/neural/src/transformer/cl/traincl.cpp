@@ -707,7 +707,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 }
 
                 // calculate error
-                current_error = MAE(h_otok_buffer, expected_vec);
+                current_error = crossEntropy(h_otok_buffer, expected_vec);
 
                 // CUDA-style convergence check and printing
                 if (this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size()) && tokens[this->indexForToken] == expected_str) {
