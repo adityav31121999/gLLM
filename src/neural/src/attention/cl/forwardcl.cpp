@@ -1,5 +1,5 @@
 #ifdef USE_OPENCL
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN64)
     #define CL_HPP_ENABLE_EXCEPTIONS
     #define CL_HPP_TARGET_OPENCL_VERSION 300
     // For Windows, use the older/common cl.hpp

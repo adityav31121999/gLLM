@@ -53,7 +53,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
 
     if (test_file) {
-        #if defined(_WIN32) || defined(_WIN64)
+        #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
                 existing_file_size = _ftelli64(test_file); // Assign to the outer-scoped variable
             } else {
@@ -84,7 +84,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
         }
 
         if (totalBlockSize > 0) {
-        #if defined(_WIN32) || defined(_WIN64)
+        #if defined(_WIN64)
             if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
                 fclose(blockFile);
                 throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
@@ -169,7 +169,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
 
     if (test_file) { // File exists
-        #if defined(_WIN32) || defined(_WIN64)
+        #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
                 long long int existing_file_size = _ftelli64(test_file);
                 if (existing_file_size == totalBlockSize) {
@@ -201,7 +201,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
         }
 
         if (totalBlockSize > 0) {
-        #if defined(_WIN32) || defined(_WIN64)
+        #if defined(_WIN64)
             if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
                 fclose(blockFile);
                 throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);

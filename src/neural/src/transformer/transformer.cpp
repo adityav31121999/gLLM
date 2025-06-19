@@ -51,7 +51,8 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         std::cout << "Here" << std::endl;
         // for inference
         t.reserve(1); // this->m is 1 for inference
-        std::cout << "<====Block " << 1 << " constructed====>" << std::endl;
+        std::cout << "----------------------------------------------------------" << std::endl;
+        std::cout << "              Block " << 1 << " constructed             " << std::endl;
         t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -96,7 +97,8 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     if(this->inTraining) {
         t.reserve(this->m); // Reserve space
         for (int i = 0; i < this->m; ++i) {
-            std::cout << "<====Block " << i+1 << " constructed====>" << std::endl;
+            std::cout << "----------------------------------------------------------" << std::endl;
+            std::cout << "              Block " << i+1 << " constructed             " << std::endl;
             t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param);
         }
         // training
@@ -113,7 +115,8 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     else {
         // for inference
         t.reserve(1); // this->m is 1 for inference
-        std::cout << "<====Block " << 1 << " constructed====>" << std::endl;
+        std::cout << "----------------------------------------------------------" << std::endl;
+        std::cout << "              Block " << 1 << " constructed             " << std::endl;
         t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -167,7 +170,8 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         // training
         t.reserve(this->m);
         for (int i = 0; i < this->m; ++i) {
-            std::cout << "<====Block " << i+1 << " constructed====>" << std::endl;
+            std::cout << "----------------------------------------------------------" << std::endl;
+            std::cout << "              Block " << i+1 << " constructed             " << std::endl;
             t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i, modelDir_param);
         }
         std::cout << "\nblock vector t initialised." << std::endl;
@@ -186,7 +190,8 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         std::cout << "TRANSFORMER: About to initialize block vector t (inference, size " << this->m << ")..." << std::endl << std::flush; // this->m is 1
         // for inference
         t.reserve(1); // this->m is 1
-        std::cout << "<====Block " << 1 << " constructed====>" << std::endl;
+        std::cout << "----------------------------------------------------------" << std::endl;
+        std::cout << "              Block " << 1 << " constructed             " << std::endl;
         t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -237,7 +242,8 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         // training
         t.reserve(this->m);
         for (int i = 0; i < this->m; ++i) {
-            std::cout << "<====Block " << i+1 << " constructed====>" << std::endl;
+            std::cout << "----------------------------------------------------------" << std::endl;
+            std::cout << "              Block " << i+1 << " constructed             " << std::endl;
             t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param);
         }
         std::cout << "block vector t initialised." << std::endl;
@@ -256,7 +262,8 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         std::cout << "TRANSFORMER: About to initialize block vector t (inference, size " << this->m << ")..." << std::endl << std::flush; // this->m is 1
         // for inference
         t.reserve(1); // this->m is 1
-        std::cout << "<====Block " << 1 << " constructed====>" << std::endl;
+        std::cout << "----------------------------------------------------------" << std::endl;
+        std::cout << "              Block " << 1 << " constructed             " << std::endl;
         t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
         std::cout << "block vector t initialised." << std::endl;
         otok.resize(d, 0); // Added otok resize for inference path, was missing.

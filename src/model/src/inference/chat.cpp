@@ -54,7 +54,7 @@ void model::newChat() {
     this->currentChatLogPath = activeChatPath;
 
     // Open the new chat log file at the standard path, overwriting if it exists
-#if defined(_WIN32)
+#if defined(_WIN64)
     errno_t err = fopen_s(&this->chat, this->currentChatLogPath.c_str(), "w"); // "w" truncates/creates
     if (err != 0 || this->chat == nullptr) {
         // Consider logging the error code 'err' for Windows

@@ -3,7 +3,7 @@
 #include <cstdio>   // For fprintf (for optional error reporting)
 
 // Platform-specific includes and MappedFile struct definition
-#if defined(_WIN32)
+#if defined(_WIN64)
     #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN
     #endif
@@ -39,7 +39,7 @@
 
 extern "C" {
 
-#if defined(_WIN32)
+#if defined(_WIN64)
 int create_or_resize_file(const char* filepath, size_t required_size) {
     HANDLE hFile = CreateFileA(
         filepath,
@@ -115,7 +115,7 @@ int create_or_resize_file(const char* filepath, size_t required_size) {
 }
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN64)
 int open_mapped_file(const char* filepath, bool read_write, MappedFile** handle, void** data, size_t* size) {
     if (!handle || !data || !size) {
         return -1; // Invalid arguments
@@ -263,7 +263,7 @@ int open_mapped_file(const char* filepath, bool read_write, MappedFile** handle,
 }
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN64)
 void close_mapped_file(MappedFile* handle) {
     if (!handle) return;
     if (handle->pData) UnmapViewOfFile(handle->pData);
