@@ -1,6 +1,6 @@
 
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/block.hpp"
 #include <vector>
 #include <string>
@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <cmath>
 #include <maths.hpp>
-#include <CL/cl.hpp>
 
 /**
  * @brief OpenCL: Computes KdotQ in parallel for a column during TRAINING using K and Q matrices.

@@ -1,10 +1,7 @@
 
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/transformer.hpp"
-#include "include/block.hpp"
-#include "include/attention.hpp"
-#include "include/mlp.hpp" // For flatten/unflatten, errorofv
 #include <maths.hpp>
 #include <vector>
 #include <stdexcept>

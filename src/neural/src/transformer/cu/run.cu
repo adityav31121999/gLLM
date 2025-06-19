@@ -75,7 +75,7 @@ void transformer::cuRun() {
 
         // --- Main Inference Loop ---
         int previousTokenCount = currentTokenCount; // Store count before adding prompt
-
+        std::vector<float> prompt_embeddings_flat = flatten(tokenEmbed);
         // Get embeddings for the prompt tokens and copy H->D incrementally
         CUDA_CHECK(cudaMemcpy(d_tokenEmbed + static_cast<size_t>(previousTokenCount) * d,
                                 prompt_embeddings_flat.data(),

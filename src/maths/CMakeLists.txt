@@ -23,8 +23,11 @@ add_library(maths STATIC
     src/mat/operators.cpp
     src/mat/prop.cpp
     src/mat/write.cpp
+    src/mat/flat.cpp
+
     src/mat/cl/operators.cl
     src/mat/cl/inverse.cl
+    
     src/mat/cu/operators.cu
     src/mat/cu/inverse.cu
 

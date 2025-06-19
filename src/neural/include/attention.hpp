@@ -97,7 +97,6 @@ public:
     void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
     void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber);
     void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber);
-            int& blockIdx, int& contextWindowSize);
 
 #elif USE_OPENCL
 
@@ -167,7 +166,8 @@ inline attention::attention(const attention& other) :
     dh(other.dh),
     dv(other.dv),
     params(other.params)
-{}
+{
+}
 
 inline attention& attention::operator=(const attention& other) {
     if (this == &other) {
@@ -205,9 +205,6 @@ inline attention& attention::operator=(const attention& other) {
 
     return *this;
 }
-
-void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
-void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols);
 
 #ifdef USE_CUDA
 // dot product and multiplication

@@ -45,13 +45,13 @@ void create(std::string &locationOfALLbins)
     long long int inferenceParams = (2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                    + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
 
-    std::cout << "      PARAMETERS          COUNT          SIZE(MiBs)        " << std::endl;
-    std::cout << "Trained Weight Matrix:  " << mat_size << "\t    " << static_cast<float>(sizeof(float)*mat_size)/(1000*1000) << std::endl;
-    std::cout << "Trained MLP Weight   :  " << mlp_size << "\t\t    " << static_cast<float>(sizeof(float)*mlp_size)/(1000*1000) << std::endl;
-    std::cout << "Compressed Weight    :  " << cache_size << "\t\t    " << static_cast<float>(sizeof(float)*cache_size)/(1000*1000) << std::endl;
-    std::cout << "Total trainable      :  " << trainableParams << "\t    " << static_cast<float>(sizeof(float)*trainableParams)/(1000*1000) << std::endl;
-    std::cout << "Total inference      :  " << inferenceParams << "\t    " << static_cast<float>(sizeof(float)*inferenceParams)/(1000*1000) << std::endl;
-    std::cout << "Total trained        :  " << totalParams << "\t    " << static_cast<float>(sizeof(float)*totalParams)/(1000*1000) << std::endl;
+    std::cout << "      PARAMETERS          COUNT          SIZE(MiBs)           SIZE(MBs)      " << std::endl;
+    std::cout << "Trained Weight Matrix:  " << mat_size << "\t  " << static_cast<float>(sizeof(float)*mat_size)/(1000*1000) << "\t\t" << static_cast<float>(sizeof(float)*mat_size)/(1024*1024) << std::endl;
+    std::cout << "Trained MLP Weight   :  " << mlp_size << "\t\t  " << static_cast<float>(sizeof(float)*mlp_size)/(1000*1000) << "\t\t" << static_cast<float>(sizeof(float)*mlp_size)/(1024*1024) << std::endl;
+    std::cout << "Compressed Weight    :  " << cache_size << "\t\t  " << static_cast<float>(sizeof(float)*cache_size)/(1000*1000) << "\t\t" << static_cast<float>(sizeof(float)*cache_size)/(1024*1024) << std::endl;
+    std::cout << "Total trainable      :  " << trainableParams << "\t  " << static_cast<float>(sizeof(float)*trainableParams)/(1000*1000) << "\t\t" << static_cast<float>(sizeof(float)*trainableParams)/(1024*1024) << std::endl;
+    std::cout << "Total inference      :  " << inferenceParams << "\t  " << static_cast<float>(sizeof(float)*inferenceParams)/(1000*1000) << "\t\t" << static_cast<float>(sizeof(float)*inferenceParams)/(1024*1024) << std::endl;
+    std::cout << "Total trained        :  " << totalParams << "\t  " << static_cast<float>(sizeof(float)*totalParams)/(1000*1000) << "\t\t" << static_cast<float>(sizeof(float)*totalParams)/(1024*1024) << std::endl;
 
     // Initialize MQ, MK, MH, MV files
     std::vector<float> mq_data(mat_size, 0.0f);

@@ -1,12 +1,12 @@
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/mlp.hpp" // Includes basic.hpp where OpenCLContext is defined
 #include <maths.hpp>       // Includes basic utilities like flatten, unflatten
 #include <vector>
 #include <stdexcept>
 #include <iostream>
 #include <string>
-#include <CL/cl.hpp> // Keep OpenCL headers
+
 
 /**
  * @brief OpenCL implementation of backpropagation for MLP with gradients using shared OpenCLContext.

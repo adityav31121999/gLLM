@@ -1,5 +1,5 @@
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/mlp.hpp" // This now includes basic.hpp where OpenCLContext is defined
 #include <maths.hpp>       // Includes basic utilities like flatten
 #include <vector>

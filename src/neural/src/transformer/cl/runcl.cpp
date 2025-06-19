@@ -1,11 +1,7 @@
 #ifdef USE_OPENCL
-
-#include "include/transformer.hpp"
-#include "include/mlp.hpp"
-#include "include/attention.hpp"
-#include "include/block.hpp"
-#include <maths.hpp>
 #include <CL/cl.hpp>
+#include "include/transformer.hpp"
+#include <maths.hpp>
 #include <vector>
 #include <string>
 #include <iostream>

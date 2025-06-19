@@ -1,5 +1,5 @@
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include <maths.hpp>
 #include "include/mlp.hpp"
 #include "include/attention.hpp"
@@ -8,7 +8,6 @@
 #include <stdexcept> // For runtime_error, out_of_range
 #include <iostream> // For error logging
 #include <string>   // For std::to_string in error messages
-
 
 /**
  * @brief CUDA backward propagation for the FIRST block, driven by a single horizontal error vector (EH).

@@ -1,8 +1,6 @@
 #ifdef USE_OPENCL
-
-#define CL_HPP_TARGET_OPENCL_VERSION 300
-#include <iostream>
 #include <CL/cl.hpp>
+#include <iostream>
 #include <maths.hpp>
 #include "include/attention.hpp"
 #include "include/block.hpp"
@@ -16,20 +14,6 @@
     }
 #endif
 
-// Helper function to flatten a 2D vector
-template <typename T>
-static std::vector<T> flatten(const std::vector<std::vector<T>>& vec_2d) {
-    std::vector<T> res;
-    size_t total_size = 0;
-    for(const auto& inner_vec : vec_2d) {
-        total_size += inner_vec.size();
-    }
-    res.reserve(total_size); // Pre-allocate memory for efficiency
-    for (const auto& inner_vec : vec_2d) {
-        res.insert(res.end(), inner_vec.begin(), inner_vec.end());
-    }
-    return res;
-}
 
 // Struct to hold per-head sub-buffers. This mirrors HeadDevicePointersV but holds cl::Buffer objects.
 struct HeadDeviceSubBuffersV {
@@ -173,7 +157,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
         // --- Create Command Queues and Setup Per-Head Sub-Buffers ---
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             // Create a non-blocking command queue for each head (OpenCL equivalent of a CUDA stream)
-            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &cl_err);
+            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 0, &cl_err);
             CL_CHECK(cl_err);
 
             // Resize MLP vectors in the sub-buffer struct
@@ -644,7 +628,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
 
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
-            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &cl_err); CL_CHECK(cl_err);
+            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
             head_gpu_data_cl[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
             head_gpu_data_cl[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
             head_gpu_data_cl[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);

@@ -1,17 +1,16 @@
 
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/block.hpp"
 #include <vector>
 #include <stdexcept>
 #include <string>
 #include <map>
 #include <maths.hpp>
-#include <CL/cl.hpp>
-
 
 // Helper macro for OpenCL error checking (copied from attention/cl/forwardcl.cpp for self-containment)
 #ifndef CL_CHECK
+
 #define CL_CHECK(call) do { \
     cl_int err = call; \
     if (err != CL_SUCCESS) { \
@@ -21,41 +20,6 @@
 } while (0)
 #endif
 
-// Helper function to flatten a 2D vector<vector<float>> into a flat vector (row-major)
-// (Copied from previous CUDA diff for consistency, assuming needed for EVp)
-static void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols) {
-    if (vec2d.empty()) {
-        output_flat.clear();
-        if (expected_rows != 0) { // Only throw if rows were expected but vec2d is empty
-            throw std::runtime_error("Input 2D vector is empty but expected " + std::to_string(expected_rows) + " rows.");
-        }
-        return; // Valid empty if 0 rows expected
-    }
-    size_t R = vec2d.size();
-    if (R != expected_rows) {
-        throw std::runtime_error("Row count mismatch in flatten2DVector. Expected " + std::to_string(expected_rows) + ", got " + std::to_string(R));
-    }
-
-    size_t C = 0;
-    if (R > 0) {
-        C = vec2d[0].size();
-        if (C != expected_cols) {
-             throw std::runtime_error("Column count mismatch in flatten2DVector for row 0. Expected " + std::to_string(expected_cols) + ", got " + std::to_string(C));
-        }
-    } 
-    else if (expected_cols != 0) { // R is 0, but expected_cols is not.
-         throw std::runtime_error("Column count mismatch in flatten2DVector: 0 rows but expected " + std::to_string(expected_cols) + " columns.");
-    }
-    output_flat.resize(R * C);
-    for (size_t r_idx = 0; r_idx < R; ++r_idx) {
-        if (vec2d[r_idx].size() != C) {
-            throw std::runtime_error("Inconsistent column count in flatten2DVector at row " + std::to_string(r_idx) + ". Expected " + std::to_string(C) + ", got " + std::to_string(vec2d[r_idx].size()));
-        }
-        for (size_t c_idx = 0; c_idx < C; ++c_idx) {
-            output_flat[r_idx * C + c_idx] = vec2d[r_idx][c_idx];
-        }
-    }
-}
 
 // Helper function to safely get a kernel from the context's map
 static cl::Kernel get_kernel_with_check(OpenCLContext& context_obj, const std::string& kernel_name) {
@@ -116,15 +80,15 @@ void block::cl1parallelForprop(int& in_dim_param, int& tokenCount_param, int col
     const int n_tokens = tokenCount_param; // Number of tokens for current processing
 
     // Per-head byte sizes (assuming n_tokens is fixed for all heads in this call)
-    size_t k_bytes_ph = static_cast<size_t>(n_tokens) * d_embedding * sizeof(float);
-    size_t q_bytes_ph = static_cast<size_t>(n_tokens) * d_embedding * sizeof(float);
-    size_t kdotq_bytes_ph = static_cast<size_t>(n_tokens) * n_tokens * sizeof(float);
-    size_t head_bytes_ph = static_cast<size_t>(n_tokens) * n_tokens * sizeof(float);
-    size_t sums_bytes_ph = static_cast<size_t>(n_tokens) * sizeof(float);
-    size_t accum_bytes_ph = static_cast<size_t>(h_attention) * sizeof(float);
-    size_t proj_mat_bytes_ph = static_cast<size_t>(d_embedding) * h_attention * sizeof(float);
-    size_t ev_processed_bytes_ph = static_cast<size_t>(n_tokens) * d_embedding * sizeof(float); // For first 'n_tokens' rows of EV
-    size_t embed_bytes_ph = static_cast<size_t>(d_embedding) * sizeof(float);
+    size_t k_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float);
+    size_t q_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float);
+    size_t kdotq_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t head_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t sums_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * sizeof(float);
+    size_t accum_bytes_ph = static_cast<size_t>(MATHEIGHTS) * sizeof(float);
+    size_t proj_mat_bytes_ph = static_cast<size_t>(EMBEDDING) * MATHEIGHTS * sizeof(float);
+    size_t ev_processed_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float); // For first 'n_tokens' rows of EV
+    size_t embed_bytes_ph = static_cast<size_t>(EMBEDDING) * sizeof(float);
 
     // --- Aggregate Buffer Allocation ---
     cl::Buffer agg_d_K, agg_d_Q, agg_d_KdotQ, agg_d_head_attention;
@@ -600,9 +564,9 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
     const int num_ev_rows_to_process_for_evp = CONTEXT_WIN;
 
     // Per-head byte sizes
-    size_t k_bytes_ph = static_cast<size_t>(count_tokens_in_block) * d_embedding * sizeof(float);
-    size_t q_bytes_ph = static_cast<size_t>(count_tokens_in_block) * d_embedding * sizeof(float);
-    size_t kdotq_bytes_ph = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block * sizeof(float);
+    size_t k_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float);
+    size_t q_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float);
+    size_t kdotq_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
     size_t head_bytes_ph = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block * sizeof(float);
     size_t sums_bytes_ph = static_cast<size_t>(count_tokens_in_block) * sizeof(float);
 

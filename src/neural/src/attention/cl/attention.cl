@@ -879,33 +879,3 @@ __kernel void kernelCompute_single_kq_vector( __global const float* d_token_embe
         }
     }
 }
-
-//////////////////////////// inference ////////////////////////////
-
-__kernel void accumulateWeightedVectorsKernel(__global const float* d_row_sums, __global const float* d_col_sums,
-                                              __global const float* Ti, __global const float* Tj,
-                                              __global float* d_dh_accum, __global float* d_dv_accum,
-                                              int num_tokens, int h_dim)
-{
-    int h_idx = get_global_id(0); // Parallelize over the h_dim dimension
-
-    if (h_idx < h_dim) {
-        float total_dh_for_h_idx = 0.0f;
-        float total_dv_for_h_idx = 0.0f;
-
-        for (int i = 0; i < num_tokens; ++i) {
-            float k_i_h = d_K[i * h_dim + h_idx];
-            float q_i_h = d_Q[i * h_dim + h_idx];
-            total_dh_for_h_idx += d_row_sums[i] * k_i_h;
-            total_dv_for_h_idx += d_col_sums[i] * q_i_h;
-        }
-
-        // Atomically add the computed sums. Requires OpenCL 2.0+ or float atomic extensions.
-        // Add volatile qualifier inside atomic call.
-        // Use custom atomic_add_float since cl_khr_float_atomics is not guaranteed
-        atomic_add_float(&d_dh_accum[h_idx], total_dh_for_h_idx);
-        atomic_add_float(&d_dv_accum[h_idx], total_dv_for_h_idx);
-
-        // If float atomics are unavailable, this needs a different reduction strategy.
-    }
-}

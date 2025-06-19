@@ -1,8 +1,8 @@
 
+#ifdef USE_CPU
+
 #include "include/attention.hpp"
 #include "include/block.hpp"
-
-#ifdef USE_CPU
 
 /**
  * @brief forward propagation for partial attention (layer of block)

@@ -8,14 +8,6 @@
 #include <maths.hpp>
 #include <chrono>
 
-#ifdef USE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime.h>
-#elif USE_OPENCL
-    #include <CL/cl.hpp>
-#endif
-
-
 /**
  * @brief train first block using training data from txt file
  * @param txtFileLocation location of txt file (with each line as a sentence, 

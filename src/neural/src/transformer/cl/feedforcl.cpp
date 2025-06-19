@@ -1,6 +1,6 @@
 
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/transformer.hpp"
 #include <vector>
 #include <numeric>

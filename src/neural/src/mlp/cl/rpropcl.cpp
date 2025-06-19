@@ -1,5 +1,5 @@
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/mlp.hpp" // Includes basic.hpp where OpenCLContext is defined
 #include <vector>
 #include <stdexcept>
@@ -7,8 +7,6 @@
 #include <string>
 #include <numeric> // For std::accumulate if calculating host MSE
 #include <cmath>   // For std::pow if calculating host MSE
-#include <CL/cl.hpp>
-
 
 /**
  * @brief OpenCL implementation of Rprop algorithm for MLP using shared OpenCLContext.

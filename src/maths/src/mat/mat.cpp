@@ -5,7 +5,16 @@
 #include <stdexcept>  // For std::runtime_error
 #include <cstdint>    // For uint64_t
 #include <algorithm>  // For std::copy
-#include <cstring>
+#include <cstring>    // For memcpy, strerror (strerror for POSIX)
+
+#ifdef _WIN32
+#include <windows.h> // For Windows API functions (GetTempPathA, GetTempFileNameA, CreateFileA, SetFilePointerEx, SetEndOfFile, CloseHandle, DeleteFileA, MAX_PATH, GetLastError, FormatMessageA)
+#include <cstdio>    // For remove, used if DeleteFileA is not preferred for some reason.
+#else // POSIX
+#include <unistd.h>   // For mkstemp, ftruncate, close
+#include <cerrno>     // For errno
+#include <cstdio>     // For remove
+#endif
 
 /**
  * @brief Constructor for matrix of size x*y
@@ -27,28 +36,75 @@ mat::mat(int x, int y) : row(x), col(y) {
         return; // Done for zero-dimension matrix
     }
 
-    // Create a temporary file for the matrix data
-    char temp_name_buffer[L_tmpnam];
-    if (!std::tmpnam(temp_name_buffer)) {
-            throw std::runtime_error("Failed to generate temporary filename.");
+    size_t required_bytes = static_cast<size_t>(row) * col * sizeof(float);
+
+#ifdef _WIN32
+    char temp_path[MAX_PATH];
+    if (GetTempPathA(MAX_PATH, temp_path) == 0) {
+        throw std::runtime_error("Failed to get temporary path: Error " + std::to_string(GetLastError()));
     }
-    backing_filename = temp_name_buffer;
+
+    char temp_filename_win[MAX_PATH];
+    if (GetTempFileNameA(temp_path, "gllvm", 0, temp_filename_win) == 0) {
+        throw std::runtime_error("Failed to create temporary file name: Error " + std::to_string(GetLastError()));
+    }
+    backing_filename = temp_filename_win;
     is_temp_file = true;
 
-    size_t required_bytes = static_cast<size_t>(row) * col * sizeof(float);
-    if (create_or_resize_file(backing_filename.c_str(), required_bytes) != 0) {
-        throw std::runtime_error("Failed to create or resize temporary backing file: " + backing_filename);
+    HANDLE hFile = CreateFileA(
+        backing_filename.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0, NULL, CREATE_ALWAYS,
+        FILE_ATTRIBUTE_TEMPORARY, // Removed FILE_FLAG_DELETE_ON_CLOSE
+        NULL
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        DeleteFileA(backing_filename.c_str()); // Clean up file created by GetTempFileNameA
+        throw std::runtime_error("Failed to create temporary file '" + backing_filename + "': Error " + std::to_string(GetLastError()));
     }
 
+    LARGE_INTEGER li;
+    li.QuadPart = required_bytes;
+    if (!SetFilePointerEx(hFile, li, NULL, FILE_BEGIN)) {
+        CloseHandle(hFile); DeleteFileA(backing_filename.c_str());
+        throw std::runtime_error("Failed to set file pointer for resizing '" + backing_filename + "': Error " + std::to_string(GetLastError()));
+    }
+    if (!SetEndOfFile(hFile)) {
+        CloseHandle(hFile); DeleteFileA(backing_filename.c_str());
+        throw std::runtime_error("Failed to resize temporary file '" + backing_filename + "' with SetEndOfFile: Error " + std::to_string(GetLastError()));
+    }
+    CloseHandle(hFile);
+#else // POSIX
+    char temp_name_tpl[] = "/tmp/gllvm_mat_XXXXXX"; // Template for mkstemp
+    int fd = mkstemp(temp_name_tpl);
+    if (fd == -1) {
+        throw std::runtime_error("Failed to generate temporary filename with mkstemp: " + std::string(strerror(errno)));
+    }
+    backing_filename = temp_name_tpl;
+    is_temp_file = true;
+
+    if (ftruncate(fd, required_bytes) == -1) {
+        close(fd);
+        remove(backing_filename.c_str());
+        throw std::runtime_error("Failed to resize temporary file '" + backing_filename + "' with ftruncate: " + std::string(strerror(errno)));
+    }
+    close(fd);
+#endif
+
     if (open_mapped_file(backing_filename.c_str(), true, &mapped_file_handle, reinterpret_cast<void**>(&mapped_data), &mapped_size) != 0) {
+#ifndef _WIN32 // On Windows, FILE_FLAG_DELETE_ON_CLOSE should handle this if CreateFileA was successful
         remove(backing_filename.c_str()); // Clean up temp file on failure
+#endif
         throw std::runtime_error("Failed to map temporary file: " + backing_filename);
     }
 
     if (mapped_size < required_bytes) {
-            close_mapped_file(mapped_file_handle);
-            remove(backing_filename.c_str());
-            throw std::runtime_error("Mapped file size is smaller than required.");
+        close_mapped_file(mapped_file_handle);
+#ifndef _WIN32
+        remove(backing_filename.c_str()); // For POSIX, explicitly remove
+#endif
+        throw std::runtime_error("Mapped file size is smaller than required.");
     }
 }
 
@@ -104,7 +160,11 @@ mat::mat(const std::vector<std::vector<float>>& b) : mat(b.empty() ? 0 : b.size(
         if (b[i].size() != static_cast<size_t>(col)) {
             // Cleanup before throwing
             close_mapped_file(mapped_file_handle);
-            if (is_temp_file) remove(backing_filename.c_str());
+            if (is_temp_file) {
+#ifndef _WIN32 // On Windows, FILE_FLAG_DELETE_ON_CLOSE handles deletion
+                remove(backing_filename.c_str());
+#endif
+            }
             throw std::invalid_argument("Input vector has inconsistent column sizes.");
         }
         // Check potential overflow before calculating offset
@@ -112,6 +172,11 @@ mat::mat(const std::vector<std::vector<float>>& b) : mat(b.empty() ? 0 : b.size(
         if (offset + col > mapped_size / sizeof(float)) {
                 close_mapped_file(mapped_file_handle);
                 if (is_temp_file) remove(backing_filename.c_str());
+                if (is_temp_file) {
+#ifndef _WIN32 // On Windows, FILE_FLAG_DELETE_ON_CLOSE handles deletion
+                    remove(backing_filename.c_str());
+#endif
+                }
                 throw std::out_of_range("Vector data exceeds mapped file capacity during copy.");
         }
         std::copy(b[i].begin(), b[i].end(), mapped_data + offset);
@@ -151,29 +216,74 @@ mat::mat(const mat &b) {
     row = b.row;
     col = b.col;
     if (row == 0 || col == 0) return; // Handle empty source
+    size_t required_bytes = static_cast<size_t>(row) * col * sizeof(float);
 
-    // Create a new temporary file for the copy
-    char temp_name_buffer[L_tmpnam];
-    if (!std::tmpnam(temp_name_buffer)) {
-            throw std::runtime_error("Failed to generate temporary filename for copy.");
+#ifdef _WIN32
+    char temp_path_copy[MAX_PATH];
+    if (GetTempPathA(MAX_PATH, temp_path_copy) == 0) {
+        throw std::runtime_error("Failed to get temporary path for copy: Error " + std::to_string(GetLastError()));
     }
-    backing_filename = temp_name_buffer;
+    char temp_filename_copy_win[MAX_PATH];
+    if (GetTempFileNameA(temp_path_copy, "gllmc", 0, temp_filename_copy_win) == 0) {
+        throw std::runtime_error("Failed to create temporary file name for copy: Error " + std::to_string(GetLastError()));
+    }
+    backing_filename = temp_filename_copy_win;
     is_temp_file = true;
 
-    size_t required_bytes = static_cast<size_t>(row) * col * sizeof(float);
-    if (create_or_resize_file(backing_filename.c_str(), required_bytes) != 0) {
-        throw std::runtime_error("Failed to create or resize temporary backing file for copy: " + backing_filename);
+    HANDLE hFileCopy = CreateFileA(
+        backing_filename.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0, NULL, CREATE_ALWAYS,
+        FILE_ATTRIBUTE_TEMPORARY, // Removed FILE_FLAG_DELETE_ON_CLOSE
+        NULL
+    );
+
+    if (hFileCopy == INVALID_HANDLE_VALUE) {
+        DeleteFileA(backing_filename.c_str());
+        throw std::runtime_error("Failed to create temporary file for copy '" + backing_filename + "': Error " + std::to_string(GetLastError()));
     }
 
+    LARGE_INTEGER li_copy;
+    li_copy.QuadPart = required_bytes;
+    if (!SetFilePointerEx(hFileCopy, li_copy, NULL, FILE_BEGIN)) {
+        CloseHandle(hFileCopy); DeleteFileA(backing_filename.c_str());
+        throw std::runtime_error("Failed to set file pointer for resizing copy '" + backing_filename + "': Error " + std::to_string(GetLastError()));
+    }
+    if (!SetEndOfFile(hFileCopy)) {
+        CloseHandle(hFileCopy); DeleteFileA(backing_filename.c_str());
+        throw std::runtime_error("Failed to resize temporary file for copy '" + backing_filename + "' with SetEndOfFile: Error " + std::to_string(GetLastError()));
+    }
+    CloseHandle(hFileCopy);
+#else // POSIX
+    char temp_name_copy_tpl[] = "/tmp/gllvm_mat_copy_XXXXXX";
+    int fd_copy = mkstemp(temp_name_copy_tpl);
+    if (fd_copy == -1) {
+        throw std::runtime_error("Failed to generate temporary filename for copy with mkstemp: " + std::string(strerror(errno)));
+    }
+    backing_filename = temp_name_copy_tpl;
+    is_temp_file = true;
+
+    if (ftruncate(fd_copy, required_bytes) == -1) {
+        close(fd_copy);
+        remove(backing_filename.c_str());
+        throw std::runtime_error("Failed to resize temporary file for copy '" + backing_filename + "' with ftruncate: " + std::string(strerror(errno)));
+    }
+    close(fd_copy);
+#endif
+
     if (open_mapped_file(backing_filename.c_str(), true, &mapped_file_handle, reinterpret_cast<void**>(&mapped_data), &mapped_size) != 0) {
+#ifndef _WIN32
         remove(backing_filename.c_str()); // Clean up temp file on failure
+#endif
         throw std::runtime_error("Failed to map temporary file for copy: " + backing_filename);
     }
 
     if (mapped_size < required_bytes) {
-            close_mapped_file(mapped_file_handle);
-            remove(backing_filename.c_str());
-            throw std::runtime_error("Copied mapped file size is smaller than required.");
+        close_mapped_file(mapped_file_handle);
+#ifndef _WIN32
+        remove(backing_filename.c_str());
+#endif
+        throw std::runtime_error("Copied mapped file size is smaller than required.");
     }
 
     // Copy data from source mapped region to destination mapped region

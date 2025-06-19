@@ -1,9 +1,7 @@
 
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/transformer.hpp"
-#include "include/block.hpp"
-#include "include/attention.hpp"
 #include <maths.hpp>
 #include <vector>
 #include <string>
@@ -11,7 +9,6 @@
 #include <cmath>
 #include <map>
 #include <cstdio>
-#include <CL/cl.hpp>
 #include <cfloat>
 
 #define WORKGROUP_SIZE_X 16

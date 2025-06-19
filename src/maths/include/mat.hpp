@@ -166,4 +166,13 @@ void write2filefrommat(const mat&, const std::string&);
     float host_dot(const std::vector<float>& h_vec1, const mat& input_mat, const std::vector<float>& h_vec2); // Vector-Matrix-Vector
 #endif
 
+std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
+std::vector<float> flatten_range(const std::vector<std::vector<float>>& vec2d, size_t start_row, size_t num_rows);
+std::vector<float> flatten(const mat&);
+void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
+
+void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
+void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols);
+void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat);
+
 #endif

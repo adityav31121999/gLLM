@@ -1,9 +1,6 @@
 #ifdef USE_OPENCL
-
-#define CL_HPP_TARGET_OPENCL_VERSION 300
-#include <iostream>
 #include <CL/cl.hpp>
-#include <maths.hpp>
+#include <iostream>
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
@@ -145,9 +142,7 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
         agg_d_ver_deltas_storage = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_neuron_layers_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
-            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 
-                                    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &cl_err); 
-            CL_CHECK(cl_err);
+            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
             head_gpu_data_cl[head_idx].d_hor_activations.resize(num_neuron_layers_mlp);
             head_gpu_data_cl[head_idx].d_hor_weights.resize(num_weight_matrices_mlp);
             head_gpu_data_cl[head_idx].d_hor_gweights.resize(num_weight_matrices_mlp);
@@ -627,7 +622,7 @@ void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &l
         agg_d_ver_deltas_storage = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_neuron_layers_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
-            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &cl_err); CL_CHECK(cl_err);
+            streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
             head_gpu_data_cl[head_idx].d_hor_activations.resize(num_neuron_layers_mlp);
             head_gpu_data_cl[head_idx].d_hor_weights.resize(num_weight_matrices_mlp);
             head_gpu_data_cl[head_idx].d_hor_gweights.resize(num_weight_matrices_mlp);

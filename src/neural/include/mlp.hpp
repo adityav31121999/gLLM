@@ -1,4 +1,3 @@
-
 #ifndef MLP_HPP
 #define MLP_HPP 1
 
@@ -145,8 +144,7 @@ inline mlp::mlp(const mlp& other) :
     activations(other.activations), // std::vector copy constructor
     gweights(other.gweights),       // Relies on mat's copy constructor and std::vector's copy constructor
     params(other.params)
-{
-}
+{}
 
 inline mlp& mlp::operator=(const mlp& other) {
     if (this == &other) {
@@ -176,7 +174,6 @@ inline mlp& mlp::operator=(const mlp& other) {
     return *this;
 }
 
-
 void write2filefrommlp(const mlp&, const std::string&);
 
 // mlp-related functions (non-member)
@@ -187,11 +184,6 @@ float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights); // Updated signature
 std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated signature
-std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
-std::vector<float> flatten_range(const std::vector<std::vector<float>>& vec2d, size_t start_row, size_t num_rows);
-std::vector<float> flatten(const mat&);
-void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
-void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
 
 #ifdef USE_CUDA
 

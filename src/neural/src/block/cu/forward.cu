@@ -18,68 +18,6 @@
 #endif
 
 
-// Helper function for transposing a mat object's data into a flat vector (row-major)
-// Takes an R x C matrix m and produces output_flat representing a C x R matrix.
-// (Copied from attention/cu/forward.cu for self-containment)
-static void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat) {
-    if (!m.mapped_data) {
-        output_flat.clear();
-        if (m.row != 0 || m.col != 0) { // Invalid state: dimensions but no data
-            throw std::runtime_error("Mat has non-zero dimensions but null mapped_data in transposeMatToFlatVector.");
-        }
-        return; // Valid empty mat
-    }
-    if (m.row == 0 || m.col == 0) { // Valid empty mat
-        output_flat.clear();
-        return;
-    }
-    int R = m.row; // Original rows
-    int C = m.col; // Original columns
-    output_flat.resize(static_cast<size_t>(R) * C); // Will store data for a C x R matrix
-
-    for (int j = 0; j < C; ++j) {        // Iterate original columns (these become rows in the transposed version)
-        for (int i_orig = 0; i_orig < R; ++i_orig) {    // Iterate original rows (these become columns in the transposed version)
-            output_flat[static_cast<size_t>(j) * R + i_orig] = m(i_orig, j); // Access m(original_row, original_col)
-        }
-    }
-}
-
-// Helper function to flatten a 2D vector<vector<float>> into a flat vector (row-major)
-static void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols) {
-    if (vec2d.empty()) {
-        output_flat.clear();
-        if (expected_rows != 0) { // Only throw if rows were expected but vec2d is empty
-            throw std::runtime_error("Input 2D vector is empty but expected " + std::to_string(expected_rows) + " rows.");
-        }
-        return; // Valid empty if 0 rows expected
-    }
-    size_t R = vec2d.size();
-    if (R != expected_rows) {
-        throw std::runtime_error("Row count mismatch in flatten2DVector. Expected " + std::to_string(expected_rows) + ", got " + std::to_string(R));
-    }
-
-    size_t C = 0;
-    if (R > 0) {
-        C = vec2d[0].size();
-        if (C != expected_cols) {
-             throw std::runtime_error("Column count mismatch in flatten2DVector for row 0. Expected " + std::to_string(expected_cols) + ", got " + std::to_string(C));
-        }
-    } else if (expected_cols != 0) { // R is 0, but expected_cols is not.
-         throw std::runtime_error("Column count mismatch in flatten2DVector: 0 rows but expected " + std::to_string(expected_cols) + " columns.");
-    }
-
-    output_flat.resize(R * C);
-    for (size_t r_idx = 0; r_idx < R; ++r_idx) {
-        if (vec2d[r_idx].size() != C) {
-            throw std::runtime_error("Inconsistent column count in flatten2DVector at row " + std::to_string(r_idx) + ". Expected " + std::to_string(C) + ", got " + std::to_string(vec2d[r_idx].size()));
-        }
-        for (size_t c_idx = 0; c_idx < C; ++c_idx) {
-            output_flat[r_idx * C + c_idx] = vec2d[r_idx][c_idx];
-        }
-    }
-}
-
-
 /**
  * @brief CUDA forward propagation on single ith column of the FIRST block.
  * @param in dimension of embeddings and mlp input

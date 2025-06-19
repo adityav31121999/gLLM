@@ -21,30 +21,6 @@
     } \
 } while (0)
 
-// Helper function for transposing a mat object's data into a flat vector (row-major)
-// Takes an R x C matrix m and produces output_flat representing a C x R matrix.
-static void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat) {
-    if (!m.mapped_data) {
-        output_flat.clear();
-        if (m.row != 0 || m.col != 0) { // Invalid state: dimensions but no data
-            throw std::runtime_error("Mat has non-zero dimensions but null mapped_data in transposeMatToFlatVector.");
-        }
-        return; // Valid empty mat
-    }
-    if (m.row == 0 || m.col == 0) { // Valid empty mat
-        output_flat.clear();
-        return;
-    }
-    int R = m.row; // Original rows
-    int C = m.col; // Original columns
-    output_flat.resize(static_cast<size_t>(R) * C); // Will store data for a C x R matrix
-
-    for (int j = 0; j < C; ++j) {        // Iterate original columns (these become rows in the transposed version)
-        for (int i = 0; i < R; ++i) {    // Iterate original rows (these become columns in the transposed version)
-            output_flat[static_cast<size_t>(j) * R + i] = m(i, j); // Access m(original_row, original_col)
-        }
-    }
-}
 
 /**
  * @brief CUDA forward propagation for first block's attention class (incomplete attention)

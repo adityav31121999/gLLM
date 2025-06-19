@@ -1,5 +1,5 @@
 #ifdef USE_OPENCL
-
+#include <CL/cl.hpp>
 #include "include/mlp.hpp" // Includes OpenCL headers, OpenCLContext, etc.
 #include <maths.hpp>
 #include <vector>
@@ -8,8 +8,6 @@
 #include <string>
 #include <numeric> // Required for std::accumulate
 #include <cmath>   // For std::pow (though MSE kernel handles squaring)
-#include <CL/cl.hpp> // Explicit include for OpenCL C++ bindings
-
 
 /**
  * @brief Helper function to calculate MSE using the kernelMseReduction OpenCL kernel

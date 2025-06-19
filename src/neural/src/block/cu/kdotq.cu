@@ -51,8 +51,8 @@ void block::cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
     int num_keys_eff = context_len_block;
     int num_queries_eff = context_len_block; // Training computes the full matrix (or triangle)
 
-    int kdotq_rows = context_len_block;
-    int kdotq_cols = context_len_block;
+    // int kdotq_rows = context_len_block;
+    // int kdotq_cols = context_len_block;
 
     // head.KdotQ is a mat, assumed to be CONTEXT_WIN x CONTEXT_WIN.
     if (promptCount <= 0 || context_len_block <= 0) { // If no new tokens or no context in block, KdotQ is effectively zero.

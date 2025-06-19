@@ -6,16 +6,6 @@
 #include <filesystem>
 #include <neural.hpp>
 
-#ifdef USE_CUDA
-    #define CUDA_CHECK(call) do { \
-        cudaError_t err = call; \
-        if (err != cudaSuccess) { \
-            fprintf(stderr, "CUDA Error in %s at line %d: %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
-            throw std::runtime_error(cudaGetErrorString(err)); \
-        } \
-    } while (0)
-#endif
-
 /**
  * @brief run model for conversation
  */

@@ -7,7 +7,7 @@
 
 ## INTRO
 - Library for LLMs
-- **VERSION**: 0.1.0.1 (Memory mapped matrices)
+- **VERSION**: 0.1.1.1 (Memory mapped matrices)
 - **LICENSE**: MIT License
 - **PROGRAMMING LANGUAGES**: C, C++, OpenCL, CUDA
   - *C VERSION*: 17

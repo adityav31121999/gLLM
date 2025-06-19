@@ -3,11 +3,6 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
 
-/**
- * For training and testing of model, use trainable weight matrices, process just like training
- * For validation of model, use compressed weights cache, process just like inferencing
- */
-
 #include <string>
 #include <cmath>
 #include <vector>
@@ -16,8 +11,6 @@
 #include <map>
 
 #include <maths.hpp>
-#include "mlp.hpp"
-#include "attention.hpp"
 #include "block.hpp"
 
 /**

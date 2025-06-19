@@ -54,7 +54,7 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode) :
 
 #else // USE_OPENCL is defined
 
-// --- OpenCL Constructors ---
+#include <CL/cl.hpp>
 
 /**
  * @brief Constructor for incomplete attention - WITH OpenCL
