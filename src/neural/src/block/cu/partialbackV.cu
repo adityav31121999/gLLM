@@ -81,7 +81,7 @@ void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters
@@ -428,7 +428,7 @@ void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters

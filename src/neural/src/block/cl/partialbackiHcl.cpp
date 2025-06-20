@@ -46,7 +46,7 @@ struct HeadDeviceSubBuffersH {
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx)
+void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning)
 {
     cl_int cl_err;
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -72,7 +72,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     const int num_total_layers_mlp = layers_mlp;
@@ -518,7 +518,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx)
+void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning)
 {
     cl_int cl_err;
     const int num_heads_to_process = x;
@@ -544,7 +544,7 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     const int num_total_layers_mlp = layers_mlp;

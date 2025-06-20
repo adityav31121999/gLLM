@@ -39,8 +39,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     // Set MLP inputs for backprop
     hor.expected = grad_hor_output;
     ver.expected = grad_ver_output;
-    hor.backprop(in, layers, LEARNING);
-    ver.backprop(in, layers, LEARNING);
+    hor.backprop(in, layers, learning);
+    ver.backprop(in, layers, learning);
 
     if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || 
         ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
@@ -168,10 +168,10 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     // Step 9: Update weights MH, MV, MQ, MK
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
-            if (i < MH.row && j < MH.col) MH(i, j) -= LEARNING * grad_MH(i, j);
-            if (i < MV.row && j < MV.col) MV(i, j) -= LEARNING * grad_MV(i, j);
-            if (i < MQ.row && j < MQ.col) MQ(i, j) -= LEARNING * grad_MQ(i, j);
-            if (i < MK.row && j < MK.col) MK(i, j) -= LEARNING * grad_MK(i, j);
+            if (i < MH.row && j < MH.col) MH(i, j) -= learning * grad_MH(i, j);
+            if (i < MV.row && j < MV.col) MV(i, j) -= learning * grad_MV(i, j);
+            if (i < MQ.row && j < MQ.col) MQ(i, j) -= learning * grad_MQ(i, j);
+            if (i < MK.row && j < MK.col) MK(i, j) -= learning * grad_MK(i, j);
         }
     }
     
@@ -179,7 +179,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     // Step 10: Update EH and EV using gradients
     if(headnumber > 1) {
         for (int i = 0; i < EMBEDDING; i++) {
-            EH[i] -= LEARNING * grad_EH[i];
+            EH[i] -= learning * grad_EH[i];
         }
     }
     for(int i = 0; i < CONTEXT_WIN; i++) {
@@ -187,7 +187,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
             break; // Check EV row bounds
         for(int j = 0; j < EMBEDDING; j++) {
             if (j < EV.col) 
-                EV(i, j) -= LEARNING * grad_EV[j];
+                EV(i, j) -= learning * grad_EV[j];
         }
     }
 }
@@ -236,7 +236,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     ver.expected = grad_ver_input;
-    ver.backward(layers, EMBEDDING, LEARNING); 
+    ver.backward(layers, EMBEDDING, learning); 
 
     // Ensure MLP gradients are available
     if (ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
@@ -363,14 +363,14 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
-            if (i < MK.row && j < MK.col) MK(i, j) -= LEARNING * grad_MK_correction(i, j);
+            if (i < MK.row && j < MK.col) MK(i, j) -= learning * grad_MK_correction(i, j);
         }
     }
 
     for (int i = 0; i < EMBEDDING; i++) {
         for (int j = 0; j < MATHEIGHTS; j++) {
-            if (i < MV.row && j < MV.col) MV(i, j) -= LEARNING * grad_MV(i, j);
-            if (i < MQ.row && j < MQ.col) MQ(i, j) -= LEARNING * grad_MQ(i, j);
+            if (i < MV.row && j < MV.col) MV(i, j) -= learning * grad_MV(i, j);
+            if (i < MQ.row && j < MQ.col) MQ(i, j) -= learning * grad_MQ(i, j);
         }
     }
 
@@ -383,7 +383,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
             for(int j = 0; j < EMBEDDING; j++) {
                 if (j >= EV.col || j >= grad_EV_mat.col) 
                     break;
-                EV(i, j) -= LEARNING * grad_EV_mat(i, j);
+                EV(i, j) -= learning * grad_EV_mat(i, j);
             }
         }
     }

@@ -11,45 +11,6 @@
 
 #ifdef USE_OPENCL
 
-/**
- * @brief Constructor for model
- * @param m number of blocks
- * @param x number of incomplete attentions in each partial attention
- * @param y number of layers of partial attention for complete attention block
- * @param n total tokens for each attention head
- * @param d token dimension
- * @param h height of MQ, MK and columns of MV, MH
- * @param l layers of mlp
- */
-model::model(const std::string& baseDirectory, OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, 
-    int matheight_param, int l_param, long long int vocab_param, bool isSelfAttention_param, bool toTrainModel_param) :
-    baseDir(baseDirectory), clcontext(context), m(toTrainModel_param ? m_param : 1), x(x_param),
-    y(y_param), n(n_param), d(d_param), matheight(matheight_param), l(l_param), learning(LEARNING), 
-    isSelf(isSelfAttention_param), toTrain(toTrainModel_param),  metadata(nullptr), chat(nullptr),
-    currentChatLogPath(""), 
-    T(context, this->m, x_param, y_param, n_param, d_param, matheight_param, l_param, vocab_param, this->isSelf, this->toTrain, baseDirectory)
-{
-    total = this->m * this->n;
-    info = {}; // Zero-initialize info struct
-    info.vocab = vocab_param;
-    info.m = this->m;
-    info.x = this->x;
-    info.y = this->y;
-    info.n = this->n;
-    info.d = this->d;
-    info.h = this->matheight;
-    info.l = this->l;
-    info.learning = this->learning;
-    info.attentionMech = MECH;
-    info.modelArch = ARCH;
-    info.matheight = this->matheight;
-    info.attentionType = this->isSelf;
-    info.totalContext = this->m * this->n;
-    calculateAndSetLayout();
-    std::cout << "MODEL CLASS CREATED with OpenCL device " << context.device.getInfo<CL_DEVICE_NAME>() << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;         
-}
-
 
 /**
  * @brief Constructor for single transformer model with learning rate
@@ -142,50 +103,6 @@ void printCudaDeviceName() {
 }
 
 #endif
-
-/**
- * @brief Constructor for model
- * @param m number of blocks
- * @param x number of incomplete attentions in each partial attention
- * @param y number of layers of partial attention for complete attention block
- * @param n total tokens for each attention head
- * @param d token dimension
- * @param h height of MQ, MK and columns of MV, MH
- * @param l layers of mlp
- */
-model::model(const std::string& baseDirectory, int m_param, int x_param, int y_param, int n_param, int d_param, int matHeightParam, 
-    int l_param, long long int vocab_param, bool isSelfAttention_param, bool toTrainModel_param) :
-    baseDir(baseDirectory),
-    m(toTrainModel_param ? (m_param > 0 ? m_param : 1) : 1), // Ensure m is at least 1 if training
-    x(x_param), y(y_param), n(n_param), d(d_param), matheight(matHeightParam), l(l_param),
-    learning(LEARNING), isSelf(isSelfAttention_param), toTrain(toTrainModel_param),
-    metadata(nullptr), chat(nullptr), currentChatLogPath(""), 
-    T(this->m, x_param, y_param, n_param, d_param, matHeightParam, l_param, vocab_param, this->isSelf, this->toTrain, baseDirectory)
-{
-    total = this->m * this->n;
-    info = {}; // Zero-initialize info struct
-    info.vocab = vocab_param;
-    info.m = this->m;
-    info.x = this->x;
-    info.y = this->y;
-    info.n = this->n;
-    info.d = this->d;
-    info.h = this->matheight;
-    info.l = this->l;
-    info.learning = this->learning; // This is LEARNING, not a param
-    info.attentionMech = MECH;
-    info.modelArch = ARCH;
-    info.matheight = this->matheight;
-    info.attentionType = this->isSelf;
-    info.totalContext = this->m * this->n;
-    calculateAndSetLayout();
-    #ifdef USE_CUDA
-    std::cout << "Model Created. "; printCudaDeviceName();
-    #elif USE_CPU
-    std::cout << "Model Created using CPU" << std::endl;
-    #endif
-    std::cout << "----------------------------------------------------------" << std::endl;
-}
 
 
 /**

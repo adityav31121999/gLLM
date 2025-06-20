@@ -163,11 +163,9 @@ public:
     // default constructor
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
-    model(const std::string& baseDirectory, OpenCLContext& context, int m, int x, int y, int n, int d, int matheight, int l, long long int vocab, bool isSelfAttention, bool toTrainModel);
     model(const std::string& baseDirectory, OpenCLContext& context, int m, int x, int y, int n, int d, int matheight, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #elif USE_CUDA || USE_CPU
     model() = default;
-    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, long long int vocab, bool isSelfAttention, bool toTrainModel);
     model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #endif
 

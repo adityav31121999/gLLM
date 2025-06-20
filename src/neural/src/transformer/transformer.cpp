@@ -25,7 +25,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     const std::string& modelDir_param) :
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param),
     d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), 
-    inTraining(inTraining_param), learning(LEARNING), epochs(EPOCHS), error(0.0f), trainCount(0),
+    inTraining(inTraining_param), learning(learning), epochs(EPOCHS), error(0.0f), trainCount(0),
     epochCount(0), promptNresponse(nullptr)
 {
     if(this->inTraining) {
@@ -33,7 +33,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         for (int i = 0; i < this->m; ++i) {
             std::cout << "----------------------------------------------------------" << std::endl;
             std::cout << "              Block " << i+1 << " constructed             " << std::endl;
-            t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i, modelDir_param);
+            t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i, modelDir_param, learning);
         }
         std::cout << "----------------------------------------------------------" << std::endl;
         // training
@@ -54,7 +54,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         t.reserve(1); // this->m is 1 for inference
         std::cout << "----------------------------------------------------------" << std::endl;
         std::cout << "              Block " << 1 << " constructed             " << std::endl;
-        t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
+        t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning);
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
         std::cout << "otok initialised." << std::endl;
@@ -100,7 +100,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         for (int i = 0; i < this->m; ++i) {
             std::cout << "----------------------------------------------------------" << std::endl;
             std::cout << "              Block " << i+1 << " constructed             " << std::endl;
-            t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param);
+            t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param, learning);
         }
         // training
         std::cout << "block vector t initialised." << std::endl;
@@ -118,7 +118,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         t.reserve(1); // this->m is 1 for inference
         std::cout << "----------------------------------------------------------" << std::endl;
         std::cout << "              Block " << 1 << " constructed             " << std::endl;
-        t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
+        t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning);
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
         std::cout << "otok initialised." << std::endl;
@@ -157,7 +157,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
     bool& inTraining_param, const std::string& modelDir_param) :
     clcontext(context_param), m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), 
     y(y_param), n(n_param), d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), 
-    isSelf(attentionType_param), inTraining(inTraining_param), learning(LEARNING), epochs(EPOCHS),
+    isSelf(attentionType_param), inTraining(inTraining_param), learning(learning), epochs(EPOCHS),
     error(0.0f), trainCount(0), epochCount(0), promptNresponse(nullptr),
     embeddings(vocab_param, d_param), tokenEmbed(m_param * n_param, d_param)
 {
@@ -173,7 +173,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         for (int i = 0; i < this->m; ++i) {
             std::cout << "----------------------------------------------------------" << std::endl;
             std::cout << "              Block " << i+1 << " constructed             " << std::endl;
-            t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i, modelDir_param);
+            t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i, modelDir_param, learning);
         }
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -193,7 +193,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         t.reserve(1); // this->m is 1
         std::cout << "----------------------------------------------------------" << std::endl;
         std::cout << "              Block " << 1 << " constructed             " << std::endl;
-        t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
+        t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning);
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
         tokForBlock = mat(n_param, d_param);
@@ -245,7 +245,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         for (int i = 0; i < this->m; ++i) {
             std::cout << "----------------------------------------------------------" << std::endl;
             std::cout << "              Block " << i+1 << " constructed             " << std::endl;
-            t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param);
+            t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param, learning);
         }
         std::cout << "block vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -265,7 +265,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         t.reserve(1); // this->m is 1
         std::cout << "----------------------------------------------------------" << std::endl;
         std::cout << "              Block " << 1 << " constructed             " << std::endl;
-        t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param);
+        t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning);
         std::cout << "block vector t initialised." << std::endl;
         otok.resize(d, 0); // Added otok resize for inference path, was missing.
         tokForBlock = mat(n_param, d_param);

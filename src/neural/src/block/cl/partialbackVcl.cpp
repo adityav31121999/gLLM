@@ -51,7 +51,7 @@ struct HeadDeviceSubBuffersV {
  * @param layers number of mlp activations layers
  * @param k column number
  */
-void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k)
+void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, float& learning)
 {
         cl_int cl_err; // For OpenCL error codes
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -74,7 +74,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters
@@ -534,7 +534,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
  * @param k column number
  * @param blocknumber current block position (1-based index)
  */
-void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k_col_idx, int& blocknumber_param)
+void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k_col_idx, int& blocknumber_param, float& learning)
 {
     cl_int cl_err; // For OpenCL error codes
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -557,7 +557,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters

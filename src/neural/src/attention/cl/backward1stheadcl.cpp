@@ -25,13 +25,13 @@
 * @param in Input size (embedding dimension)
 * @param layers Number of layers in the MLPs
 */
-void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber)
+void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
     const int token_count = this->tokenCount;
 
@@ -434,13 +434,13 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
 * @param in Input size (embedding dimension - used for MLP)
 * @param layers Number of layers in the MLPs
 */
-void attention::clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers)
+void attention::clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
     const int token_count = this->tokenCount;
 

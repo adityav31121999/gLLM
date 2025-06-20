@@ -16,11 +16,11 @@
  * @param isSelf Self (true) or Cross (false) attention
  * @param trainMode Training (true) or Inference (false)
  */
-attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode) :
+attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
     isSelfAttention(isSelf), inTraining(trainMode),
     tokenCount(0), EV(n, d), KdotQ(n, n), dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
-    ver(std::vector<unsigned int>(l, d), EPOCHS, LEARNING), // Correct MLP initialization
-    hor(std::vector<unsigned int>(l, d), EPOCHS, LEARNING), // Correct MLP initialization
+    ver(std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
+    hor(std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
     // Conditionally initialize matrices based on training mode
     MQ(trainMode ? h : 0, trainMode ? d : 0), // Only needed in training? Check logic. Assuming yes for now.
     MK(trainMode ? h : 0, trainMode ? d : 0),
@@ -66,11 +66,11 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode) :
  * @param isSelf Self (true) or Cross (false) attention
  * @param trainMode Training (true) or Inference (false)
  */
-attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf, bool trainMode) :
+attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
     clcontext(context), isSelfAttention(isSelf), inTraining(trainMode),
     tokenCount(0), EV(n, d), KdotQ(n, n), dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
-    ver(context, std::vector<unsigned int>(l, d), EPOCHS, LEARNING), // Correct MLP initialization
-    hor(context, std::vector<unsigned int>(l, d), EPOCHS, LEARNING), // Correct MLP initialization
+    ver(context, std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
+    hor(context, std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
     // Conditionally initialize matrices based on training mode
     MQ(trainMode ? h : 0, trainMode ? d : 0), MK(trainMode ? h : 0, trainMode ? d : 0),
     MV(trainMode ? d : 0, trainMode ? h : 0), MH(trainMode ? d : 0, trainMode ? h : 0),

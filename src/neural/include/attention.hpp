@@ -25,8 +25,6 @@
 
 // macros for models
 #define TERMINATE "@#O"                     // end of conversation (And Its Over)
-#define LEARNING 0.01                       // learning rate for transformer, except mlp
-#define LEARNING_MLP 0.05                   // learning rate for MLPs only
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head
 #define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt
 #define EMBEDDING 64                        // embedding dimension for each token
@@ -73,10 +71,10 @@ public:
 #ifdef USE_OPENCL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
     OpenCLContext& clcontext;
-    attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining);
+    attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
 #elif USE_CUDA || USE_CPU
     // Constructors without OpenCLContext
-    attention(int n, int d, int h, int l, bool attentionType, bool inTraining);
+    attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
 #endif // USE_OPENCL
 
     // Explicitly define copy constructor and copy assignment operator
@@ -93,10 +91,10 @@ public:
 
     void cuforprop(int& in, int& layers, int& tokenCount);
     void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber);
-    void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber);
-    void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber);
+    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
+    void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
+    void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
+    void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
 
 #elif USE_OPENCL
 
@@ -110,10 +108,10 @@ public:
 
     void clforprop(int& in, int& layers, int& tokenCount);
     void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber);
-    void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber);
-    void clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber);
+    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
+    void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
+    void clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber, float& learning);
+    void clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber, float& learning);
 
 #else
 
@@ -122,10 +120,10 @@ public:
     void forprop(int& in, int& layers, int& tokenCount);
     void forprop(const mat& EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     // backward propagation
-    void backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber);
-    void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers);
-    void backward(std::vector<float>& expected, int& in, int& layers, int headnumber);
-    void backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber);
+    void backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
+    void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
+    void backward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
+    void backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
 
 #endif
 

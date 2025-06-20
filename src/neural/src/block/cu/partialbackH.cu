@@ -49,7 +49,7 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters based on 'layers' (L = number of hidden layers)
@@ -470,7 +470,7 @@ void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layer
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters based on 'layers' (L = number of hidden layers)

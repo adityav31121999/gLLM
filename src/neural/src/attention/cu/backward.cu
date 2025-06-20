@@ -32,7 +32,7 @@ void attention::cuBackward(std::vector<float>& expected, int& in, int& layers, i
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
     // const int ev_size = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
     const int token_count = this->tokenCount; // Use member variable
 
@@ -469,7 +469,7 @@ void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& laye
     const int embedding_dim = EMBEDDING;
     const int mat_heights = MATHEIGHTS;
     const int context_win = CONTEXT_WIN;
-    const float learning_rate = LEARNING;
+    const float learning_rate = learning;
     const float scaling_factor = SCALING;
     const int token_count = this->tokenCount; // Use member variable
 

@@ -45,8 +45,8 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
     // Set MLP for backprop
     hor.expected = grad_hor_input;
     ver.output = grad_ver_input;
-    hor.backprop(in, layers, LEARNING);
-    ver.backward(in, layers, LEARNING);
+    hor.backprop(in, layers, learning);
+    ver.backward(in, layers, learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dh(EMBEDDING, 0.0f);
@@ -221,7 +221,7 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
         throw std::runtime_error("Weight and gradient dimension mismatch in backward1stHead (H)");
     }
 
-    float learning_rate = LEARNING;
+    float learning_rate = learning;
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
             MH(i, j) -= learning_rate * grad_MH(i, j);
@@ -234,12 +234,12 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
     // Step 10: Update EH and EV using gradients
     if(headnumber > 1) {
         for (int i = 0; i < EMBEDDING; i++) {
-            EH[i] -= LEARNING * grad_EH[i];
+            EH[i] -= learning * grad_EH[i];
         }
         /*for(int i = 0; i < CONTEXT_WIN; i++) {
         if (i >= EV.row) break; // Check EV row bounds
             for(int j = 0; j < EMBEDDING; j++) {
-                if (j < EV.col) EV(i, j) -= LEARNING * grad_EV[j];
+                if (j < EV.col) EV(i, j) -= learning * grad_EV[j];
             }
         }*/
     }
@@ -289,7 +289,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
 
     // Set MLP inputs for backprop
     ver.output = grad_ver_input;
-    ver.backward(in, layers, LEARNING);
+    ver.backward(in, layers, learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dv(EMBEDDING, 0.0f);
@@ -437,7 +437,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
          throw std::runtime_error("Weight and gradient dimension mismatch in backward1stHead (V)");
     }
 
-    float learning_rate = LEARNING;
+    float learning_rate = learning;
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
             MK(i, j) -= learning_rate * grad_MK_correction(i, j);
