@@ -26,29 +26,30 @@ void model::runModel(const std::string& binDirectory)
 
     while(1) {
         while(T.currentTokenCount < FULL_CONTEXT) {
-        std::cout << "Enter prompt: "; // Use 'total' member variable
-        takeInput();
-        if (this->chat != nullptr) {
-            // Check if the file pointer is valid
-            fprintf(this->chat, "Response:\n");
-            fflush(this->chat); // Ensure it's written immediately (optional but good for logging)
-        }
-        std::vector<float> pValues(EMBEDDING, 0.0f);
-        for(int i = 0; i < tinput.size(); i++) {
-            // get embeddings for tokens
-            T.getEmbedding(tinput[i], pValues);
-            setRow(T.tokenEmbed, T.currentTokenCount+i, pValues);
-        }
-        #ifdef USE_CUDA
-        // use cuda run function from transformer
-            T.cuRun();
-        #elif USE_OPENCL
-        // use cl run function from transformer
-            T.clRun();
-        #elif USE_CPU
-        // use cpp run function from transformer
-            T.run();
-        #endif
+            std::cout << "Enter prompt: "; // Use 'total' member variable
+            takeInput();
+            if (this->chat != nullptr) {
+                // Check if the file pointer is valid
+                fprintf(this->chat, "Response:\n");
+                fflush(this->chat); // Ensure it's written immediately (optional but good for logging)
+            }
+            std::vector<float> pValues(EMBEDDING, 0.0f);
+            for(int i = 0; i < tinput.size(); i++) {
+                // get embeddings for tokens
+                T.getEmbedding(tinput[i], pValues);
+                setRow(T.tokenEmbed, T.currentTokenCount+i, pValues);
+            }
+            T.promptCount = tinput.size();
+            #ifdef USE_CUDA
+            // use cuda run function from transformer
+                T.cuRun();
+            #elif USE_OPENCL
+            // use cl run function from transformer
+                T.clRun();
+            #elif USE_CPU
+            // use cpp run function from transformer
+                T.run();
+            #endif
             if (this->chat != nullptr) {
                 // Check if the file pointer is valid
                 fprintf(this->chat, "\n");

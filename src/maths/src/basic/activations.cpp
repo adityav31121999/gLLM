@@ -457,12 +457,6 @@ std::vector<std::vector<float>> LOTA(const std::vector<std::vector<float>>& y, i
             }
         }
     }
-     // Zero out rows beyond 't' if necessary (depends on desired output shape)
-     // for (size_t i = max_rows; i < x.size(); ++i) {
-     //     std::fill(x[i].begin(), x[i].end(), 0.0f);
-     // }
-
-
     // Normalize relevant elements by the global sum
     if (sum > 0.0f) {
         for (size_t i = 0; i < max_rows; ++i) {
@@ -485,7 +479,6 @@ std::vector<std::vector<float>> LOTA(const std::vector<std::vector<float>>& y, i
         }
     }
     // Non-relevant elements remain 0 (if zeroed out) or their original value
-
     return x; // Return the modified 2D vector
 }
 
@@ -506,8 +499,6 @@ std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y
     // Handle 1x1 case explicitly if t=1
     if (t == 1 && !result.empty() && !result[0].empty()) {
         result[0][0] = 0.0f; // Derivative of LOTA(x)=1 is 0
-        // Zero out other elements if needed
-        // ...
         return result;
     }
 
@@ -526,7 +517,6 @@ std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y
     if (!found_value) min_val = 0.0f;
 
     float abs_min_val = std::abs(min_val);
-
     // Calculate the sum of (element + abs(min_val)) in the relevant region
     // Also store transformed values temporarily
     float sum = 0.0f;
@@ -557,7 +547,8 @@ std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y
                 }
             }
         }
-    } else {
+    } 
+    else {
         // Handle sum=0 case (derivative is likely 0 or undefined)
         for (size_t i = 0; i < max_rows; ++i) {
             size_t limit_j = attentionType ? (i + 1) : (size_t)t;
@@ -567,16 +558,12 @@ std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y
             }
             // Zero out non-relevant elements if attentionType is true
             if (attentionType) {
-                 for (size_t j = limit_j; j < result[i].size(); ++j) {
-                     result[i][j] = 0.0f;
-                 }
+                for (size_t j = limit_j; j < result[i].size(); ++j) {
+                    result[i][j] = 0.0f;
+                }
             }
         }
     }
-     // Zero out rows beyond 't' if necessary
-     // for (size_t i = max_rows; i < result.size(); ++i) {
-     //     std::fill(result[i].begin(), result[i].end(), 0.0f);
-     // }
 
     return result; // Return the derivative matrix
 }

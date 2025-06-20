@@ -12,88 +12,6 @@
  * 3. QK, KH, QV : m*x*y*d*d each
  */
 
-// calculate offset for model layout and its components
-void model::calculateAndSetLayout() {
-    matOffset = matheight * d;      // for single mat
-    cacheOffset = d * d;            // for single cache
-    mlpOffset = d * d * l;          // for single mlp
-    // for training
-    attentionOffset = (4*matOffset) + (2*mlpOffset) + d + (n*d) + (2*n*d) * (n*n);
-    blockOffset = (x * y * (attentionOffset + (n * d))) + (n*d);
-}
-
-
-/**
- * @brief after training the first block, share all the values to other blocks
- */
-void model::copy1toOhterBlocks()
-{
-    // create a .bin as common.bin
-    // hold all the values of MQ, MK, MV, MH, hor and ver
-    std::ofstream common(baseDir + "/common.bin", std::ios::binary);
-    
-    // total values = x*y*(4*row*col+2*layer*d*d)
-    long long int offset = x * y * (4 * matOffset + 2 * mlpOffset);
-    long long int of = 0;
-    std::vector<float> commonData;
-    common.write(reinterpret_cast<char*>(commonData.data()), offset * sizeof(float));
-    common.close();
-    for(int j = 0; j < x; j++) {
-        for(int k = 0; k < y; k++) {
-            T.t[0].b[j][k].MQ.serialise(of, baseDir + "/common.bin");
-            T.t[0].b[j][k].MK.serialise(of+matOffset, baseDir + "/common.bin");
-            T.t[0].b[j][k].MV.serialise(of+2*matOffset, baseDir + "/common.bin");
-            T.t[0].b[j][k].MH.serialise(of+3*matOffset, baseDir + "/common.bin");
-            T.t[0].b[j][k].hor.serialise(of+4*matOffset, baseDir + "/common.bin");
-            T.t[0].b[j][k].ver.serialise(of+4*matOffset+mlpOffset, baseDir + "/common.bin");
-        }
-        of += 4 * matOffset + 2 * mlpOffset;
-    }
-    std::cout << "common.bin created. Common Kowledge Stored." << std::endl;
-
-    // shared common knowledge
-    T.t[0].serialise(baseDir + "/block_1.bin");
-    std::cout << "Block 1 serialised. Knowledge Shared." << std::endl;
-    for(int i = 1; i < m; i++) {
-        for(int j = 0; j < x; j++) {
-            for(int k = 0; k < y; k++) {
-                T.t[i].b[j][k].MQ = T.t[0].b[j][k].MQ;
-                T.t[i].b[j][k].MK = T.t[0].b[j][k].MK;
-                T.t[i].b[j][k].MV = T.t[0].b[j][k].MV;
-                T.t[i].b[j][k].MH = T.t[0].b[j][k].MH;
-                T.t[i].b[j][k].hor.weights = T.t[0].b[j][k].hor.weights;
-                T.t[i].b[j][k].ver.weights = T.t[0].b[j][k].ver.weights;
-            }
-        }
-        T.t[i].serialise(baseDir + "/block_" + std::to_string(i+1) + ".bin");
-        std::cout << "Block " << i+1 << " serialised. Knowledge Shared." << std::endl;
-    }
-
-    // allocate the common knowledge to discrete bins
-    mat cache(d, d);
-    for(int i = 0; i < m; i++) {
-        for(int j = 0; j < x; j++) {
-            for(int k = 0; k < y; k++) {
-                T.t[i].b[j][k].MQ.serialise(i*k*j*matOffset, baseDir + "/bin/MQ.bin");
-                T.t[i].b[j][k].MK.serialise(i*k*j*matOffset, baseDir + "/bin/MK.bin");
-                T.t[i].b[j][k].MV.serialise(i*k*j*matOffset, baseDir + "/bin/MV.bin");
-                T.t[i].b[j][k].MH.serialise(i*k*j*matOffset, baseDir + "/bin/MH.bin");
-                T.t[i].b[j][k].hor.serialise(i*k*j*mlpOffset, baseDir + "/bin/hor.bin");
-                T.t[i].b[j][k].ver.serialise(i*k*j*mlpOffset, baseDir + "/bin/ver.bin");
-                cache = T.t[i].b[j][k].MQ * T.t[i].b[j][k].MK;
-                cache.serialise(i*k*j*cacheOffset, baseDir + "/bin/QK.bin");
-                cache = T.t[i].b[j][k].MK * T.t[i].b[j][k].MH;
-                cache.serialise(i*k*j*cacheOffset, baseDir + "/bin/KH.bin");
-                cache = T.t[i].b[j][k].MQ * T.t[i].b[j][k].MV;
-                cache.serialise(i*k*j*cacheOffset, baseDir + "/bin/QV.bin");
-            }
-        }
-    }
-    std::cout << "All discrete bins serialised." << std::endl;
-    std::cout << "All blocks serialised. Knowledge Shared." << std::endl;
-}
-
-
 /**
  * @brief number of float values currently available in the model file
  * @param blockCount current block in the full context (1-based index)
@@ -109,6 +27,77 @@ int model::getOffset(int blockCount, int paCount, int attentionCount, int matCou
 }
 
 
+// calculate offset for model layout and its components
+void model::calculateAndSetLayout() {
+    matOffset = matheight * d;      // for single mat
+    cacheOffset = d * d;            // for single cache
+    mlpOffset = d * d * l;          // for single mlp
+    // for training
+    attentionOffset = (4*matOffset) + (2*mlpOffset) + d + (n*d) + (2*n*d) * (n*n);
+    blockOffset = (x * y * (attentionOffset + (n * d))) + (n*d);
+}
+
+
+void transformer::makeCommon(std::string &path2folderOfAllBins)
+{
+    // Create/truncate common.bin. The serialise methods will append to it.
+    std::string commonBinPath = path2folderOfAllBins + "/common.bin";
+    std::ofstream commonFileStream(commonBinPath, std::ios::binary | std::ios::trunc);
+    if (!commonFileStream.is_open()) {
+        throw std::runtime_error("Failed to open/create common.bin for writing: " + commonBinPath);
+    }
+    commonFileStream.close(); // Close it now. serialise calls will reopen in append mode.
+
+    long long int single_mlp_params_from_instance = 0;
+    if (this->x > 0 && this->y > 0) {
+        if (this->t.empty()) {
+             throw std::runtime_error("transformer::makeCommon: Transformer has no blocks (T.t is empty) when x and y are positive.");
+        }
+        if (this->t[0].b.empty() || this->t[0].b[0].empty()) {
+            throw std::runtime_error("transformer::makeCommon: Block 0's attention structure (b) is empty or first row is empty when x and y are positive.");
+        }
+        // Access parameters from the first head of the first partial attention layer of the first block
+        single_mlp_params_from_instance = t[0].b[0][0].hor.params;
+    }
+    // If x or y is 0, totalparams will correctly be 0.
+
+    long long int totalparams = static_cast<long long int>(this->x) * this->y *
+                               ((4 * static_cast<long long int>(this->h) * this->d) +
+                                (2 * single_mlp_params_from_instance));
+
+    std::cout << "Size of Common Bin FIle: " << std::endl;
+    std::cout << "\tTotal Parameters: " << totalparams << std::endl;
+    std::cout << "\tSize(MiBs): " << static_cast<float>(sizeof(float) * totalparams) / (1000.0f * 1000.0f) << std::endl;
+    std::cout << "\tSize(MBs): " << static_cast<float>(sizeof(float) * totalparams) / (1024.0f * 1024.0f) << std::endl;
+
+    // The 'conceptual_offset' is for logical tracking if needed, as serialise appends.
+    // The offset parameter to mat::serialise is 0, assuming it appends.
+    if (!this->t.empty()) { // Proceed only if there's at least one block
+        for (int j = 0; j < this->x; j++) {
+            for (int k = 0; k < this->y; k++) {
+                // Ensure T.t[0].b[j][k] is valid before calling methods on it.
+                // This should be guaranteed if x and y match the dimensions of T.t[0].b
+                if (j < t[0].b.size() && k < t[0].b[j].size()) {
+                    t[0].b[j][k].MQ.serialise(0, commonBinPath);
+                    t[0].b[j][k].MK.serialise(0, commonBinPath);
+                    t[0].b[j][k].MV.serialise(0, commonBinPath);
+                    t[0].b[j][k].MH.serialise(0, commonBinPath);
+                    t[0].b[j][k].hor.serialise4train(commonBinPath);
+                    t[0].b[j][k].ver.serialise4train(commonBinPath);
+                }
+                else {
+                    throw std::out_of_range("transformer::makeCommon: Attempted to access T.t[0].b out of bounds during serialization.");
+                }
+            }
+        }
+        std::cout << "common.bin populated with shared weights from block 0." << std::endl;
+    }
+    else if (this->x > 0 && this->y > 0) { // x and y suggest there should be data, but T.t is empty
+        std::cerr << "Warning: transformer::makeCommon: x and y are positive, but T.t is empty. common.bin will be empty." << std::endl;
+    }
+}
+
+
 /**
  * @brief create the binary storage files for the model
  * @param locationOfModel location of the model folder
@@ -119,22 +108,31 @@ void model::serialise()
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
+                std::cout << "Serialising: Block " << i+1 << " | Partial Attention " << j+1 << " | Attention Head " << k+1 << " -> MQ -> ";
                 T.t[0].b[j][k].MQ.serialise(k*j*matOffset, baseDir + "/bin/MQ.bin");
+                std::cout << "MQ -> ";
                 T.t[0].b[j][k].MK.serialise(k*j*matOffset, baseDir + "/bin/MK.bin");
+                std::cout << "MK -> ";
                 T.t[0].b[j][k].MV.serialise(k*j*matOffset, baseDir + "/bin/MV.bin");
+                std::cout << "MV -> ";
                 T.t[0].b[j][k].MH.serialise(k*j*matOffset, baseDir + "/bin/MH.bin");
+                std::cout << "MH -> ";
                 T.t[0].b[j][k].hor.serialise(k*j*mlpOffset, baseDir + "/bin/hor.bin");
+                std::cout << "hor -> ";
                 T.t[0].b[j][k].ver.serialise(k*j*mlpOffset, baseDir + "/bin/ver.bin");
-                cache = T.t[0].b[j][k].MQ*T.t[0].b[j][k].MK;
+                std::cout << "ver -> ";
+                cache.mult_A_Bt(T.t[0].b[j][k].MQ,T.t[0].b[j][k].MK);
+                std::cout << "QK' -> ";
                 cache.serialise(k*j*cacheOffset, baseDir + "/bin/QK.bin");
                 cache = T.t[0].b[j][k].MK*T.t[0].b[j][k].MH;
+                std::cout << "KH -> ";
                 cache.serialise(k*j*cacheOffset, baseDir + "/bin/KH.bin");
                 cache = T.t[0].b[j][k].MQ*T.t[0].b[j][k].MV;
+                std::cout << "QV" << std::endl;
                 cache.serialise(k*j*cacheOffset, baseDir + "/bin/QV.bin");
             }
         }
     }
-    std::cout << "common.bin created. Common Kowledge Stored." << std::endl;
     for(int i = 0; i < m; i++) {
         T.t[i].serialise(baseDir + "/block" + std::to_string(i+1) + ".bin");
         std::cout << "Block " << i+1 << " serialised." << std::endl;

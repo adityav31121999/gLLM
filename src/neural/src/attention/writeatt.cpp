@@ -84,3 +84,18 @@ void attention::deserialise(int offset, const std::string& locationofbinfile) {
                     (ver.weights.size()*ver.weights[0].row*ver.weights[0].col)+(K.row*K.col)+(Q.row*Q.col)+EH.size()+(KdotQ.row*KdotQ.col), 
                     locationofbinfile);
 }
+
+
+/**
+ * @brief compute compressed weight matrices elements
+ */
+void attention::computeCache()
+{
+    mat cache(EMBEDDING, EMBEDDING);
+    // qkCache
+    cache.mult_A_Bt(MQ, MK);
+    // khCache
+    cache = MK * MH;
+    // qvCache
+    cache = MQ * MV;
+}

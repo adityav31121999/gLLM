@@ -182,7 +182,6 @@ float getL2Penalty(const std::vector<mat>& weights); // Updated signature
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
-std::vector<float> flattenWeights(const std::vector<std::vector<std::vector<float>>>& weights); // Updated signature
 std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated signature
 
 #ifdef USE_CUDA
@@ -219,14 +218,6 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
     float cucomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
     float cudropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 
-#elif USE_OPENCL
-
-    float clgetL1Penalty(OpenCLContext& clContext, std::vector<std::vector<std::vector<float>>>& weights);
-    float clgetL2Penalty(OpenCLContext& clContext, std::vector<std::vector<std::vector<float>>>& weights);
-    float clcomputeLossWithL1(OpenCLContext& clContext, std::vector<float>& expected, std::vector<float>& output, mlp& network, float lambda);
-    float clcomputeLossWithL2(OpenCLContext& clContext, std::vector<float>& expected, std::vector<float>& output, mlp& network, float lambda);
-    float cldropoutGeneralisation(OpenCLContext& clContext, std::vector<float>& expected, std::vector<float>& output, mlp& network, float dropout_rate);
-
-#endif // USE_CUDA / USE_OPENCL
+#endif
 
 #endif // MLP_HPP

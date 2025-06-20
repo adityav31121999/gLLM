@@ -133,9 +133,10 @@ public:
     void clearValues();
     void serialiseattention4train(const std::string& locationWithFileName);
     void serialiseattention4use(const std::string& binDirectory, const std::string& locationWithFileName);
-
+    void computeCache();
     ~attention() = default;
 };
+
 
 // Inline implementations for copy constructor and copy assignment operator
 inline attention::attention(const attention& other) :

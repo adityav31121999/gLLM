@@ -120,6 +120,7 @@ void model::trainBlock(const std::string& txtFileLocation)
 
     long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     long long linesProcessedInThisRun = 0;
+    bool sortIt = 0;    // off
     for(int k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfFile.clear();
@@ -153,14 +154,14 @@ void model::trainBlock(const std::string& txtFileLocation)
             continue;
         }
         std::cout << "In line " << k << ". Number of pairs of Odd-Even Lines are: " << num_pairs << "." << std::endl;
-        int tok = 0;        // token limit counter
-        T.currentTokenCount = 0;      // 
+        int tok = 0;
+        T.currentTokenCount = 0;
         // Loop based on the number of pairs identified
         for(int i = 0; i < num_pairs; i++) {
-            tokenize_with_numbers(tokensOfFile[2*i], oddSentence[i]);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
-            tokenize_with_numbers(tokensOfFile[2*i+1], evenSentence[i]); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
-            evenSentence.resize(evenSentence.size() + 1);
-            evenSentence.back().push_back("@#0");
+            tokenize_with_numbers(tokensOfFile[2*i], oddSentence[i], sortIt);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
+            tokenize_with_numbers(tokensOfFile[2*i+1], evenSentence[i], sortIt); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
+            evenSentence[i].resize(evenSentence[i].size() + 1);
+            evenSentence[i].back() = "@#0";
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -236,10 +237,6 @@ void model::trainBlock(const std::string& txtFileLocation)
     }
 
     // copy to other blocks and serialise
-    copy1toOhterBlocks();
-    // for(int i = 1; i < m; i++) {
-    //     T.t[i].serialise(T.t[i].blockFilePath);
-    // }
     // End timing here
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -284,11 +281,14 @@ void model::trainModel(const std::string& txtFile)
     while (std::getline(file, line) && !line.empty()) {
         linesOfFile.push_back(line);
     }
+    bool sortIt = 0;    // off
+
     std::vector<std::vector<std::string>> oddSentence, evenSentence;
     // get all values for matrices and mlps from block .bin files
     for(int i = 0; i < m; i++) {
         T.t[i].deserialise(T.t[i].blockFilePath);
     }
+
     for(int i = 0; i < numberOfLines; i++)
     {
         tokensOfFile.clear();
@@ -304,8 +304,8 @@ void model::trainModel(const std::string& txtFile)
         int tok = 0;
         // get embeddings and response
         for(int i = 0; i < oddSentence.size(); i++) {
-            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i]);
-            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i], sortIt);
+            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i], sortIt);
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -352,55 +352,4 @@ void model::trainModel(const std::string& txtFile)
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "Total training time for file " << txtFile << ": " << duration.count() << " ms" << std::endl;
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
-}
-
-
-/**
- * @brief train the first block of model for local context
- * @param strings embeddings for model
- * @param rString tokens
- */
-void model::trainforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString)
-{
-    if(strings.size() < CONTEXT_WIN) 
-    {
-        #ifdef USE_CUDA
-            this->T.cuTrain(strings, rString);
-        #elif USE_OPENCL
-            this->T.clTrain(strings, rString);
-        #elif USE_CPU
-            this->T.train(strings, rString);
-        #endif
-        T.t[0].serialise(T.t[0].blockFilePath);
-    }
-    else {
-        throw std::runtime_error("LOCAL CONTEXT LIMIT of REACHED");
-    }
-}
-
-
-/**
- * @brief train the model for Full Context
- * @param strings prompt embeddings for model
- * @param rString tokens
- */
-void model::trainforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString)
-{
-    if(strings.size() < FULL_CONTEXT) 
-    {
-        #ifdef USE_CUDA
-            this->T.cuTrain(strings, rString);
-        #elif USE_OPENCL
-            this->T.clTrain(strings, rString);
-        #elif USE_CPU
-            this->T.train(strings, rString);
-        #endif
-        for(int i = 0; i < m; i++) {
-            T.t[i].serialise(T.t[i].blockFilePath);
-        }
-        serialise();
-    }
-    else {
-        throw std::runtime_error("LOCAL CONTEXT LIMIT of REACHED");
-    }
 }

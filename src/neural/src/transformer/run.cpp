@@ -6,12 +6,12 @@
 #ifdef USE_CPU
 
 /**
- * @brief run transformer for single prompt-response
- * @param prompt prompt to get single response
+ * @brief run transformer for prompt's response
+ * @param prompt prompt to get response
  */
 void transformer::run() {
     if(currentTokenCount+promptCount >= FULL_CONTEXT) {
-        throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT!");
+        throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT! SORRY -_-");
     }
     int c = std::abs(currentTokenCount - (blockCount-1)*CONTEXT_WIN);
     // under local context
@@ -174,7 +174,7 @@ void transformer::run() {
         }
         // check for maximum token limit
         if(currentTokenCount == FULL_CONTEXT) {
-            std::cout << "\nTOKEN LIMIT REACHED AT FULL CONTEXT!";
+            std::cout << "\nTOKEN LIMIT REACHED AT FULL CONTEXT WHILE IN PROCESS! SORRY :(";
             break;
         }
         // check for terminating word '@#0'

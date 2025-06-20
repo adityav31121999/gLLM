@@ -91,10 +91,10 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
     if (trainMode == 1) {
         K = mat(n, h);
         Q = mat(n, h);
-        if (MQ.row == 0) MQ = mat(h, d);
-        if (MK.row == 0) MK = mat(h, d);
-        if (MV.row == 0) MV = mat(d, h);
-        if (MH.row == 0) MH = mat(d, h);
+        if (MQ.row == 0) MQ = mat(h, d);    // h row x d col
+        if (MK.row == 0) MK = mat(h, d);    // h row x d col
+        if (MV.row == 0) MV = mat(d, h);    // d row x h col
+        if (MH.row == 0) MH = mat(d, h);    // d row x h col
         params = hor.params + ver.params + (4*h*d) + d + (n*n) + (n*d) + (2*n*h);
     }
     else {

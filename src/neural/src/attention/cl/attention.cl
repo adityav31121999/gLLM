@@ -376,19 +376,13 @@ __kernel void kernelComputeGradientsEH(__global const float* eh, __global const 
 {
     int idx = get_global_id(0);
     if (idx < embedding_dim) {
-        // grad_eh = 2 * (eh - expected_h)
-        grad_eh[idx] = 2.0f * (eh[idx] - expected_h[idx]);
-    }
-}
+        float pred = eh[idx];
+        float label = expected_h[idx];
 
-__kernel void kernelComputeGradDhDv_1stHead(__global const float* d_hor_gweights0, __global const float* d_ver_gweights0,
-                                            __global float* grad_dh, __global float* grad_dv, int embedding_dim)
-{
-    int i = get_global_id(0);
-    if (i < embedding_dim) {
-        int gweight_idx = i * embedding_dim + 0;
-        grad_dh[i] = (d_hor_gweights0 != NULL) ? d_hor_gweights0[gweight_idx] : 0.0f;
-        grad_dv[i] = (d_ver_gweights0 != NULL) ? d_ver_gweights0[gweight_idx] : 0.0f;
+        // BCE gradient: (p - y) / [p * (1 - p)]
+        float grad = (pred - label) / (pred * (1.0f - pred));
+
+        grad_eh[idx] = grad;
     }
 }
 
@@ -411,6 +405,34 @@ __kernel void kernelComputeGradientsEH_EV(__global const float* eh, __global con
     }
 }
 
+__kernel void kernelComputeGradientsEV_V(__global const float* ev, __global const float* expected_v,
+                                         __global float* grad_ev_full, __global float* grad_ev_summed, __global float* grad_ev_scaled,
+                                         float learning_rate,
+                                         int context_win, int embedding_dim)
+{
+    int embed_idx = get_global_id(0);
+    if (embed_idx < embedding_dim) {
+        float sum_grad_embed = 0.0f;
+        for (int win_idx = 0; win_idx < context_win; ++win_idx) {
+            int idx = win_idx * embedding_dim + embed_idx;
+
+            float pred = ev[idx];
+            float label = expected_v[idx];
+
+            // Clamp to avoid division by zero or log(0)
+            pred = fmax(fmin(pred, 1.0f - 1e-7f), 1e-7f);
+
+            // BCE gradient: (p - y) / (p * (1 - p))
+            float grad = (pred - label) / (pred * (1.0f - pred));
+
+            grad_ev_full[idx] = grad;
+            sum_grad_embed += grad;
+        }
+        grad_ev_summed[embed_idx] = sum_grad_embed;
+        grad_ev_scaled[embed_idx] = sum_grad_embed * learning_rate;
+    }
+}
+
 __kernel void kernelComputeGradDhDv(__global const float* d_hor_gweights0, __global const float* d_ver_gweights0,
                                     __global float* grad_dh, __global float* grad_dv, int embedding_dim)
 {
@@ -425,6 +447,17 @@ __kernel void kernelComputeGradDhDv(__global const float* d_hor_gweights0, __glo
         }
         grad_dh[i] = sum_dh;
         grad_dv[i] = sum_dv;
+    }
+}
+
+__kernel void kernelComputeGradDhDv_1stHead(__global const float* d_hor_gweights0, __global const float* d_ver_gweights0,
+                                        __global float* grad_dh, __global float* grad_dv, int embedding_dim)
+{
+    int i = get_global_id(0);
+    if (i < embedding_dim) {
+        int gweight_idx = i * embedding_dim + 0;
+        grad_dh[i] = (d_hor_gweights0 != NULL) ? d_hor_gweights0[gweight_idx] : 0.0f;
+        grad_dv[i] = (d_ver_gweights0 != NULL) ? d_ver_gweights0[gweight_idx] : 0.0f;
     }
 }
 
@@ -564,34 +597,6 @@ __kernel void kernelUpdateWeights_EH_EV(__global float* mh_a, __global float* mv
             ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
         }
     } 
-}
-
-__kernel void kernelComputeGradientsEV_V(__global const float* ev, __global const float* expected_v,
-                                         __global float* grad_ev_full, __global float* grad_ev_summed, __global float* grad_ev_scaled,
-                                         float learning_rate,
-                                         int context_win, int embedding_dim)
-{
-    int embed_idx = get_global_id(0);
-    if (embed_idx < embedding_dim) {
-        float sum_grad_embed = 0.0f;
-        for (int win_idx = 0; win_idx < context_win; ++win_idx) {
-            int idx = win_idx * embedding_dim + embed_idx;
-
-            float pred = ev[idx];
-            float label = expected_v[idx];
-
-            // Clamp to avoid division by zero or log(0)
-            pred = fmax(fmin(pred, 1.0f - 1e-7f), 1e-7f);
-
-            // BCE gradient: (p - y) / (p * (1 - p))
-            float grad = (pred - label) / (pred * (1.0f - pred));
-
-            grad_ev_full[idx] = grad;
-            sum_grad_embed += grad;
-        }
-        grad_ev_summed[embed_idx] = sum_grad_embed;
-        grad_ev_scaled[embed_idx] = sum_grad_embed * learning_rate;
-    }
 }
 
 __kernel void kernelComputeGradDv_V(__global const float* d_ver_gweights0, __global float* grad_dv, int embedding_dim)

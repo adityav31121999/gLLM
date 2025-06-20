@@ -35,6 +35,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
             std::cout << "              Block " << i+1 << " constructed             " << std::endl;
             t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i, modelDir_param);
         }
+        std::cout << "----------------------------------------------------------" << std::endl;
         // training
         std::cout << "block vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -67,7 +68,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         params = t[0].params + d + (this->vocabsize * d) + (this->n*this->m)*d + (this->x * this->y * this->n * this->d) + this->n*this->d;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
-    std::cout << "<==================================================================>" << std::endl;
+    std::cout << "----------------------------------------------------------" << std::endl;
 }
 
 /**
@@ -131,7 +132,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         params = t[0].params + d + (this->vocabsize * d) + (this->n*this->m)*d + (this->x * this->y * this->n * this->d) + this->n*this->d;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
-    std::cout << "<==================================================================>" << std::endl;
+    std::cout << "----------------------------------------------------------" << std::endl;
 }
 
 #else
@@ -206,7 +207,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         params = t[0].params + this->d + (this->vocabsize * this->d) + (this->m * this->n * this->d) /*tokenEmbed*/ + (this->x * this->y * this->n * this->d) /*EVuse*/ + (this->n * this->d) /*tokForBlock*/;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
-    std::cout << "<==================================================================>" << std::endl;
+    std::cout << "----------------------------------------------------------" << std::endl;
 }
 
 /**
@@ -278,7 +279,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         params = t[0].params + this->d + (this->vocabsize * this->d) + (this->m * this->n * this->d) /*tokenEmbed*/ + (this->x * this->y * this->n * this->d) /*EVuse*/ + (this->n * this->d) /*tokForBlock*/;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
-    std::cout << "<==================================================================>" << std::endl;
+    std::cout << "----------------------------------------------------------" << std::endl;
 }
 
 #endif

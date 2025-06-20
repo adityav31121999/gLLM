@@ -1,6 +1,14 @@
 
 #ifdef USE_OPENCL
-#include <CL/cl.hpp>
+#if defined(_WIN64)
+    #define CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
+    // For Windows, use the older/common cl.hpp
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #define CL_HPP_TARGET_OPENCL_VERSION 220
+    #include <CL/opencl.hpp>
+#endif
 #include "include/transformer.hpp"
 #include <vector>
 #include <numeric>
@@ -166,7 +174,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         std::cerr << "Standard Exception in transformer::clForward: " << e.what() << std::endl;
         throw;
     }
-    std::cout << "clForward: Finished forward propagation for block " << blockCount << "." << std::endl;
+    // std::cout << "clForward: Finished forward propagation for block " << blockCount << "." << std::endl;
 }
 
 #endif // USE_OPENCL

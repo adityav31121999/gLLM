@@ -61,14 +61,12 @@ add_library(neural STATIC
     src/block/backward.cpp
     src/block/writeblock.cpp
     # CUDA
-    src/block/cu/kdotq.cu
     src/block/cu/forward.cu
     src/block/cu/partialbackH.cu
     src/block/cu/partialbackiH.cu
     src/block/cu/partialbackV.cu
     src/block/cu/backward.cu
     # OpenCL
-    src/block/cl/kdotqcl.cpp
     src/block/cl/forwardcl.cpp
     src/block/cl/partialbackHcl.cpp
     src/block/cl/partialbackiHcl.cpp

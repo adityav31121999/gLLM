@@ -182,21 +182,11 @@ public:
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
             std::string& license, std::string& trainingData);
     void setEmbeddingFromCSV(const std::string& path2file);
-    void setEmbeddingFromBin(const std::string& path2file);
     void makeEmbedding(std::string& path2file);
 
-    void trainforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
-    void trainforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
     void trainBlock(const std::string& trainingDataFolder);
-
-    void testforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
-    void testforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
     void testBlock(const std::string& testDataFolder);
-
-    void validateforLC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
-    void validateforFC(std::vector<std::vector<float>>& strings,std::vector<std::string> rString);
     void validateBlock(const std::string& validationDataFolder);
-    void copy1toOhterBlocks();
 
     // train model
     void trainModel(const std::string& trainingDataFolder);
@@ -236,17 +226,12 @@ public:
 
 static bool is_sub_sentence_delimiter(char c);
 static bool is_digit(char c);
+void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens, bool& sortIt);
+void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
 void textSplit(std::string& path2file, std::vector<std::string>& tokensOfFile, std::vector<std::vector<std::string>>& oddSentence, 
                 std::vector<std::vector<std::string>>& evenSentence);
-void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens);
-void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
-
-// binary files
 
 void create(std::string &locationOfALLbins);
-void create(std::string &locationOfALLbins, int totalBlocks);
-
-// csv and txt support functions
 
 long long int countLinesInCSV(const std::string& filename);
 int countLineInTXT(const std::string& filename);

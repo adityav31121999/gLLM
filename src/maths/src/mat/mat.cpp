@@ -7,7 +7,7 @@
 #include <algorithm>  // For std::copy
 #include <cstring>    // For memcpy, strerror (strerror for POSIX)
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h> // For Windows API functions (GetTempPathA, GetTempFileNameA, CreateFileA, SetFilePointerEx, SetEndOfFile, CloseHandle, DeleteFileA, MAX_PATH, GetLastError, FormatMessageA)
 #include <cstdio>    // For remove, used if DeleteFileA is not preferred for some reason.
 #else // POSIX

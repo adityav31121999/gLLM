@@ -152,6 +152,7 @@ public:
     void getmat(int blockCount, int i, int j, mat& q, std::string path2file, int& row, int& column);
     void getmlp(int blockCount, int i, int j, std::vector<mat>& weights, std::string path2file);
     void getEmbedding(std::string& word, std::vector<float>& embed);
+    void makeCommon(std::string& path2folderOfAllBins);
     void clearValues();
 
     ~transformer() = default;

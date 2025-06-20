@@ -25,40 +25,63 @@ static bool is_sub_sentence_delimiter(char c) {
 
 
 /**
- * @brief Tokenize a string into words, numbers (digit by digit), and punctuations.
+ * @brief Tokenize a string into words, separate numbers (digit by digit), and punctuations.
  * @param str The string to tokenize.
  * @param tokens The vector to store the tokens.
+ * @param sortIt when embedding needed (1) sort else don't
  */
-void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens)
+void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens, bool& sortIt)
 {
-    std::stringstream ss(str);
-    std::string chunk;
-    static const std::string delimiters = " .,!?;:-~_+=/@#$&*`%^\\|\"\'(){}[]<>";
+    tokens.clear(); // Ensure the output vector starts fresh
+    std::set<std::string> encountered_tokens; // To keep track of tokens already added
 
-    while (ss >> chunk) {
-        std::string current_part;
-        for (char c : chunk) {
-            if (is_digit(c)) {
-                if (!current_part.empty()) {
-                    tokens.push_back(current_part);
-                    current_part.clear();
-                }
-                tokens.push_back(std::string(1, c));
-            } else if (delimiters.find(c) != std::string::npos) {
-                if (!current_part.empty()) {
-                    tokens.push_back(current_part);
-                    current_part.clear();
-                }
-                tokens.push_back(std::string(1, c));
-            } else {
-                current_part.push_back(c);
-            }
+    // Delimiters include common punctuation and symbols (excluding space)
+    static const std::string delimiters = ".,!?;:-~_+=/@#$&*`%^\\|\"\'(){}[]<>";
+
+    // Helper lambda to add a token to the 'tokens' vector if it's new
+    auto add_unique_token = [&](const std::string& token_val) {
+        if (!token_val.empty() && encountered_tokens.find(token_val) == encountered_tokens.end()) {
+            tokens.push_back(token_val);
+            encountered_tokens.insert(token_val);
         }
-        if (!current_part.empty()) {
-            tokens.push_back(current_part);
+    };
+
+    std::string current_part;
+    
+    // Process each character in the string
+    for (char c : str) {
+        if (c == ' ') {
+            // Space separates tokens but is not included as a token
+            add_unique_token(current_part);
+            current_part.clear();
+        } 
+        else if (is_digit(c)) {
+            // Add accumulated word part if any
+            add_unique_token(current_part);
+            current_part.clear();
+            // Add digit as a separate token
+            add_unique_token(std::string(1, c));
+        } 
+        else if (delimiters.find(c) != std::string::npos) {
+            // Add accumulated word part if any
+            add_unique_token(current_part);
+            current_part.clear();
+            // Add delimiter as a separate token
+            add_unique_token(std::string(1, c));
+        } 
+        else {
+            // Accumulate character for a word/token
+            current_part.push_back(c);
         }
     }
+    
+    // Add any remaining part
+    add_unique_token(current_part);
+    // Sort the tokens lexicographically
+    if(sortIt == 1)
+        std::sort(tokens.begin(), tokens.end());
 }
+
 
 /**
  * @brief Split a line into sub-sentences based on delimiters (., !, ?, :) and store them in a vector.
@@ -207,6 +230,7 @@ void textSplit(std::string &path2file, std::vector<std::string> &tokensOfFile, s
  */
 void model::makeEmbedding(std::string &path2file)
 {
+    bool sortIt = 1;
     const std::string special_token = "@#0";
 
     std::ifstream file(path2file);
@@ -222,7 +246,7 @@ void model::makeEmbedding(std::string &path2file)
             continue;
         }
         std::vector<std::string> line_tokens_temp;
-        tokenize_with_numbers(line_content, line_tokens_temp);
+        tokenize_with_numbers(line_content, line_tokens_temp, sortIt);
         all_tokens_from_file_temp.insert(all_tokens_from_file_temp.end(), line_tokens_temp.begin(), line_tokens_temp.end());
     }
     file.close();
@@ -554,44 +578,4 @@ void model::setEmbeddingFromCSV(const std::string& path2file) {
         }
         std::cout << (this->T.d > 5 ? "..." : "") << std::endl;
     }
-}
-
-
-/**
- * @brief Set the embedding from a binary file.
- * @param path2file The path to the binary file.
- */
-void model::setEmbeddingFromBin(const std::string& path2file) {
-    if (this->T.vocabsize <= 0 || this->T.d <= 0) {
-        throw std::runtime_error("Vocabulary size and embedding dimension must be set and positive before loading from binary file.");
-    }
-
-    // Initialize T.embeddings to the correct size. This creates the memory-mapped file.
-    this->T.embeddings = mat(this->T.vocabsize, this->T.d);
-
-    if (!this->T.embeddings.mapped_data) {
-        throw std::runtime_error("Failed to initialize matrix for embeddings. Mapped data is null.");
-    }
-
-    std::ifstream file(path2file, std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open binary file: " + path2file);
-    }
-
-    size_t total_floats = static_cast<size_t>(this->T.vocabsize) * this->T.d;
-    size_t total_bytes = total_floats * sizeof(float);
-
-    file.read(reinterpret_cast<char*>(this->T.embeddings.mapped_data), total_bytes);
-
-    if (!file) { // Check for read errors (e.g. not enough data)
-        size_t bytes_read = file.gcount();
-        file.close();
-        // Clean up the partially filled/failed mat object's resources
-        this->T.embeddings = mat(0,0); // Reset to empty
-        throw std::runtime_error("Failed to read the expected number of bytes from binary file: " + path2file +
-                                 ". Expected " + std::to_string(total_bytes) + " bytes, but only " +
-                                 std::to_string(bytes_read) + " could be read.");
-    }
-
-    file.close();
 }

@@ -1,6 +1,12 @@
 
 #ifdef USE_OPENCL
-#include <CL/cl.hpp>
+
+#if defined(_WIN64)
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #include <CL/opencl.hpp>
+#endif
+
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <vector>
@@ -15,10 +21,10 @@
 #define WORKGROUP_SIZE_Y 16
 
 /**
- * @brief compute KdotQ of specific parallel (or column of block vector b) using OpenCL
- * kernels. This optimized version allocates large buffers on the device once, copies data
- * in batches, launches kernels using offsets into these buffers, copies results back,
- * and then frees. Mirrors the logic of the C++ parallelKdotQs and CUDA cuParallelKdotQs functions.
+ * @brief compute KdotQ of specific parallel (or column of block vector b) using OpenCL kernels. 
+ * This optimized version allocates large buffers on the device once, copies data in batches, 
+ * launches kernels using offsets into these buffers, copies results back, and then frees. Mirrors 
+ * the logic of the C++ parallelKdotQs and CUDA cuParallelKdotQs functions.
  * @param promptCount number of new tokens in the prompt being processed in this step.
  * @param currentTokenCount total number of tokens processed *before* this step across all blocks.
  * @param blockCount 1-based index of the current block being processed.
@@ -104,12 +110,20 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
     cl::Buffer d_block_tokForBlock_flat;      // Shared, single copy
 
     cl_int cl_err; // For OpenCL error codes
+    std::vector<cl::CommandQueue> clQueues; 
 
     try {
+        if (num_heads_in_parallel > 0) {
+            clQueues.reserve(num_heads_in_parallel);
+            for (int head_idx_q = 0; head_idx_q < num_heads_in_parallel; ++head_idx_q) {
+                clQueues.emplace_back(this->clcontext.context, this->clcontext.device, 0, &cl_err);
+                CL_CHECK(cl_err);
+            }
+        }
         // --- Allocate Large Device Buffers ---
         // Use cl_context (assumed member variable or accessible)
         d_all_kdotq = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, total_kdotq_bytes);
-        // Initialize KdotQ to 0. Use enqueueFillBuffer for initialization.
+        // Initialize KdotQ to 0 using the main context queue.
         cl_float zero = 0.0f;
         CL_CHECK(this->clcontext.queue.enqueueFillBuffer(d_all_kdotq, zero, 0, total_kdotq_bytes));
         // Ensure fill is complete before proceeding (optional, depends on queue properties)
@@ -248,6 +262,9 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             // d_transformer_tokenEmbed_flat and d_block_tokForBlock_flat already copied via CL_MEM_COPY_HOST_PTR
         }
 
+        // Ensure all initial H->D transfers and buffer fills are complete before kernel launches
+        CL_CHECK(this->clcontext.queue.finish());
+
         // --- Loop, Calculate Offsets, and Launch Kernels ---
         cl::NDRange local_work_size(WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y);
         cl::NDRange global_work_size; // Will be set inside the loop based on effective dimensions
@@ -307,19 +324,27 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         // The provided OpenCL kernels calculate indices based on get_global_id.
         // We launch one kernel per head, adjusting the arguments.
         // This mirrors the CUDA approach more closely than one giant kernel launch.
+        
 
         for (int i = 0; i < num_heads_in_parallel; ++i) {
-
+            int blk = (inTraining == 0) ? 0 : blockCount-1;
+            // Ensure blk is valid for t
+            if (blk < 0 || blk >= static_cast<int>(t.size())) {
+                fprintf(stderr, "Error: Calculated block index blk=%d is out of bounds for transformer 't' (size %zu).\n", blk, t.size());
+                throw std::out_of_range("Block index out of bounds for transformer 't'");
+            }
+            attention& head_obj = t[blk].b[i][column];
+            cl::CommandQueue& current_stream = (num_heads_in_parallel > 0) ? clQueues[i] : this->clcontext.queue; // Fallback, though loop shouldn't run if 0
             // Calculate byte offsets and sizes for the current head's data within aggregated buffers
-            size_t kdotq_byte_offset = i * kdotq_head_elems * sizeof(cl_float);
-            size_t k_byte_offset     = i * k_q_ev_head_elems * sizeof(cl_float);
-            size_t q_byte_offset     = i * k_q_ev_head_elems * sizeof(cl_float);
-            size_t m_byte_offset     = i * qkcache_head_elems * sizeof(cl_float);
-            size_t evp_byte_offset   = i * k_q_ev_head_elems * sizeof(cl_float);
+            size_t kdotq_byte_offset    = i * kdotq_head_elems * sizeof(cl_float);
+            size_t k_byte_offset        = i * k_q_ev_head_elems * sizeof(cl_float);
+            size_t q_byte_offset        = i * k_q_ev_head_elems * sizeof(cl_float);
+            size_t m_byte_offset        = i * qkcache_head_elems * sizeof(cl_float);
+            size_t evp_byte_offset      = i * k_q_ev_head_elems * sizeof(cl_float);
 
-            size_t kdotq_head_bytes = kdotq_head_elems * sizeof(cl_float);
-            size_t k_q_ev_head_bytes= k_q_ev_head_elems * sizeof(cl_float);
-            size_t qkcache_head_bytes= qkcache_head_elems * sizeof(cl_float);
+            size_t kdotq_head_bytes     = kdotq_head_elems * sizeof(cl_float);
+            size_t k_q_ev_head_bytes    = k_q_ev_head_elems * sizeof(cl_float);
+            size_t qkcache_head_bytes   = qkcache_head_elems * sizeof(cl_float);
 
             // Create sub-buffer for KdotQ output for this head
             cl_buffer_region kdotq_region = {kdotq_byte_offset, kdotq_head_bytes};
@@ -330,11 +355,11 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             if (inTraining) {
                  if (num_queries_eff > 0 && num_keys_eff > 0) {
                     // Create sub-buffers for K and Q
-                    cl_buffer_region k_region = {k_byte_offset, k_q_ev_head_bytes};
-                    cl::Buffer d_keys_head = d_all_keys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &k_region, &cl_err); CL_CHECK(cl_err);
+                    cl_buffer_region k_region   = {k_byte_offset, k_q_ev_head_bytes};
+                    cl::Buffer d_keys_head      = d_all_keys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &k_region, &cl_err); CL_CHECK(cl_err);
 
-                    cl_buffer_region q_region = {q_byte_offset, k_q_ev_head_bytes};
-                    cl::Buffer d_querys_head = d_all_querys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &q_region, &cl_err); CL_CHECK(cl_err);
+                    cl_buffer_region q_region   = {q_byte_offset, k_q_ev_head_bytes};
+                    cl::Buffer d_querys_head    = d_all_querys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &q_region, &cl_err); CL_CHECK(cl_err);
 
                     if (isSelf) {
                         kernel = this->clcontext.kernels.at("kernelKdotQforSelf_train");
@@ -359,15 +384,15 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         CL_CHECK(kernel.setArg(7, inv_scaling));
                     }
                     if (global_work_size[0] > 0 && global_work_size[1] > 0) { // Ensure global size is valid
-                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
+                        CL_CHECK(current_stream.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
                     }
                  }
             } 
             else { // Inference Mode
                 if (effective_prompt_len > 0) {
                     // Create sub-buffer for M
-                    cl_buffer_region m_region = {m_byte_offset, qkcache_head_bytes};
-                    cl::Buffer d_M_head = d_all_M.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &m_region, &cl_err); CL_CHECK(cl_err);
+                    cl_buffer_region m_region   = {m_byte_offset, qkcache_head_bytes};
+                    cl::Buffer d_M_head         = d_all_M.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &m_region, &cl_err); CL_CHECK(cl_err);
 
                     if (blockCount == 1) {
                         if (isSelf) {
@@ -398,7 +423,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     else { // Block N > 1
                         // Create sub-buffer for EVp
                         cl_buffer_region evp_region = {evp_byte_offset, k_q_ev_head_bytes};
-                        cl::Buffer d_EVp_head = d_all_EVp.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &evp_region, &cl_err); CL_CHECK(cl_err);
+                        cl::Buffer d_EVp_head       = d_all_EVp.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &evp_region, &cl_err); CL_CHECK(cl_err);
                         if (isSelf) {
                             kernel = this->clcontext.kernels.at("kernelKdotQBlockNSelf_Inference");
                             CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
@@ -427,14 +452,20 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         }
                     }
                     if (global_work_size[0] > 0 && global_work_size[1] > 0) { // Ensure global size is valid
-                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
+                        CL_CHECK(current_stream.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
                     }
                 }
             }
         }
 
         // Ensure all kernels are finished before reading back
-        CL_CHECK(this->clcontext.queue.finish());
+        if (num_heads_in_parallel > 0) {
+            for (int i = 0; i < num_heads_in_parallel; ++i) {
+                CL_CHECK(clQueues[i].finish());
+            }
+        } else { // If no heads, still ensure the main queue is clear if any prior ops were on it.
+            CL_CHECK(this->clcontext.queue.finish());
+        }
 
         // --- Batch Copy Result Device -> Host ---
         h_all_kdotq_flat.resize(total_kdotq_elems); // Allocate host buffer

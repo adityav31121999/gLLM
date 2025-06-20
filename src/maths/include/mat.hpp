@@ -84,6 +84,7 @@ public:
 
     // TODO: Update algorithms to work with mapped_data
     mat gaussjordan() const;
+    void mult_A_Bt(const mat& a, const mat& b);
     mat mult(const mat& a, const mat& b); // Static or friend? Needs update.
     float trace() const;
     void set(int i, int j, float val);  // set val to (i, j)th element
@@ -132,7 +133,9 @@ public:
     }
 };
 
-// TODO: Update standalone functions if they rely on internal matrix structure
+// Helper functions for row operations on mat
+std::vector<float> getRow(const mat& m, int row_idx);
+void setRow(mat& m, int row_idx, const std::vector<float>& data);
 std::vector<float> dot(const mat& a, const std::vector<float>& b);
 std::vector<float> dot(const std::vector<float>& a, const mat& b);
 void swap(mat& first, mat& second) noexcept;
@@ -142,10 +145,6 @@ void write2filefrommat(const mat& matrix, const std::string& locationWithFileNam
 mat LOTA(const mat& y, int t, bool attentionType);
 mat LOTAder(const mat& y, int t, bool attentionType);
 
-// Helper functions for row operations on mat
-std::vector<float> getRow(const mat& m, int row_idx);
-void setRow(mat& m, int row_idx, const std::vector<float>& data);
-void write2filefrommat(const mat&, const std::string&);
 
 #ifdef USE_CUDA
 // device
@@ -167,12 +166,10 @@ void write2filefrommat(const mat&, const std::string&);
 #endif
 
 std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
-std::vector<float> flatten_range(const std::vector<std::vector<float>>& vec2d, size_t start_row, size_t num_rows);
 std::vector<float> flatten(const mat&);
 void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
-
-void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
 void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols);
 void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat);
+void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
 
 #endif

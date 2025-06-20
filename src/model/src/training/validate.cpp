@@ -42,6 +42,7 @@ void model::validateBlock(const std::string& txtFileLocation)
         linesOfFile.push_back(line);
     }
     std::vector<std::vector<std::string>> oddSentence, evenSentence;
+    bool sortIt = 0;    // off
 
     for(int i = 0; i < numberOfLines; i++)
     {
@@ -58,8 +59,8 @@ void model::validateBlock(const std::string& txtFileLocation)
         int tok = 0;
         // get embeddings and response
         for(int i = 0; i < oddSentence.size(); i++) {
-            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i]);
-            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i], sortIt);
+            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i], sortIt);
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -139,6 +140,7 @@ void model::validateModel(const std::string& txtFileLocation)
         linesOfFile.push_back(line);
     }
     std::vector<std::vector<std::string>> oddSentence, evenSentence;
+    bool sortIt = 0;    // off
 
     for(int i = 0; i < numberOfLines; i++)
     {
@@ -155,8 +157,8 @@ void model::validateModel(const std::string& txtFileLocation)
         int tok = 0;
         // get embeddings and response
         for(int i = 0; i < oddSentence.size(); i++) {
-            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i]);
-            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i]);
+            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i], sortIt);
+            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i], sortIt);
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt

@@ -719,7 +719,7 @@ float crossEntropy(std::vector<float>& y_true, std::vector<float>& y_pred) {
     float epsilon = 1e-15f; // Small value to prevent log(0)
     for (size_t i = 0; i < y_true.size(); ++i) {
         // Ensure y_pred[i] is not zero before taking log
-        loss -= y_true[i] * std::log(std::max(y_pred[i], epsilon));
+        loss -= y_true[i] * std::log(std::max<float>(y_pred[i], epsilon));
     }
     return loss;
 }

@@ -253,7 +253,7 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
         // compute the KdotQ for each head of block using EVs of previous blocks
         computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         forward(blockCount, currentTokenCount, promptCount);
-        
+
         int j_epoch = 0;
         while (j_epoch < epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);

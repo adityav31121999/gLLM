@@ -21,6 +21,7 @@
 void transformer::test(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, 
     std::vector<std::string>& rString)
 {
+    // 
 }
 
 /**

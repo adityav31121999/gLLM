@@ -84,12 +84,12 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
             accumulateEH<<<blocksPerGrid, threadsPerBlock>>>(d_eh_pointers_device, d_otok, x, d);
             CUDA_CHECK(cudaGetLastError());
             CUDA_CHECK(cudaDeviceSynchronize());
-            std::cout << "cuForward: Device EH accumulation for Block 1 finished." << std::endl;
+            // std::cout << "cuForward: Device EH accumulation for Block 1 finished." << std::endl;
         }
         else { // blockCount > 1
             // --- Block N Forward Propagation ---
             if (blockCount > 1) {
-                std::cout << "-> clForward: Executing clForprop for Block " << blockCount << "..." << std::endl;
+                // std::cout << "-> clForward: Executing clForprop for Block " << blockCount << "..." << std::endl;
                 // Assumes t[blockCount].cuForprop updates internal states (like EH) 1..." << std::endl;
                 t[blockCount].cuForprop(t[blockCount - 1].EV, d, currentTokenCount, blockCount, l, n);
                 CUDA_CHECK(cudaDeviceSynchronize());
@@ -116,7 +116,7 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
                 accumulateEH<<<blocksPerGrid, threadsPerBlock>>>(d_eh_pointers_device, d_otok, x, d);
                 CUDA_CHECK(cudaGetLastError());
                 CUDA_CHECK(cudaDeviceSynchronize());
-                std::cout << "cuForward: Device EH accumulation for Block " << blockCount << " finished." << std::endl;
+                // std::cout << "cuForward: Device EH accumulation for Block " << blockCount << " finished." << std::endl;
             } 
             else {
                 // Should not happen if blockCount > 0, but handle defensively
@@ -132,7 +132,7 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
         }
 
         float* d_embeddings = nullptr;
-        std::cout << "cuForward: Computing output token index using cuComputeOutput..." << std::endl;
+        // std::cout << "cuForward: Computing output token index using cuComputeOutput..." << std::endl;
         // Allocate device memory for the embeddings
         size_t embeddings_bytes = static_cast<size_t>(embeddings.row) * embeddings.col * sizeof(float);
         CUDA_CHECK(cudaMalloc(&d_embeddings, embeddings_bytes));
@@ -143,17 +143,16 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
 
             // Check token validity and print
             if (indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && indexForToken < vocabsize) {
-                std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken
-                          << " | Token is: " << tokens[indexForToken] << "" << std::endl;
+                // std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << " | Token is: " << tokens[indexForToken] << "" << std::endl;
             } 
             else {
-                std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << std::endl;
+                // std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << std::endl;
             }
             // Separate warning for vocabsize, similar to clForward
             if (indexForToken < 0 || indexForToken >= vocabsize) {
                 std::cerr << "Warning: cuForward resulted in invalid indexForToken: " << indexForToken << " (vocabsize: " << vocabsize << ")" << std::endl;
             }
-        } 
+        }
         else {
             // This case should ideally be caught by earlier checks or d_embeddings would not be null
             throw std::runtime_error("Device embeddings pointer (d_embeddings) is null in cuForward before calling cuComputeOutput.");
@@ -170,7 +169,7 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
         }
         temp_device_eh_buffers.clear();
         delete[] d_eh_pointers_host;
-        std::cout << "cuForward: Finished forward propagation for block " << blockCount << "." << std::endl;
+        // std::cout << "cuForward: Finished forward propagation for block " << blockCount << "." << std::endl;
     } 
     catch (const std::exception& e) {
         std::cerr << "Error in transformer::cuForward: " << e.what() << std::endl;
