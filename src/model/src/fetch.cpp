@@ -7,11 +7,8 @@
 #include <string>       // For std::string
 #include "include/model.hpp"
 
-
-// fetch matrix from .bin file with offsets calculated and assign to matrix a
-// trainLocation is the FULL PATH to the specific .bin file (e.g., "baseDir/bin/MQ.bin")
-// x_idx is 1-based PA layer index, y_idx is 1-based head index
-void model::fetchmat(mat& a, int blockCount, int x_idx, int y_idx, std::string& specificComponentBinFile) {
+// fetch matrix from bin file at location (blockCount, x, y)
+void model::fetchmat(mat& a, int blockCount, int x_idx, int y_idx, const std::string& specificComponentBinFile) {
     if (a.row == 0 || a.col == 0) return;
 
     float* data_ptr_to_fill = a.is_shared_segment ? a.data_segment_start : a.mapped_data;
@@ -59,8 +56,9 @@ void model::fetchmat(mat& a, int blockCount, int x_idx, int y_idx, std::string& 
     inFile.close();
 }
 
-// trainLocation is the FULL PATH to the specific .bin file (e.g., "baseDir/bin/hor.bin")
-void model::fetchmlp(mlp& network, int blockCount, int x_idx, int y_idx, std::string& specificComponentBinFile) {
+
+// fetch mlp from bin file at location (blockCount, x, y)
+void model::fetchmlp(mlp& network, int blockCount, int x_idx, int y_idx, const std::string& specificComponentBinFile) {
     if (network.weights.empty()) return;
 
     std::ifstream inFile(specificComponentBinFile, std::ios::binary | std::ios::ate);
@@ -117,4 +115,120 @@ void model::fetchmlp(mlp& network, int blockCount, int x_idx, int y_idx, std::st
         current_byte_offset += static_cast<std::streamoff>(bytes_to_read);
     }
     inFile.close();
+}
+
+
+void model::fetchForInference(const std::string &binPath)
+{
+    std::filesystem::path binDirectory(binPath);
+    // fetch for mlp
+    std::cout << "Fetching MLPs..." << std::endl;
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmlp(T.t[i].b[j][k].hor, i + 1, j + 1, k + 1, (binDirectory / "hor.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MLP: HOR fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmlp(T.t[i].b[j][k].ver, i + 1, j + 1, k + 1, (binDirectory / "ver.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MLP: VER fetched" << std::endl;
+    }
+    // fetch for cache
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].qkCache, i + 1, j + 1, k + 1, (binDirectory / "QK.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " CACHE: QK fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].khCache, i + 1, j + 1, k + 1, (binDirectory / "KH.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " CACHE: KH fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].qvCache, i + 1, j + 1, k + 1, (binDirectory / "QV.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " CACHE: QV fetched" << std::endl;
+    }
+}
+
+
+void model::fetchForTraining(const std::string &binPath)
+{
+    std::filesystem::path binDirectory(binPath);
+    // fetch for mlp
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmlp(T.t[i].b[j][k].hor, i + 1, j + 1, k + 1, (binDirectory / "hor.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MLP: HOR fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmlp(T.t[i].b[j][k].ver, i + 1, j + 1, k + 1, (binDirectory / "ver.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MLP: VER fetched" << std::endl;
+    }
+    // fetch for matrix
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].MQ, i + 1, j + 1, k + 1, (binDirectory / "MQ.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MATRIX: MQ fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].MK, i + 1, j + 1, k + 1, (binDirectory / "MK.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MATRIX: MK fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].MH, i + 1, j + 1, k + 1, (binDirectory / "MH.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MATRIX: MH fetched" << std::endl;
+    }
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < x; j++) {
+            for(int k = 0; k < y; k++) {
+                std::cout << "(" << i << ", " << j << ", " << k << ") - ";
+                fetchmat(T.t[i].b[j][k].MV, i + 1, j + 1, k + 1, (binDirectory / "MV.bin").string());
+            }
+        }
+        std::cout << "Block " << i+1 << " MATRIX: MV fetched" << std::endl;
+    }
 }

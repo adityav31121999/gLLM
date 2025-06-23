@@ -32,6 +32,8 @@ public:
     int l;                  // layers of mlp
     int epochs;             // number of epochs for MLPs and Blocks
     float learning;         // learning rate for MLPs
+    float lambda_L1;        // lambda for L1 penalty
+    float lambda_L2;        // lambda for L2 penalty
 
     long long int cacheOffset;      // for extracting caches
     long int matOffset;             // for extracting matrices

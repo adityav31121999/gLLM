@@ -1,8 +1,5 @@
 #ifdef USE_OPENCL
 #if defined(_WIN64)
-    #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
     #define CL_HPP_TARGET_OPENCL_VERSION 220
@@ -74,6 +71,8 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
+    const float lambda_l1 = 0.001f; // L1 regularization parameter
+    const float lambda_l2 = 0.001f; // L2 regularization parameter
 
     const int num_total_layers_mlp = layers_mlp;
     const int num_neuron_layers_mlp = num_total_layers_mlp;
@@ -261,85 +260,89 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             current_stream.flush();
 
             cl::Kernel k_grad_eh_ev = clcontext.kernels.at("kernelComputeGradientsEH_EV"); 
-            CL_CHECK(k_grad_eh_ev.setArg(0, device_ptrs.d_EH)); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_eh_ev.setArg(1, device_ptrs.d_expected_h)); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_eh_ev.setArg(2, device_ptrs.d_grad_EH)); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_eh_ev.setArg(3, device_ptrs.d_grad_EV_scaled)); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_eh_ev.setArg(4, embedding_dim)); CL_CHECK(cl_err);
-            CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_eh_ev, cl::NullRange, global_embed, local_1d));
+            CL_CHECK(k_grad_eh_ev.setArg(0, device_ptrs.d_EH));
+            CL_CHECK(k_grad_eh_ev.setArg(1, device_ptrs.d_expected_h));
+            CL_CHECK(k_grad_eh_ev.setArg(2, device_ptrs.d_grad_EH));
+            CL_CHECK(k_grad_eh_ev.setArg(3, device_ptrs.d_grad_EV_scaled));
+            CL_CHECK(k_grad_eh_ev.setArg(4, embedding_dim));
+            CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_eh_ev, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
 
             cl::Kernel k_last_delta_h = clcontext.kernels.at("kernelLastLayerDeltaSigmoid"); 
-            k_last_delta_h.setArg(0, device_ptrs.d_grad_EH); 
-            k_last_delta_h.setArg(1, device_ptrs.d_hor_activations[num_neuron_layers_mlp - 1]); 
-            k_last_delta_h.setArg(2, device_ptrs.d_hor_deltas[num_neuron_layers_mlp - 1]); 
-            k_last_delta_h.setArg(3, embedding_dim); 
-            CL_CHECK(current_stream.enqueueNDRangeKernel(k_last_delta_h, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
+            CL_CHECK(k_last_delta_h.setArg(0, device_ptrs.d_grad_EH));
+            CL_CHECK(k_last_delta_h.setArg(1, device_ptrs.d_hor_activations[num_neuron_layers_mlp - 1]));
+            CL_CHECK(k_last_delta_h.setArg(2, device_ptrs.d_hor_deltas[num_neuron_layers_mlp - 1]));
+            CL_CHECK(k_last_delta_h.setArg(3, embedding_dim));
+            CL_CHECK(current_stream.enqueueNDRangeKernel(k_last_delta_h, cl::NullRange, global_embed, local_1d));
 
             cl::Kernel k_hidden_delta_h = clcontext.kernels.at("kernelHiddenDeltaSigmoid"); 
             for (int l = num_neuron_layers_mlp - 2; l >= 0; --l) { 
-                CL_CHECK(k_hidden_delta_h.setArg(0, device_ptrs.d_hor_deltas[l+1])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_h.setArg(1, device_ptrs.d_hor_weights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_h.setArg(2, device_ptrs.d_hor_activations[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_h.setArg(3, device_ptrs.d_hor_deltas[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_h.setArg(4, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_h.setArg(5, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_h, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
+                CL_CHECK(k_hidden_delta_h.setArg(0, device_ptrs.d_hor_deltas[l+1]));
+                CL_CHECK(k_hidden_delta_h.setArg(1, device_ptrs.d_hor_weights[l]));
+                CL_CHECK(k_hidden_delta_h.setArg(2, device_ptrs.d_hor_activations[l]));
+                CL_CHECK(k_hidden_delta_h.setArg(3, device_ptrs.d_hor_deltas[l]));
+                CL_CHECK(k_hidden_delta_h.setArg(4, embedding_dim));
+                CL_CHECK(k_hidden_delta_h.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_h, cl::NullRange, global_embed, local_1d));
             }
 
-            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateWeightsAndGradients"); 
+            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateElasticNet"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
-                CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_deltas[l+1])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_activations[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_weights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(3, device_ptrs.d_hor_gweights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(4, learning_rate)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(5, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(6, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_h, cl::NullRange, global_embed_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_deltas[l+1])); // deltas
+                CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_activations[l])); // prev_activations
+                CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_weights[l])); // weights
+                CL_CHECK(k_update_weights_h.setArg(3, device_ptrs.d_hor_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_h.setArg(4, learning_rate)); // learning_rate
+                CL_CHECK(k_update_weights_h.setArg(5, lambda_l1)); // lambda_l1
+                CL_CHECK(k_update_weights_h.setArg(6, lambda_l2)); // lambda_l2
+                CL_CHECK(k_update_weights_h.setArg(7, embedding_dim)); // current_layer_size
+                CL_CHECK(k_update_weights_h.setArg(8, embedding_dim)); // prev_layer_size
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_h, cl::NullRange, global_embed_2d, local_2d));
             }
 
-            cl::Kernel k_last_delta_v = clcontext.kernels.at("kernelLastLayerDeltaSigmoid"); 
-            CL_CHECK(k_last_delta_v.setArg(0, device_ptrs.d_grad_EV_scaled)); CL_CHECK(cl_err);
-            CL_CHECK(k_last_delta_v.setArg(1, device_ptrs.d_ver_activations[num_neuron_layers_mlp - 1])); CL_CHECK(cl_err);
-            CL_CHECK(k_last_delta_v.setArg(2, device_ptrs.d_ver_deltas[num_neuron_layers_mlp - 1])); CL_CHECK(cl_err);
-            CL_CHECK(k_last_delta_v.setArg(3, embedding_dim)); CL_CHECK(cl_err);
-            CL_CHECK(current_stream.enqueueNDRangeKernel(k_last_delta_v, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
+            cl::Kernel k_last_delta_v = clcontext.kernels.at("kernelLastLayerDeltaSigmoid");
+            CL_CHECK(k_last_delta_v.setArg(0, device_ptrs.d_grad_EV_scaled));
+            CL_CHECK(k_last_delta_v.setArg(1, device_ptrs.d_ver_activations[num_neuron_layers_mlp - 1]));
+            CL_CHECK(k_last_delta_v.setArg(2, device_ptrs.d_ver_deltas[num_neuron_layers_mlp - 1]));
+            CL_CHECK(k_last_delta_v.setArg(3, embedding_dim));
+            CL_CHECK(current_stream.enqueueNDRangeKernel(k_last_delta_v, cl::NullRange, global_embed, local_1d));
 
             cl::Kernel k_hidden_delta_v = clcontext.kernels.at("kernelHiddenDeltaSigmoid"); 
             for (int l = num_neuron_layers_mlp - 2; l >= 0; --l) { 
-                CL_CHECK(k_hidden_delta_v.setArg(0, device_ptrs.d_ver_deltas[l+1])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_v.setArg(1, device_ptrs.d_ver_weights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_v.setArg(2, device_ptrs.d_ver_activations[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_v.setArg(3, device_ptrs.d_ver_deltas[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_v.setArg(4, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(k_hidden_delta_v.setArg(5, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_v, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
+                CL_CHECK(k_hidden_delta_v.setArg(0, device_ptrs.d_ver_deltas[l+1]));
+                CL_CHECK(k_hidden_delta_v.setArg(1, device_ptrs.d_ver_weights[l]));
+                CL_CHECK(k_hidden_delta_v.setArg(2, device_ptrs.d_ver_activations[l]));
+                CL_CHECK(k_hidden_delta_v.setArg(3, device_ptrs.d_ver_deltas[l]));
+                CL_CHECK(k_hidden_delta_v.setArg(4, embedding_dim));
+                CL_CHECK(k_hidden_delta_v.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_v, cl::NullRange, global_embed, local_1d));
             }
 
-            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsAndGradients"); 
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
-                k_update_weights_v.setArg(0, device_ptrs.d_ver_deltas[l+1]); 
-                k_update_weights_v.setArg(1, device_ptrs.d_ver_activations[l]); 
-                k_update_weights_v.setArg(2, device_ptrs.d_ver_weights[l]); 
-                k_update_weights_v.setArg(3, device_ptrs.d_ver_gweights[l]); 
-                CL_CHECK(k_update_weights_v.setArg(4, learning_rate)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(5, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(6, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs.d_ver_deltas[l+1])); // deltas
+                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs.d_ver_activations[l])); // prev_activations
+                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs.d_ver_weights[l])); // weights
+                CL_CHECK(k_update_weights_v.setArg(3, device_ptrs.d_ver_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_v.setArg(4, learning_rate)); // learning_rate
+                CL_CHECK(k_update_weights_v.setArg(5, lambda_l1)); // lambda_l1
+                CL_CHECK(k_update_weights_v.setArg(6, lambda_l2)); // lambda_l2
+                CL_CHECK(k_update_weights_v.setArg(7, embedding_dim)); // current_layer_size
+                CL_CHECK(k_update_weights_v.setArg(8, embedding_dim)); // prev_layer_size
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d));
             }
 
             cl::Kernel k_grad_mlp_input = clcontext.kernels.at("kernelComputeGradMLPInput"); 
-            CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs.d_hor_deltas[0])); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs.d_hor_weights[0])); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs.d_grad_dh)); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim)); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim)); CL_CHECK(cl_err);
-            CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
+            CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs.d_hor_deltas[0]));
+            CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs.d_hor_weights[0]));
+            CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs.d_grad_dh));
+            CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim));
+            CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim));
+            CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
             
-            CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs.d_ver_deltas[0])); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs.d_ver_weights[0])); CL_CHECK(cl_err);
-            CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs.d_grad_dv)); CL_CHECK(cl_err);
-            CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
+            CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs.d_ver_deltas[0]));
+            CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs.d_ver_weights[0]));
+            CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs.d_grad_dv));
+            CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
             
             if (token_count > 0) {
 
@@ -351,81 +354,81 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
                 CL_CHECK(k_lota.setArg(4, token_count)); 
                 cl_int cl_att_is_self_lota = att_is_self ? 1 : 0;
                 CL_CHECK(k_lota.setArg(5, cl_att_is_self_lota));
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d));
 
                 cl::Kernel k_pre_mh_mv = clcontext.kernels.at("kernelComputePreMH_MV"); 
-                CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head)); CL_CHECK(cl_err);
-                CL_CHECK(k_pre_mh_mv.setArg(1, device_ptrs.d_K)); CL_CHECK(cl_err);
-                CL_CHECK(k_pre_mh_mv.setArg(2, device_ptrs.d_Q)); CL_CHECK(cl_err);
-                CL_CHECK(k_pre_mh_mv.setArg(3, device_ptrs.d_pre_MH)); CL_CHECK(cl_err);
-                CL_CHECK(k_pre_mh_mv.setArg(4, device_ptrs.d_pre_MV)); CL_CHECK(cl_err);
-                CL_CHECK(k_pre_mh_mv.setArg(5, token_count)); CL_CHECK(cl_err);
-                CL_CHECK(k_pre_mh_mv.setArg(6, mat_heights)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_pre_mh_mv, cl::NullRange, global_mat_heights, local_1d)); CL_CHECK(cl_err);
+                CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head));
+                CL_CHECK(k_pre_mh_mv.setArg(1, device_ptrs.d_K));
+                CL_CHECK(k_pre_mh_mv.setArg(2, device_ptrs.d_Q));
+                CL_CHECK(k_pre_mh_mv.setArg(3, device_ptrs.d_pre_MH));
+                CL_CHECK(k_pre_mh_mv.setArg(4, device_ptrs.d_pre_MV));
+                CL_CHECK(k_pre_mh_mv.setArg(5, token_count));
+                CL_CHECK(k_pre_mh_mv.setArg(6, mat_heights));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_pre_mh_mv, cl::NullRange, global_mat_heights, local_1d));
 
                 cl::Kernel k_grad_mh_mv = clcontext.kernels.at("kernelComputeGradMH_MV"); 
-                CL_CHECK(k_grad_mh_mv.setArg(0, device_ptrs.d_pre_MH)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(1, device_ptrs.d_pre_MV)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(2, device_ptrs.d_grad_dh)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(3, device_ptrs.d_grad_dv)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(4, device_ptrs.d_grad_MH)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(5, device_ptrs.d_grad_MV)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(6, mat_heights)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mh_mv.setArg(7, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mh_mv, cl::NullRange, global_matrix_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(k_grad_mh_mv.setArg(0, device_ptrs.d_pre_MH));
+                CL_CHECK(k_grad_mh_mv.setArg(1, device_ptrs.d_pre_MV));
+                CL_CHECK(k_grad_mh_mv.setArg(2, device_ptrs.d_grad_dh));
+                CL_CHECK(k_grad_mh_mv.setArg(3, device_ptrs.d_grad_dv));
+                CL_CHECK(k_grad_mh_mv.setArg(4, device_ptrs.d_grad_MH));
+                CL_CHECK(k_grad_mh_mv.setArg(5, device_ptrs.d_grad_MV));
+                CL_CHECK(k_grad_mh_mv.setArg(6, mat_heights));
+                CL_CHECK(k_grad_mh_mv.setArg(7, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mh_mv, cl::NullRange, global_matrix_2d, local_2d));
 
                 cl::Kernel k_grad_head = clcontext.kernels.at("kernelComputeGradHead"); 
-                CL_CHECK(k_grad_head.setArg(0, device_ptrs.d_K)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(1, device_ptrs.d_Q)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(2, device_ptrs.d_MH_a)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(3, device_ptrs.d_MV_a)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(4, device_ptrs.d_grad_dh)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(5, device_ptrs.d_grad_dv)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(6, device_ptrs.d_grad_head)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(7, token_count)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(8, mat_heights)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_head.setArg(9, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_head, cl::NullRange, global_head_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(k_grad_head.setArg(0, device_ptrs.d_K));
+                CL_CHECK(k_grad_head.setArg(1, device_ptrs.d_Q));
+                CL_CHECK(k_grad_head.setArg(2, device_ptrs.d_MH_a));
+                CL_CHECK(k_grad_head.setArg(3, device_ptrs.d_MV_a));
+                CL_CHECK(k_grad_head.setArg(4, device_ptrs.d_grad_dh));
+                CL_CHECK(k_grad_head.setArg(5, device_ptrs.d_grad_dv));
+                CL_CHECK(k_grad_head.setArg(6, device_ptrs.d_grad_head));
+                CL_CHECK(k_grad_head.setArg(7, token_count));
+                CL_CHECK(k_grad_head.setArg(8, mat_heights));
+                CL_CHECK(k_grad_head.setArg(9, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_head, cl::NullRange, global_head_2d, local_2d));
 
                 cl::Kernel k_lota_der = clcontext.kernels.at("clLOTA2ddermasking"); 
-                CL_CHECK(k_lota_der.setArg(0, device_ptrs.d_KdotQ)); CL_CHECK(cl_err);
-                CL_CHECK(k_lota_der.setArg(1, device_ptrs.d_lota_deriv)); CL_CHECK(cl_err);
+                CL_CHECK(k_lota_der.setArg(0, device_ptrs.d_KdotQ));
+                CL_CHECK(k_lota_der.setArg(1, device_ptrs.d_lota_deriv));
                 CL_CHECK(k_lota_der.setArg(2, context_win)); // rows
                 CL_CHECK(k_lota_der.setArg(3, context_win)); // cols
-                CL_CHECK(k_lota_der.setArg(4, token_count)); CL_CHECK(cl_err);
+                CL_CHECK(k_lota_der.setArg(4, token_count));
                 cl_int cl_att_is_self_lota_der = att_is_self ? 1 : 0;
                 CL_CHECK(k_lota_der.setArg(5, cl_att_is_self_lota_der));
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota_der, cl::NullRange, global_head_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota_der, cl::NullRange, global_head_2d, local_2d));
 
                 cl::Kernel k_grad_kdotq_lota = clcontext.kernels.at("kernelComputeGradKdotQ_LOTA"); 
-                CL_CHECK(k_grad_kdotq_lota.setArg(0, device_ptrs.d_grad_head)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_kdotq_lota.setArg(1, device_ptrs.d_lota_deriv)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_kdotq_lota.setArg(2, device_ptrs.d_grad_KdotQ)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_kdotq_lota.setArg(3, scaling_factor)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_kdotq_lota.setArg(4, static_cast<int>(active_head_elements))); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_kdotq_lota, cl::NullRange, global_head_1d, local_1d)); CL_CHECK(cl_err);
+                CL_CHECK(k_grad_kdotq_lota.setArg(0, device_ptrs.d_grad_head));
+                CL_CHECK(k_grad_kdotq_lota.setArg(1, device_ptrs.d_lota_deriv));
+                CL_CHECK(k_grad_kdotq_lota.setArg(2, device_ptrs.d_grad_KdotQ));
+                CL_CHECK(k_grad_kdotq_lota.setArg(3, scaling_factor));
+                CL_CHECK(k_grad_kdotq_lota.setArg(4, static_cast<int>(active_head_elements)));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_kdotq_lota, cl::NullRange, global_head_1d, local_1d));
 
                 cl::Kernel k_grad_k_q = clcontext.kernels.at("kernelComputeGradK_Q"); 
-                CL_CHECK(k_grad_k_q.setArg(0, device_ptrs.d_grad_KdotQ)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_k_q.setArg(1, device_ptrs.d_K)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_k_q.setArg(2, device_ptrs.d_Q)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_k_q.setArg(3, device_ptrs.d_grad_K)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_k_q.setArg(4, device_ptrs.d_grad_Q)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_k_q.setArg(5, token_count)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_k_q.setArg(6, mat_heights)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_k_q, cl::NullRange, global_kq_grad_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(k_grad_k_q.setArg(0, device_ptrs.d_grad_KdotQ));
+                CL_CHECK(k_grad_k_q.setArg(1, device_ptrs.d_K));
+                CL_CHECK(k_grad_k_q.setArg(2, device_ptrs.d_Q));
+                CL_CHECK(k_grad_k_q.setArg(3, device_ptrs.d_grad_K));
+                CL_CHECK(k_grad_k_q.setArg(4, device_ptrs.d_grad_Q));
+                CL_CHECK(k_grad_k_q.setArg(5, token_count));
+                CL_CHECK(k_grad_k_q.setArg(6, mat_heights));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_k_q, cl::NullRange, global_kq_grad_2d, local_2d));
 
                 cl::Kernel k_grad_mk_mq = clcontext.kernels.at("kernelComputeGradMK_MQ"); 
-                CL_CHECK(k_grad_mk_mq.setArg(0, device_ptrs.d_grad_K)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(1, device_ptrs.d_grad_Q)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(2, device_ptrs.d_K)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(3, device_ptrs.d_Q)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(4, device_ptrs.d_grad_MK)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(5, device_ptrs.d_grad_MQ)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(6, token_count)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(7, mat_heights)); CL_CHECK(cl_err);
-                CL_CHECK(k_grad_mk_mq.setArg(8, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mk_mq, cl::NullRange, global_matrix_2d, local_2d)); CL_CHECK(cl_err);
+                CL_CHECK(k_grad_mk_mq.setArg(0, device_ptrs.d_grad_K));
+                CL_CHECK(k_grad_mk_mq.setArg(1, device_ptrs.d_grad_Q));
+                CL_CHECK(k_grad_mk_mq.setArg(2, device_ptrs.d_K));
+                CL_CHECK(k_grad_mk_mq.setArg(3, device_ptrs.d_Q));
+                CL_CHECK(k_grad_mk_mq.setArg(4, device_ptrs.d_grad_MK));
+                CL_CHECK(k_grad_mk_mq.setArg(5, device_ptrs.d_grad_MQ));
+                CL_CHECK(k_grad_mk_mq.setArg(6, token_count));
+                CL_CHECK(k_grad_mk_mq.setArg(7, mat_heights));
+                CL_CHECK(k_grad_mk_mq.setArg(8, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mk_mq, cl::NullRange, global_matrix_2d, local_2d));
             }
             else {
                 CL_CHECK(current_stream.enqueueFillBuffer(device_ptrs.d_grad_MH, 0.0f, 0, proj_mat_bytes)); CL_CHECK(current_stream.enqueueFillBuffer(device_ptrs.d_grad_MV, 0.0f, 0, proj_mat_bytes)); CL_CHECK(current_stream.enqueueFillBuffer(device_ptrs.d_grad_MQ, 0.0f, 0, proj_mat_bytes)); CL_CHECK(current_stream.enqueueFillBuffer(device_ptrs.d_grad_MK, 0.0f, 0, proj_mat_bytes));
@@ -759,15 +762,15 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_h, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
             }
             
-            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateWeightsAndGradients"); 
+            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateWeightsL2"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
-                CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_deltas[l+1])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_activations[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_weights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(3, device_ptrs.d_hor_gweights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(4, learning_rate)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(5, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_h.setArg(6, embedding_dim)); CL_CHECK(cl_err);
+                CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_weights[l]));
+                CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_deltas[l+1]));
+                CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_activations[l]));
+                CL_CHECK(k_update_weights_h.setArg(3, learning_rate));
+                CL_CHECK(k_update_weights_h.setArg(4, lambda_l2));
+                CL_CHECK(k_update_weights_h.setArg(5, embedding_dim));
+                CL_CHECK(k_update_weights_h.setArg(6, embedding_dim));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_h, cl::NullRange, global_embed_2d, local_2d)); CL_CHECK(cl_err);
             }
             
@@ -789,15 +792,15 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_v, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
             }
             
-            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsAndGradients"); 
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsL2"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
-                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs.d_ver_deltas[l+1])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs.d_ver_activations[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs.d_ver_weights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(3, device_ptrs.d_ver_gweights[l])); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(4, learning_rate)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(5, embedding_dim)); CL_CHECK(cl_err);
-                CL_CHECK(k_update_weights_v.setArg(6, embedding_dim)); CL_CHECK(cl_err);
+                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs.d_ver_weights[l]));
+                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs.d_ver_deltas[l+1]));
+                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs.d_ver_activations[l]));
+                CL_CHECK(k_update_weights_v.setArg(3, learning_rate));
+                CL_CHECK(k_update_weights_v.setArg(4, lambda_l2));
+                CL_CHECK(k_update_weights_v.setArg(5, embedding_dim));
+                CL_CHECK(k_update_weights_v.setArg(6, embedding_dim));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d)); CL_CHECK(cl_err);
             }
             
@@ -905,26 +908,26 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
 
             cl_int cl_update_eh_flag = (layno_col_idx > 0) ? 1 : 0;
             cl_int cl_update_ev_flag = 1; // EV is generally updated in non-first blocks/columns
-            cl::Kernel k_update_weights_eh_ev = clcontext.kernels.at("kernelUpdateWeights_EH_EV"); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(0, device_ptrs.d_MH_a)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(1, device_ptrs.d_MV_a)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(2, device_ptrs.d_MQ_a)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(3, device_ptrs.d_MK_a)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(4, device_ptrs.d_EH)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(5, device_ptrs.d_EV)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(6, device_ptrs.d_grad_MH)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(7, device_ptrs.d_grad_MV)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(8, device_ptrs.d_grad_MQ)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(9, device_ptrs.d_grad_MK)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(10, device_ptrs.d_grad_EH)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(11, device_ptrs.d_grad_EV_scaled)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(12, learning_rate)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(13, cl_update_eh_flag)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(14, cl_update_ev_flag)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(15, mat_heights)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(16, embedding_dim)); CL_CHECK(cl_err);
-            CL_CHECK(k_update_weights_eh_ev.setArg(17, context_win)); CL_CHECK(cl_err);
-            CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_eh_ev, cl::NullRange, global_ev, local_1d)); CL_CHECK(cl_err);
+            cl::Kernel k_update_weights_eh_ev = clcontext.kernels.at("kernelUpdateWeights_EH_EV");
+            CL_CHECK(k_update_weights_eh_ev.setArg(0, device_ptrs.d_MH_a));
+            CL_CHECK(k_update_weights_eh_ev.setArg(1, device_ptrs.d_MV_a));
+            CL_CHECK(k_update_weights_eh_ev.setArg(2, device_ptrs.d_MQ_a));
+            CL_CHECK(k_update_weights_eh_ev.setArg(3, device_ptrs.d_MK_a));
+            CL_CHECK(k_update_weights_eh_ev.setArg(4, device_ptrs.d_EH));
+            CL_CHECK(k_update_weights_eh_ev.setArg(5, device_ptrs.d_EV));
+            CL_CHECK(k_update_weights_eh_ev.setArg(6, device_ptrs.d_grad_MH));
+            CL_CHECK(k_update_weights_eh_ev.setArg(7, device_ptrs.d_grad_MV));
+            CL_CHECK(k_update_weights_eh_ev.setArg(8, device_ptrs.d_grad_MQ));
+            CL_CHECK(k_update_weights_eh_ev.setArg(9, device_ptrs.d_grad_MK));
+            CL_CHECK(k_update_weights_eh_ev.setArg(10, device_ptrs.d_grad_EH));
+            CL_CHECK(k_update_weights_eh_ev.setArg(11, device_ptrs.d_grad_EV_scaled));
+            CL_CHECK(k_update_weights_eh_ev.setArg(12, learning_rate));
+            CL_CHECK(k_update_weights_eh_ev.setArg(13, cl_update_eh_flag));
+            CL_CHECK(k_update_weights_eh_ev.setArg(14, cl_update_ev_flag));
+            CL_CHECK(k_update_weights_eh_ev.setArg(15, mat_heights));
+            CL_CHECK(k_update_weights_eh_ev.setArg(16, embedding_dim));
+            CL_CHECK(k_update_weights_eh_ev.setArg(17, context_win));
+            CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_eh_ev, cl::NullRange, global_ev, local_1d));
 
             for(int l=0; l<num_weight_matrices_mlp; ++l) { 
                 CL_CHECK(current_stream.enqueueReadBuffer(device_ptrs.d_hor_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.hor.weights[l].mapped_data)); 

@@ -69,26 +69,20 @@ void mlp::cuBackwithL2(int in, int layers, float learning) {
             CUDA_CHECK(cudaMalloc(&d_weights, weight_matrix_bytes));
             CUDA_CHECK(cudaMalloc(&d_deltas, in * sizeof(float)));
             CUDA_CHECK(cudaMalloc(&d_prev_activations, in * sizeof(float)));
-            
-            CUDA_CHECK(cudaMemcpy(d_weights, current_weights_mat.mapped_data,
-                                 weight_matrix_bytes, cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_deltas, layer_deltas.data(), 
-                                 in * sizeof(float), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_prev_activations, prev_activations.data(), 
-                                 in * sizeof(float), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_weights, current_weights_mat.mapped_data, weight_matrix_bytes, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_deltas, layer_deltas.data(), in * sizeof(float), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_prev_activations, prev_activations.data(), in * sizeof(float), cudaMemcpyHostToDevice));
             
             // Update weights with L2 regularization
             dim3 blockDim(16, 16);
             dim3 gridDim((in + blockDim.x - 1) / blockDim.x, (in + blockDim.y - 1) / blockDim.y);
             
-            updateWeightsL2Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, 
-                                                      learning, lambda, in, in);
+            // updateWeightsL2Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, learning, lambda, in, in);
             CUDA_CHECK(cudaGetLastError());
             
             // Copy updated weights back to host
             // The mat object this->weights[l] will receive the updated flat data.
-            CUDA_CHECK(cudaMemcpy(this->weights[l].mapped_data, d_weights,
-                                 weight_matrix_bytes, cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(this->weights[l].mapped_data, d_weights, weight_matrix_bytes, cudaMemcpyDeviceToHost));
 
             // Free temporary memory
             CUDA_CHECK(cudaFree(d_weights));

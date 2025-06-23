@@ -59,7 +59,7 @@ struct HeadDevicePointersV {
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno)
+void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -135,17 +135,17 @@ void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     float *agg_d_grad_MQ = nullptr, *agg_d_grad_MK_correction = nullptr;
     // MLP Aggregate Storage (ver only)
     float *agg_d_ver_activations_storage = nullptr;
-    float *agg_d_ver_weights_storage = nullptr;
-    float *agg_d_ver_gweights_storage = nullptr;
-    float *agg_d_ver_deltas_storage = nullptr;
+    float *agg_d_ver_weights_storage = nullptr; 
+    float *agg_d_ver_gweights_storage = nullptr; 
+    float *agg_d_ver_deltas_storage = nullptr; 
 
     std::vector<cudaStream_t> streams(num_heads_to_process, nullptr);
     std::vector<HeadDevicePointersV> head_gpu_data(num_heads_to_process);
 
     try {
         // --- Allocate Aggregate Memory ---
-        CUDA_CHECK(cudaMalloc(&agg_d_expected_v, num_heads_to_process * ev_total_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_EV, num_heads_to_process * ev_total_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_expected_v, num_heads_to_process * ev_total_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_EV, num_heads_to_process * ev_total_bytes)); 
         CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_full, num_heads_to_process * ev_total_bytes));
         CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_summed, num_heads_to_process * embed_bytes));
         CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_scaled, num_heads_to_process * embed_bytes));
@@ -166,18 +166,18 @@ void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>
         CUDA_CHECK(cudaMalloc(&agg_d_grad_MQ, num_heads_to_process * proj_mat_bytes));
         CUDA_CHECK(cudaMalloc(&agg_d_grad_MK_correction, num_heads_to_process * proj_mat_bytes));
 
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_deltas_storage, num_heads_to_process * num_weight_matrices_mlp * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_deltas_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes)); 
 
         // --- Create Streams and Setup Per-Head Pointers ---
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CUDA_CHECK(cudaStreamCreateWithFlags(&streams[head_idx], cudaStreamNonBlocking));
-            head_gpu_data[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
+            head_gpu_data[head_idx].d_ver_activations.resize(num_neuron_layers_mlp); 
             head_gpu_data[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
             head_gpu_data[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);
-            head_gpu_data[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_ver_deltas.resize(num_neuron_layers_mlp); 
 
             HeadDevicePointersV& current_ptrs = head_gpu_data[head_idx];
             current_ptrs.d_expected_v = agg_d_expected_v + head_idx * ev_total_elements;
@@ -202,10 +202,10 @@ void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             current_ptrs.d_grad_MQ = agg_d_grad_MQ + head_idx * proj_mat_elements;
             current_ptrs.d_grad_MK_correction = agg_d_grad_MK_correction + head_idx * proj_mat_elements;
 
-            for (int l = 0; l < num_neuron_layers_mlp; ++l) {
+            for (int l = 0; l < num_neuron_layers_mlp; ++l) { 
                 current_ptrs.d_ver_activations[l] = agg_d_ver_activations_storage + (head_idx * num_neuron_layers_mlp + l) * embedding_dim;
             }
-            for (int l = 0; l < num_weight_matrices_mlp; ++l) {
+            for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
                 current_ptrs.d_ver_weights[l] = agg_d_ver_weights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
                 current_ptrs.d_ver_gweights[l] = agg_d_ver_gweights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
                 current_ptrs.d_ver_deltas[l] = agg_d_ver_deltas_storage + (head_idx * num_weight_matrices_mlp + l) * embedding_dim;
@@ -285,7 +285,7 @@ void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 CUDA_CHECK(cudaGetLastError());
             }
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                updateWeightsKernel<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l], device_ptrs.d_ver_activations[l], device_ptrs.d_ver_weights[l], device_ptrs.d_ver_gweights[l], learning_rate, embedding_dim, embedding_dim);
+                kernelUpdateElasticNet<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l], device_ptrs.d_ver_activations[l], device_ptrs.d_ver_weights[l], device_ptrs.d_ver_gweights[l], learning_rate, lambda_l1, lambda_l2, embedding_dim, embedding_dim);
                 CUDA_CHECK(cudaGetLastError());
             }
 
@@ -407,7 +407,7 @@ void block::cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, int layno)
+void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, int layno, float& learning, float& lambda_l1, float& lambda_l2)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -482,17 +482,17 @@ void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     float *agg_d_grad_MQ = nullptr, *agg_d_grad_MK_correction = nullptr;
     // MLP Aggregate Storage (ver only)
     float *agg_d_ver_activations_storage = nullptr;
-    float *agg_d_ver_weights_storage = nullptr;
-    float *agg_d_ver_gweights_storage = nullptr;
-    float *agg_d_ver_deltas_storage = nullptr;
+    float *agg_d_ver_weights_storage = nullptr; 
+    float *agg_d_ver_gweights_storage = nullptr; 
+    float *agg_d_ver_deltas_storage = nullptr; 
 
     std::vector<cudaStream_t> streams(num_heads_to_process, nullptr);
     std::vector<HeadDevicePointersV> head_gpu_data(num_heads_to_process);
 
     try {
         // --- Allocate Aggregate Memory ---
-        CUDA_CHECK(cudaMalloc(&agg_d_expected_v, num_heads_to_process * ev_total_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_EV, num_heads_to_process * ev_total_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_expected_v, num_heads_to_process * ev_total_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_EV, num_heads_to_process * ev_total_bytes)); 
         CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_full, num_heads_to_process * ev_total_bytes));
         CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_summed, num_heads_to_process * embed_bytes));
         CUDA_CHECK(cudaMalloc(&agg_d_grad_EV_scaled, num_heads_to_process * embed_bytes));
@@ -513,18 +513,18 @@ void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expe
         CUDA_CHECK(cudaMalloc(&agg_d_grad_MQ, num_heads_to_process * proj_mat_bytes));
         CUDA_CHECK(cudaMalloc(&agg_d_grad_MK_correction, num_heads_to_process * proj_mat_bytes));
 
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_deltas_storage, num_heads_to_process * num_weight_matrices_mlp * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_activations_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_weights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_gweights_storage, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes)); 
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_deltas_storage, num_heads_to_process * num_neuron_layers_mlp * embed_bytes)); 
 
         // --- Create Streams and Setup Per-Head Pointers ---
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CUDA_CHECK(cudaStreamCreateWithFlags(&streams[head_idx], cudaStreamNonBlocking));
-            head_gpu_data[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
+            head_gpu_data[head_idx].d_ver_activations.resize(num_neuron_layers_mlp); 
             head_gpu_data[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
             head_gpu_data[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);
-            head_gpu_data[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp);
+            head_gpu_data[head_idx].d_ver_deltas.resize(num_neuron_layers_mlp); 
 
             HeadDevicePointersV& current_ptrs = head_gpu_data[head_idx];
             current_ptrs.d_expected_v = agg_d_expected_v + head_idx * ev_total_elements;
@@ -549,10 +549,10 @@ void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             current_ptrs.d_grad_MQ = agg_d_grad_MQ + head_idx * proj_mat_elements;
             current_ptrs.d_grad_MK_correction = agg_d_grad_MK_correction + head_idx * proj_mat_elements;
 
-            for (int l = 0; l < num_neuron_layers_mlp; ++l) {
+            for (int l = 0; l < num_neuron_layers_mlp; ++l) { 
                 current_ptrs.d_ver_activations[l] = agg_d_ver_activations_storage + (head_idx * num_neuron_layers_mlp + l) * embedding_dim;
             }
-            for (int l = 0; l < num_weight_matrices_mlp; ++l) {
+            for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
                 current_ptrs.d_ver_weights[l] = agg_d_ver_weights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
                 current_ptrs.d_ver_gweights[l] = agg_d_ver_gweights_storage + (head_idx * num_weight_matrices_mlp + l) * mlp_weights_elements;
                 current_ptrs.d_ver_deltas[l] = agg_d_ver_deltas_storage + (head_idx * num_weight_matrices_mlp + l) * embedding_dim;
@@ -622,7 +622,7 @@ void block::cupartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             }
             // ver mlp
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                updateWeightsKernel<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l], device_ptrs.d_ver_activations[l], device_ptrs.d_ver_weights[l], device_ptrs.d_ver_gweights[l], learning_rate, embedding_dim, embedding_dim); CUDA_CHECK(cudaGetLastError());
+                kernelUpdateElasticNet<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l], device_ptrs.d_ver_activations[l], device_ptrs.d_ver_weights[l], device_ptrs.d_ver_gweights[l], learning_rate, lambda_l1, lambda_l2, embedding_dim, embedding_dim); CUDA_CHECK(cudaGetLastError());
             }
             kernelComputeGradMLPInput<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_ver_deltas[0], device_ptrs.d_ver_weights[0], device_ptrs.d_grad_dv, embedding_dim, embedding_dim); CUDA_CHECK(cudaGetLastError());
 

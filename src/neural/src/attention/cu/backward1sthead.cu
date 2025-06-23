@@ -28,7 +28,7 @@
 * @param layers Number of layers in the MLPs
 * @param first Boolean flag - Determines if EH is updated. (Now implicitly true in this overload)
 */
-void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber)
+void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;
@@ -447,7 +447,7 @@ void attention::cuBackward1stHead(std::vector<float>& expected, int& in, int& la
 * @param in Input size (embedding dimension - used for MLP)
 * @param layers Number of layers in the MLPs
 */
-void attention::cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers)
+void attention::cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning)
 {
     // --- Setup ---
     const int embedding_dim = EMBEDDING;

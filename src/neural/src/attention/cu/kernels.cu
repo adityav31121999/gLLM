@@ -583,15 +583,14 @@ __global__ void kernelComputeGradientsEH_EV(const float* eh, const float* expect
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < embedding_dim) {
-        float pred = eh[idx];             // predicted probability (assumed sigmoid output)
-        float label = expected_h[idx];    // true label (0 or 1)
+        float pred = eh[idx];          // predicted probability (sigmoid output)
+        float label = expected_h[idx]; // true label (0 or 1)
 
-        // Clamp predicted value to avoid division by 0 or log(0)
-        pred = fminf(fmaxf(pred, 1e-7f), 1.0f - 1e-7f);
-
-        // Compute BCE gradient
-        float grad = (pred - label) / (pred * (1.0f - pred));
-
+        // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
+        // This is numerically stable and avoids the division by (pred * (1-pred)), which explodes when pred is near 0 or 1.
+        // The result, grad_eh, now represents the initial 'delta' for backpropagation into the final MLP layer.
+        float grad = pred - label;
+ 
         grad_eh[idx] = grad;
         grad_ev_scaled[idx] = grad * 0.1f;  // scale for vertical path
     }
@@ -790,25 +789,24 @@ __global__ void kernelComputeGradKdotQ_LOTA(const float* grad_head, const float*
  * @param[in] mat_heights The height dimension.
  */
 __global__ void kernelComputeGradK_Q(const float* grad_kdotq, const float* k, const float* q,
-                                     float* grad_k, float* grad_q,
-                                     int token_count, int mat_heights) {
+                                     float* grad_k, float* grad_q, int token_count, int mat_heights) {
     // Each thread computes one element of grad_k and one element of grad_q
     int i = blockIdx.y * blockDim.y + threadIdx.y; // Row index for grad_k (token i)
     int h = blockIdx.x * blockDim.x + threadIdx.x; // Column index for grad_k/grad_q (height h)
 
     if (i < token_count && h < mat_heights) {
-        float sum_for_grad_k_ih = 0.0f; // Accumulator for grad_K[i][h]
-        float sum_for_grad_q_ih = 0.0f; // Accumulator for grad_Q[i][h] (Note: 'i' here corresponds to 'j' in formula)
+        float sum_for_grad_k_ih = 0.0f; // Accumulator for grad_K[i][h] = sum_j(grad_kdotq[j][i] * Q[j][h])
+        float sum_for_grad_q_ih = 0.0f; // Accumulator for grad_Q[i][h] = sum_j(grad_kdotq[i][j] * K[j][h])
 
-        // Calculate grad_K[i][h] = sum_j (grad_KdotQ[i][j] * Q[j][h])
+        // Correctly calculate grad_Q[i][h] = sum_j (grad_kdotq[i][j] * K[j][h])
         for (int j = 0; j < token_count; ++j) {
-            sum_for_grad_k_ih += grad_kdotq[i * token_count + j] * k[j * mat_heights + h];
+            sum_for_grad_q_ih += grad_kdotq[i * token_count + j] * k[j * mat_heights + h];
         }
 
-        // Calculate grad_Q[i][h] = sum_j (K[j][h] * grad_KdotQ[j][i]) (Note: 'i' is column index of grad_KdotQ)
-        // Equivalent to: grad_Q[token_idx][h] = sum_j (K[j][h] * grad_KdotQ[j][token_idx]) where token_idx = i
+        // Correctly calculate grad_K[i][h] = sum_j (grad_kdotq[j][i] * Q[j][h])
         for (int j = 0; j < token_count; ++j) {
-            sum_for_grad_q_ih += q[j * mat_heights + h] * grad_kdotq[j * token_count + i];
+            // Access grad_kdotq transposed: grad_kdotq[j][i]
+            sum_for_grad_k_ih += grad_kdotq[j * token_count + i] * q[j * mat_heights + h];
         }
 
         // Store results using row-major indexing

@@ -4,7 +4,7 @@
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support, might help with float atomics on some platforms
+#pragma OPENCL EXTENSION cl_khr_fp32 : enable // For double support, might help with float atomics on some platforms
 // #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
 // --- Static helper cl_compute_dot_product_vec is NO LONGER NEEDED by these kernels ---
@@ -379,9 +379,9 @@ __kernel void kernelComputeGradientsEH(__global const float* eh, __global const 
         float pred = eh[idx];
         float label = expected_h[idx];
 
-        // BCE gradient: (p - y) / [p * (1 - p)]
-        float grad = (pred - label) / (pred * (1.0f - pred));
-
+        // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
+        // This is numerically stable.
+        float grad = label - pred;
         grad_eh[idx] = grad;
     }
 }
@@ -393,13 +393,9 @@ __kernel void kernelComputeGradientsEH_EV(__global const float* eh, __global con
     if (idx < embedding_dim) {
         float pred = eh[idx];
         float label = expected_h[idx];
-
-        // Clamp to avoid division by zero or log(0)
-        pred = fmax(fmin(pred, 1.0f - 1e-7f), 1e-7f);
-
-        // BCE gradient: (p - y) / [p * (1 - p)]
-        float grad = (pred - label) / (pred * (1.0f - pred));
-
+        // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
+        // This is numerically stable and avoids the division by (pred * (1-pred)), which explodes when pred is near 0 or 1.
+        float grad = label - pred;
         grad_eh[idx] = grad;
         grad_ev_scaled[idx] = grad * 0.1f;
     }
@@ -419,12 +415,8 @@ __kernel void kernelComputeGradientsEV_V(__global const float* ev, __global cons
             float pred = ev[idx];
             float label = expected_v[idx];
 
-            // Clamp to avoid division by zero or log(0)
-            pred = fmax(fmin(pred, 1.0f - 1e-7f), 1e-7f);
-
-            // BCE gradient: (p - y) / (p * (1 - p))
-            float grad = (pred - label) / (pred * (1.0f - pred));
-
+            // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
+            // This is numerically stable.
             grad_ev_full[idx] = grad;
             sum_grad_embed += grad;
         }
@@ -539,16 +531,20 @@ __kernel void kernelComputeGradK_Q(__global const float* grad_kdotq, __global co
     int i = get_global_id(1);
     int h = get_global_id(0);
     if (i < token_count && h < mat_heights) {
-        float sum_for_grad_k_ih = 0.0f;
-        float sum_for_grad_q_ih = 0.0f;
+        float sum_for_grad_k_ih = 0.0f; // Accumulator for grad_K[i][h] = sum_j(grad_kdotq[j][i] * Q[j][h])
+        float sum_for_grad_q_ih = 0.0f; // Accumulator for grad_Q[i][h] = sum_j(grad_kdotq[i][j] * K[j][h])
+
+        // Correctly calculate grad_Q[i][h] = sum_j (grad_kdotq[i][j] * K[j][h])
         for (int j = 0; j < token_count; ++j) {
-            sum_for_grad_k_ih += grad_kdotq[i * token_count + j] * q[j * mat_heights + h];
+            sum_for_grad_q_ih += grad_kdotq[i * token_count + j] * k[j * mat_heights + h];
         }
+
+        // Correctly calculate grad_K[i][h] = sum_j (grad_kdotq[j][i] * Q[j][h])
         for (int j = 0; j < token_count; ++j) {
-            sum_for_grad_q_ih += k[j * mat_heights + h] * grad_kdotq[j * token_count + i];
+            sum_for_grad_k_ih += grad_kdotq[j * token_count + i] * q[j * mat_heights + h];
         }
-        grad_k[i * mat_heights + h] = sum_for_grad_k_ih;
-        grad_q[i * mat_heights + h] = sum_for_grad_q_ih;
+        grad_k[i * mat_heights + h] = sum_for_grad_k_ih; // Store results using row-major indexing
+        grad_q[i * mat_heights + h] = sum_for_grad_q_ih; // Store results using row-major indexing
     }
 }
 

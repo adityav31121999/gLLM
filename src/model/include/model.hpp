@@ -196,9 +196,11 @@ public:
     int getOffset(int blockCount, int paCount, int attentionCount, int matCount, int mlpCount);
 
     // fetch components from different bins for inference
-    void fetchmat(mat& a, int blockCount, int x, int y, std::string& trainLocation);        // cache and mat
-    void fetchmlp(mlp& network, int blockCount, int x, int y, std::string& trainLocation);  // mlp
+    void fetchmat(mat& a, int blockCount, int x, int y, const std::string& trainLocation);        // cache and mat
+    void fetchmlp(mlp& network, int blockCount, int x, int y, const std::string& trainLocation);  // mlp
     void serialise();           // serialise the model
+    void fetchForInference(const std::string& binDirectory);
+    void fetchForTraining(const std::string& binDirectory);
 
     // chat with model
     void runModel(const std::string& binDirectory);     // run transformer for conversation

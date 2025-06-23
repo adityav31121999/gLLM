@@ -50,7 +50,7 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
         // Step 2 & 3: Perform forward propagation for the relevant block
         if (blockCount == 1) {
             // --- Block 0 Forward Propagation ---
-            std::cout << "-> clForward: Executing clForprop for Block 1..." << std::endl;
+            std::cout << "-> cuForward: Executing cuForprop for Block 1..." << std::endl;
             // Assumes t[0].cuForprop updates internal states (like EH) on the device
             t[0].cuForprop(d, currentTokenCount, l); // Pass embedding dim, token count, mlp layers
             CUDA_CHECK(cudaDeviceSynchronize()); // Ensure block 0 forward prop is complete

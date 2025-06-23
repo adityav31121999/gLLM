@@ -7,7 +7,6 @@
 #include <stdexcept>
 #include <maths.hpp>
 
-
 /**
  * @brief Calculates the gradient w.r.t. the input of an MLP layer.
  *        grad_input[i] = sum_j (deltas[j] * weights[j * input_size + i])
@@ -16,7 +15,7 @@
  * @param grad_input Gradient w.r.t. the input (to be computed)
  * @param current_layer_size Size of the current layer (number of deltas/rows in weights)
  * @param input_size Size of the input layer (number of columns in weights)
- */
+*/
 __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
     int current_layer_size, int input_size)
 {
@@ -41,7 +40,7 @@ __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weig
 * @param expected Expected output values
 * @param deltas Deltas to be computed for the output layer
 * @param size Size of the output layer
-*/
+
 __global__ void kernelOutputDelta(const float* activations, const float* expected, float* deltas, int size)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -51,7 +50,8 @@ __global__ void kernelOutputDelta(const float* activations, const float* expecte
         float sigmoid_der = activation * (1.0f - activation); // Assuming Sigmoid was used
         deltas[idx] = error * sigmoid_der;
     }
-}
+}*/
+
 
 /**
 * @brief CUDA kernel for calculating hidden layer deltas (Sigmoid derivative assumed)
@@ -102,11 +102,13 @@ __global__ void kernelLastLayerDelta(const float* grad_output, const float* acti
  * @param deltas Output deltas to be computed
  * @param size Size of the arrays
  */
-__global__ void kernelOutputDelta(float* output, float* expected, float* delta, int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;    // index of thread in global context
-    if(idx < size) {
-        float result = 1 / (1-expf(output[idx]));
-        delta[idx] = (output[idx] - expected[idx]) * (result/(1.0f - result));
+__global__ void kernelOutputDelta(const float* output, const float* expected, float* delta, int size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        // This kernel calculates the initial delta for a layer with Sigmoid activation and Binary Cross-Entropy (BCE) loss.
+        // The gradient of the loss with respect to the pre-activation inputs (logits) is simply (activation - expected).
+        // This is numerically stable.
+        delta[idx] = output[idx] - expected[idx];
     }
 }
 
@@ -227,20 +229,70 @@ __global__ void updateWeightsL1Kernel(float* weights, float* deltas, float* prev
  * @param current_layer_size Size of the current layer
  * @param prev_layer_size Size of the previous layer
  */
-__global__ void updateWeightsL2Kernel(float* weights, float* deltas, float* prev_activations,
-    float learning_rate, float lambda, int current_layer_size, int prev_layer_size) {
-    int row = blockIdx.y;
+__global__ void updateWeightsL2Kernel(float* deltas, float* prev_activations, float* weights, float* gweights,
+    float learning_rate, float lambda, int current_layer_size, int prev_layer_size) 
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (row < current_layer_size && col < prev_layer_size) {
         int weight_idx = row * prev_layer_size + col;
-        float gradient = deltas[row] * prev_activations[col];
+        float error_gradient = deltas[row] * prev_activations[col];
+        float l2_gradient = lambda * weights[weight_idx];
+        float total_gradient = error_gradient + l2_gradient;
         
+        if (gweights != nullptr) {
+            gweights[weight_idx] = total_gradient;
+        }
         // L2 regularization update
-        weights[weight_idx] -= learning_rate * (lambda * weights[weight_idx] + gradient);
+        weights[weight_idx] -= learning_rate * total_gradient;
     }
 }
 
+/**
+ * @brief CUDA kernel for Elastic Net (L1+L2) regularization weight update.
+ * @param deltas Deltas for the current layer.
+ * @param prev_activations Activations from the previous layer.
+ * @param weights Weights to be updated.
+ * @param gweights Gradients of the weights (output, can be nullptr).
+ * @param learning_rate The learning rate.
+ * @param lambda_l1 The L1 regularization parameter.
+ * @param lambda_l2 The L2 regularization parameter.
+ * @param current_layer_size Size of the current layer.
+ * @param prev_layer_size Size of the previous layer.
+ */
+__global__ void kernelUpdateElasticNet(float* deltas, float* prev_activations, 
+        float* weights, float* gweights, float learning_rate, float lambda_l1, 
+        float lambda_l2, int current_layer_size, int prev_layer_size)
+{
+    // 2D grid: x-dimension for previous layer neurons, y-dimension for current layer neurons
+    int i = blockIdx.x * blockDim.x + threadIdx.x; // neuron index in previous layer ('col')
+    int j = blockIdx.y * blockDim.y + threadIdx.y; // neuron index in current layer ('row')
+
+    if (i < prev_layer_size && j < current_layer_size) {
+        int weight_idx = j * prev_layer_size + i;
+        
+        // Gradient of the error term
+        float error_gradient = deltas[j] * prev_activations[i];
+        
+        float current_weight = weights[weight_idx];
+        
+        // Gradient of the L2 regularization term
+        float l2_gradient = lambda_l2 * current_weight;
+        
+        // Subgradient of the L1 regularization term
+        float sign = (current_weight > 0.0f) ? 1.0f : ((current_weight < 0.0f) ? -1.0f : 0.0f);
+        float l1_gradient = lambda_l1 * sign;
+        
+        // Total gradient
+        float total_gradient = error_gradient + l2_gradient + l1_gradient;
+        
+        if (gweights != nullptr) {
+            gweights[weight_idx] = total_gradient;
+        }
+        weights[weight_idx] -= learning_rate * total_gradient;
+    }
+}
 
 /**
  * @brief CUDA kernel for updating input vector

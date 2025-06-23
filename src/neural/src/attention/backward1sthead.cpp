@@ -45,8 +45,8 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
     // Set MLP for backprop
     hor.expected = grad_hor_input;
     ver.output = grad_ver_input;
-    hor.backprop(in, layers, learning);
-    ver.backward(in, layers, learning);
+    hor.backwithL2(in, layers, learning);
+    ver.backwithL2(in, layers, learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dh(EMBEDDING, 0.0f);
@@ -289,7 +289,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
 
     // Set MLP inputs for backprop
     ver.output = grad_ver_input;
-    ver.backward(in, layers, learning);
+    ver.backwithL2(in, layers, learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dv(EMBEDDING, 0.0f);
@@ -315,7 +315,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
         limit_j = std::min(limit_j, head.row);
         for (int j = 0; j < limit_j; j++) {
             if (i < head.col) {
-                 sum_head_col += head(j, i);
+                sum_head_col += head(j, i);
             }
         }
         std::vector<float> Q_row_i = getRow(Q, i);

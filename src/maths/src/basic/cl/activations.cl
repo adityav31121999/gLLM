@@ -5,7 +5,7 @@
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support, might help with float atomics on some platforms
+#pragma OPENCL EXTENSION cl_khr_fp32 : enable // For double support, might help with float atomics on some platforms
 // #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Ignored by target platform, implementing manually
 
 __kernel void clSigmoid(float x, __global float* result) {
@@ -65,15 +65,17 @@ void parallel_reduce_max(__local float* buffer, uint local_size) {
     }
 }
 
-void parallel_reduce_sum(__local float* buffer, uint local_size) {
+
+void parallel_reduce_min(__local float* buffer, uint local_size) {
     uint local_id = get_local_id(0);
     for (uint stride = local_size / 2; stride > 0; stride /= 2) {
         if (local_id < stride) {
-            buffer[local_id] += buffer[local_id + stride];
+            buffer[local_id] = fmin(buffer[local_id], buffer[local_id + stride]);
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
+
 
 __kernel void clSoftmax1d(__global float* x, __global float* out, float temp, int size)
 {
@@ -382,16 +384,6 @@ __kernel void clReLUder2d(__global float* x, __global float* out, int rows, int 
     if (row < rows && col < cols) {
         int idx = row * cols + col;
         out[idx] = (x[idx] > 0.0f) ? 1.0f : 0.0f;
-    }
-}
-
-void parallel_reduce_min(__local float* buffer, uint local_size) {
-    uint local_id = get_local_id(0);
-    for (uint stride = local_size / 2; stride > 0; stride /= 2) {
-        if (local_id < stride) {
-            buffer[local_id] = fmin(buffer[local_id], buffer[local_id + stride]);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
 

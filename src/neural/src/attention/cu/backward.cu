@@ -25,7 +25,7 @@
  * @param in Input size (embedding dimension) - Corresponds to EMBEDDING
  * @param layers Number of layers in the MLPs
  */
-void attention::cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber)
+void attention::cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
 {
     // get values for all kernels and functions
     const int embedding_dim = EMBEDDING; // Should match 'in'
@@ -463,7 +463,7 @@ void attention::cuBackward(std::vector<float>& expected, int& in, int& layers, i
  * @param in Input size (number of tokens) - Corresponds to tokenCount (used indirectly via member)
  * @param layers Number of layers in the MLPs
  */
-void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber)
+void attention::cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning)
 {
     // get values for all kernels and functions
     const int embedding_dim = EMBEDDING;

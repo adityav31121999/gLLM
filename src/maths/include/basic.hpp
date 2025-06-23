@@ -159,7 +159,7 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)
     #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300 
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
     // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
@@ -272,7 +272,7 @@ public:
     cl::Device device;          // Represents the selected OpenCL device.
     cl::CommandQueue queue;     // Command queue for the selected device.
     cl::Program program;        // Compiled OpenCL program from all sources.
-    std::map<std::string, cl::Kernel> kernels; // Map to store kernel objects by name
+    std::map<std::string, cl::Kernel> kernels;  // Map to store kernel objects by name
 
     /**
      * @brief Constructs and initializes the OpenCL environment from kernel source files.
@@ -286,62 +286,68 @@ public:
     {
         std::cout << "CL context Preparation." << std::endl;
         cl_int err; // To store error codes from OpenCL calls
-        // Input validation remains important
-        if (kernelSourceFiles.empty()) { // Check only files, names check below
+        
+        // Input validation
+        if (kernelSourceFiles.empty()) {
             throw std::runtime_error("OpenCL Error: No kernel source files provided.");
         }
         if (kernelNames.empty()) {
             throw std::runtime_error("OpenCL Error: No kernel names provided.");
         }
 
-        // The main try-catch for std::runtime_error can be kept if you want a general catch-all
-        // for other runtime errors, but cl::Error specific catches must be removed.
-        // try {
-        // --- Platform and Device Selection (No changes needed) ---
+        // --- Platform and Device Selection ---
         std::vector<cl::Platform> platforms;
-        CL_CHECK(cl::Platform::get(&platforms)); // cl::Platform::get returns cl_int
+        CL_CHECK(cl::Platform::get(&platforms));
         if (platforms.empty()) {
             throw std::runtime_error("OpenCL Error: No platforms found.");
         }
+        
         cl::Platform platform = platforms[0];
         std::vector<cl::Device> devices;
-        err = platform.getDevices(device_type, &devices); // platform.getDevices returns cl_int
+        err = platform.getDevices(device_type, &devices);
+        
         if (devices.empty() && device_type != CL_DEVICE_TYPE_CPU) {
             std::cerr << "Warning: No OpenCL devices found for preferred type (" << device_type << "). Trying CPU..." << std::endl;
             err = platform.getDevices(CL_DEVICE_TYPE_CPU, &devices);
         }
-        CL_CHECK(err); // Check the result of the last getDevices call
+        CL_CHECK(err);
+        
         if (devices.empty()) {
             throw std::runtime_error("OpenCL Error: No devices found (GPU or CPU).");
         }
+        
         device = devices[0];
         std::cout << "Using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
         std::cout << "Device Version: " << device.getInfo<CL_DEVICE_VERSION>() << std::endl;
+        
         context = cl::Context({device}, nullptr, nullptr, nullptr, &err);
         CL_CHECK(err);
-        queue = cl::CommandQueue(context, device, 0, &err); // 0 for default properties
+        
+        queue = cl::CommandQueue(context, device, 0, &err);
         CL_CHECK(err);
+        
         std::cout << "CONTEXT and QUEUE created successfully" << std::endl;
 
-        // --- Load and Compile Program from Multiple Files (No changes needed) ---
+        // --- Load and Compile Program from Multiple Files ---
         cl::Program::Sources sources;
         std::string allKernelCode;
-        // Use a set to avoid reading the same file multiple times if paths are duplicated
+        
+        // Use a set to avoid reading the same file multiple times
         std::set<std::string> uniqueFiles(kernelSourceFiles.begin(), kernelSourceFiles.end());
-        for (const std::string& filePath : uniqueFiles) { // Iterate over unique files
-            std::ifstream file(filePath);
-            if (!file.is_open()) {
-                throw std::runtime_error("OpenCL Error: Could not open kernel file: " + filePath);
+        for (const std::string& filePath : uniqueFiles) {
+            try {
+                std::string fileContent = readKernelFile(filePath);
+                allKernelCode += fileContent + "\n";
+                std::cout << "File " << filePath << " loaded successfully." << std::endl;
+            } catch (const std::runtime_error& e) {
+                throw std::runtime_error("Failed to load kernel file '" + filePath + "': " + e.what());
             }
-            std::stringstream buffer;
-            buffer << file.rdbuf();
-            allKernelCode += buffer.str() + "\n";
-            file.close();
-            std::cout << "File " << filePath << " loaded successfully." << std::endl;
         }
+        
         if (allKernelCode.empty()) {
             throw std::runtime_error("OpenCL Error: No kernel code loaded from files.");
         }
+        
         sources.push_back({allKernelCode.c_str(), allKernelCode.length()});
         program = cl::Program(context, sources, &err);
         CL_CHECK(err);
@@ -349,92 +355,156 @@ public:
 
         // --- Build Program ---
         std::stringstream options_ss;
-        options_ss << "-cl-std=CL2.0";
+        // Use appropriate OpenCL standard based on device capabilities
+        std::string device_version = device.getInfo<CL_DEVICE_VERSION>();
+        if (device_version.find("OpenCL 3.") != std::string::npos) {
+            options_ss << "-cl-std=CL3.0";
+        } 
+        else if (device_version.find("OpenCL 2.") != std::string::npos) {
+            options_ss << "-cl-std=CL2.0";
+        } 
+        else {
+            options_ss << "-cl-std=CL1.2";
+        }
+        
+        // Add debugging and optimization flags
+        options_ss << " -Werror"; // Treat warnings as errors for cleaner code
+        
         std::string options = options_ss.str();
-        // Add any other necessary build options here
-        std::cout << "CL standard: " << options << std::endl;
-        err = program.build({device}, options.c_str()); // program.build() returns cl_int
-        std::cout << "Program built successfully" << std::endl;
-        if (err != CL_SUCCESS) { // Manual check for build error
+        std::cout << "Build options: " << options << std::endl;
+        
+        err = program.build({device}, options.c_str());
+        
+        if (err != CL_SUCCESS) {
             std::string error_message = "OpenCL Error during program build: ";
-            // Ensure string concatenation is safe by converting C-style strings to std::string first
             error_message += std::string(oclErrorString(err)) +
-                                std::string(" [") + std::to_string(err) + std::string("]");
+                            std::string(" [") + std::to_string(err) + std::string("]");
+            
             if (err == CL_BUILD_PROGRAM_FAILURE) {
                 error_message += "\n--- Build Log ---";
                 std::string build_log_details;
-                // Use the non-template getBuildInfo that returns cl_int
                 cl_int build_log_err = program.getBuildInfo(device, CL_PROGRAM_BUILD_LOG, &build_log_details);
+                
                 if (build_log_err == CL_SUCCESS) {
-                    // This line should be fine as device.getInfo<CL_DEVICE_NAME>() returns std::string,
-                    // breaking any problematic const char* + const char* chain.
                     error_message += "\nDevice " + device.getInfo<CL_DEVICE_NAME>() + " Log:\n" + build_log_details;
-                } 
-                else {
-                    // Ensure string concatenation is safe
+                } else {
                     error_message += std::string("\nFailed to retrieve build log: ") + oclErrorString(build_log_err) +
-                                        std::string(" [") + std::to_string(build_log_err) + std::string("]");
+                                   std::string(" [") + std::to_string(build_log_err) + std::string("]");
                 }
-                // Also print directly to cerr for immediate visibility
+                
+                // Print to stderr for immediate visibility
                 std::cerr << "OpenCL Program Build Failed. Build Log:" << std::endl;
                 std::cerr << "--------------------------------------------------------" << std::endl;
-                std::cerr << build_log_details << std::endl; // Print whatever was retrieved, even if getBuildInfo failed (might be empty)
+                std::cerr << build_log_details << std::endl;
                 std::cerr << "--------------------------------------------------------" << std::endl;
             }
             throw std::runtime_error(error_message);
         }
+        
+        std::cout << "Program built successfully" << std::endl;
 
-
-        // --- Create and store kernels (No changes needed) ---
-        if (kernelNames.empty()) {
-                throw std::runtime_error("OpenCL Error: No kernel names provided.");
-        }
-
+        // --- Create and store kernels ---
         for (const std::string& kernelName : kernelNames) {
-            // Check if kernel name is empty string before creating
             if (kernelName.empty()) {
                 std::cerr << "Warning: Skipping empty kernel name." << std::endl;
                 continue;
             }
-            kernels[kernelName] = createKernel(kernelName); // Calls internal createKernel
-            std::cout << "Created OpenCL kernel: " << kernelName << std::endl;
+            
+            try {
+                kernels[kernelName] = createKernel(kernelName);
+                std::cout << "Created OpenCL kernel: " << kernelName << std::endl;
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Warning: Failed to create kernel '" << kernelName << "': " << e.what() << std::endl;
+                // Decide whether to continue or throw based on your requirements
+                // For now, we'll continue and let the user handle missing kernels
+            }
         }
-        std::cout << "Successfully created " << kernels.size() << " OpenCL kernels." << std::endl;
+        
+        std::cout << "Successfully created " << kernels.size() << " OpenCL kernels out of " << kernelNames.size() << " requested." << std::endl;
     }
 
-    // Disable copy constructor and assignment operator (Good practice)
-    OpenCLContext(const OpenCLContext&) = default; // Now enabled
-    OpenCLContext& operator=(const OpenCLContext&) = default; // Now enabled
-    // Allow move constructor and assignment (Good practice)
-    OpenCLContext(OpenCLContext&&) = default; // Remains enabled
+    // Copy and move semantics
+    OpenCLContext(const OpenCLContext&) = default;
+    OpenCLContext& operator=(const OpenCLContext&) = default;
+    OpenCLContext(OpenCLContext&&) = default;
     OpenCLContext& operator=(OpenCLContext&&) = default;
-
-    // Default destructor is sufficient as cl:: objects manage their resources via RAII.
     ~OpenCLContext() = default;
 
     /**
-     * @brief Creates a cl::Kernel object from the compiled program. (Internal helper)
+     * @brief Creates a cl::Kernel object from the compiled program.
      * @param kernelName The name of the kernel function in the source code.
      * @return A cl::Kernel object.
      * @throws std::runtime_error if the kernel cannot be created.
      */
     cl::Kernel createKernel(const std::string& kernelName) {
         cl_int err;
-        cl::Kernel kernel_obj(program, kernelName.c_str(), &err); // Use constructor with cl_int*
-        if (err != CL_SUCCESS) { // Manual error check
-            throw std::runtime_error("OpenCL Error creating kernel '" + kernelName + "': " + oclErrorString(err) + " (" + std::to_string(err) + ")");
+        cl::Kernel kernel_obj(program, kernelName.c_str(), &err);
+        if (err != CL_SUCCESS) {
+            throw std::runtime_error("OpenCL Error creating kernel '" + kernelName + "': " + 
+                                   oclErrorString(err) + " (" + std::to_string(err) + ")");
         }
         return kernel_obj;
     }
 
+    /**
+     * @brief Reads kernel source code from a file.
+     * @param filename Path to the kernel file.
+     * @return String containing the kernel source code.
+     * @throws std::runtime_error if file cannot be read.
+     */
     std::string readKernelFile(const std::string& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
             throw std::runtime_error("Could not open kernel file: " + filename);
         }
+        
         std::stringstream buffer;
         buffer << file.rdbuf();
-        return buffer.str();
+        std::string content = buffer.str();
+        
+        if (content.empty()) {
+            throw std::runtime_error("Kernel file is empty: " + filename);
+        }
+        
+        return content;
+    }
+
+    /**
+     * @brief Get a kernel by name.
+     * @param kernelName Name of the kernel to retrieve.
+     * @return Reference to the kernel object.
+     * @throws std::runtime_error if kernel doesn't exist.
+     */
+    cl::Kernel& getKernel(const std::string& kernelName) {
+        auto it = kernels.find(kernelName);
+        if (it == kernels.end()) {
+            throw std::runtime_error("Kernel '" + kernelName + "' not found. Available kernels: " + getAvailableKernelNames());
+        }
+        return it->second;
+    }
+
+    /**
+     * @brief Check if a kernel exists.
+     * @param kernelName Name of the kernel to check.
+     * @return True if kernel exists, false otherwise.
+     */
+    bool hasKernel(const std::string& kernelName) const {
+        return kernels.find(kernelName) != kernels.end();
+    }
+
+    /**
+     * @brief Get a comma-separated list of available kernel names.
+     * @return String containing all available kernel names.
+     */
+    std::string getAvailableKernelNames() const {
+        std::stringstream ss;
+        bool first = true;
+        for (const auto& pair : kernels) {
+            if (!first) ss << ", ";
+            ss << pair.first;
+            first = false;
+        }
+        return ss.str();
     }
 };
 

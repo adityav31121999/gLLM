@@ -82,8 +82,7 @@ void mlp::cuBackwithL1(int in, int layers, float learning) {
             dim3 blockDim(16, 16);
             dim3 gridDim((in + blockDim.x - 1) / blockDim.x, (in + blockDim.y - 1) / blockDim.y);
 
-            updateWeightsL1Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, 
-                                                      learning, lambda, in, in);
+           // updateWeightsL1Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, learning, lambda, in, in);
             CUDA_CHECK(cudaGetLastError());
 
             // Copy updated weights back to host

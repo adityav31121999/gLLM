@@ -4,7 +4,7 @@
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support, might help with float atomics on some platforms
+#pragma OPENCL EXTENSION cl_khr_fp32 : enable // For double support, might help with float atomics on some platforms
 
 __kernel void matrixMultiplyKernel(__global const float* A, __global const float* B,
                                    __global float* C, int rowsA, int colsA, int colsB)

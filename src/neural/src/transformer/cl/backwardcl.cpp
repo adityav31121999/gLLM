@@ -1,12 +1,9 @@
 #ifdef USE_OPENCL
 
-#if defined(_WIN64)
-    #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    // For Windows, use the older/common cl.hpp
+#if defined(_WIN64) 
     #include <CL/cl.hpp>
 #elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 220
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
     #include <CL/opencl.hpp>
 #endif
 
@@ -14,7 +11,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
-#include <string> // For std::to_string
+#include <string>
 
 /**
  * @brief CUDA backward propagation from the last block (m-1) down to the first block (0).

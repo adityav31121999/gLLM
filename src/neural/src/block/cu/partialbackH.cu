@@ -28,7 +28,7 @@
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno)
+void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -292,8 +292,8 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
             }
             // Calculate Gradients and Update Weights for hor MLP (N-1 weight matrices, W[0] to W[N-2])
             // W[l] uses activations[l] and deltas[l+1]
-            for (int l_weight_idx = 0; l_weight_idx < num_weight_matrices_mlp; ++l_weight_idx) { 
-                updateWeightsKernel<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_hor_deltas[l_weight_idx + 1], device_ptrs.d_hor_activations[l_weight_idx], device_ptrs.d_hor_weights[l_weight_idx], device_ptrs.d_hor_gweights[l_weight_idx], learning_rate, embedding_dim, embedding_dim);
+            for (int l_weight_idx = 0; l_weight_idx < num_weight_matrices_mlp; ++l_weight_idx) {
+                kernelUpdateElasticNet<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_hor_deltas[l_weight_idx + 1], device_ptrs.d_hor_activations[l_weight_idx], device_ptrs.d_hor_weights[l_weight_idx], device_ptrs.d_hor_gweights[l_weight_idx], learning_rate,lambda_l1, lambda_l2, embedding_dim, embedding_dim);
                 CUDA_CHECK(cudaGetLastError());
             }
 
@@ -305,7 +305,7 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
                 CUDA_CHECK(cudaGetLastError());
             }
             for (int l_weight_idx = 0; l_weight_idx < num_weight_matrices_mlp; ++l_weight_idx) {
-                updateWeightsKernel<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l_weight_idx + 1], device_ptrs.d_ver_activations[l_weight_idx], device_ptrs.d_ver_weights[l_weight_idx], device_ptrs.d_ver_gweights[l_weight_idx], learning_rate, embedding_dim, embedding_dim);
+                kernelUpdateElasticNet<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l_weight_idx + 1], device_ptrs.d_ver_activations[l_weight_idx], device_ptrs.d_ver_weights[l_weight_idx], device_ptrs.d_ver_gweights[l_weight_idx], learning_rate, lambda_l1, lambda_l2, embedding_dim, embedding_dim);
                 CUDA_CHECK(cudaGetLastError());
             }
 
@@ -452,7 +452,7 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno)
+void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -692,7 +692,7 @@ void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layer
                 CUDA_CHECK(cudaGetLastError());
             }
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                updateWeightsKernel<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_hor_deltas[l + 1], device_ptrs.d_hor_activations[l], device_ptrs.d_hor_weights[l], device_ptrs.d_hor_gweights[l], learning_rate, embedding_dim, embedding_dim);
+                kernelUpdateElasticNet<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_hor_deltas[l + 1], device_ptrs.d_hor_activations[l], device_ptrs.d_hor_weights[l], device_ptrs.d_hor_gweights[l], learning_rate, lambda_l1, lambda_l2, embedding_dim, embedding_dim);
                 CUDA_CHECK(cudaGetLastError());
             }
             // --- 2b: Ver MLP ---
@@ -703,7 +703,7 @@ void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layer
                 CUDA_CHECK(cudaGetLastError());
             }
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                updateWeightsKernel<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l + 1], device_ptrs.d_ver_activations[l], device_ptrs.d_ver_weights[l], device_ptrs.d_ver_gweights[l], learning_rate, embedding_dim, embedding_dim);
+                kernelUpdateElasticNet<<<gridDimEmbed2D, blockDim2D, 0, current_stream>>>(device_ptrs.d_ver_deltas[l + 1], device_ptrs.d_ver_activations[l], device_ptrs.d_ver_weights[l], device_ptrs.d_ver_gweights[l], learning_rate, lambda_l1, lambda_l2, embedding_dim, embedding_dim);
                 CUDA_CHECK(cudaGetLastError());
             }
             // Step 3: Compute grad_dh and grad_dv

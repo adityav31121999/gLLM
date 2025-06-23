@@ -64,7 +64,7 @@ void model::trainBlock(const std::string& txtFileLocation)
             }
         } 
         else {
-             std::cerr << "Warning: Session data path " << currentChatLogPath 
+            std::cerr << "Warning: Session data path " << currentChatLogPath 
                        << " is not a regular file. Starting with fresh session values." << std::endl;
         }
     } 
@@ -207,34 +207,25 @@ void model::trainBlock(const std::string& txtFileLocation)
             totalTokens += tok;
         }
         linesProcessedInThisRun++;
-        std::cout << "complete " << k << "th part." << std::endl;
+
+        // Update and save session data after each line
+        sessionData.lastTrainingFileName = txtFileLocation;
+        sessionData.linesProcessedInLastFile = k + 1; // We just finished line k (0-indexed)
+        sessionData.cumulativeTotalLinesTrained = initialCumulativeLinesTrainedForSession + linesProcessedInThisRun;
+        sessionData.cumulativeTotalTokensProcessed = this->totalTokens;
+        sessionData.cumulativeTotalTrainCount = this->T.trainCount;
+        sessionData.lastBlockCountState = this->T.blockCount;
+        sessionData.lastEpochCountState = this->T.epochCount;
+        sessionData.vocabSizeSnapshot = this->T.vocabsize;
+        if (!currentChatLogPath.empty()) {
+            sessionData.save(currentChatLogPath);
+        }
+
+        std::cout << "complete " << k << "th part. Progress saved." << std::endl;
         if(T.blockCount == 1) T.t[0].serialise(T.t[0].blockFilePath);
-        newChat();
     }
     std::cout << "Training complete for file " << txtFileLocation << std::endl;
-    
-    // Update session data for saving
-    sessionData.lastTrainingFileName = txtFileLocation;
-    sessionData.linesProcessedInLastFile = startLineForCurrentFile + linesProcessedInThisRun;
-
-    if (sessionFileExistsAndIsValid && sessionData.lastTrainingFileName == txtFileLocation && startLineForCurrentFile > 0) {
-        // Resumed this file: initialCumulativeLinesTrainedForSession included 'startLineForCurrentFile' lines from it.
-        // Subtract those, then add the total lines now processed in this file.
-        sessionData.cumulativeTotalLinesTrained = initialCumulativeLinesTrainedForSession - startLineForCurrentFile + sessionData.linesProcessedInLastFile;
-    }
-    else {
-        // New file, or fresh start for this file. Add lines from this run to the prior total.
-        sessionData.cumulativeTotalLinesTrained = initialCumulativeLinesTrainedForSession + linesProcessedInThisRun;
-    }
-    sessionData.cumulativeTotalTokensProcessed = this->totalTokens;
-    sessionData.cumulativeTotalTrainCount = this->T.trainCount;
-    sessionData.lastBlockCountState = this->T.blockCount;
-    sessionData.lastEpochCountState = this->T.epochCount;
-    sessionData.vocabSizeSnapshot = this->T.vocabsize;
-    if (!currentChatLogPath.empty()) {
-        sessionData.save(currentChatLogPath);
-        std::cout << "Training session data saved to: " << currentChatLogPath << std::endl;
-    }
+    newChat();
 
     // copy to other blocks and serialise
     // End timing here

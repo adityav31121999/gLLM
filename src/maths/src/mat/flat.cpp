@@ -119,7 +119,7 @@ void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat) {
  * @return A 1D vector containing the flattened data. Returns empty if input is empty.
  */
 std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d) {
-    if (vec2d.empty() || vec2d[0].empty()) {
+    if (vec2d.empty()) {
         return {};
     }
     size_t rows = vec2d.size();
@@ -127,14 +127,11 @@ std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d) {
     std::vector<float> flat_vec;
     flat_vec.reserve(rows * cols);
     for (size_t i = 0; i < rows; ++i) {
-        if (cols > 0 && vec2d[i].size() != cols) {
-             fprintf(stderr, "Warning: Inconsistent column count in flatten (Row %zu has %zu, expected %zu). Data might be truncated or padded later.\n", i, vec2d[i].size(), cols);
+        if (vec2d[i].size() != cols) {
+            throw std::runtime_error("flatten: Inconsistent column count. Row " + std::to_string(i) + " has " + std::to_string(vec2d[i].size()) + " columns, but expected " + std::to_string(cols) + ".");
         }
-         flat_vec.insert(flat_vec.end(), vec2d[i].begin(), vec2d[i].end());
+        flat_vec.insert(flat_vec.end(), vec2d[i].begin(), vec2d[i].end());
     }
-     if (flat_vec.size() != rows * cols) {
-         fprintf(stderr, "Warning: Flattened vector size (%zu) does not match expected (%zu * %zu) due to inconsistent rows.\n", flat_vec.size(), rows, cols);
-     }
     return flat_vec;
 }
 

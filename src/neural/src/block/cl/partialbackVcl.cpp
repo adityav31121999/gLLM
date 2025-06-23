@@ -1,8 +1,5 @@
 #ifdef USE_OPENCL
 #if defined(_WIN64)
-    #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
     #define CL_HPP_TARGET_OPENCL_VERSION 220
@@ -41,7 +38,8 @@ struct HeadDeviceSubBuffersV {
     cl::Buffer d_grad_MQ, d_grad_MK_correction;
 
     std::vector<cl::Buffer> d_ver_activations;
-    std::vector<cl::Buffer> d_ver_weights, d_ver_gweights, d_ver_deltas;
+    std::vector<cl::Buffer> d_ver_weights, d_ver_deltas;
+    std::vector<cl::Buffer> d_ver_gweights; // Added for ElasticNet
 };
 
 /**
@@ -76,6 +74,8 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
+    const float lambda_l1 = 0.001f;     // L1 regularization parameter
+    const float lambda_l2 = 0.001f;     // L2 regularization parameter
 
     // MLP structure parameters
     const int num_total_layers_mlp = layers;
@@ -119,7 +119,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     cl::Buffer agg_d_grad_MQ_buf, agg_d_grad_MK_correction_buf;
     cl::Buffer agg_d_ver_activations_storage_buf;
     cl::Buffer agg_d_ver_weights_storage_buf;
-    cl::Buffer agg_d_ver_gweights_storage_buf;
     cl::Buffer agg_d_ver_deltas_storage_buf;
 
     // OpenCL Command Queues (one per head, like CUDA streams)
@@ -159,7 +158,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
         // MLP Aggregate Storage (ver only)
         agg_d_ver_activations_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_neuron_layers_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_ver_weights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_ver_gweights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_ver_gweights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err); // Added
         agg_d_ver_deltas_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
 
         // --- Create Command Queues and Setup Per-Head Sub-Buffers ---
@@ -171,7 +170,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             // Resize MLP vectors in the sub-buffer struct
             head_gpu_data_cl[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
             head_gpu_data_cl[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
-            head_gpu_data_cl[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);
+            head_gpu_data_cl[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp); // Added
             head_gpu_data_cl[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp); // Following CUDA code's usage
 
             // Create sub-buffers for each head from the aggregate buffers.
@@ -219,7 +218,9 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { // All weight/gradient/delta matrices
                 region = { (head_idx * num_weight_matrices_mlp + l) * mlp_weights_bytes, mlp_weights_bytes };
                 head_gpu_data_cl[head_idx].d_ver_weights[l] = agg_d_ver_weights_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
-                head_gpu_data_cl[head_idx].d_ver_gweights[l] = agg_d_ver_gweights_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
+
+                region = { (head_idx * num_weight_matrices_mlp + l) * mlp_weights_bytes, mlp_weights_bytes }; // Added
+                head_gpu_data_cl[head_idx].d_ver_gweights[l] = agg_d_ver_gweights_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err); // Added
 
                 region = { (head_idx * num_weight_matrices_mlp + l) * embed_bytes, embed_bytes }; // Assuming deltas are vector of size embed_bytes
                 head_gpu_data_cl[head_idx].d_ver_deltas[l] = agg_d_ver_deltas_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
@@ -285,23 +286,20 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
 
             // --- Data Transfer Host -> Device (Async ver MLP Internals) ---
             if (head_obj.ver.activations.size() != static_cast<size_t>(num_neuron_layers_mlp) ||
-                head_obj.ver.weights.size() != static_cast<size_t>(num_weight_matrices_mlp) ||
-                head_obj.ver.gweights.size() != static_cast<size_t>(num_weight_matrices_mlp)) {
+                head_obj.ver.weights.size() != static_cast<size_t>(num_weight_matrices_mlp)) {
                  throw std::runtime_error("MLP host ver vector size mismatch for head [" + std::to_string(head_idx) + "][" + std::to_string(k) + "]");
             }
             for (int l = 0; l < num_neuron_layers_mlp; ++l) {
                 if (head_obj.ver.activations[l].empty()) {
                     throw std::runtime_error("MLP ver.activations vector is empty for head [" + std::to_string(head_idx) + "][" + std::to_string(k) + "], layer " + std::to_string(l));
                 }
-                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_activations[l], CL_FALSE, 0, embed_bytes, head_obj.ver.activations[l].data()));
+                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_activations[l], CL_FALSE, 0, embed_bytes, head_obj.ver.activations[l].data())); // Corrected from head_obj.ver.activations[l].data()
             }
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                if (!head_obj.ver.weights[l].mapped_data || head_obj.ver.weights[l].row * head_obj.ver.weights[l].col != mlp_weights_elements ||
-                    !head_obj.ver.gweights[l].mapped_data || head_obj.ver.gweights[l].row * head_obj.ver.gweights[l].col != mlp_weights_elements) {
+                if (!head_obj.ver.weights[l].mapped_data || head_obj.ver.weights[l].row * head_obj.ver.weights[l].col != mlp_weights_elements) {
                     throw std::runtime_error("Invalid ver.weights/gweights mat for head [" + std::to_string(head_idx) + "][" + std::to_string(k) + "], layer " + std::to_string(l));
                 }
                 CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.weights[l].mapped_data));
-                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_gweights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.gweights[l].mapped_data));
             }
             current_stream_cl.flush(); // Flush commands to the device
 
@@ -337,16 +335,19 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 CL_CHECK(hiddenDeltaKernel_cl.setArg(5, embedding_dim));
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(hiddenDeltaKernel_cl, cl::NullRange, global_embed, local_1d));
             }
-            cl::Kernel updateWeightsKernel_cl = clcontext.kernels.at("updateWeightsKernel");
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsL2");
+            k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); // Changed to ElasticNet
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
-                CL_CHECK(updateWeightsKernel_cl.setArg(0, device_ptrs_cl.d_ver_deltas[l]));
-                CL_CHECK(updateWeightsKernel_cl.setArg(1, device_ptrs_cl.d_ver_activations[l]));
-                CL_CHECK(updateWeightsKernel_cl.setArg(2, device_ptrs_cl.d_ver_weights[l]));
-                CL_CHECK(updateWeightsKernel_cl.setArg(3, device_ptrs_cl.d_ver_gweights[l]));
-                CL_CHECK(updateWeightsKernel_cl.setArg(4, learning_rate));
-                CL_CHECK(updateWeightsKernel_cl.setArg(5, embedding_dim)); // Rows
-                CL_CHECK(updateWeightsKernel_cl.setArg(6, embedding_dim)); // Cols
-                CL_CHECK(current_stream_cl.enqueueNDRangeKernel(updateWeightsKernel_cl, cl::NullRange, global_embed_2d, local_2d));
+                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs_cl.d_ver_deltas[l])); // deltas
+                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs_cl.d_ver_activations[l])); // prev_activations
+                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs_cl.d_ver_weights[l])); // weights
+                CL_CHECK(k_update_weights_v.setArg(3, device_ptrs_cl.d_ver_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_v.setArg(4, learning_rate)); // learning_rate
+                CL_CHECK(k_update_weights_v.setArg(5, lambda_l1)); // lambda_l1
+                CL_CHECK(k_update_weights_v.setArg(6, lambda_l2)); // lambda_l2
+                CL_CHECK(k_update_weights_v.setArg(7, embedding_dim)); // current_layer_size
+                CL_CHECK(k_update_weights_v.setArg(8, embedding_dim)); // prev_layer_size
+                CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d));
             }
 
             // --- Step 3: Compute grad_dv ---
@@ -474,7 +475,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             // --- Data Transfer Device -> Host (Asynchronous) ---
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
                 CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_ver_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.weights[l].mapped_data));
-                CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_ver_gweights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.gweights[l].mapped_data));
             }
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_EV, CL_FALSE, 0, ev_total_bytes, head_obj.EV.mapped_data));
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data));
@@ -508,8 +508,8 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
         agg_d_grad_MQ_buf = cl::Buffer();
         agg_d_grad_MK_correction_buf = cl::Buffer();
         agg_d_ver_activations_storage_buf = cl::Buffer();
+        agg_d_ver_gweights_storage_buf = cl::Buffer(); // Added
         agg_d_ver_weights_storage_buf = cl::Buffer();
-        agg_d_ver_gweights_storage_buf = cl::Buffer();
         agg_d_ver_deltas_storage_buf = cl::Buffer();
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
@@ -559,6 +559,8 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
+    const float lambda_l1 = 0.001f; // L1 regularization parameter
+    const float lambda_l2 = 0.001f; // L2 regularization parameter
 
     // MLP structure parameters
     const int num_total_layers_mlp = layers;
@@ -599,7 +601,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     cl::Buffer agg_d_grad_MQ_buf, agg_d_grad_MK_correction_buf;
     cl::Buffer agg_d_ver_activations_storage_buf;
     cl::Buffer agg_d_ver_weights_storage_buf;
-    cl::Buffer agg_d_ver_gweights_storage_buf;
     cl::Buffer agg_d_ver_deltas_storage_buf;
 
     std::vector<cl::CommandQueue> streams_cl(num_heads_to_process);
@@ -631,7 +632,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
         agg_d_grad_MK_correction_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * proj_mat_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_ver_activations_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_neuron_layers_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_ver_weights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_ver_gweights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_ver_deltas_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
 
 
@@ -639,7 +639,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
             head_gpu_data_cl[head_idx].d_ver_activations.resize(num_neuron_layers_mlp);
             head_gpu_data_cl[head_idx].d_ver_weights.resize(num_weight_matrices_mlp);
-            head_gpu_data_cl[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp);
+            head_gpu_data_cl[head_idx].d_ver_gweights.resize(num_weight_matrices_mlp); // Added
             head_gpu_data_cl[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp);
 
             cl_buffer_region region;
@@ -684,7 +684,8 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
                 region = { (head_idx * num_weight_matrices_mlp + l) * mlp_weights_bytes, mlp_weights_bytes };
                 head_gpu_data_cl[head_idx].d_ver_weights[l] = agg_d_ver_weights_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
-                head_gpu_data_cl[head_idx].d_ver_gweights[l] = agg_d_ver_gweights_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
+                region = { (head_idx * num_weight_matrices_mlp + l) * mlp_weights_bytes, mlp_weights_bytes }; // Added
+                head_gpu_data_cl[head_idx].d_ver_gweights[l] = agg_d_ver_gweights_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err); // Added
                 region = { (head_idx * num_weight_matrices_mlp + l) * embed_bytes, embed_bytes }; // Assuming deltas are vector of size embed_bytes
                 head_gpu_data_cl[head_idx].d_ver_deltas[l] = agg_d_ver_deltas_storage_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
             }
@@ -726,7 +727,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_EV, CL_FALSE, 0, ev_total_bytes, head_obj.EV.mapped_data));
             if (token_count > 0) { CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_KdotQ, CL_FALSE, 0, active_head_bytes, head_obj.KdotQ.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_K, CL_FALSE, 0, active_k_q_bytes, head_obj.K.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_Q, CL_FALSE, 0, active_k_q_bytes, head_obj.Q.mapped_data));}
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MQ_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MQ.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
-            if (head_obj.ver.activations.size()!=static_cast<size_t>(num_neuron_layers_mlp) || head_obj.ver.weights.size()!=static_cast<size_t>(num_weight_matrices_mlp) || head_obj.ver.gweights.size()!=static_cast<size_t>(num_weight_matrices_mlp)) { throw std::runtime_error("MLP host ver vector size mismatch for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "]"); }
+            if (head_obj.ver.activations.size()!=static_cast<size_t>(num_neuron_layers_mlp) || head_obj.ver.weights.size()!=static_cast<size_t>(num_weight_matrices_mlp)) { throw std::runtime_error("MLP host ver vector size mismatch for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "]"); }
             for (int l=0; l<num_neuron_layers_mlp; ++l) { 
                 if(head_obj.ver.activations[l].empty()) { 
                     throw std::runtime_error("MLP ver.activations empty for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "], layer " + std::to_string(l)); 
@@ -734,19 +735,39 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
                 CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_activations[l], CL_FALSE, 0, embed_bytes, head_obj.ver.activations[l].data())); 
             }
             for (int l=0; l<num_weight_matrices_mlp; ++l) {
-                if(!head_obj.ver.weights[l].mapped_data || head_obj.ver.weights[l].row*head_obj.ver.weights[l].col!=mlp_weights_elements || !head_obj.ver.gweights[l].mapped_data || head_obj.ver.gweights[l].row*head_obj.ver.gweights[l].col!=mlp_weights_elements) { 
+                if(!head_obj.ver.weights[l].mapped_data || head_obj.ver.weights[l].row*head_obj.ver.weights[l].col!=mlp_weights_elements) { 
                     throw std::runtime_error("Invalid ver.weights/gweights mat for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "], layer " + std::to_string(l)); 
                 } 
                 CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.weights[l].mapped_data)); 
-                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_ver_gweights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.gweights[l].mapped_data)); 
             }
             current_stream_cl.flush();
 
             // --- Kernel Launches for steps 1-8 (same as clpartialbackward1stBlock) ---
             cl::Kernel k_grad_ev_v = clcontext.kernels.at("kernelComputeGradientsEV_V"); CL_CHECK(k_grad_ev_v.setArg(0, device_ptrs_cl.d_EV)); CL_CHECK(k_grad_ev_v.setArg(1, device_ptrs_cl.d_expected_v)); CL_CHECK(k_grad_ev_v.setArg(2, device_ptrs_cl.d_grad_EV_full)); CL_CHECK(k_grad_ev_v.setArg(3, device_ptrs_cl.d_grad_EV_summed)); CL_CHECK(k_grad_ev_v.setArg(4, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_grad_ev_v.setArg(5, learning_rate)); CL_CHECK(k_grad_ev_v.setArg(6, context_win)); CL_CHECK(k_grad_ev_v.setArg(7, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_ev_v, cl::NullRange, global_ev, local_1d));
             cl::Kernel k_last_delta = clcontext.kernels.at("kernelLastLayerDelta"); CL_CHECK(k_last_delta.setArg(0, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_last_delta.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1])); CL_CHECK(k_last_delta.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1])); CL_CHECK(k_last_delta.setArg(3, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_last_delta, cl::NullRange, global_embed, local_1d));
-            cl::Kernel k_hidden_delta = clcontext.kernels.at("hiddenDeltaKernel"); for (int l = num_weight_matrices_mlp - 1; l >= 1; --l) { CL_CHECK(k_hidden_delta.setArg(0, device_ptrs_cl.d_ver_deltas[l])); CL_CHECK(k_hidden_delta.setArg(1, device_ptrs_cl.d_ver_weights[l])); CL_CHECK(k_hidden_delta.setArg(2, device_ptrs_cl.d_ver_activations[l])); CL_CHECK(k_hidden_delta.setArg(3, device_ptrs_cl.d_ver_deltas[l-1])); CL_CHECK(k_hidden_delta.setArg(4, embedding_dim)); CL_CHECK(k_hidden_delta.setArg(5, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_hidden_delta, cl::NullRange, global_embed, local_1d)); }
-            cl::Kernel k_update_weights_mlp = clcontext.kernels.at("updateWeightsKernel"); for (int l = 0; l < num_weight_matrices_mlp; ++l) { CL_CHECK(k_update_weights_mlp.setArg(0, device_ptrs_cl.d_ver_deltas[l])); CL_CHECK(k_update_weights_mlp.setArg(1, device_ptrs_cl.d_ver_activations[l])); CL_CHECK(k_update_weights_mlp.setArg(2, device_ptrs_cl.d_ver_weights[l])); CL_CHECK(k_update_weights_mlp.setArg(3, device_ptrs_cl.d_ver_gweights[l])); CL_CHECK(k_update_weights_mlp.setArg(4, learning_rate)); CL_CHECK(k_update_weights_mlp.setArg(5, embedding_dim)); CL_CHECK(k_update_weights_mlp.setArg(6, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_update_weights_mlp, cl::NullRange, global_embed_2d, local_2d)); }
+            cl::Kernel k_hidden_delta = clcontext.kernels.at("hiddenDeltaKernel"); 
+            for (int l = num_weight_matrices_mlp - 1; l >= 1; --l) { 
+                CL_CHECK(k_hidden_delta.setArg(0, device_ptrs_cl.d_ver_deltas[l])); 
+                CL_CHECK(k_hidden_delta.setArg(1, device_ptrs_cl.d_ver_weights[l])); 
+                CL_CHECK(k_hidden_delta.setArg(2, device_ptrs_cl.d_ver_activations[l])); 
+                CL_CHECK(k_hidden_delta.setArg(3, device_ptrs_cl.d_ver_deltas[l-1])); 
+                CL_CHECK(k_hidden_delta.setArg(4, embedding_dim)); 
+                CL_CHECK(k_hidden_delta.setArg(5, embedding_dim)); 
+                CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_hidden_delta, cl::NullRange, global_embed, local_1d)); 
+            }
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); // Changed to ElasticNet
+            for (int l = 0; l < num_weight_matrices_mlp; ++l) {
+                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs_cl.d_ver_deltas[l])); // deltas
+                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs_cl.d_ver_activations[l])); // prev_activations
+                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs_cl.d_ver_weights[l])); // weights
+                CL_CHECK(k_update_weights_v.setArg(3, device_ptrs_cl.d_ver_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_v.setArg(4, learning_rate)); // learning_rate
+                CL_CHECK(k_update_weights_v.setArg(5, lambda_l1)); // lambda_l1
+                CL_CHECK(k_update_weights_v.setArg(6, lambda_l2)); // lambda_l2
+                CL_CHECK(k_update_weights_v.setArg(7, embedding_dim)); // current_layer_size
+                CL_CHECK(k_update_weights_v.setArg(8, embedding_dim)); // prev_layer_size
+                CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d));
+            }
             cl::Kernel k_grad_mlp_input = clcontext.kernels.at("kernelComputeGradMLPInput"); CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs_cl.d_ver_deltas[0])); CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs_cl.d_ver_weights[0])); CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs_cl.d_grad_dv)); CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim)); CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
 
             if (token_count > 0) {
@@ -861,7 +882,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             // --- Data Transfer Device -> Host (Asynchronous) ---
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
                 CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_ver_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.weights[l].mapped_data));
-                CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_ver_gweights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.gweights[l].mapped_data));
             }
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_EV, CL_FALSE, 0, ev_total_bytes, head_obj.EV.mapped_data));
             CL_CHECK(current_stream_cl.enqueueReadBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data));
@@ -893,8 +913,8 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
         agg_d_grad_MQ_buf = cl::Buffer();
         agg_d_grad_MK_correction_buf = cl::Buffer();
         agg_d_ver_activations_storage_buf = cl::Buffer();
+        agg_d_ver_gweights_storage_buf = cl::Buffer(); // Added
         agg_d_ver_weights_storage_buf = cl::Buffer();
-        agg_d_ver_gweights_storage_buf = cl::Buffer();
         agg_d_ver_deltas_storage_buf = cl::Buffer();
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
