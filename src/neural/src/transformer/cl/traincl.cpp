@@ -701,45 +701,72 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 if (current_prompt_count_in_block == 0 && effective_context_size > 0) current_prompt_count_in_block = CONTEXT_WIN;
                 clForward(current_block_idx, effective_context_size, current_prompt_count_in_block);
                 std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl;
-
+                
+                long long int host_indexForToken = -1;
                 h_otok_buffer = this->otok;
                 if (h_otok_buffer.size() != static_cast<size_t>(d)) {
                     throw std::runtime_error("clTrain(prompt-response): this->otok from clForward has incorrect size. Expected " + std::to_string(d) + ", got " + std::to_string(this->otok.size()));
+                }
+                // use kernelComputePrediction for output prediction
+                {
+                    cl::Buffer d_otok_buffer, d_result_index_buffer;
+                    try {
+                        size_t otok_bytes = h_otok_buffer.size() * sizeof(float);
+                        d_otok_buffer = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, h_otok_buffer.data(), &cl_err); CL_CHECK(cl_err);
+                        d_result_index_buffer = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int), nullptr, &cl_err); CL_CHECK(cl_err);
+
+                        cl::Kernel kernel = this->clcontext.kernels.at("kernelComputePrediction");
+
+                        CL_CHECK(kernel.setArg(0, d_otok_buffer));
+                        CL_CHECK(kernel.setArg(1, d_embeddings));
+                        CL_CHECK(kernel.setArg(2, d_result_index_buffer));
+                        CL_CHECK(kernel.setArg(3, static_cast<cl_int>(this->d)));
+                        CL_CHECK(kernel.setArg(4, static_cast<cl_int>(this->vocabsize)));
+
+                        cl::NDRange global(1);
+                        cl::NDRange local(1);
+                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local));
+
+                        int result_idx = -1;
+                        CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &result_idx));
+                        host_indexForToken = result_idx;
+                        this->indexForToken = result_idx; // Also update the class member
+                    } 
+                    catch (const std::exception& e) {
+                        std::cerr << "Error during kernelComputePrediction in clTrain: " << e.what() << std::endl;
+                        throw;
+                    }
                 }
 
                 // calculate error
                 current_error = crossEntropy(h_otok_buffer, expected_vec);
 
-                // CUDA-style convergence check and printing
-                if (this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size()) && tokens[this->indexForToken] == expected_str) {
-                    std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
+                // Unified logging and convergence check
+                std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<long long int>(tokens.size()))
+                                                  ? tokens[host_indexForToken]
+                                                  : "INVALID_INDEX";
+                
+                std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, response[i]) << std::endl;
+
+                if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
                     if (offset_bytes + outputBytes > tokenEmbedBytes) {
                         throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                     }
                     CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected_vec.data())); // Write expected_vec (target EH)
-                    if(tokens[this->indexForToken] == "@#0"){
+                    if(predicted_token_str == "@#0"){
+                        std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
                         std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
-                        break;
                     }
-                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                    else 
+                        std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
                     break;
                 }
-                // If not converged by string match, and it's the last iteration of the current epochs
-                else if (j == this->epochs - 1) { // CUDA-style epoch adjustment check
-                    std::cout << "Computed token is -> " << ((this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size())) ? tokens[this->indexForToken] : "INVALID_INDEX") << " <- with error " << current_error << std::endl;
-                    // Check if string matched (already handled above), if not, increase epochs.
-                    // This condition implies string did not match.
-                    // The CUDA code increases epochs if the string doesn't match on the last attempt.
-                    // Here, if it didn't match above, and it's the last epoch, we increase.
-                    if (!(this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size()) && tokens[this->indexForToken] == expected_str)) {
+                else if (j == this->epochs - 1) {
+                    if (predicted_token_str != expected_str) {
                         std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
                         this->epochs += 10;
                     }
-                }
-                // If not converged by string match, and not the last iteration
-                else {
-                    std::cout << "Computed token is -> " << ((this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size())) ? tokens[this->indexForToken] : "INVALID_INDEX") << " <- with error " << current_error << std::endl;
                 }
 
                 // --- Backward Pass ---

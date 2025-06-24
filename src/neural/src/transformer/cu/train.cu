@@ -424,7 +424,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
             cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, host_indexForToken, d);
             std::vector<float> h_otok_buffer(d);
             CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost));    // Copy result back for error check
-            current_error = MSE(h_otok_buffer, response[i]);        // Compare against target response[i]
+            current_error = crossEntropy(h_otok_buffer, response[i]);        // Compare against target response[i]
             // if(host_indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && tokens[host_indexForToken] == rString[i])
             if(tokens[this->indexForToken] == rString[i]) {
                 std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;

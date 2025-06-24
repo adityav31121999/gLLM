@@ -21,7 +21,7 @@
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
  */
-void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning) {
+void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size
     if (expectedH.size() != EMBEDDING) {
         throw std::runtime_error("cuBackward1stBlock(vector<float>): ExpectedH vector size mismatch. Expected "
@@ -38,7 +38,7 @@ void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
             // Call the partial backward function for the current column j
             if(j == this->y-1) {
                 // for last column
-                clpartialbackward1stBlock(expectedH, in, layers, j, learning);
+                clpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j >= 0 && j < this->y-1) {
                 // for columns inbetween
@@ -46,7 +46,7 @@ void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
                 for(int i = 0; i < this->x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
-                clpartialbackward1stBlock(exp2h, in, layers, j, learning);
+                clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             /*else if(j == 0){
                 // for first column
@@ -72,7 +72,7 @@ void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
  */
-void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning) {
+void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size - should have one vector per column
     if (expectedH.size() != static_cast<size_t>(this->y)) {
         throw std::runtime_error("cuBackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
@@ -92,7 +92,7 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
             // Call the partial backward function for the current column j
             if(j == this->y-1) {
                 // for last column
-                clpartialbackward1stBlock(expectedH, in, layers, j, learning);
+                clpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j >= 0 && j < this->y-1) {
                 // for columns inbetween
@@ -100,7 +100,7 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
                 for(int i = 0; i < this->x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
-                clpartialbackward1stBlock(exp2h, in, layers, j, learning);
+                clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             /*else if(j == 0){
                 std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
@@ -126,7 +126,7 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
  */
-void block::clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning) {
+void block::clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input dimensions
     if (expectedV.size() != static_cast<size_t>(this->x)) {
         throw std::runtime_error("cuBackward1stBlock(V): ExpectedV outer dimension (rows) mismatch. Expected "
@@ -173,7 +173,7 @@ void block::clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<f
             }
 
             // Call the partial backward function for the current column j
-            clpartialbackward1stBlock(expectedV_col_j, in, layers, j, learning);
+            clpartialbackward1stBlock(expectedV_col_j, in, layers, j, learning, lambda_l1, lambda_l2);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(V) for column ["
@@ -190,7 +190,7 @@ void block::clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<f
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
  */
-void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning) {
+void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size
     if (expectedH.size() != EMBEDDING) {
         throw std::runtime_error("cuBackward1stBlock(vector<float>): ExpectedH vector size mismatch. Expected "
@@ -207,7 +207,7 @@ void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int&
             // Call the partial backward function for the current column j
             if(j == this->y-1) {
                 // for last column
-                clpartialbackward(expectedH, in, layers, j, learning);
+                clpartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j >= 0 && j < this->y-1) {
                 // for columns inbetween
@@ -215,7 +215,7 @@ void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int&
                 for(int i = 0; i < this->x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
-                clpartialbackward(exp2h, in, layers, j, learning);
+                clpartialbackward(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             /*else if(j == 0){
                 // for first column
@@ -241,7 +241,7 @@ void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int&
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
  */
-void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning) {
+void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size - should have one vector per column
     if (expectedH.size() != static_cast<size_t>(this->y)) {
         throw std::runtime_error("cuBackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
@@ -261,7 +261,7 @@ void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int&
             // Call the partial backward function for the current column j
             if(j == this->y-1) {
                 // for last column
-                clpartialbackward(expectedH, in, layers, j, learning);
+                clpartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j >= 0 && j < this->y-1) {
                 // for columns inbetween
@@ -269,7 +269,7 @@ void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int&
                 for(int i = 0; i < this->x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
-                clpartialbackward(exp2h, in, layers, j, learning);
+                clpartialbackward(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             /*else if(j == 0){
                 std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
@@ -295,7 +295,7 @@ void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int&
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
  */
-void block::clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount, float& learning) {
+void block::clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input dimensions
     if (expectedV.size() != static_cast<size_t>(this->x)) {
         throw std::runtime_error("cuBackward(V): ExpectedV outer dimension (rows) mismatch. Expected "
@@ -340,7 +340,7 @@ void block::clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>
             }
 
             // Call the partial backward function for the current column j
-            clpartialbackward(expectedV_col_j, in, layers, j, blockCount, learning);
+            clpartialbackward(expectedV_col_j, in, layers, j, blockCount, learning, lambda_l1, lambda_l2);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cl1ParallelBackward(V) for column ["

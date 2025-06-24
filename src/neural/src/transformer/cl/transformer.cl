@@ -4,7 +4,7 @@
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
 // #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 // #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // This is the correct pragma for double support. Disabled as it's not used and can cause build issues.
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
 
 // Forward declarations to prevent implicit declaration warnings/errors
 inline float compute_dot_product(__global const float* vec1, __global const float* vec2, int dim);

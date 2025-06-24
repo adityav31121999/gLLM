@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 // activations and its derivative functions
 #include "include/basic.hpp"
@@ -634,3 +635,5 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, b
         }
     }
 }
+
+#endif

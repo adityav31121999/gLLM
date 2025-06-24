@@ -4,7 +4,7 @@
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp32 : enable // For double support, might help with float atomics on some platforms
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
 // #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
 // --- Static helper cl_compute_dot_product_vec is NO LONGER NEEDED by these kernels ---
@@ -381,7 +381,7 @@ __kernel void kernelComputeGradientsEH(__global const float* eh, __global const 
 
         // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
         // This is numerically stable.
-        float grad = label - pred;
+        float grad = pred - label;
         grad_eh[idx] = grad;
     }
 }
@@ -395,7 +395,7 @@ __kernel void kernelComputeGradientsEH_EV(__global const float* eh, __global con
         float label = expected_h[idx];
         // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
         // This is numerically stable and avoids the division by (pred * (1-pred)), which explodes when pred is near 0 or 1.
-        float grad = label - pred;
+        float grad = pred - label; // Declaration was missing
         grad_eh[idx] = grad;
         grad_ev_scaled[idx] = grad * 0.1f;
     }
@@ -417,6 +417,10 @@ __kernel void kernelComputeGradientsEV_V(__global const float* ev, __global cons
 
             // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
             // This is numerically stable.
+            // Clamp pred to avoid division by zero or near-zero values in the denominator
+            pred = fmin(fmax(pred, 1e-7f), 1.0f - 1e-7f);
+            // Binary Cross Entropy gradient w.r.t. sigmoid output
+            float grad = (pred - label) / (pred * (1.0f - pred));
             grad_ev_full[idx] = grad;
             sum_grad_embed += grad;
         }
@@ -592,7 +596,7 @@ __kernel void kernelUpdateWeights_EH_EV(__global float* mh_a, __global float* mv
             int embed_idx = idx % embedding_dim;
             ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
         }
-    } 
+    }
 }
 
 __kernel void kernelComputeGradDv_V(__global const float* d_ver_gweights0, __global float* grad_dv, int embedding_dim)

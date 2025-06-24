@@ -1,9 +1,8 @@
+#ifdef USE_CPU
 
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include "include/transformer.hpp"
-
-#ifdef USE_CPU
 
 /**
  * @brief forward propagation for transformers

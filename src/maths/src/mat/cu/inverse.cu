@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -371,3 +372,5 @@ mat host_inverse_gauss_jordan(const mat& input_mat) {
 
     return result_mat;
 }
+
+#endif

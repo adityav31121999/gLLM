@@ -49,7 +49,7 @@ struct HeadDeviceSubBuffersV {
  * @param layers number of mlp activations layers
  * @param k column number
  */
-void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, float& learning)
+void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, float& learning, float& lambda_l1, float& lambda_l2)
 {
         cl_int cl_err; // For OpenCL error codes
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -74,8 +74,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
-    const float lambda_l1 = 0.001f;     // L1 regularization parameter
-    const float lambda_l2 = 0.001f;     // L2 regularization parameter
 
     // MLP structure parameters
     const int num_total_layers_mlp = layers;
@@ -120,6 +118,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     cl::Buffer agg_d_ver_activations_storage_buf;
     cl::Buffer agg_d_ver_weights_storage_buf;
     cl::Buffer agg_d_ver_deltas_storage_buf;
+    cl::Buffer agg_d_ver_gweights_storage_buf;
 
     // OpenCL Command Queues (one per head, like CUDA streams)
     std::vector<cl::CommandQueue> streams_cl(num_heads_to_process);
@@ -335,8 +334,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 CL_CHECK(hiddenDeltaKernel_cl.setArg(5, embedding_dim));
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(hiddenDeltaKernel_cl, cl::NullRange, global_embed, local_1d));
             }
-            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsL2");
-            k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); // Changed to ElasticNet
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet");
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
                 CL_CHECK(k_update_weights_v.setArg(0, device_ptrs_cl.d_ver_deltas[l])); // deltas
                 CL_CHECK(k_update_weights_v.setArg(1, device_ptrs_cl.d_ver_activations[l])); // prev_activations
@@ -534,7 +532,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
  * @param k column number
  * @param blocknumber current block position (1-based index)
  */
-void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k_col_idx, int& blocknumber_param, float& learning)
+void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k_col_idx, int& blocknumber_param, float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err; // For OpenCL error codes
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -559,8 +557,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
-    const float lambda_l1 = 0.001f; // L1 regularization parameter
-    const float lambda_l2 = 0.001f; // L2 regularization parameter
 
     // MLP structure parameters
     const int num_total_layers_mlp = layers;
@@ -602,6 +598,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     cl::Buffer agg_d_ver_activations_storage_buf;
     cl::Buffer agg_d_ver_weights_storage_buf;
     cl::Buffer agg_d_ver_deltas_storage_buf;
+    cl::Buffer agg_d_ver_gweights_storage_buf;
 
     std::vector<cl::CommandQueue> streams_cl(num_heads_to_process);
     std::vector<HeadDeviceSubBuffersV> head_gpu_data_cl(num_heads_to_process);
@@ -725,9 +722,17 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_expected_v, CL_FALSE, 0, ev_total_bytes, flat_expectedV_head.data()));
             // ... (all other H->D transfers, same as clpartialbackward1stBlock)
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_EV, CL_FALSE, 0, ev_total_bytes, head_obj.EV.mapped_data));
-            if (token_count > 0) { CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_KdotQ, CL_FALSE, 0, active_head_bytes, head_obj.KdotQ.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_K, CL_FALSE, 0, active_k_q_bytes, head_obj.K.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_Q, CL_FALSE, 0, active_k_q_bytes, head_obj.Q.mapped_data));}
-            CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MQ_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MQ.mapped_data)); CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
-            if (head_obj.ver.activations.size()!=static_cast<size_t>(num_neuron_layers_mlp) || head_obj.ver.weights.size()!=static_cast<size_t>(num_weight_matrices_mlp)) { throw std::runtime_error("MLP host ver vector size mismatch for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "]"); }
+            if (token_count > 0) { 
+                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_KdotQ, CL_FALSE, 0, active_head_bytes, head_obj.KdotQ.mapped_data)); 
+                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_K, CL_FALSE, 0, active_k_q_bytes, head_obj.K.mapped_data)); 
+                CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_Q, CL_FALSE, 0, active_k_q_bytes, head_obj.Q.mapped_data));
+            }
+            CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data)); 
+            CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MQ_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MQ.mapped_data));
+             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
+            if (head_obj.ver.activations.size()!=static_cast<size_t>(num_neuron_layers_mlp) || head_obj.ver.weights.size()!=static_cast<size_t>(num_weight_matrices_mlp)) { 
+                throw std::runtime_error("MLP host ver vector size mismatch for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "]"); 
+            }
             for (int l=0; l<num_neuron_layers_mlp; ++l) { 
                 if(head_obj.ver.activations[l].empty()) { 
                     throw std::runtime_error("MLP ver.activations empty for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "], layer " + std::to_string(l)); 

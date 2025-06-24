@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -1482,3 +1483,5 @@ __global__ void kernelUpdateEVBroadcasted(float* d_EV, const float* d_grad_EV_sc
         d_EV[idx] -= learning_rate * d_grad_EV_scaled[embed_idx];
     }
 }
+
+#endif

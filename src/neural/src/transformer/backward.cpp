@@ -1,10 +1,9 @@
+#ifdef USE_CPU
 
 // backward propagation for transformer
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include "include/transformer.hpp"
-
-#ifdef USE_CPU
 
 /**
  * @brief backward propagation for last to first block

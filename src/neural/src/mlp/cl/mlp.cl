@@ -4,7 +4,7 @@
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp32 : enable // For double support, might help with float atomics on some platforms
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
 
 __kernel void l1PenaltyKernel(__global const float* weights,
                               __global float* result, // Output buffer for partial sums (size = num_groups)
@@ -80,8 +80,10 @@ __kernel void l2PenaltyKernel(__global const float* weights,
 }
 
 
-__kernel void kernelOutputDelta(__global const float* output, __global const float* expected, __global float* delta, const int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+__kernel void kernelOutputDelta(__global const float* output, __global const float* expected, 
+                    __global float* delta, const int size) 
+{
+    int idx = get_global_id(0);
     if (idx < size) {
         // This kernel calculates the initial delta for a layer with Sigmoid activation and Binary Cross-Entropy (BCE) loss.
         // The gradient of the loss with respect to the pre-activation inputs (logits) is simply (activation - expected).
@@ -292,8 +294,8 @@ __kernel void kernelUpdateWeightsAndGradients(__global const float* deltas, __gl
  */
 __kernel void kernelUpdateWeightsL1(__global float* weights, __global const float* deltas,
                                     __global const float* prev_activations, const float learning_rate,
-                                    const float lambda, const int current_layer_size,
-                                    const int prev_layer_size)
+                                    const float lambda, __global float* gweights, // This parameter was likely missing
+                                    const int current_layer_size, const int prev_layer_size)
 {
     int i = get_global_id(0); // neuron index in previous layer ('col')
     int j = get_global_id(1); // neuron index in current layer ('row')
@@ -305,51 +307,60 @@ __kernel void kernelUpdateWeightsL1(__global float* weights, __global const floa
         float error_gradient = deltas[j] * prev_activations[i];
         float current_weight = weights[weight_idx];
 
-        // For pure L1, lambda_l2 is 0.0f
+        // For pure L1 regularization
         float lambda_l1 = lambda;
-        float lambda_l2 = 0.0f;
-
-        // Gradient of the L2 regularization term (will be 0 for pure L1)
-        float l2_gradient = lambda_l2 * current_weight;
 
         // Subgradient of the L1 regularization term
         float sign;
         if (current_weight < 0.0f) {
             sign = -1.0f;
-        } else if (current_weight > 0.0f) {
+        } 
+        else if (current_weight > 0.0f) {
             sign = 1.0f;
-        } else {
+        } 
+        else {
             sign = 0.0f; // Subgradient is 0 when weight is 0
         }
         float l1_gradient = sign * lambda_l1;
 
         // Total gradient
-        float total_gradient = error_gradient + l2_gradient + l1_gradient;
+        float total_gradient = error_gradient + l1_gradient;
 
-        if (gweights != NULL) { // Check if gweights buffer is provided
+        // Optionally store the computed gradient if the buffer is provided
+        if (gweights != NULL) {
             gweights[weight_idx] = total_gradient;
         }
+        // Apply the weight update
         weights[weight_idx] -= learning_rate * total_gradient;
     }
 }
 
 
-
 __kernel void kernelUpdateWeightsL2(__global float* weights, __global const float* deltas,
                                     __global const float* prev_activations, const float learning_rate,
-                                    const float lambda, const int current_layer_size,
-                                    const int prev_layer_size)
+                                    const float lambda, __global float* gweights,
+                                    const int current_layer_size, const int prev_layer_size)
 {
     // Use 2D indexing
     int col = get_global_id(0); // Index for previous layer neuron 'j'
     int row = get_global_id(1); // Index for current layer neuron 'i'
 
     if (row < current_layer_size && col < prev_layer_size) {
-        int weight_idx = row * prev_layer_size + col; // row-major index for W_ij
-        float gradient = deltas[row] * prev_activations[col];
+        int weight_idx = row * prev_layer_size + col;
 
-        // L2 regularization update (weight decay)
-        weights[weight_idx] -= learning_rate * (gradient + lambda * weights[weight_idx]);
+        // Gradient of the error term
+        float error_gradient = deltas[row] * prev_activations[col];
+
+        // Gradient of the L2 regularization term (weight decay)
+        float l2_gradient = lambda * weights[weight_idx];
+
+        // Total gradient
+        float total_gradient = error_gradient + l2_gradient;
+
+        if (gweights != NULL) {
+            gweights[weight_idx] = total_gradient;
+        }
+        weights[weight_idx] -= learning_rate * total_gradient;
         // Alternative form (often used): weights[weight_idx] *= (1.0f - learning_rate * lambda); weights[weight_idx] -= learning_rate * gradient;
         // The form used here matches the CUDA kernel.
     }
@@ -445,7 +456,7 @@ __kernel void kernelRpropUpdate(__global float* weights,
                                 const float delta_min,
                                 const int size)
 {
-    int idx = get_global_id(0);
+    int idx = get_global_id(0); // Was using CUDA-style indexing (blockIdx.x * blockDim.x + threadIdx.x)
 
     if (idx < size) {
         float grad = gradients[idx];
@@ -520,44 +531,7 @@ __kernel void kernelUpdateElasticNet(__global const float* deltas, __global cons
         // Total gradient
         float total_gradient = error_gradient + l2_gradient + l1_gradient;
         
-        gweights[weight_idx] = total_gradient;
-        weights[weight_idx] -= learning_rate * total_gradient;
-    }
-}
-
-
-__kernel void kernelUpdateWeightsL1L2elasticNet(__global float* weights, __global const float* deltas,
-                                    __global const float* prev_activations, __global float* gweights,
-                                    const float learning_rate, const float lambda,
-                                    const int current_layer_size, const int prev_layer_size)
-{
-    int i = get_global_id(0); // neuron index in previous layer ('col')
-    int j = get_global_id(1); // neuron index in current layer ('row')
-    
-    if (i < prev_layer_size && j < current_layer_size) {
-        int weight_idx = j * prev_layer_size + i;
-        
-        float error_gradient = deltas[j] * prev_activations[i];
-        float current_weight = weights[weight_idx];
-
-        // Split lambda for L1 and L2 components of Elastic Net (50/50 split)
-        float lambda_l1 = 0.5f * lambda;
-        float lambda_l2 = 0.5f * lambda;
-
-        float l2_gradient = lambda_l2 * current_weight;
-        float sign;
-        if (current_weight < 0.0f) {
-            sign = -1.0f;
-        } else if (current_weight > 0.0f) {
-            sign = 1.0f;
-        } else {
-            sign = 0.0f; // Subgradient is 0 when weight is 0
-        }
-        float l1_gradient = sign * lambda_l1;
-        
-        float total_gradient = error_gradient + l2_gradient + l1_gradient;
-        
-        if (gweights != nullptr) {
+        if (gweights != NULL) { // Use NULL instead of nullptr and ensure check exists
             gweights[weight_idx] = total_gradient;
         }
         weights[weight_idx] -= learning_rate * total_gradient;

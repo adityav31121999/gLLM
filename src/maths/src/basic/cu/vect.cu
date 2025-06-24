@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 // vector operations in cuda programs
 #include "include/basic.hpp"
@@ -81,3 +82,5 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
         C[idx] = A[idx] + B[idx];
     }
 }
+
+#endif

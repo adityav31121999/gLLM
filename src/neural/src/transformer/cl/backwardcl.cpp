@@ -33,24 +33,24 @@ void transformer::clBackward(std::vector<float>& expectedH) {
         // If m=1, this is also the first block.
         if (start_block_index == 0) { // Only one block (m=1)
             t[0].tokenCount = this->currentTokenCount;
-            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning);
+            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
         } 
         else {
             t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning);
+            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- Intermediate Blocks (m-2 down to 1) ---
         for (int i = start_block_index - 1; i >= 1; --i) {
             t[i].tokenCount = CONTEXT_WIN;
             // Block 'i' receives EV from block 'i+1'.
-            t[i].clbackward(t[i + 1].EV, i, this->d, this->l, learning);
+            t[i].clbackward(t[i + 1].EV, i, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- First Block (0) ---
         if (start_block_index > 0) {
             t[0].tokenCount = CONTEXT_WIN;
-            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning);
+            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
     }
     catch (const std::exception& e) {
@@ -78,11 +78,11 @@ void transformer::clBackward(std::vector<float>& expectedH, int& k) {
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
             t[0].tokenCount = this->currentTokenCount;
-            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning);
+            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
         else {
             t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning);
+            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- Intermediate Blocks (k-2 down to 1) ---
@@ -90,13 +90,13 @@ void transformer::clBackward(std::vector<float>& expectedH, int& k) {
         for (int i = start_block_index - 1; i >= 1; --i) {
             t[i].tokenCount = CONTEXT_WIN;
             // Block 'i' receives EV from block 'i+1'.
-            t[i].clbackward(t[i + 1].EV, i,  this->d, this->l, learning);
+            t[i].clbackward(t[i + 1].EV, i,  this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- First Block (0) ---
         if (start_block_index > 0) {
             t[0].tokenCount = CONTEXT_WIN;
-            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning);
+            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
     } 
     catch (const std::exception& e) {
@@ -129,11 +129,11 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH) {
         // If m=1, this is also the first block.
         if (start_block_index == 0) { // Only one block (m=1)
             t[0].tokenCount = this->currentTokenCount;
-            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning);
+            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
         else {
             t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning);
+            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- Intermediate Blocks (m-2 down to 1) ---
@@ -141,7 +141,7 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH) {
         for (int i = start_block_index - 1; i >= 1; --i) {
             t[i].tokenCount = CONTEXT_WIN;
             // Block 'i' receives EV from block 'i+1'.
-            t[i].clbackward(t[i + 1].EV, i, this->d, this->l, learning);
+            t[i].clbackward(t[i + 1].EV, i, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- First Block (0) ---
@@ -149,7 +149,7 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH) {
         // Receives EV from block 1. Uses the special '1stBlock' function.
         if (start_block_index > 0) {
             t[0].tokenCount = CONTEXT_WIN;
-            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning);
+            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
     } catch (const std::exception& e) {
         throw std::runtime_error("Exception during transformer::clBackward(vector<vector<float>>): " + std::string(e.what()));
@@ -182,11 +182,11 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
             t[0].tokenCount = this->currentTokenCount;
-            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning);
+            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
         } 
         else {
             t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning);
+            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- Intermediate Blocks (k-2 down to 1) ---
@@ -194,7 +194,7 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
         for (int i = start_block_index - 1; i >= 1; --i) {
             t[i].tokenCount = CONTEXT_WIN;
             // Block 'i' receives EV from block 'i+1'.
-            t[i].clbackward(t[i + 1].EV, i, this->d, this->l, learning);
+            t[i].clbackward(t[i + 1].EV, i, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
 
         // --- First Block (0) ---
@@ -202,7 +202,7 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
         // Receives EV from block 1. Uses the special '1stBlock' function.
         if (start_block_index > 0) {
             t[0].tokenCount = CONTEXT_WIN;
-            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning);
+            t[0].clbackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
         }
     } catch (const std::exception& e) {
          throw std::runtime_error("Exception during transformer::clBackward(vector<vector<float>>, k=" + std::to_string(k) + "): " + std::string(e.what()));

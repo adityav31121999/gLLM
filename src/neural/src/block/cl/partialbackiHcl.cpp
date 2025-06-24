@@ -43,7 +43,7 @@ struct HeadDeviceSubBuffersH {
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning)
+void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -71,8 +71,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
-    const float lambda_l1 = 0.001f; // L1 regularization parameter
-    const float lambda_l2 = 0.001f; // L2 regularization parameter
 
     const int num_total_layers_mlp = layers_mlp;
     const int num_neuron_layers_mlp = num_total_layers_mlp;
@@ -521,7 +519,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning)
+void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
     const int num_heads_to_process = x;
@@ -762,15 +760,17 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_h, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
             }
             
-            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateWeightsL2"); 
+            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateElasticNet"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
-                CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_weights[l]));
-                CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_deltas[l+1]));
-                CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_activations[l]));
-                CL_CHECK(k_update_weights_h.setArg(3, learning_rate));
-                CL_CHECK(k_update_weights_h.setArg(4, lambda_l2));
-                CL_CHECK(k_update_weights_h.setArg(5, embedding_dim));
-                CL_CHECK(k_update_weights_h.setArg(6, embedding_dim));
+                CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_deltas[l+1])); // deltas
+                CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_activations[l])); // prev_activations
+                CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_weights[l])); // weights
+                CL_CHECK(k_update_weights_h.setArg(3, device_ptrs.d_hor_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_h.setArg(4, learning_rate));
+                CL_CHECK(k_update_weights_h.setArg(5, lambda_l1));
+                CL_CHECK(k_update_weights_h.setArg(6, lambda_l2));
+                CL_CHECK(k_update_weights_h.setArg(7, embedding_dim));
+                CL_CHECK(k_update_weights_h.setArg(8, embedding_dim));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_h, cl::NullRange, global_embed_2d, local_2d)); CL_CHECK(cl_err);
             }
             
@@ -792,15 +792,17 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_v, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
             }
             
-            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsL2"); 
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
-                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs.d_ver_weights[l]));
-                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs.d_ver_deltas[l+1]));
-                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs.d_ver_activations[l]));
-                CL_CHECK(k_update_weights_v.setArg(3, learning_rate));
-                CL_CHECK(k_update_weights_v.setArg(4, lambda_l2));
-                CL_CHECK(k_update_weights_v.setArg(5, embedding_dim));
-                CL_CHECK(k_update_weights_v.setArg(6, embedding_dim));
+                CL_CHECK(k_update_weights_v.setArg(0, device_ptrs.d_ver_deltas[l+1])); // deltas
+                CL_CHECK(k_update_weights_v.setArg(1, device_ptrs.d_ver_activations[l])); // prev_activations
+                CL_CHECK(k_update_weights_v.setArg(2, device_ptrs.d_ver_weights[l])); // weights
+                CL_CHECK(k_update_weights_v.setArg(3, device_ptrs.d_ver_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_v.setArg(4, learning_rate));
+                CL_CHECK(k_update_weights_v.setArg(5, lambda_l1));
+                CL_CHECK(k_update_weights_v.setArg(6, lambda_l2));
+                CL_CHECK(k_update_weights_v.setArg(7, embedding_dim));
+                CL_CHECK(k_update_weights_v.setArg(8, embedding_dim));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d)); CL_CHECK(cl_err);
             }
             

@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/transformer.hpp"
 #include <cuda.h>
@@ -49,3 +50,5 @@ __global__ void computeAllDotsKernel(const float* vector, const float* matrix, f
         results[idx] = dot_product;
     }
 }
+
+#endif

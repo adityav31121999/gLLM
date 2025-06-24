@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/mlp.hpp"
 #include <cuda_runtime.h>
@@ -533,3 +534,5 @@ __global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_
         delta_weights[idx] = delta;
     }
 }
+
+#endif

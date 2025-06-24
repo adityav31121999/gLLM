@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -316,3 +317,5 @@ float host_dot(
 
     return h_scalarOutput;
 }
+
+#endif

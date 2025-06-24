@@ -100,7 +100,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             std::cerr << "Warning: clForward called with y=0 columns. Cannot accumulate EH." << std::endl;
         }
 
-        // ====================================================================
+/*        // ====================================================================
         // Step 4: Compute Output Token Index using kernelComputePredictionIndex
         // ====================================================================
         // std::cout << "clForward: Computing output token index using kernelComputePredictionIndex..." << std::endl;
@@ -156,7 +156,6 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             std::cerr << "Standard Exception during prediction kernel execution: " << e.what() << std::endl;
             throw;
         }
-
         // ================= End of Step 4 =====================================
         // Optional: Update host-side tokenEmbed based on indexForToken if needed
         // ... (No change from previous version) ...
@@ -166,6 +165,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         else {
             std::cerr << "Warning: clForward resulted in invalid indexForToken: " << indexForToken << std::endl;
         }
+*/
     }
     catch (const std::exception& e) {
         std::cerr << "Standard Exception in transformer::clForward: " << e.what() << std::endl;
