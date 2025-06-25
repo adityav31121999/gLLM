@@ -1,4 +1,3 @@
-
 // transformer.hpp: header source for transformer class
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
@@ -47,7 +46,12 @@ public:
     int indexForToken;      // this is to set token index from embedding list
     int resCount;           // response count for every prompt
 
-    float error;            // error for transformer
+    float error;            // error for transformer (after complete trainin)
+    float cErr;             // current error for ongoing iteration of training
+    float pErr1;            // previous iteration's error
+    float pErr2;            // previous to previous iteration's error
+    float fErr;             // next iteration's predicted error
+
     long long int trainCount;       // total training count
     long long int vocabsize;        // size of vocabulary
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
@@ -154,6 +158,7 @@ public:
     void getmat(int blockCount, int i, int j, mat& q, std::string path2file, int& row, int& column);
     void getmlp(int blockCount, int i, int j, std::vector<mat>& weights, std::string path2file);
     void getEmbedding(std::string& word, std::vector<float>& embed);
+    void updateLearning(float& pErr, float& cErr);
     void makeCommon(std::string& path2folderOfAllBins);
     void clearValues();
 

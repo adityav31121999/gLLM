@@ -75,9 +75,10 @@ add_library(neural STATIC
 
 # transformer
     # C++
+    src/transformer/transformer.cpp
+    src/transformer/setVal.cpp
     src/transformer/compute.cpp
     src/transformer/tokens.cpp
-    src/transformer/transformer.cpp
     src/transformer/feedfor.cpp
     src/transformer/backward.cpp
     src/transformer/train.cpp

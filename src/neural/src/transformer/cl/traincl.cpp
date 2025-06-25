@@ -753,14 +753,15 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                     if (offset_bytes + outputBytes > tokenEmbedBytes) {
                         throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                     }
+                    std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
                     CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected_vec.data())); // Write expected_vec (target EH)
                     if(predicted_token_str == "@#0"){
-                        std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
                         std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                     }
-                    else 
+                    else {
                         std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
-                    break;
+                        break;
+                    }
                 }
                 else if (j == this->epochs - 1) {
                     if (predicted_token_str != expected_str) {

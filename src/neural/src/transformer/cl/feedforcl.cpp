@@ -57,7 +57,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         // Step 1: Compute KdotQ matrices
         // Step 2 & 3: Perform forward propagation for the relevant block using its OpenCL method
         if (blockCount == 1) {
-            std::cout << "-> clForward: Executing clForprop for Block 1..." << std::endl;
+            std::cout << "-> clForward: Executing clForprop for Block 1:- ";
             // t[0].deserialise(t[0].blockFilePath);
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);
@@ -70,7 +70,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
             if (static_cast<size_t>(blockCount - 1) >= t.size()) {
                 throw std::logic_error("clForward: Invalid blockCount logic: trying to access EV from non-existent previous block index " + std::to_string(blockCount - 1));
             }
-            std::cout << "-> clForward: Executing clForprop for Block " << blockCount << " using EV from Block " << blockCount - 1 << "..." << std::endl;
+            std::cout << "-> clForward: Executing clForprop for Block " << blockCount << " using EV from Block " << blockCount - 1 << ":- ";
             // t[blockCount-1].deserialise(t[blockCount-1].blockFilePath);
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);
