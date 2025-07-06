@@ -23,7 +23,7 @@
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(const std::string& baseDirectory, OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, 
+model::model(OpenCLContext& context, const std::string& baseDirectory, int m_param, int x_param, int y_param, int n_param, int d_param, 
     int matheight_param, int l_param, float learning_param, long long int vocab_param, bool isSelfAttention_param, bool toTrainModel_param) :
     baseDir(baseDirectory), clcontext(context), m(toTrainModel_param ? m_param : 1), 
     x(x_param), y(y_param), n(n_param), d(d_param), matheight(matheight_param), l(l_param), learning(learning_param),

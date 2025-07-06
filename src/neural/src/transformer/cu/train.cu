@@ -174,12 +174,21 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
     CUDA_CHECK(cudaMalloc(&d_embeddings, vocabsize * d * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(d_embeddings, embeddings.mapped_data, vocabsize * d * sizeof(float), cudaMemcpyHostToDevice)); // Should be embeddings.mapped_data
 
+    float* dQ; float* dK; float* mQ; float* mK; float* tok;
+    // int threadsPerBlock = 256;
+    CUDA_CHECK(cudaMalloc(&dQ, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
+    CUDA_CHECK(cudaMalloc(&dK, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
+    CUDA_CHECK(cudaMalloc(&mQ, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MQ is MATHEIGHTS x EMBEDDING
+    CUDA_CHECK(cudaMalloc(&mK, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MK is MATHEIGHTS x EMBEDDING
+    CUDA_CHECK(cudaMalloc(&tok, static_cast<size_t>(MATHEIGHTS) * sizeof(float))); // Output of matrix-vector product (MATHEIGHTS elements)
+
     // Initialize state for sentence training
     promptCount = 1; // The first token acts as the initial prompt
     blockCount = 1;
     currentTokenCount = 1;
 
-    // Train for each subsequent token in the sentence
+    // Train for each subsequent token in the sentence, starting from the second token
+    // first token is used to set kdotq
     for(int i = 1; i < sentence.size(); ++i) {
         // Copy the expected token embedding to device
         CUDA_CHECK(cudaMemcpy(d_expected_token, sentence[i].data(), d * sizeof(float), cudaMemcpyHostToDevice));
@@ -190,6 +199,26 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         // first block
         if(blockCount == 1 && (effective_context_size < CONTEXT_WIN)) 
         {
+            for(int i_pa = 0; i_pa < x; i_pa++) {
+                for(int j_head = 0; j_head < y; j_head++) {
+                    CUDA_CHECK(cudaMemcpy(mQ, t[0].b[i_pa][j_head].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    CUDA_CHECK(cudaMemcpy(mK, t[0].b[i_pa][j_head].MK.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    for(int k = 0; k < i; k++) {
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dQ, sentence[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        CUDA_CHECK(cudaMemcpy(dK, sentence[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[0].b[i_pa][j_head].Q.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                        // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[0].b[i_pa][j_head].K.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                }
+            }
+            
             cuParallelKdotQs(promptCount, effective_context_size, blockCount, d, isSelf, inTraining);
             cuForward(blockCount, effective_context_size, promptCount);
 
@@ -235,8 +264,30 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         // next blocks
         else if(blockCount > 1 && effective_context_size >= CONTEXT_WIN)
         {
-            cuParallelKdotQs(promptCount, effective_context_size, blockCount, d, isSelf, inTraining);
+            if(blockCount == 1 && (effective_context_size < CONTEXT_WIN)) 
+            for(int i_pa = 0; i_pa < x; i_pa++) {
+                for(int j_head = 0; j_head < y; j_head++) {
+                    CUDA_CHECK(cudaMemcpy(mQ, t[blockCount-1].b[i_pa][j_head].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    CUDA_CHECK(cudaMemcpy(mK, t[blockCount-1].b[i_pa][j_head].MK.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
+                    for(int k = 0; k < i; k++) {
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dK, sentence[(blockCount-1)*CONTEXT_WIN + k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[i_pa][j_head].K.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                    for(int k = 0; k < CONTEXT_WIN; k++) {
+                        // copy H -> D
+                        CUDA_CHECK(cudaMemcpy(dQ, t[blockCount-1].b[i_pa][j_head].EV(k).data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
+                        compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS); // tok is output, mQ matrix, dQ input
+                        // copy D -> H
+                        CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[i_pa][j_head].Q.mapped_data + k*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
+                    }
+                }
+            }
 
+            cuParallelKdotQs(promptCount, effective_context_size, blockCount, d, isSelf, inTraining);
             cuForward(blockCount, effective_context_size, promptCount);
 
             int j = 0;

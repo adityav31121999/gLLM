@@ -46,23 +46,23 @@ public:
     mat(const std::vector<std::vector<float>>& b);
     mat(mat&& b) noexcept;
     mat(const mat &b);
+
     void assign_shared_segment(MappedFile* shared_map_handle, float* shared_map_base_ptr,
                 size_t segment_byte_offset_in_shared_map,int new_row, int new_col, const std::string& path_to_shared_file);
-    
-    // TODO: Update assignment operators (copy-and-swap or careful resource management)
+    void row2Square(bool dia = 1);
+    void col2Square(bool dia = 1);
+
     mat& operator=(const mat& other); // Needs deep copy logic
     mat& operator=(mat&& other) noexcept; // Needs move logic
     std::vector<float> operator=(int i);    // return ith row
     mat& operator=(const std::vector<std::vector<float>>& b); // Needs file creation/mapping/copy
+
     float& operator()(int i, int j);
     const float& operator()(int i, int j) const;
     std::vector<float> operator()(int i) const;
     void addRow(const std::vector<float>&, int i);   // add row in ith location of matrix
     std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col);
 
-    // std::vector<float> operator()(const int row) const;
-    // float operator()(const int row, const int col) const;
-    // TODO: Update arithmetic operators to work with mapped_data
     mat operator+(const mat& other) const;
     mat operator-(const mat& other) const;
     mat operator*(float scalar) const;
@@ -72,7 +72,6 @@ public:
     mat operator+(const std::vector<std::vector<float>>& b) const; // Add vector
     mat operator-(const std::vector<std::vector<float>>& b) const; // Subtract vector
 
-    // TODO: Update compound assignment operators
     mat& operator+=(const mat& other);
     mat& operator-=(const mat& other);
     mat& operator*=(float scalar);
@@ -82,14 +81,13 @@ public:
     mat& operator+=(const std::vector<std::vector<float>>& other); // Add-assign vector
     mat& operator-=(const std::vector<std::vector<float>>& other); // Subtract-assign vector
 
-    // TODO: Update algorithms to work with mapped_data
     mat gaussjordan() const;
     void mult_A_Bt(const mat& a, const mat& b);
     mat mult(const mat& a, const mat& b); // Static or friend? Needs update.
     float trace() const;
     void set(int i, int j, float val);  // set val to (i, j)th element
     bool ifsquare() const;              // check if matrix is square
-    // TODO: Update boolean checks for mapped_data
+
     bool ifsymmetric() const;
     bool ifidentity() const;
     bool ifdiagonal() const;

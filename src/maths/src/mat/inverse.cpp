@@ -1,11 +1,36 @@
 
 // ANYONE CAN USE IT
 #include <algorithm>
-#include <vector> // Needed for temporary row buffer during swap
+#include <vector>
 #include <iostream>
-#include <stdexcept> // For exceptions
-#include <cmath>     // For std::abs
-#include "include/mat.hpp" // Use relative path if appropriate
+#include <stdexcept>
+#include <cmath>
+#include "include/mat.hpp"
+
+// converts a row-major matrix to square matrix by adding extra columns, 
+// and providing values to diagonal or antidiagonal elements 1 and remaining
+// new elements 0.
+void mat::row2Square(bool dia) {
+    int newCol = row - col;
+    int start = col;
+    // resize matrix to make square
+    for(int i = start-1; i < newCol; i++) {
+        // set value to new diagonal elements
+    }
+}
+
+// converts a column-major matrix to square matrix by adding extra rows, 
+// and providing values to diagonal or antidiagonal elements 1 and remaining
+// new elements 0.
+void mat::col2Square(bool dia) {
+    if(dia == 0) {
+        // antidiagonal
+    }
+    else {
+        // diagonal
+    }
+}
+
 
 // Helper function to swap two rows in mapped memory
 void swap_rows_in_mapped_memory(mat& m, int r1, int r2) {

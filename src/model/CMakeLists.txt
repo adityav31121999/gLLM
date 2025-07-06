@@ -6,12 +6,13 @@ project(model C CXX)
 include_directories(include)
 
 add_library(model STATIC
+    src/tokens/token.cpp
+
     src/model.cpp
     src/create.cpp
     src/fetch.cpp
     src/set.cpp
     src/csvsup.cpp
-    src/token.cpp
     src/ser.cpp
 
     src/training/train.cpp

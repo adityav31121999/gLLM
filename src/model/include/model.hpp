@@ -3,11 +3,15 @@
 #ifndef MODEL_HPP
 #define MODEL_HPP 1
 
+#include "tokeniser.hpp"
 #include <string>
 #include <vector>
 #include <maths.hpp>
 #include <neural.hpp>
 #include <chrono>
+
+#define MECH "SHADY-ATTENTION"      // attention mechanism
+#define ARCH "DIVIDED-CONTEXT"      // model architecture
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -41,9 +45,10 @@ typedef struct modelDataInfo {
     bool attentionType;     // if self attention or cross attention
 } modelDataInfo;
 
+
 // for training session data
 struct TrainingSessionData {
-    std::string lastTrainingFileName;
+    std::string lastTrainingFileName;               // Name of the last training file
     int linesProcessedInLastFile = 0;               // Lines processed in the lastTrainingFileName
     int totalLines = 0;                             // total lines available in last training file
     long long cumulativeTotalLinesTrained = 0;      // Total lines trained across all files/sessions
@@ -53,7 +58,7 @@ struct TrainingSessionData {
     long long cumulativeTotalTrainCount = 0;        // Total train count (T.trainCount)
     long long vocabSizeSnapshot = 0;                // Snapshot of T.vocabsize
     float cumulativeError = 0;                      // total error throughout training
-    std::string lastSaveTimestamp;
+    std::string lastSaveTimestamp;                  // Timestamp of last progress saved
 
     bool load(const std::string& filepath) {
         std::ifstream ifs(filepath);
@@ -115,9 +120,6 @@ struct TrainingSessionData {
  * 3. Caches: QK.bin, KH.bin, QV.bin
  */
 
-#define MECH "SHADY-ATTENTION"      // attention mechanism
-#define ARCH "DIVIDED-CONTEXT"      // model architecture
-
 /**
  * @brief Model Class for storing transformers. Uses transformer class to store all the parametes
  * trained and to be trained. This helps in keeping all values together and accessing the values 
@@ -136,11 +138,14 @@ public:
     float learning;         // learning rate for MLPs
     bool isSelf;            // if self attention or cross attention
     bool toTrain;           // if training of model, set to 1, or use of model, set to 0
-    transformer T;          // model with 1 transformer
+
+// files to hold data
     modelDataInfo info;     // model info
-    TrainingSessionData trainInfo;  // training session data
     FILE *metadata = nullptr;       // .txt file for model metadata
+    TrainingSessionData trainInfo;  // training session data
     FILE *chat = nullptr;           // .txt file to save chat
+
+// paths
     std::string baseDir;            // Base directory for model files (e.g., D:/train)
     std::string currentChatLogPath; // Stores the path of the currently open chat log file
 
@@ -151,6 +156,7 @@ public:
     std::vector<std::string> toutput;       // predicted token output
     std::vector<std::string> chatToken;     // Input + Expected/Output + Terminator
 
+// offsets
     long long int matOffset;                // matrix offset
     long long int mlpOffset;                // mlp offset
     long long int cacheOffset;              // cache offset
@@ -160,10 +166,13 @@ public:
     long long int totalTokens;              // total tokens used for training, testing and validation
     long long int vocabsize;                // total vocabulary size
 
+    TOKENISER TOK;          // tokeniser
+    transformer T;          // transformer
+
     // default constructor
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
-    model(const std::string& baseDirectory, OpenCLContext& context, int m, int x, int y, int n, int d, int matheight, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
+    model(OpenCLContext& context, const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #elif USE_CUDA || USE_CPU
     model() = default;
     model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
