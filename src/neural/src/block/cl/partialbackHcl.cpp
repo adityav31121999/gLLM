@@ -2,7 +2,6 @@
 #if defined(_WIN64)
     #include <CL/cl.hpp>
 #elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 220
     #include <CL/opencl.hpp>
 #endif
 #include <iostream>
@@ -42,7 +41,8 @@ struct HeadDeviceSubBuffersH {
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2)
+void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx,
+    float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -516,7 +516,8 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
  * @param layno column number
  * @param blocknumber_param (unused for H-backprop, but kept for signature consistency if needed later)
  */
-void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2)
+void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+    float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
     const int num_heads_to_process = x;

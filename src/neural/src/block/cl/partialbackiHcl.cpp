@@ -2,7 +2,6 @@
 #if defined(_WIN64)
     #include <CL/cl.hpp>
 #elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 220
     #include <CL/opencl.hpp>
 #endif
 #include <iostream>
@@ -39,11 +38,12 @@ struct HeadDeviceSubBuffersH {
 /**
  * @brief backward propagation for last column of first block (backprop starts from this)
  * @param expectedH expected token embedding for each head of the column
- * @param in embedding dimension and input-output vector dimension of mlp
+ * @param in_dim embedding dimension and input-output vector dimension of mlp
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2)
+void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+    float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -63,6 +63,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
         }
     }
     if (EMBEDDING != in_dim) {
+        std::cout << "Embedding: " << EMBEDDING << ", in_dim: " << in_dim << std::endl;
         throw std::runtime_error("Embedding dimension mismatch: EMBEDDING vs in_dim");
     }
 
@@ -519,7 +520,8 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2)
+void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+    float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
     const int num_heads_to_process = x;

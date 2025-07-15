@@ -8,8 +8,8 @@
 #include <iostream>
 #include <fstream>
 #include <map>
-
 #include <maths.hpp>
+#include "attention.hpp"
 #include "block.hpp"
 
 /**
@@ -19,7 +19,6 @@
  */
 class transformer {
 public:
-// these are constant values, once constructor is called, they cannot be changed
     bool isSelf;            // if self attention or cross attention
     bool inTraining;        // = 1 for training, = 0 for in use
     int m;                  // number of blocks
@@ -30,33 +29,29 @@ public:
     int h;                  // height of MQ, MK and columns of MV, MH
     int l;                  // layers of mlp
     int epochs;             // number of epochs for MLPs and Blocks
-    float learning;         // learning rate for MLPs
-    float lambda_L1;        // lambda for L1 penalty
-    float lambda_L2;        // lambda for L2 penalty
-
-    long long int cacheOffset;      // for extracting caches
-    long int matOffset;             // for extracting matrices
-    long int mlpOffset;             // for extracting MLPs
-
-// these are variables that change during training
     int blockCount;         // which block is working
     int epochCount;         // epoch counter
     int promptCount;        // number of tokens in the prompt
     int currentTokenCount;  // current count of tokens in full context
     int indexForToken;      // this is to set token index from embedding list
     int resCount;           // response count for every prompt
-
+    float learning;         // learning rate for MLPs
+    double totalLearning;   // total learning for all updates (adaptive learning)
+    float lambda_L1;        // lambda for L1 penalty
+    float lambda_L2;        // lambda for L2 penalty
     float error;            // error for transformer (after complete trainin)
     float cErr;             // current error for ongoing iteration of training
     float pErr1;            // previous iteration's error
     float pErr2;            // previous to previous iteration's error
     float fErr;             // next iteration's predicted error
-
+    bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
+    long long int params;           // parameters in transformer
     long long int trainCount;       // total training count
     long long int vocabsize;        // size of vocabulary
-    bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
+    long long int cacheOffset;      // for extracting caches
+    long long int matOffset;        // for extracting matrices
+    long long int mlpOffset;        // for extracting MLPs
 
-// containers
     std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
     std::vector<std::string> mTokens;   // prompts and response tokens
@@ -67,20 +62,19 @@ public:
     // when model is in inference, hold EV of ith block here
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse; // Keeping as vector due to complexity
     mat tokForBlock;                    // token embeddings for local context for inference (Mapped, n x d)
-    long long int params;               // parameters in transformer
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
-    // Constructor with default learning rate
-    transformer(OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, long long int vocab_param, bool attentionType_param, bool& inTraining_param, const std::string& modelDir_param);
     // Constructor with explicit learning rate
-    transformer(OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, long long int vocab_param, float learning_rate_param, bool attentionType_param, bool& inTraining_param, const std::string& modelDir_param);
+    transformer(OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
+        long long int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
+        bool& inTraining_param, const std::string& modelDir_param);
 #elif USE_CUDA || USE_CPU
     transformer() = default;
-    // Constructor with default learning rate
-    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, long long int vocab_param, bool attentionType_param, bool& inTraining_param, const std::string& blockBinPath);
     // Constructor with explicit learning rate
-    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, long long int vocab_param, float learning_rate_param, bool attentionType_param, bool& inTraining_param, const std::string& blockBinPath);
+    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, long long int vocab_param, 
+        float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
+        const std::string& blockBinPath);
 #endif
 
 #ifdef USE_CUDA
@@ -99,9 +93,6 @@ public:
     void cuTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
              std::vector<std::vector<std::string>>& rString);
-    void cuValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-    void cuValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                std::vector<std::vector<std::string>>& rString);
     void cuRun();
 
 #elif USE_OPENCL
@@ -120,9 +111,6 @@ public:
     void clTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
              std::vector<std::vector<std::string>>& rString);
-    void clValidate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-    void clValidate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                std::vector<std::vector<std::string>>& rString);
     void clRun();
 
 #else
@@ -142,13 +130,11 @@ public:
     void test(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void test(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
-    void validate(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
-    void validate(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
-                std::vector<std::vector<std::string>>& rString);
     void run();
 
 #endif
 
+    float adaptiveLearningOptimiser(float prev_Error, float current_Error, float learning, int epochCount);
     void setDims(int m, int x, int y, int n, int d, int h, int l);      // set dimension of transformer
     void setLearning(float learning);           // set learning rate for MLPs
     void setEpochs(int epochs);                 // set epochs for MLPs
@@ -168,6 +154,7 @@ public:
 std::string toLower(const std::string& str);
 
 // compute functions for dot, KdotQ and other values
+
 void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index);
 void computeOutput(const std::vector<float>& output, mat& embeddings, long long int& voc, int& index);
 void computeKorQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
@@ -187,14 +174,3 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 #endif
 
 #endif
-
-/*
-// i dont know why it is needed, ai suggested it
-// Singleton pattern implementation
-    static transformer& getInstance() {
-        if (instance == nullptr) {
-            instance = new transformer();
-        }
-        return *instance;
-    }
-*/

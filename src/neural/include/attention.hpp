@@ -26,7 +26,7 @@
 // macros for models
 #define TERMINATE "@#O"                     // end of conversation (And Its Over)
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head
-#define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt
+#define PROMPT_THRESHOLD CONTEXT_WIN/2      // token limit for prompt
 #define EMBEDDING 64                        // embedding dimension for each token
 #define SCALING std::sqrt(EMBEDDING)        // SCALING FACTOR for ATTENTION HEAD
 #define LAYERS_MLP 4                        // layers of mlp
@@ -36,7 +36,8 @@
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
 #define MATHEIGHTS CONTEXT_WIN*2            // weight matrix heights
 #define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS       // maximum tokens for full context
-
+#define LEARNING_MAX 0.1                    // maximum learning rate allowable
+#define LEARNING_MIN 0.00001                // minimum learning rate allowable
 
 /**
  * @brief ATTENTION CLASS for calculating attention head and Embeddings.

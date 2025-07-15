@@ -1,6 +1,6 @@
 
 # src/neural/CMakeLists.txt
-cmake_minimum_required(VERSION 3.25.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(neural C CXX)
 
 include_directories(include)
@@ -32,6 +32,7 @@ add_library(neural STATIC
     src/mlp/cl/backwardcl.cpp
     src/mlp/cl/backwithL1cl.cpp
     src/mlp/cl/backwithL2cl.cpp
+    src/mlp/cl/backwithElasticNetcl.cpp
     src/mlp/cl/rpropcl.cpp
     src/mlp/cl/traincl.cpp
 
@@ -83,7 +84,6 @@ add_library(neural STATIC
     src/transformer/backward.cpp
     src/transformer/train.cpp
     src/transformer/test.cpp
-    src/transformer/validate.cpp
     src/transformer/run.cpp
     src/transformer/getVal.cpp
     # CUDA
@@ -91,18 +91,18 @@ add_library(neural STATIC
     src/transformer/cu/cucompute.cu
     src/transformer/cu/feedfor.cu
     src/transformer/cu/backward.cu
-    src/transformer/cu/train.cu
+    src/transformer/cu/train1.cu
+    src/transformer/cu/train2.cu
     src/transformer/cu/test.cu
-    src/transformer/cu/validate.cu
     src/transformer/cu/run.cu
     # OpenCL
     src/transformer/cl/transformer.cl
     src/transformer/cl/clcompute.cpp
     src/transformer/cl/feedforcl.cpp
     src/transformer/cl/backwardcl.cpp
-    src/transformer/cl/traincl.cpp
+    src/transformer/cl/train1cl.cpp
+    src/transformer/cl/train2cl.cpp
     src/transformer/cl/testcl.cpp
-    src/transformer/cl/validatecl.cpp
     src/transformer/cl/runcl.cpp
 )
 

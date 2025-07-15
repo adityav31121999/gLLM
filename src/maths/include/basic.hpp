@@ -154,7 +154,7 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)
     #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
+    #define CL_HPP_TARGET_OPENCL_VERSION 200
     // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
@@ -372,17 +372,16 @@ public:
                 }
                 // Also print directly to cerr for immediate visibility
                 std::cerr << "OpenCL Program Build Failed. Build Log:" << std::endl;
-                std::cerr << "--------------------------------------------------------" << std::endl;
+                std::cerr << "-----------------------------------------------------------------------" << std::endl;
                 std::cerr << build_log_details << std::endl; // Print whatever was retrieved, even if getBuildInfo failed (might be empty)
-                std::cerr << "--------------------------------------------------------" << std::endl;
+                std::cerr << "-----------------------------------------------------------------------" << std::endl;
             }
             throw std::runtime_error(error_message);
         }
 
-
         // --- Create and store kernels (No changes needed) ---
         if (kernelNames.empty()) {
-                throw std::runtime_error("OpenCL Error: No kernel names provided.");
+            throw std::runtime_error("OpenCL Error: No kernel names provided.");
         }
 
         for (const std::string& kernelName : kernelNames) {
@@ -394,7 +393,9 @@ public:
             kernels[kernelName] = createKernel(kernelName); // Calls internal createKernel
             std::cout << "Created OpenCL kernel: " << kernelName << std::endl;
         }
+        std::cerr << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "Successfully created " << kernels.size() << " OpenCL kernels." << std::endl;
+        std::cerr << "-----------------------------------------------------------------------" << std::endl;
     }
 
     // Disable copy constructor and assignment operator (Good practice)

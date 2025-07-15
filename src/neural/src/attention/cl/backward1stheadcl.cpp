@@ -1,13 +1,4 @@
 #ifdef USE_OPENCL
-#if defined(_WIN64)
-    #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    // For Windows, use the older/common cl.hpp
-    #include <CL/cl.hpp>
-#elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    #include <CL/opencl.hpp>
-#endif
 #include "include/attention.hpp" // Includes mlp.hpp and maths.hpp indirectly or directly
 #include <vector>
 #include <string>
@@ -41,9 +32,7 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
     const size_t mh_mv_mq_mk_bytes = static_cast<size_t>(this->MH.row) * this->MH.col * sizeof(float);
     const size_t ev_bytes = static_cast<size_t>(this->EV.row) * this->EV.col * sizeof(float);
     const size_t embed_bytes = embedding_dim * sizeof(float);
-    const size_t mlp_weights_bytes = (this->hor.weights.empty()) ? 0 :
-                                   static_cast<size_t>(this->hor.weights[0].row) * this->hor.weights[0].col * sizeof(float);
-
+    const size_t mlp_weights_bytes = (this->hor.weights.empty()) ? 0 : static_cast<size_t>(this->hor.weights[0].row) * this->hor.weights[0].col * sizeof(float);
     bool first = (headnumber > 0) ? 1 : 0;
 
     // Validation
@@ -62,7 +51,6 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
         throw std::runtime_error("MLP hor.weights dimensions mismatch");
 
     cl_int cl_err;
-
     OpenCLContext& context_obj = this->clcontext;
     cl::Context context = context_obj.context;
     cl::CommandQueue queue = context_obj.queue;
@@ -137,7 +125,7 @@ void attention::clbackward1stHead(std::vector<float>& expected, int& in, int& la
     CL_CHECK(queue.enqueueWriteBuffer(d_MV_a, CL_TRUE, 0, mh_mv_mq_mk_bytes, this->MV.mapped_data));
     CL_CHECK(queue.enqueueWriteBuffer(d_MQ_a, CL_TRUE, 0, mh_mv_mq_mk_bytes, this->MQ.mapped_data));
     CL_CHECK(queue.enqueueWriteBuffer(d_MK_a, CL_TRUE, 0, mh_mv_mq_mk_bytes, this->MK.mapped_data));
-    
+
     // --- Data Transfer H->D (MLP Internals) ---
     for (int l = 0; l < layers; ++l) {
         CL_CHECK(queue.enqueueWriteBuffer(d_hor_activations[l], CL_TRUE, 0, embed_bytes, this->hor.activations[l].data()));

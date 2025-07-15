@@ -1,3 +1,5 @@
+#ifndef BLOCK_HPP
+#define BLOCK_HPP 1
 
 /**
  * @file CLass BLOCK for complete attention using 2d array of attention class. This
@@ -18,9 +20,6 @@
  *      |                   |                   |
  *      ---------Parallel-------.........--------
  */
-
-#ifndef BLOCK_HPP
-#define BLOCK_HPP 1
 
 #include <vector>
 #include <maths.hpp>
@@ -175,7 +174,7 @@ public:
     void partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, float& learning);
     void partialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning);
-    void partialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno);
+    void partialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& layers, int k, int blocknumber, float& learning);
     // parallel partialbackward(i)
     void backward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning);

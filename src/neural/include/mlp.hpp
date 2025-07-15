@@ -1,7 +1,7 @@
 #ifndef MLP_HPP
 #define MLP_HPP 1
 
-#include <maths.hpp> // This includes basic.hpp which defines OpenCLContext
+#include <maths.hpp>
 #include <string>
 #include <cmath>
 #include <vector>
@@ -17,11 +17,15 @@ public:
 // member variables
     bool status;                // 1 if completely trained, 0 otherwise
     unsigned int num_layers;    // Total number of layers (including input and output)
-    std::vector<unsigned int> layer_sizes; // Number of neurons in each layer
+    std::vector<unsigned int> layer_sizes;      // Number of neurons in each layer
     unsigned int epochs;        // Training epochs
     float learning_rate;        // Learning rate
     float lambda_l1;            // L1 regularization parameter
     float lambda_l2;            // L2 regularization parameter
+    float beta1;                // Adam hyperparameter (decay rate for first moment)
+    float beta2;                // Adam hyperparameter (decay rate for second moment)
+    float epsilon;              // Adam hyperparameter (small value to prevent division by zero)
+    unsigned int t;             // Time step for Adam (number of updates), initialized to 0
 
 // member containers
     std::vector<float> input;      // input vector
@@ -32,8 +36,6 @@ public:
     std::vector<std::vector<float>> activations;   // activations for each layer
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
-
-// member functions
 
     // Constructor(s) modified to accept OpenCLContext when needed
 #ifdef USE_OPENCL
@@ -50,7 +52,6 @@ public:
     mlp(const mlp& other);
     mlp& operator=(const mlp& other);
 
-
 #ifdef USE_CUDA
 
 // cuda implementation for mlp
@@ -59,12 +60,14 @@ public:
     void cuBackprop(int layers, int in, float learning);
     void cuBackwithL1(int layers, int in, float learning);
     void cuBackwithL2(int layers, int in, float learning);
+    void cuBackwithELasticNet(int layers, int in, float learning);
     void cuBackprop2in(int layers, int in, float learning);
     void cuRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void cuTrain(float& mse, int in, int layers, float learning);
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void cuValidate(int in, int layers);
     void cuTest(int in, int layers);
+    void cuAdamUpdate();
 
 #elif USE_OPENCL
 
@@ -74,12 +77,14 @@ public:
     void clBackprop(int layers, int in, float learning);
     void clBackwithL1(int layers, int in, float learning);
     void clBackwithL2(int layers, int in, float learning);
+    void clBackwithElasticNet(int layers, int in, float learning);
     void clBackprop2in(int layers, int in, float learning);
     void clRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void clTrain(float& mse, int in, int layers, float learning);
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void clValidate(int in, int layers);
     void clTest(int in, int layers);
+    void clAdamUpdate(); 
 
 #else
 
@@ -88,12 +93,14 @@ public:
     void backprop(int layers, int in, float learning);
     void backwithL1(int layers, int in, float learning);
     void backwithL2(int layers, int in, float learning);
+    void backwithElastic(int in, int layers, float learning);
     void backprop2in(int layers, int in, float learning);
     void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void train(float& mse, int in, int layers, float learning);
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void validate(int in, int layers);
     void test(int in, int layers);
+    void adamUpdate(); 
 
 #endif
     void initializeWeights();
@@ -185,6 +192,7 @@ float getL1Penalty(const std::vector<mat>& weights); // Updated signature
 float getL2Penalty(const std::vector<mat>& weights); // Updated signature
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
+float computeLossWithElasticNet(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float lambda_l1, float lambda_l2);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated signature
 

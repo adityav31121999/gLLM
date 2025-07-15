@@ -12,7 +12,8 @@
         "D:/gLLM/src/maths/src/mat/cl/operators.cl",
         "D:/gLLM/src/neural/src/mlp/cl/mlp.cl",
         "D:/gLLM/src/neural/src/attention/cl/attention.cl",
-        "D:/gLLM/src/neural/src/transformer/cl/transformer.cl"
+        "D:/gLLM/src/neural/src/transformer/cl/transformer.cl",
+        "D:/gLLM/src/model/src/tokens/token.cl"
     };
 
     // Kernel names - Must be unique across ALL source files loaded into the context
@@ -116,6 +117,10 @@
         "kernelKdotQBlock1Self_Inference",
         "kernelKdotQBlock1Cross_Inference",
         "kernelKdotQBlockNSelf_Inference",
-        "kernelKdotQBlockNCross_Inference"
+        "kernelKdotQBlockNCross_Inference",
+
+        // model
+        "generate_embeddings",
+        "batchedVectorInverseKernel"
     };
 #endif

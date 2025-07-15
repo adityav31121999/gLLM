@@ -1,16 +1,14 @@
-
 // model.cpp: implementation of Model class
 #include "include/model.hpp"
+#include <maths.hpp>
 #include <iostream>
 #include <stdexcept>
 #include <filesystem>
 #include <fstream>
 #include <locale> // for isspace
-
 #include <sys/stat.h> // For stat to check file existence (alternative to std::filesystem::exists)
 
 #ifdef USE_OPENCL
-
 
 /**
  * @brief Constructor for single transformer model with learning rate
@@ -24,11 +22,14 @@
  * @param learning learning rate for MLPs
  */
 model::model(OpenCLContext& context, const std::string& baseDirectory, int m_param, int x_param, int y_param, int n_param, int d_param, 
-    int matheight_param, int l_param, float learning_param, long long int vocab_param, bool isSelfAttention_param, bool toTrainModel_param) :
-    baseDir(baseDirectory), clcontext(context), m(toTrainModel_param ? m_param : 1), 
-    x(x_param), y(y_param), n(n_param), d(d_param), matheight(matheight_param), l(l_param), learning(learning_param),
-    isSelf(isSelfAttention_param), toTrain(toTrainModel_param), metadata(nullptr), chat(nullptr), currentChatLogPath(""), 
-    T(context, this->m, x_param, y_param, n_param, d_param, matheight_param, l_param, vocab_param, this->learning, this->isSelf, this->toTrain, baseDirectory) // Pass baseDirectory
+    int matheight_param, int l_param, float learning_param, float lambda_L1, float lambda_L2, long long int vocab_param, bool isSelfAttention_param, 
+    bool toTrainModel_param) :
+    baseDir(baseDirectory), clcontext(context), m(toTrainModel_param ? m_param : 1), x(x_param), y(y_param), n(n_param), 
+    d(d_param), matheight(matheight_param), l(l_param), learning(learning_param), lambda_L1(lambda_L1), lambda_L2(lambda_L2), 
+    total(m * n), isSelf(isSelfAttention_param), toTrain(toTrainModel_param), metadata(nullptr), chat(nullptr), currentChatLogPath(""), 
+    T(context, this->m, x_param, y_param, n_param, d_param, matheight_param, l_param, vocab_param, 
+        this->learning, this->lambda_L1, this->lambda_L2, this->isSelf, this->toTrain, baseDirectory), 
+    TOK(d_param, context)
 {
     total = this->m * this->n;
     info = {}; // Zero-initialize info struct
@@ -117,14 +118,14 @@ void printCudaDeviceName() {
  * @param learning learning rate for MLPs
  */
 model::model(const std::string& baseDirectory, int m_param, int x_param, int y_param, int n_param, int d_param, 
-    int matHeightParam, int l_param, float learning_param, long long int vocab_param, bool isSelfAttention_param, 
-    bool toTrainModel_param) :
-    baseDir(baseDirectory),
-    m(toTrainModel_param ? (m_param > 0 ? m_param : 1) : 1), // Ensure m is at least 1 if training
-    x(x_param), y(y_param), n(n_param), d(d_param), matheight(matHeightParam), l(l_param),
-    learning(learning_param), isSelf(isSelfAttention_param), toTrain(toTrainModel_param),
-    metadata(nullptr), chat(nullptr), currentChatLogPath(""), 
-    T(this->m, x_param, y_param, n_param, d_param, matHeightParam, l_param, vocab_param, this->learning, this->isSelf, this->toTrain, baseDirectory)
+    int matHeightParam, int l_param, float learning_param, float lambda_L1, float lambda_L2, long long int vocab_param, 
+    bool isSelfAttention_param, bool toTrainModel_param) :
+    baseDir(baseDirectory), m(toTrainModel_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), 
+    n(n_param), d(d_param), matheight(matHeightParam), l(l_param), learning(learning_param), lambda_L1(lambda_L1), lambda_L2(lambda_L2), 
+    total(m * n), isSelf(isSelfAttention_param), toTrain(toTrainModel_param), metadata(nullptr), chat(nullptr), currentChatLogPath(""), 
+    T(this->m, x_param, y_param, n_param, d_param, matHeightParam, l_param, this->learning, lambda_L1, lambda_L2, vocab_param, 
+        this->isSelf, this->toTrain, baseDirectory),
+    TOK(d_param)
 {
     total = this->m * this->n;
     info = {}; // Zero-initialize info struct

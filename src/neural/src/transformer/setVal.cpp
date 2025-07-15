@@ -80,3 +80,40 @@ void transformer::clearValues() {
     }
     std::cout << "<====Transformer values cleared====>" << std::endl;
 }
+
+
+/**
+ * @brief function for adaptive learning rate
+ * @param[in] prev_Error previous epochs error
+ * @param[in] current_Error current epochs error
+ * @param[in] learning current learning rate
+ * @param[in] epochCount current epoch of prediction
+ * @return new learning rate
+ */ 
+float transformer::adaptiveLearningOptimiser(float prev_Error, float current_Error, float learning, int epochCount)
+{
+    // adaptive learning with global macros
+    // #define LEARNING_MAX 0.1         // maximum learning rate allowable
+    // #define LEARNING_MIN 0.00001     // minimum learning rate allowable
+    // update learning rate starting from second epoch and specific conditions
+    float learningNew = 0.0f;
+    if(epochCount > 1) {
+        if(current_Error <= prev_Error) {
+            if(epochCount <= 6)   
+                learningNew = learning * 1.1;
+            else if (epochCount % 6 == 0)
+                learningNew = learning * (1.05 + (epochCount/6)*0.05);
+        }
+        else {
+            if(epochCount <= 6)   
+                learningNew = learning * 0.95;
+            else if (epochCount % 6 == 0)
+                learningNew = learning * (0.95 - (epochCount/6)*0.01);
+        }
+        if(learningNew > LEARNING_MAX)
+            learningNew = LEARNING_MAX;
+        if(learningNew < LEARNING_MIN)
+            learningNew = LEARNING_MIN;
+    }
+    return learningNew;
+}

@@ -1,4 +1,3 @@
-
 #include "include/transformer.hpp"
 #include "include/block.hpp"
 #include "include/attention.hpp"
@@ -87,7 +86,7 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
             // std::cout << "cuForward: Device EH accumulation for Block 1 finished." << std::endl;
         }
         else { // blockCount > 1
-            // --- Block N Forward Propagation ---
+            // --- Block ith Forward Propagation ---
             if (blockCount > 1) {
                 // std::cout << "-> clForward: Executing clForprop for Block " << blockCount << "..." << std::endl;
                 // Assumes t[blockCount].cuForprop updates internal states (like EH) 1..." << std::endl;
@@ -143,10 +142,10 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
 
             // Check token validity and print
             if (indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && indexForToken < vocabsize) {
-                // std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << " | Token is: " << tokens[indexForToken] << "" << std::endl;
+                std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << " | Token is: " << tokens[indexForToken] << "" << std::endl;
             } 
             else {
-                // std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << std::endl;
+                std::cout << "cuForward: cuComputeOutput finished. Predicted index: " << indexForToken << std::endl;
             }
             // Separate warning for vocabsize, similar to clForward
             if (indexForToken < 0 || indexForToken >= vocabsize) {
@@ -186,16 +185,11 @@ void transformer::cuForward(int& blockCount, int& currentTokenCount, int& prompt
 
 /**
  * @brief compute output as index for new token string
- * @param d_output A pointer to a device memory location holding the output vector, which represents the
- *      processed token embedding.
- * @param d_embeddings A pointer to a device memory location holding the embeddings matrix, where each 
- *      row represents a token's embedding vector.
- * @param voc_size The vocabulary size, which is the number of rows in the `d_embeddings` matrix and the 
- *      number of tokens in the vocabulary.
- * @param index A reference to an integer variable where the resulting index (the index of the most likely 
- *      next token) will be stored.
- * @param embedding_dim The dimension of the embedding vectors (the number of columns in the `d_embeddings`
- *      matrix).
+ * @param d_output A pointer to a device memory location holding the output vector, which represents the processed token embedding.
+ * @param d_embeddings A pointer to a device memory location holding the embeddings matrix, where each row represents a token's embedding vector.
+ * @param voc_size The vocabulary size, which is the number of rows in the `d_embeddings` matrix and the number of tokens in the vocabulary.
+ * @param index A reference to an integer variable where the resulting index (the index of the most likely next token) will be stored.
+ * @param embedding_dim The dimension of the embedding vectors (the number of columns in the `d_embeddings` matrix).
  */
 void cuComputeOutput(float* d_output, float* d_embeddings, int voc_size, int& index, int embedding_dim)
 {

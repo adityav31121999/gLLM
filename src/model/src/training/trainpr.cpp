@@ -13,7 +13,7 @@
  * @param txtFileLocation location of txt file (with each line as a sentence, 
  *          between two lines there is an empty line)
  */
-void model::trainBlock(const std::string& txtFileLocation) 
+void model::trainBlockPR(const std::string& txtFileLocation) 
 {
     // basic checks for file
     if (txtFileLocation.empty()) {
@@ -62,16 +62,16 @@ void model::trainBlock(const std::string& txtFileLocation)
                 std::cerr << "Warning: Could not open session data file " << currentChatLogPath 
                           << " for reading. Starting with fresh session values." << std::endl;
             }
-        } 
+        }
         else {
             std::cerr << "Warning: Session data path " << currentChatLogPath 
                        << " is not a regular file. Starting with fresh session values." << std::endl;
         }
-    } 
+    }
     else {
         if (currentChatLogPath.empty()) {
             std::cout << "Session data file path (currentChatLogPath) is not set. Starting with fresh session values." << std::endl;
-        } 
+        }
         else {
             std::cout << "Session data file " << currentChatLogPath << " not found. Starting with fresh session values." << std::endl;
         }
@@ -94,7 +94,7 @@ void model::trainBlock(const std::string& txtFileLocation)
     if (!file.is_open()) {
         throw std::runtime_error("Error opening training data file: " + txtFileLocation);
     }
-    int numberOfLines = countLineInTXT(txtFileLocation);
+    long long int numberOfLines = countLineInTXT(txtFileLocation);
     if (numberOfLines <= 0) {
         throw std::runtime_error("No training data found in the specified file!");
     }
@@ -121,13 +121,12 @@ void model::trainBlock(const std::string& txtFileLocation)
     long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     long long linesProcessedInThisRun = 0;
     bool sortIt = 0;    // off
-    for(int k = startLineForCurrentFile; k < numberOfLines; k++)
+    for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfFile.clear();
         oddSentence.clear();
         evenSentence.clear();
         T.currentTokenCount = 0;
-
         splitLine2SubSentences(linesOfFile[k], tokensOfFile);
 
         // Ensure tokensOfFile contains pairs of sub-sentences (prompt, response)
@@ -158,10 +157,10 @@ void model::trainBlock(const std::string& txtFileLocation)
         T.currentTokenCount = 0;
         // Loop based on the number of pairs identified
         for(int i = 0; i < num_pairs; i++) {
-            tokenize_with_numbers(tokensOfFile[2*i], oddSentence[i], sortIt);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
-            tokenize_with_numbers(tokensOfFile[2*i+1], evenSentence[i], sortIt); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
+            TOK.splitSentence(tokensOfFile[2*i], oddSentence[i]);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
+            TOK.splitSentence(tokensOfFile[2*i+1], evenSentence[i]); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
             evenSentence[i].resize(evenSentence[i].size() + 1);
-            evenSentence[i].back() = "@#0";
+            evenSentence[i].back() = "<@#0>";
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -240,7 +239,7 @@ void model::trainBlock(const std::string& txtFileLocation)
  * @brief train all blocks using training data from txt file
  * @param txtFile path 2 txt file for training 2 or more or all blocks
  */
-void model::trainModel(const std::string& txtFile) 
+void model::trainModelPR(const std::string& txtFile) 
 {
     // basic checks for file
     if (txtFile.empty()) {
@@ -295,8 +294,8 @@ void model::trainModel(const std::string& txtFile)
         int tok = 0;
         // get embeddings and response
         for(int i = 0; i < oddSentence.size(); i++) {
-            tokenize_with_numbers(tokensOfFile[2*i-1], oddSentence[i], sortIt);
-            tokenize_with_numbers(tokensOfFile[2*i], evenSentence[i], sortIt);
+            TOK.splitSentence(tokensOfFile[2*i-1], oddSentence[i]);
+            TOK.splitSentence(tokensOfFile[2*i], evenSentence[i]);
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt

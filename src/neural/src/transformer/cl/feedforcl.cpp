@@ -1,11 +1,5 @@
 
 #ifdef USE_OPENCL
-#if defined(_WIN64) 
-    #include <CL/cl.hpp>
-#elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    #include <CL/opencl.hpp>
-#endif
 #include "include/transformer.hpp"
 #include <vector>
 #include <numeric>
@@ -57,7 +51,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         // Step 1: Compute KdotQ matrices
         // Step 2 & 3: Perform forward propagation for the relevant block using its OpenCL method
         if (blockCount == 1) {
-            std::cout << "-> clForward: Executing clForprop for Block 1:- ";
+            std::cout << "-> clForward: Executing clForprop for Block 1\n";
             // t[0].deserialise(t[0].blockFilePath);
             for(int i = 0; i < x; ++i) {
                 clParallelKdotQs(promptCount, currentTokenCount, blockCount, i, isSelf, inTraining);

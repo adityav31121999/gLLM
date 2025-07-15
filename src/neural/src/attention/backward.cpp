@@ -11,7 +11,7 @@
  * @param layers Number of layers in the MLPs
  * @param headnumber 1-based index of position of head in local context
  */
-void attention::backward(std::vector<float>& expected, int& in, int& layers, int headnumber)
+void attention::backward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
 {
     // Ensure tokenCount is valid and matrices are mapped
     if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) {
@@ -196,7 +196,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
  * @param expectedV Vertical retention vector (target context)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber) 
+void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning) 
 {
     if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || 
         KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || 

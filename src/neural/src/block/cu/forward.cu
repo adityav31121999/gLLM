@@ -252,7 +252,7 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             CUDA_CHECK(cudaMemcpyAsync(d_EV_processed_data, head_cpu.EV.mapped_data, ev_processed_bytes_ph, cudaMemcpyHostToDevice, current_stream));
 
             const int threadsPerBlock = 256;
-            // Kernel: Perform score normalisation (and masking if needed)
+            // Kernel: Perform KdotQ score normalisation (and masking if needed)
             cuLOTA<<<( (n_tokens * n_tokens) + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_KdotQ, d_head_attention, CONTEXT_WIN, CONTEXT_WIN, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
             // Kernel: Compute row and column sums of the attention matrix
             computeHeadSumsMaskedKernel<<<(n_tokens + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
@@ -359,9 +359,11 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
 /**
  * @brief CUDA forward propagation on single ith column of a SUBSEQUENT block (blockCount > 0).
  * @param EVp vector of EV
- * @param in dimension of embeddings and mlp input
+ * @param in dimension of embeddings and mlp input/output
  * @param tokenCount number of tokens available in full context
+ * @param blockCount current block in full context
  * @param layers number of mlp weight matrices
+ * @param n local context for block
  */
 void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount,
     int i, int& layers, int& n)
@@ -391,10 +393,7 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
     const int count_tokens_this_block = std::max(0, end_idx_in_full_context - start_idx_in_full_context);
 
     if (count_tokens_this_block <= 0) {
-        // std::cerr << "Warning: cu1ParallelForprop (subsequent block) for head [" << layer_idx << "][" << i << "] with calculated count <= 0. Skipping." << std::endl;
-        // std::fill(head.EH.begin(), head.EH.end(), 0.0f); // Will be handled inside the loop
-        // EV might not need zeroing if count is 0, depends on overall logic.
-        // continue; // Loop structure will change
+        std::cerr << "Warning: cu1ParallelForprop (subsequent block) for head [" << layers << "][" << i << "] with calculated count <= 0. Skipping." << std::endl;
     }
 
     for(int layer_idx = 0; layer_idx < layers; ++layer_idx) 
@@ -445,12 +444,6 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
     // Note: The output EV for the current block (head_cpu.EV) will be updated based on EVp.
     // We'll use agg_d_EV_processed_data_from_prev_block to hold EVp on device, update it, then copy to head_cpu.EV.
     float *agg_d_ver_accumulated_ev = nullptr;
-    // ... (MLP aggregate buffers as in the first overload)
-    // float *agg_d_hor_inputs = nullptr, *agg_d_ver_inputs = nullptr;
-    // float *agg_d_hor_output = nullptr, *agg_d_ver_output = nullptr;
-    // float *agg_d_relu_hor_output = nullptr, *agg_d_relu_ver_output = nullptr;
-    // float *agg_d_mlp_bufferA_hor = nullptr, *agg_d_mlp_bufferB_hor = nullptr;
-    // float *agg_d_mlp_bufferA_ver = nullptr, *agg_d_mlp_bufferB_ver = nullptr;
     float *agg_d_mlp_pre_activation = nullptr;
 
     std::vector<cudaStream_t> streams(num_heads_in_col);
@@ -476,7 +469,6 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
         CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_in_col * embed_bytes_ph));
         CUDA_CHECK(cudaMalloc(&agg_d_EV_processed_data_from_prev_block, num_heads_in_col * ev_from_prev_block_bytes_ph));
         CUDA_CHECK(cudaMalloc(&agg_d_ver_accumulated_ev, num_heads_in_col * embed_bytes_ph));
-        // ... (Allocate ALL other aggregate buffers similarly to the first overload)
         CUDA_CHECK(cudaMalloc(&agg_d_mlp_pre_activation, num_heads_in_col * embed_bytes_ph));
 
         for (int layer_idx = 0; layer_idx < num_heads_in_col; ++layer_idx) 
@@ -493,10 +485,6 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
             if (count_tokens_this_block <= 0) {
                 std::fill(head_cpu.EH.begin(), head_cpu.EH.end(), 0.0f);
-                // For subsequent blocks, EV output might still need to be based on EVp even if count_tokens_this_block is 0,
-                // or it might be zeroed. Current logic implies skipping all processing.
-                // If EV output needs to be EVp passed through, that logic would go here.
-                // For now, matching the skip logic.
                 continue;
             }
             // Per-head validation (already done partially outside, can add more specifics if needed)
@@ -578,7 +566,7 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
             const int threadsPerBlock = 256;
             if (count_tokens_this_block > 0) {
-                // Kernel: Perform scaled dot-product attention
+                // Kernel: Perform KdotQ score normalisation (and masking if needed)
                 cuLOTA<<<( (count_tokens_this_block * count_tokens_this_block) + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_KdotQ, d_head_attention, count_tokens_this_block, count_tokens_this_block); CUDA_CHECK(cudaGetLastError());
                 // Kernel: Compute row and column sums of the attention matrix
                 computeHeadSumsMaskedKernel<<<(count_tokens_this_block + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, count_tokens_this_block, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
@@ -593,7 +581,6 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
             // Kernel: Add dh to EH for horizontal MLP input
             vectorAddKernel<<<(d_embedding + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_EH, d_dh, d_hor_inputs, d_embedding); CUDA_CHECK(cudaGetLastError());
-            // Accumulate EV from previous block (d_EV_processed_data_from_prev_block)
             // Kernel: Sum rows of EVp data (from previous block)
             accumulateEVRowsKernel<<<(d_embedding + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_EV_processed_data_from_prev_block, d_ver_accumulated_ev, num_ev_rows_to_process_for_evp, d_embedding); CUDA_CHECK(cudaGetLastError());
             // Kernel: Add dv to accumulated EVp for vertical MLP input
@@ -644,8 +631,6 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
             // Kernel: Final residual update for EH
             vectorAddKernel<<<(d_embedding + threadsPerBlock - 1)/threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_EH, d_relu_hor_output, d_EH, d_embedding); CUDA_CHECK(cudaGetLastError());
-            // Update d_EV_processed_data_from_prev_block with ReLU(ver_output)
-            // This effectively updates the EV that came from the previous block.
             // Kernel: Update EV rows (from EVp) with the vertical MLP output
             updateEVRowsKernel<<<(num_ev_rows_to_process_for_evp + threadsPerBlock - 1)/threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_EV_processed_data_from_prev_block, d_relu_ver_output, num_ev_rows_to_process_for_evp, d_embedding); CUDA_CHECK(cudaGetLastError());
             CUDA_CHECK(cudaStreamSynchronize(current_stream));

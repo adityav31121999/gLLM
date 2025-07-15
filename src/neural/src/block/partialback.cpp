@@ -11,10 +11,10 @@
  * @param layers layers of MLP
  * @param k column numebr
  */
-void block::partialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int k) {
+void block::partialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int k, float& learning) {
     for(int i = 0; i < x; i ++) {
         // for last column
-        b[i][k].backward1stHead(expectedH, in, layers, k);
+        b[i][k].backward1stHead(expectedH, in, layers, k, learning);
     }
 }
 
@@ -26,10 +26,10 @@ void block::partialbackward1stBlock(std::vector<float>& expectedH, int& in, int&
  * @param layers layers of MLP
  * @param k column number
  */
-void block::partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int k) {
+void block::partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int k, float& learning) {
     for(int i = 0; i < x; i ++) {
         // for ith column from last second to first column
-        b[i][k].backward1stHead(expectedH[i], in, layers, k);
+        b[i][k].backward1stHead(expectedH[i], in, layers, k, learning);
     }
 }
 
@@ -41,10 +41,10 @@ void block::partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, 
  * @param layers layers of MLP
  * @param k column number
  */
-void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k) {
+void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, float& learning) {
     for(int i = 0; i < x; i ++) {
         // for all columns of block
-        b[i][k].backward1stHead(expectedV[i], in, layers);
+        b[i][k].backward1stHead(expectedV[i], in, layers, learning);
     }
 }
 
@@ -56,10 +56,10 @@ void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>
  * @param layers layers of MLP
  * @param k column number (b[i][k])
  */
-void block::partialbackward(std::vector<float>& expectedH, int& in, int& layers, int k) {
+void block::partialbackward(std::vector<float>& expectedH, int& in, int& layers, int k, float& learning) {
     for(int i = 0; i < x; i ++) {
         // for last column of block
-        b[i][k].backward(expectedH, in, layers, k);
+        b[i][k].backward(expectedH, in, layers, k, learning);
     }
 }
 
@@ -71,10 +71,10 @@ void block::partialbackward(std::vector<float>& expectedH, int& in, int& layers,
  * @param layers layers of MLP
  * @param k column number (b[i][k])
  */
-void block::partialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int k) {
+void block::partialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int k, float& learning) {
     for(int i = 0; i < x; i ++) {
         // for last second to first column
-        b[i][k].backward(expectedH[i], in, layers, k);
+        b[i][k].backward(expectedH[i], in, layers, k, learning);
     }
 }
 
@@ -87,10 +87,10 @@ void block::partialbackward(std::vector<std::vector<float>>& expectedH, int& in,
  * @param k column number
  * @param i current block index 1-based
  */
-void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& layers, int k, int i) {
+void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& layers, int k, int i, float& learning) {
     for(int i = 0; i < x; i ++) {
         // for all columns of block
-        b[i][k].backward(expectedV[i], layers, i);
+        b[i][k].backward(expectedV[i], layers, i, learning);
     }
 }
 

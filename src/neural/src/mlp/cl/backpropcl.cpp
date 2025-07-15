@@ -1,15 +1,6 @@
 #ifdef USE_OPENCL
-#if defined(_WIN64)
-    #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    // For Windows, use the older/common cl.hpp
-    #include <CL/cl.hpp>
-#elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    #include <CL/opencl.hpp>
-#endif
-#include "include/mlp.hpp" // Includes basic.hpp where OpenCLContext is defined
-#include <maths.hpp>       // Includes basic utilities like flatten, unflatten
+#include "include/mlp.hpp"
+#include <maths.hpp>
 #include <vector>
 #include <stdexcept>
 #include <iostream>

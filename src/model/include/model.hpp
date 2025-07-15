@@ -1,9 +1,11 @@
-
 // model class for file
 #ifndef MODEL_HPP
 #define MODEL_HPP 1
 
-#include "tokeniser.hpp"
+#include "tokenise.hpp"
+#include <fstream>
+#include <string_view>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <maths.hpp>
@@ -106,6 +108,7 @@ struct TrainingSessionData {
     }
 };
 
+
 /**
  * Model parameters are stored in a single binary file pointed to by `modelPath`.
  * This file, managed by modelFILE, is used for training, contains:
@@ -119,6 +122,7 @@ struct TrainingSessionData {
  * 2. MLPs: hor.bin, ver.bin
  * 3. Caches: QK.bin, KH.bin, QV.bin
  */
+
 
 /**
  * @brief Model Class for storing transformers. Uses transformer class to store all the parametes
@@ -136,6 +140,8 @@ public:
     int l;                  // layers of mlp
     int total;              // total tokenLimit -> t*count m * n
     float learning;         // learning rate for MLPs
+    float lambda_L1;        // lambda for L1 penalty
+    float lambda_L2;        // lambda for L2 penalty
     bool isSelf;            // if self attention or cross attention
     bool toTrain;           // if training of model, set to 1, or use of model, set to 0
 
@@ -166,16 +172,18 @@ public:
     long long int totalTokens;              // total tokens used for training, testing and validation
     long long int vocabsize;                // total vocabulary size
 
-    TOKENISER TOK;          // tokeniser
+    tokeniser TOK;          // tokeniser
     transformer T;          // transformer
 
     // default constructor
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
-    model(OpenCLContext& context, const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
+    model(OpenCLContext& context, const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, 
+        int l, float learning, float lambda_L1, float lambda_L2, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #elif USE_CUDA || USE_CPU
     model() = default;
-    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, long long int vocab, bool isSelfAttention, bool toTrainModel);
+    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
+        float lambda_L1, float lambda_L2, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #endif
 
     void setLearning(float learning);
@@ -191,25 +199,27 @@ public:
     void setEmbeddingFromCSV(const std::string& path2file);
     void makeEmbedding(std::string& path2file);
 
-    void trainBlock(const std::string& trainingDataFolder);
-    void testBlock(const std::string& testDataFolder);
-    void validateBlock(const std::string& validationDataFolder);
+    // train first block promp-response and sentences
+    void trainBlockPR(const std::string& trainingDataFolder);
+    void trainBlockSentence(const std::string& trainingDataFolder);
+    void testBlockPR(const std::string& testDataFolder);
+    void testBlockSentence(const std::string& testDataFolder);
 
-    // train model
-    void trainModel(const std::string& trainingDataFolder);
-    void testModel(const std::string& testDataFolder);
-    void validateModel(const std::string& validationDataFolder);
+    // train model promp-response and sentences
+    void trainModelPR(const std::string& trainingDataFolder);
+    void trainModelSentence(const std::string& trainingDataFolder);
+    void testModelPR(const std::string& testDataFolder);
+    void testModelSentence(const std::string& testDataFolder);
 
     // get offsets for layout and components
     void calculateAndSetLayout();
     int getOffset(int blockCount, int paCount, int attentionCount, int matCount, int mlpCount);
 
-    // fetch components from different bins for inference
+    void serialise();               // serialise whole model
     void fetchmat(mat& a, int blockCount, int x, int y, const std::string& trainLocation);        // cache and mat
     void fetchmlp(mlp& network, int blockCount, int x, int y, const std::string& trainLocation);  // mlp
-    void serialise();           // serialise the model
-    void fetchForInference(const std::string& binDirectory);
-    void fetchForTraining(const std::string& binDirectory);
+    void fetchForInference(const std::string& binDirectory);    // fetch for inference (mlp and cache)
+    void fetchForTraining(const std::string& binDirectory);     // fetch for training (matrix and mlp)
 
     // chat with model
     void runModel(const std::string& binDirectory);     // run transformer for conversation
@@ -231,19 +241,20 @@ public:
     }
 };
 
-// tokens management and embedding
+// words and embeddings
+
+long long int countLinesInCSV(const std::string& filename);
+long long int countLineInTXT(const std::string& filename);
 
 static bool is_sub_sentence_delimiter(char c);
 static bool is_digit(char c);
+
 void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens, bool& sortIt);
 void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
 void textSplit(std::string& path2file, std::vector<std::string>& tokensOfFile, std::vector<std::vector<std::string>>& oddSentence, 
                 std::vector<std::vector<std::string>>& evenSentence);
 
 void create(std::string &locationOfALLbins);
-
-long long int countLinesInCSV(const std::string& filename);
-int countLineInTXT(const std::string& filename);
 void makeCSV(std::vector<std::string>& tokens, mat& tokenEmbed, const std::string& csvFilePath);
 
 #endif

@@ -2,7 +2,6 @@
 #if defined(_WIN64) 
     #include <CL/cl.hpp>
 #elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
     #include <CL/opencl.hpp>
 #endif
 #include <maths.hpp>
@@ -58,7 +57,7 @@ void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
             }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(H) for column ["
+            throw std::runtime_error("Exception in clbackward1stBlock(H) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -112,7 +111,7 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
             }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(H) for column ["
+            throw std::runtime_error("Exception in clbackward1stBlock(H) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -176,7 +175,7 @@ void block::clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<f
             clpartialbackward1stBlock(expectedV_col_j, in, layers, j, learning, lambda_l1, lambda_l2);
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cl1ParallelBackward1stBlock(V) for column ["
+            throw std::runtime_error("Exception in clbackward1stBlock(V) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -227,7 +226,7 @@ void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int&
             }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cl1ParallelBackward(H) for column [" // Corrected to cl1ParallelBackward
+            throw std::runtime_error("Exception in clbackward(H) for column [" // Corrected to cl1ParallelBackward
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -281,7 +280,7 @@ void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int&
             }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cl1ParallelBackward(H) for column [" // Corrected to cl1ParallelBackward
+            throw std::runtime_error("Exception in clbackward(H) for column [" // Corrected to cl1ParallelBackward
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -343,7 +342,7 @@ void block::clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>
             clpartialbackward(expectedV_col_j, in, layers, j, blockCount, learning, lambda_l1, lambda_l2);
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cl1ParallelBackward(V) for column ["
+            throw std::runtime_error("Exception in clbackward(V) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
 

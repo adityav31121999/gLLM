@@ -103,6 +103,43 @@ float computeLossWithL2(std::vector<float>& outputs, std::vector<float>& targets
     return static_cast<float>(total_loss); // Cast back at the end
 }
 
+/**
+ * @brief Computes the loss with Elastic Net regularization.
+ * The loss is the Mean Squared Error (MSE) plus the combined L1 and L2 regularization terms.
+ * Elastic Net Loss = MSE + lambda_l1 * L1_Penalty + lambda_l2 * L2_Penalty
+ * @param outputs The predicted output of the network.
+ * @param targets The target output of the network.
+ * @param network The network to compute the loss for.
+ * @param lambda_l1 The L1 regularization parameter.
+ * @param lambda_l2 The L2 regularization parameter.
+ * @return The loss with Elastic Net regularization.
+ */
+float computeLossWithElasticNet(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float lambda_l1, float lambda_l2) {
+    if (outputs.size() != targets.size()) {
+        throw std::invalid_argument("Output and target vector sizes must match for loss calculation.");
+    }
+
+    // 1. Calculate the base loss (Mean Squared Error)
+    double mse_loss = 0.0;
+    for (size_t i = 0; i < outputs.size(); ++i) {
+        double diff = static_cast<double>(outputs[i]) - static_cast<double>(targets[i]);
+        mse_loss += diff * diff;
+    }
+    mse_loss /= outputs.size(); // Divide by number of outputs to get the mean
+
+    // 2. Calculate L1 and L2 penalties
+    double l1_penalty = static_cast<double>(getL1Penalty(network.weights));
+    double l2_penalty = static_cast<double>(getL2Penalty(network.weights));
+
+    // 3. Combine base loss with weighted regularization terms
+    // Standard Elastic Net combines MSE with lambda_l1 * |W| + lambda_l2 * W^2
+    double total_loss = mse_loss +
+                        static_cast<double>(lambda_l1) * l1_penalty +
+                        static_cast<double>(lambda_l2) * l2_penalty;
+
+    return static_cast<float>(total_loss);
+}
+
 
 /**
  * @brief Computes the loss with dropout generalization. The loss is the sum of 

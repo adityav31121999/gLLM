@@ -404,6 +404,8 @@ __global__ void l2PenaltyKernel(float* weights, float* result, int size) {
     }
 }
 
+
+
 /**
  * @brief kernel to calculate absolute difference
  * @param[in] output original output vector from a process

@@ -10,13 +10,8 @@
 #include <neural.hpp>           // LLM related classes
 #include <mod.hpp>            // model related operations
 
-#ifdef USE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime.h>
-#elif USE_OPENCL
-    #define CL_HPP_ENABLE_EXCEPTIONS // Define before including cl.hpp
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    #include <CL/cl.hpp>
+#ifdef USE_OPENCL
+#include <CL/cl.hpp> // Required for OpenCL C++ bindings, e.g., cl::BuildError
     extern std::vector<std::string> kernelSourceFiles;
     extern std::vector<std::string> kernelNames;
 #endif

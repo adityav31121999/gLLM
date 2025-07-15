@@ -188,6 +188,36 @@ void mlp::backwithL2(int in, int layers, float learning) {
 
 
 /**
+ * @brief Compute backpropagation with Elastic Net regularization (combines L1 and L2).
+ *        Updates weights directly.
+ *        Should be used with standard SGD `train` method if regularization is desired without Adam.
+ */
+void mlp::backwithElastic(int in, int layers, float learning) {
+    backprop(in, layers, learning); // Calculate gradients
+
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        mat& current_weights = weights[l];
+        mat& current_gweights = gweights[l];
+        size_t rows = current_weights.row;
+        size_t cols = current_weights.col;
+
+        for (unsigned int i = 0; i < rows; ++i) {
+            for (unsigned int j = 0; j < cols; ++j) {
+                float w_val = current_weights(i, j);
+                float sign_w = (w_val > 0.0f) ? 1.0f : ((w_val < 0.0f) ? -1.0f : 0.0f);
+
+                // Combined gradient with regularization: grad_total = grad_from_backprop + lambda_l1 * sign(W) + lambda_l2 * W
+                float regularized_gradient = current_gweights(i, j) + (lambda_l1 * sign_w) + (lambda_l2 * current_weights(i, j));
+
+                // Update rule: W = W - learning_rate * grad_total
+                current_weights(i, j) -= learning * regularized_gradient;
+            }
+        }
+    }
+}
+
+
+/**
  * @brief Rprop algorithm for MLP
  * @param dataset Input dataset
  * @note This version only updates the weights and doesn't update the bias

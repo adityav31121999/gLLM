@@ -15,7 +15,7 @@
  * @param in Input size (embedding dimension)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber) 
+void attention::backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning) 
 {
     // Check dimensions before starting
     if (expected.size() != EMBEDDING || EH.size() != EMBEDDING) {
@@ -256,7 +256,7 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
  * @param in Input size (number of tokens)
  * @param layers Number of layers in the MLPs
  */
-void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers) 
+void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning) 
 {
     // Ensure tokenCount is valid
     if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || this->tokenCount > K.row || this->tokenCount > Q.row || this->tokenCount > KdotQ.row || this->tokenCount > KdotQ.col) {

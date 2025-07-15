@@ -1,12 +1,4 @@
-
 #ifdef USE_OPENCL
-
-#if defined(_WIN64)
-    #include <CL/cl.hpp>
-#elif defined(__linux__)
-    #include <CL/opencl.hpp>
-#endif
-
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <vector>

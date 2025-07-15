@@ -1,10 +1,4 @@
 #ifdef USE_OPENCL
-#if defined(_WIN64) 
-    #include <CL/cl.hpp>
-#elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 300
-    #include <CL/opencl.hpp>
-#endif
 #include "include/attention.hpp" // Includes mlp.hpp and maths.hpp indirectly or directly
 #include <maths.hpp>
 #include <vector>
