@@ -44,6 +44,7 @@
 
 ### src/model
 - *model.hpp*: Main Header for model class
+- *tokenise.hpp*: Header for tokenisation process
 
 ### bin
 - Output directory for compiled binaries: .lib (static) and .dll (dynamic)
@@ -156,6 +157,7 @@
 - `vocabsize`: Vocabulary size.
 - `calculateAndSetLayout()`: Method to determine memory layout for components.
 - Manages model lifecycle, training, inference, and serialization.
+- Tokeniser: BPE-based tokenisation
 
 **MODEL METADATA**:
 - Stored in a `modelDataInfo` struct, typically at the beginning of the main model binary file or a separate metadata file.
