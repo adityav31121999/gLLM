@@ -4,12 +4,7 @@
 #include <filesystem>
 
 /**
- * FOR TRAINING:
- * serialise all the mats and mlps and vectors in this way:
- * MQ, MK, MV, MH
- * hor, ver,
- * K, Q, KdotQ
- * EH, EV
+ * serialise the the matrix to a bin after offset number of float values
  */
 void mat::serialise(long long int offset, const std::string& locationofbinfile) {
     // Open the file for binary read and write, expecting it to exist and be pre-sized.
@@ -60,12 +55,57 @@ void mat::serialise(long long int offset, const std::string& locationofbinfile) 
 
 
 /**
- * FOR TRAINING:
- * serialise all the mats and mlps and vectors in this way:
- * MQ, MK, MV, MH
- * hor, ver,
- * K, Q, KdotQ
- * EH, EV
+ * serialise the the matrix to a bin by appending from last
+ */
+void mat::serialise(const std::string& locationofbinfile) {
+    // Open the file for binary write in append mode.
+    // If the file does not exist, it will be created.
+    // If it exists, new data will be appended to the end.
+    std::fstream outFile(locationofbinfile, std::ios::binary | std::ios::app);
+    if (!outFile.is_open()) {
+        throw std::runtime_error("Failed to open file for appending (check permissions or path): " + locationofbinfile);
+    }
+
+    // Serialize matrix data
+    size_t num_elements_in_mat_a = static_cast<size_t>(row) * static_cast<size_t>(col);
+
+    if (num_elements_in_mat_a == 0) {
+        // No data to write for a 0-element matrix.
+        outFile.close();
+        // Check for errors during close, especially if buffers needed flushing
+        if (!outFile) {
+            throw std::runtime_error("Error occurred while closing file (e.g., flush error) for empty matrix: " + locationofbinfile);
+        }
+        return;
+    }
+
+    // A non-zero size implies we need a valid data pointer.
+    const float* data_ptr = is_shared_segment ? data_segment_start : mapped_data;
+    if (data_ptr == nullptr) { // Should not happen for a valid non-empty matrix
+        outFile.close();
+        throw std::runtime_error("Matrix has non-zero size but data pointer is null. File: " + locationofbinfile);
+    }
+
+    size_t bytes_to_write = num_elements_in_mat_a * sizeof(float);
+
+    // In std::ios::app mode, the output pointer is automatically positioned at the end of the file
+    // before each write operation. Therefore, no explicit seekp is needed for appending.
+    outFile.write(reinterpret_cast<const char*>(data_ptr), static_cast<std::streamsize>(bytes_to_write));
+    
+    if (!outFile) { // Check for errors after writing data
+        outFile.close();
+        throw std::runtime_error("Error writing matrix data to file: " + locationofbinfile);
+    }
+
+    outFile.close();
+    if (!outFile) { // Check for errors that might occur during close (e.g., buffer flush failure)
+        throw std::runtime_error("Error occurred while closing file (e.g., flush error): " + locationofbinfile);
+    }
+}
+
+
+/**
+ * deserialise the the bin to a matrix from offset number of float values
  */
 void mat::deserialise(long long int offset, const std::string& locationofbinfile) {
     if (row == 0 || col == 0) {

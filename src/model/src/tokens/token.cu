@@ -1,39 +1,57 @@
 #ifdef USE_CUDA
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include <chrono>
 #include "include/tokenise.hpp"
 
 // Helper for CUDA Error Checking
-#define CHECK_CUDA(call) do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-        fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(err), __FILE__, __LINE__); \
-        exit(EXIT_FAILURE); \
-    } \
+#define CHECK_CUDA(call) do {   \
+    cudaError_t err = call;     \
+    if (err != cudaSuccess) {   \
+        fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(err), __FILE__, __LINE__);  \
+        exit(EXIT_FAILURE);     \
+    }                           \
 } while (0)
 
-
-/** 
- * embedding formula kernel
- * --> f(i, j, seed) = (i * j + 1) * C * (seed^[j%d])
- * where: C = 0.01, x = seed, and  d is the embedding dimension.
- */
-__global__ void embeddingFormulaBatchKernel(float* embeddings_out, const int d_dim,
-    const float r1, const float r2, const unsigned int initial_seed_offset) 
-{
-    int global_id = blockIdx.x * blockDim.x + threadIdx.x;
-
-    unsigned int seed = initial_seed_offset + global_id + 1;
-
-    float normalized_val = (float)(seed ^ (seed << 13) ^ (seed >> 17) ^ (seed << 5)) / (float)0xFFFFFFFFU;
-    embeddings_out[global_id] = r1 + normalized_val * (r2 - r1);
+// Basic XorShift32 PRNG for CUDA
+// Each thread uses its unique thread index to get a distinct seed
+__device__ unsigned int xorshift32_cuda(unsigned int x) {
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return x;
 }
 
+// Function to convert a normalized [0,1] float to a custom range [r1, r2]
+__device__ float scale_random_cuda(unsigned int* seed_ptr, float r1, float r2) {
+    *seed_ptr = xorshift32_cuda(*seed_ptr);
+    float normalized_val = (float)(*seed_ptr) / (float)UINT_MAX;
+    return r1 + normalized_val * (r2 - r1);
+}
+
+// CUDA Kernel to generate embeddings
+__global__ void generate_embeddings_kernel(
+    float* embeddings_out,
+    int d_dim,
+    float r1,
+    float r2,
+    unsigned int initial_seed_offset,
+    int total_elements) {
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Global thread ID
+
+    if (idx < total_elements) {
+        // Use global_id + an offset for a unique seed per thread
+        unsigned int seed = initial_seed_offset + idx + 1; // +1 to avoid seed 0
+
+        // Generate random float in [r1, r2]
+        embeddings_out[idx] = scale_random_cuda(&seed, r1, r2);
+    }
+}
 
 /**
  * @brief Computes the inverse (v / ||v||^2) for a batch of vectors in parallel.
@@ -43,7 +61,8 @@ __global__ void embeddingFormulaBatchKernel(float* embeddings_out, const int d_d
  * @param N The number of vectors (rows).
  * @param d The dimension of each vector (columns).
  */
-__global__ void batchedVectorInverseKernel(float* output, const float* input, int N, int d) {
+__global__ void batchedVectorInverseKernel(float* output, const float* input, int N, int d) 
+{
     // Use dynamic shared memory, sized by the kernel launch.
     // This will hold the values for the reduction.
     extern __shared__ float s_data[];
@@ -97,56 +116,53 @@ __global__ void batchedVectorInverseKernel(float* output, const float* input, in
 // HOST-SIDE WRAPPER FUNCTIONS
 // =================================================================================
 
-/**
- * @brief Host wrapper to generate embeddings on the GPU.
- * @param embedding [out] 2D vector to store the results. Will be resized.
- * @param seeds [in] 1D vector of seed values, one for each token.
- * @param d [in] The embedding dimension.
- * @param vocSize [in] The number of tokens/seeds (N).
- */
-void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d, int& vocSize, float r1, float r2) {
-    if (vocSize == 0 || d == 0) return;
 
+// Host-side wrapper function
+void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val) {
     // Resize embedding vector to hold the results
-    embedding.assign(vocSize, std::vector<float>(d));
+    embedding.resize(vocSize_val, std::vector<float>(d_dim));
 
-    size_t total_elements = (size_t)vocSize * d;
+    size_t total_elements = (size_t)vocSize_val * d_dim;
     if (total_elements == 0) return;
 
-    std::vector<float> flat_embeddings(total_elements);
+    float* d_embeddings = nullptr; // Device pointer for embeddings
 
-    // 2. Allocate device memory
-    float* d_embeddings;
-    CHECK_CUDA(cudaMalloc(&d_embeddings, sizeof(float) * total_elements));
+    // Allocate device memory
+    CUDA_CHECK(cudaMalloc(&d_embeddings, total_elements * sizeof(float)));
 
-    // Initialize kernel
-    dim3 block_dim(256);
-    dim3 grid_dim((total_elements + block_dim.x - 1) / block_dim.x);
+    // Configure kernel launch parameters
+    int threads_per_block = 256;
+    int blocks_per_grid = (total_elements + threads_per_block - 1) / threads_per_block;
 
-    // Determine initial seed offset based on time
+    // Use a time-based seed offset for better randomness across runs
     unsigned int initial_seed_offset = static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
     // Launch kernel
-    embeddingFormulaBatchKernel<<<grid_dim, block_dim>>>(d_embeddings, d, r1, r2, initial_seed_offset);
+    generate_embeddings_kernel<<<blocks_per_grid, threads_per_block>>>(
+        d_embeddings,
+        d_dim,
+        r1,
+        r2,
+        initial_seed_offset,
+        total_elements
+    );
+    CUDA_CHECK(cudaGetLastError()); // Check for errors during kernel launch
 
-    // Check for kernel launch errors
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        fprintf(stderr, "Error: Kernel launch failed with error %s\n", cudaGetErrorString(err));
-        cudaFree(d_embeddings);
-        return;
-    }
+    // Copy results back to host
+    std::vector<float> flat_embeddings(total_elements);
+    CUDA_CHECK(cudaMemcpy(flat_embeddings.data(), d_embeddings, total_elements * sizeof(float), cudaMemcpyDeviceToHost));
 
-    // Read results back
-    CHECK_CUDA(cudaMemcpy(flat_embeddings.data(), d_embeddings, sizeof(float) * total_elements, cudaMemcpyDeviceToHost));
-
-    for (int i = 0; i < vocSize; ++i) {
-        for (int j = 0; j < d; ++j) {
-            embedding[i][j] = flat_embeddings[i * d + j];
+    // Copy flat_embeddings to the 2D embedding vector
+    for (int i = 0; i < vocSize_val; ++i) {
+        for (int j = 0; j < d_dim; ++j) {
+            embedding[i][j] = flat_embeddings[i * d_dim + j];
         }
     }
-    CHECK_CUDA(cudaFree(d_embeddings));
+
+    // Free device memory
+    CUDA_CHECK(cudaFree(d_embeddings));
 }
+
 
 /**
  * @brief Host wrapper to calculate batched vector inverses on the GPU.
@@ -155,7 +171,7 @@ void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, c
  * @param d [in] The dimension of each vector.
  * @param vocSize [in] The number of vectors.
  */
-void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
+void tokeniser::cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
     const std::vector<std::vector<float>>& embedding, int& d, int& vocSize)
 {
     if (vocSize == 0 || d == 0) return;
@@ -204,6 +220,5 @@ void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
     CHECK_CUDA(cudaFree(d_input));
     CHECK_CUDA(cudaFree(d_output));
 }
-
 
 #endif

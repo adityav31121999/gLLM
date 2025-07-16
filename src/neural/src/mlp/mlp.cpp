@@ -10,17 +10,18 @@
 #ifndef USE_OPENCL
 
 /**
- * @brief Constructor used when OpenCL is NOT enabled.
- * (in = out = neurons)
+ * @brief Constructor used when OpenCL is NOT enabled (in = out = neurons)
  * @param layerSizes Vector containing the number of neurons in each layer (e.g., {input_size, hidden1_size, output_size}).
  * @param epochs number of epochs for training (Note: epochs might be better handled in training loop)
  * @param learning learning rate for the network (Note: learning rate might be better handled in training loop)
  */
-mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning)
+mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2)
     : status(false),
       layer_sizes(layerSizes),
       epochs(epochs),
-      learning_rate(learning)
+      learning_rate(learning),
+      lambda_l1(lambda_L1),
+      lambda_l2(lambda_L2)
 {
     if (layerSizes.size() < 2) {
         throw std::invalid_argument("MLP must have at least an input and an output layer (size >= 2).");
@@ -30,6 +31,8 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
             throw std::invalid_argument("MLP layer sizes must be positive.");
         }
     }
+
+
     num_layers = layerSizes.size();
 
     input.resize(layer_sizes[0], 0.0f);
@@ -68,19 +71,20 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
 #else
 
 /**
- * @brief Constructor used when OpenCL IS enabled.
- * (in = out = neurons)
+ * @brief Constructor used when OpenCL IS enabled (in = out = neurons)
  * @param context Reference to the shared OpenCL context object.
  * @param layerSizes Vector containing the number of neurons in each layer (input, hidden..., output).
  * @param epochs number of epochs for training (Note: epochs might be better handled in training loop)
  * @param learning learning rate for the network (Note: learning rate might be better handled in training loop)
  */
-mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning)
+mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2)
     : clContext(context),
       status(false),
       layer_sizes(layerSizes),
       epochs(epochs),
-      learning_rate(learning)
+      learning_rate(learning),
+      lambda_l1(lambda_L1),
+      lambda_l2(lambda_L2)
 {
     // Validate inputs
     if (layerSizes.size() < 2) {

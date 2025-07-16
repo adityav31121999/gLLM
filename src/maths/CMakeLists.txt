@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(maths C CXX)
 
-include_directories(include)
+#include_directories(include)
 
 add_library(maths STATIC
     # basic files
@@ -37,6 +37,12 @@ add_library(maths STATIC
     src/stats/cl/basic.cl
 
     src/stats/cu/basic.cu
+)
+
+# Make the include directory available to this target and any
+# other target that links to it (like the main executable).
+target_include_directories(maths PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 target_link_libraries(maths

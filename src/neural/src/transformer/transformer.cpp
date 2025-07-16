@@ -34,7 +34,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         for (int i = 0; i < this->m; ++i) {
             std::cout << "-----------------------------------------------------------------------" << std::endl;
             std::cout << "                   Block " << i+1 << " constructed                     " << std::endl;
-            t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param, learning);
+            t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param, learning, lambda_L1, lambda_L2);
         }
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         // training
@@ -53,7 +53,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         t.reserve(1); // this->m is 1 for inference
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "                      Block " << 1 << " constructed                    " << std::endl;
-        t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning);
+        t.emplace_back(this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning, lambda_L1, lambda_L2);
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "\nblock vector t initialised." << std::endl;
         otok.resize(d, 0);
@@ -109,7 +109,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         for (int i = 0; i < this->m; ++i) {
             std::cout << "-----------------------------------------------------------------------" << std::endl;
             std::cout << "                   Block " << i+1 << " constructed                     " << std::endl;
-            t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param, learning);
+            t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, i+1, modelDir_param, learning, lambda_L1, lambda_L2);
         }
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "block vector t initialised." << std::endl;
@@ -130,7 +130,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         t.reserve(1); // this->m is 1
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "                     Block " << 1 << " constructed                     " << std::endl;
-        t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning);
+        t.emplace_back(clcontext, this->x, this->y, this->n, this->d, this->h, this->l, this->vocabsize, this->isSelf, this->inTraining, 1, modelDir_param, learning, lambda_L1, lambda_L2);
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "block vector t initialised." << std::endl;
         otok.resize(d, 0); // Added otok resize for inference path, was missing.

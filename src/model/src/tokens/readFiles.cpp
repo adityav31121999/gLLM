@@ -123,12 +123,15 @@ bool isHeaderLine(const std::string& line) {
             trimmed == "token,repetitions");
 }
 
+
 // Helper function to read a single CSV field, handling quotes and escaped quotes
+// Modified to return the raw field as read, without trimming or quote removal.
+// This allows the caller to decide how to process the field.
 std::string readCsvField(std::stringstream& ss) {
     std::string field;
     char c;
 
-    // Consume leading whitespace before the field starts
+    // Consume leading whitespace before the field starts (if any)
     while (ss.peek() != EOF && std::isspace(static_cast<unsigned char>(ss.peek()))) {
         ss.get();
     }
@@ -136,13 +139,14 @@ std::string readCsvField(std::stringstream& ss) {
     if (ss.peek() == '"') {
         ss.get(); // Consume opening quote
         bool in_quotes = true;
-        while (ss.get(c) && in_quotes) { // Loop while we are inside the quoted field
+        while (ss.get(c)) { // Loop until the end of the quoted field or stream
             if (c == '"') {
                 if (ss.peek() == '"') { // Escaped double quote ("")
                     field += '"';
                     ss.get(); // Consume the second quote
                 } else { // Closing quote
-                    in_quotes = false; // Exit loop after consuming closing quote
+                    in_quotes = false;
+                    break; // Exit the loop for this field
                 }
             } else {
                 field += c;
@@ -153,7 +157,7 @@ std::string readCsvField(std::stringstream& ss) {
             ss.get();
         }
         if (ss.peek() == ',') {
-            ss.get(); // Consume the comma
+            ss.get(); // Consume the comma delimiter
         }
         // If it was a quoted field and no comma followed, it means it's the last field,
         // or a malformed line. No need to consume a comma that's not there.
@@ -161,14 +165,13 @@ std::string readCsvField(std::stringstream& ss) {
         // Not a quoted field, read until comma or end of line
         std::getline(ss, field, ',');
     }
-    return field; // `removeQuotes` will be called on this string later
+    return field;
 }
 
-// Function to read an entire CSV file into a 2D vector of a specified type T
-// This version uses the provided robust utility functions.
-template <typename T>
-std::vector<std::vector<T>> readCsvTo2DVector(const std::string& filename) {
-    std::vector<std::vector<T>> csvData;
+
+// Function to read an entire CSV file into a 2D vector of floats
+std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename) {
+    std::vector<std::vector<float>> csvData;
     std::ifstream file(filename);
 
     if (!file.is_open()) {
@@ -182,54 +185,62 @@ std::vector<std::vector<T>> readCsvTo2DVector(const std::string& filename) {
 
     while (std::getline(file, line)) {
         lineNumber++;
-
         if (line.empty()) {
             continue; // Skip truly empty lines
         }
-
         // Apply global trim to the entire line
         line = trim(line);
-
         if (line.empty()) {
             continue; // Skip lines that become empty after trimming
         }
-        
-        // if (lineNumber == 1 && isHeaderLine(line)) {
-        //     std::cout << "Skipping what appears to be a header line: " << line << std::endl;
-        //     continue;
-        // }
 
-        std::vector<T> row;
-        std::stringstream ss(line); // Create a stringstream for the current line
+        std::vector<float> row;
+        std::stringstream ss(line);
 
         // Loop to read fields using the robust readCsvField
-        while (true) {
+        // Check for success of readCsvField and if there are actual characters processed
+        bool has_more_fields_on_line = true;
+        while (has_more_fields_on_line) {
             std::string raw_field = readCsvField(ss);
+            // After reading the field, if ss is at EOF and the field is empty, it means we hit end of line (possibly after a trailing comma).
+            // This is a subtle point: readCsvField will consume a trailing comma. If no chars are left after that, it's EOF.
+            // If the last actual field was empty (e.g., "1,2,"), raw_field for the last empty one will be empty.
+            if (raw_field.empty() && ss.eof()) {
+                has_more_fields_on_line = false; // No more actual fields.
+            }
+
             // Apply trim and removeQuotes to the raw field string before conversion
             std::string cleaned_field_str = removeQuotes(trim(raw_field));
 
-            T value;
-            std::stringstream converter_ss(cleaned_field_str); // Use a new stringstream for type conversion
-
-            // Attempt to convert the string to the target type T
-            if (!(converter_ss >> value)) {
-                // Conversion failed (e.g., "abc" to int, or a number too large for the type)
-                std::cerr << "Warning: Failed to convert field '" << cleaned_field_str
-                          << "' to target type at line " << lineNumber
-                          << " in file " << filename << ". Defaulting to T()." << std::endl;
-                value = T(); // Default-construct T (e.g., 0 for int/float, empty for string)
+            float value = 0.0f;
+            // Attempt to convert the string to float
+            try {
+                // If the cleaned_field_str is empty, stof will throw invalid_argument, which is desired.
+                value = std::stof(cleaned_field_str);
+            } catch (const std::invalid_argument& e) {
+                // Conversion failed (e.g., empty string, "abc" to float)
+                // This means the field was empty or non-numeric. Treat as 0.0f.
+                if (!cleaned_field_str.empty()) { // Only warn if it wasn't just an empty field
+                    std::cerr << "Warning: Failed to convert field '" << cleaned_field_str
+                              << "' to float at line " << lineNumber
+                              << " in file " << filename << ". Defaulting to 0.0f." << std::endl;
+                }
+                value = 0.0f;
+            } catch (const std::out_of_range& e) {
+                std::cerr << "Warning: Float out of range '" << cleaned_field_str
+                          << "' at line " << lineNumber
+                          << " in file " << filename << ". Defaulting to 0.0f." << std::endl;
+                value = 0.0f;
             }
             row.push_back(value);
 
             // Check if there are more fields to read in the current line.
-            // readCsvField consumes the comma delimiter. So if ss.peek() is EOF,
-            // or if the stream's failbit/eofbit is set and no more chars, we're done with the line.
-            // The original loop condition `if (ss.eof() && ss.peek() == EOF)` is used for consistency.
-            if (ss.peek() == EOF) { // No more characters remaining in the stream
-                break;
+            // If ss.peek() returns EOF or fails, or if it's not a comma, we are at the end of fields for this line.
+            if (ss.peek() == EOF && !ss.good()) {
+                has_more_fields_on_line = false;
             }
-        }
-        
+        } // End of while(has_more_fields_on_line)
+
         // Add row only if it's not empty (e.g., not just an empty line that resulted in no fields)
         if (!row.empty() || line.find(',') != std::string::npos) { // Add row even if empty but it indicates fields (e.g. "a,,c")
             csvData.push_back(row);
@@ -237,7 +248,6 @@ std::vector<std::vector<T>> readCsvTo2DVector(const std::string& filename) {
     }
 
     file.close();
-
     if (csvData.empty()) {
         std::cerr << "Warning: No data found in file " << filename << std::endl;
     }
@@ -312,7 +322,6 @@ std::vector<std::string> readSpecificColumnFromCsv(const std::string& filename, 
 
     std::string line;
     int lineNumber = 0;
-    bool headerSkipped = false;
 
     while (std::getline(file, line)) {
         lineNumber++;
@@ -327,21 +336,18 @@ std::vector<std::string> readSpecificColumnFromCsv(const std::string& filename, 
             continue;
         }
 
-        // Removed header skip logic here, as per previous discussion it was commented out in user's code.
-        // If your files legitimately have headers, uncomment this AND ensure it correctly identifies them.
-        /*if (!headerSkipped && isHeaderLine(line)) {
-            headerSkipped = true;
-            std::cout << "Skipping header line: " << line << std::endl;
-            continue;
-        }*/
-
         std::stringstream ss(line);
         std::string segment_raw;
         int currentColumnIndex = 0;
         bool columnFoundForThisLine = false;
 
-        while (true) { // Loop to read fields
+        bool has_more_fields_on_line = true;
+        while (has_more_fields_on_line) {
             segment_raw = readCsvField(ss);
+            
+            if (segment_raw.empty() && ss.eof()) { // Check for empty field at end of line
+                 has_more_fields_on_line = false;
+            }
 
             if (currentColumnIndex == targetColumnIndex) {
                 columnData.push_back(removeQuotes(trim(segment_raw)));
@@ -350,25 +356,20 @@ std::vector<std::string> readSpecificColumnFromCsv(const std::string& filename, 
             }
             currentColumnIndex++;
 
-            if (ss.eof() && segment_raw.empty() && currentColumnIndex <= targetColumnIndex) {
-                break;
-            }
-            if (ss.eof() && !segment_raw.empty() && currentColumnIndex <= targetColumnIndex) {
-                break;
-            }
-            // If we are here, it means readCsvField successfully consumed a field,
-            // and there was a comma, but it was not the target.
-            // Check if there are more characters in the stream after consuming the field+comma.
             if (ss.peek() == EOF && !ss.good()) { // Check if stream failed or reached true EOF
-                break;
+                has_more_fields_on_line = false;
             }
         }
 
         if (!columnFoundForThisLine) {
-            if (lineNumber <= 3) {
-                std::cerr << "Warning: Column " << targetColumnIndex
-                          << " not found in line " << lineNumber << " of file " << filename
-                          << " (line has " << currentColumnIndex << " columns)" << std::endl;
+            // Only warn if the line genuinely had fewer columns than expected,
+            // not if it was just a malformed last line.
+            if (currentColumnIndex <= targetColumnIndex) { // Check if we even reached the target column index
+                if (lineNumber <= 10) { // Limit warnings for brevity
+                    std::cerr << "Warning: Column " << targetColumnIndex
+                              << " not found in line " << lineNumber << " of file " << filename
+                              << " (line has only " << currentColumnIndex << " columns)." << std::endl;
+                }
             }
             columnData.push_back(""); // Add empty string to maintain row count
         }
@@ -403,7 +404,7 @@ std::unordered_map<std::string, int> readUnorderedMap(const std::string& filenam
     std::string line;
     int lineNumber = 0;
     int successfullyParsed = 0;
-    bool headerSkipped = false;
+    bool headerSkipped = false; // Keep this for potential future use or if some files truly have headers
 
     while (std::getline(file, line)) {
         lineNumber++;
@@ -435,46 +436,23 @@ std::unordered_map<std::string, int> readUnorderedMap(const std::string& filenam
         std::string raw_count_field = readCsvField(ss);
         std::string count_str_cleaned = removeQuotes(trim(raw_count_field));
 
-        std::string final_numeric_count_str;
-        bool first_char_of_count = true;
-        for (char c : count_str_cleaned) {
-            if (std::isdigit(static_cast<unsigned char>(c))) {
-                final_numeric_count_str += c;
-            } else if (c == '-' && first_char_of_count) { // Allow only one leading minus sign
-                final_numeric_count_str += c;
-            }
-            first_char_of_count = false;
-        }
-        // If after cleaning, the string is empty, AND the original was not just "0", it's invalid.
-        if (final_numeric_count_str.empty() && !count_str_cleaned.empty() && count_str_cleaned != "0") {
-             std::cerr << "Warning: Count string became empty after cleaning non-numeric characters in line " << lineNumber << ". Original raw: '" << raw_count_field << "'. Cleaned: '" << count_str_cleaned << "'" << std::endl;
-             continue;
-        }
-
-        if (token.empty()) {
-            // This case should ideally result in a valid empty string token `""`.
-            // If a genuinely empty token is not expected in your vocabulary,
-            // then consider adding a specific check for it here, e.g., if (token != "\"\"") and token.empty().
-            // For now, allowing empty string as a key.
-            if (lineNumber <= 15) {
-                std::cerr << "Warning: Token resolved to empty string in line " << lineNumber
-                          << " of file " << filename << ". Raw field: '" << raw_token_field << "'. Processed token: '" << token << "'" << std::endl;
-            }
-        }
-
         // Attempt to convert to integer
         try {
-            int count = std::stoi(final_numeric_count_str);
-            corpusWordCount[token] = count;
+            // std::stoi is quite robust for numeric strings, including leading/trailing spaces
+            // and signs. It stops at the first non-numeric character.
+            int count = std::stoi(count_str_cleaned);
+            corpusWordCount[token] = count; // Allow empty string as a key if it comes from data
             successfullyParsed++;
         } catch (const std::invalid_argument& e) {
-            std::cerr << "Warning: Invalid integer format for count '"
-                      << raw_count_field << "' (cleaned to '" << final_numeric_count_str << "') in line " << lineNumber
-                      << " of file " << filename << ": " << e.what() << std::endl;
+            if (!count_str_cleaned.empty() && count_str_cleaned.find_first_not_of(" \t\r\n") != std::string::npos) { // Only warn if it wasn't just empty/whitespace
+                std::cerr << "Warning: Invalid integer format for count '"
+                          << raw_count_field << "' (cleaned to '" << count_str_cleaned << "') in line " << lineNumber
+                          << " of file " << filename << ": " << e.what() << ". Skipping entry." << std::endl;
+            }
         } catch (const std::out_of_range& e) {
             std::cerr << "Warning: Count out of range '"
-                      << raw_count_field << "' (cleaned to '" << final_numeric_count_str << "') in line " << lineNumber
-                      << " of file " << filename << ": " << e.what() << std::endl;
+                      << raw_count_field << "' (cleaned to '" << count_str_cleaned << "') in line " << lineNumber
+                      << " of file " << filename << ": " << e.what() << ". Skipping entry." << std::endl;
         }
     }
 
@@ -505,9 +483,8 @@ std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const s
     std::string line;
     int lineNumber = 0;
     int successfullyParsed = 0;
-    int expectedEmbeddingSize = -1; // To track consistency
-    // bool headerSkipped = false; // REMOVED: No header for this file per user feedback
-    
+    // int expectedEmbeddingSize = -1; // Not strictly needed here, 'd' is set in Tokenizer after loading
+
     while (std::getline(file, line)) {
         lineNumber++;
 
@@ -527,43 +504,48 @@ std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const s
 
 
         if (word_str.empty()) {
-            // An empty string as a token for embedding mapping implies a problem
-            // unless a specific empty string token `""` is expected to have an embedding.
-            // If your CSV outputs `""` for some tokens, and they should have embeddings,
-            // then `word_str` should ideally become `"`, not empty.
-            if (lineNumber <= 15) {
-                std::cerr << "Warning: Empty word in line " << lineNumber
-                          << " of file " << filename << ". Raw field: '" << raw_token_field << "'. Processed token: '" << word_str << "'" << std::endl;
+            if (lineNumber <= 10) { // Limit warnings
+                std::cerr << "Warning: Empty token string in line " << lineNumber
+                          << " of file " << filename << ". Skipping embedding for this line." << std::endl;
             }
-            continue; // Skip lines with empty tokens for embeddings, as they can't be mapped meaningfully
+            continue;
         }
         
         std::vector<float> embeddings_vector;
         bool parseError = false;
-
-        // Extract the rest of the floats using the robust helper
-        while (!ss.eof() && ss.peek() != EOF) { // Continue as long as there's something to read
+        
+        // Extract the rest of the floats, handling potential consecutive commas (empty segments).
+        bool has_more_fields_on_line = true;
+        while (has_more_fields_on_line) {
             std::string raw_segment = readCsvField(ss);
-            std::string segment = removeQuotes(trim(raw_segment));
 
-            if (segment.empty()) {
-                // An empty segment for a float value is likely an error.
-                // stof will throw std::invalid_argument for "".
-                // Allow the try-catch to handle it.
+            if (raw_segment.empty() && ss.eof()) { // Check for empty field at end of line
+                 has_more_fields_on_line = false;
+                 // If the last field was truly empty and there was a comma before it, we still want to add a 0.0f.
+                 // Otherwise, if it was the end of the line, break.
+                 if (line.back() == ',') { // Check if the original line ended with a comma
+                     embeddings_vector.push_back(0.0f); // Treat trailing empty field as 0.0f
+                 }
+                 break;
+            }
+            if (raw_segment.empty() && ss.peek() == ',') { // Empty field followed by a comma (,,)
+                embeddings_vector.push_back(0.0f); // Treat empty intermediate field as 0.0f
+                ss.get(); // Consume the comma
+                continue; // Continue to next field
             }
             
-            // Remove any remaining quotes that might be embedded for float conversion.
-            segment.erase(std::remove(segment.begin(), segment.end(), '"'), segment.end());
-            segment.erase(std::remove(segment.begin(), segment.end(), '\''), segment.end());
+            std::string segment = trim(removeQuotes(raw_segment));
 
             try {
                 float value = std::stof(segment);
                 embeddings_vector.push_back(value);
             } catch (const std::invalid_argument& e) {
-                if (lineNumber <= 5) {
-                    std::cerr << "Warning: Invalid float format '" << raw_segment
-                              << "' (cleaned to '" << segment << "') for word '" << word_str << "' in line " << lineNumber
-                              << " of file " << filename << ": " << e.what() << std::endl;
+                if (!segment.empty()) { // Only warn if it wasn't just an empty field
+                    if (lineNumber <= 5) {
+                        std::cerr << "Warning: Invalid float format '" << raw_segment
+                                  << "' (cleaned to '" << segment << "') for word '" << word_str << "' in line " << lineNumber
+                                  << " of file " << filename << ": " << e.what() << ". Skipping line." << std::endl;
+                    }
                 }
                 parseError = true;
                 break;
@@ -571,20 +553,30 @@ std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const s
                 if (lineNumber <= 5) {
                     std::cerr << "Warning: Float out of range '" << raw_segment
                               << "' (cleaned to '" << segment << "') for word '" << word_str << "' in line " << lineNumber
-                              << " of file " << filename << ": " << e.what() << std::endl;
+                              << " of file " << filename << ": " << e.what() << ". Skipping line." << std::endl;
                 }
                 parseError = true;
                 break;
             }
-        }
-        
+            // Check if there are more fields to read (after consuming current field and its comma)
+            if (ss.peek() == EOF && !ss.good()) {
+                has_more_fields_on_line = false;
+            }
+        } // End of while(has_more_fields_on_line)
+
         if (parseError) {
             continue;
         }
 
-        // Only add to map if we got at least some embeddings or if empty embeddings are valid.
-        mappedEmbeddings[word_str] = embeddings_vector;
-        successfullyParsed++;
+        // Only add to map if we got at least some embeddings
+        if (!embeddings_vector.empty()) {
+            mappedEmbeddings[word_str] = embeddings_vector;
+            successfullyParsed++;
+        } else {
+            if (lineNumber <= 10) {
+                std::cerr << "Warning: No embeddings found for token '" << word_str << "' in line " << lineNumber << ". Skipping." << std::endl;
+            }
+        }
     }
 
     file.close();
@@ -593,11 +585,7 @@ std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const s
         std::cerr << "Warning: No valid word-embedding pairs found in file " << filename << std::endl;
     } else {
         std::cout << "Successfully read " << successfullyParsed
-                  << " word-embedding pairs from file " << filename;
-        if (expectedEmbeddingSize != -1) {
-            std::cout << " (embedding dimension: " << expectedEmbeddingSize << ")";
-        }
-        std::cout << std::endl;
+                  << " word-embedding pairs from file " << filename << std::endl;
     }
 
     return mappedEmbeddings;
@@ -618,88 +606,70 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder) {
     }
     this->statOfTokens = readUnorderedMap(token_stats_file);
 
-    // 2. Load the mapped embeddings
+    // 2. Load the mapped embeddings (token -> vector<float>)
     std::string tokenembeddings_file = path2ClassDataFolder + "/_tokenEmbedding.csv";
-    std::string embeddings_file = path2ClassDataFolder + "/_embeddings_only.csv";
     if (!std::filesystem::exists(tokenembeddings_file)) {
-        std::cerr << "Error: Embeddings file not found at " << tokenembeddings_file << std::endl;
-        throw std::runtime_error("Required embeddings file missing. Ensure training created '_tokenEmbedding.csv' in the specified path.");
+        std::cerr << "Error: Token embeddings file not found at " << tokenembeddings_file << std::endl;
+        throw std::runtime_error("Required token embeddings file missing. Ensure training created '_tokenEmbedding.csv' in the specified path.");
     }
     this->mappedEmbeddings = readMappedEmbeddings(tokenembeddings_file);
 
-    if (!std::filesystem::exists(embeddings_file)) {
-        std::cerr << "Error: Embeddings file not found at " << embeddings_file << std::endl;
-        throw std::runtime_error("Required embeddings file missing. Ensure training created '_tokenEmbedding.csv' in the specified path.");
-    }
-    this->embeddings = std::vector<std::vector<float>>(this->mappedEmbeddings.size(), std::vector<float>(this->mappedEmbeddings.begin()->second.size(), 0.0f));
-    this->embeddings = readCsvTo2DVector<float>(embeddings_file);
-
-    // --- CRITICAL STEP: Populate 'this->tokens' from the loaded vocabulary ---
+    // --- CRITICAL STEP: Populate 'this->tokens' from the loaded vocabulary AND then 'this->embeddings' ---
     this->tokens.clear(); // Ensure it's empty before populating
+    this->embeddings.clear(); // Clear existing embeddings
+    this->embeddings.reserve(this->statOfTokens.size()); // Pre-allocate space
+
+    // Sort the tokens from statOfTokens to ensure a consistent order for `this->tokens`
+    // (and thus for the `embeddings` vector if you populate it in the same order).
+    // This is crucial for `splitWord`'s longest-match logic.
+    std::vector<std::string> sorted_tokens_from_stats;
     for (const auto& pair : this->statOfTokens) {
-        this->tokens.push_back(pair.first); // Add all unique tokens (including BPE merges) to the vector
+        sorted_tokens_from_stats.push_back(pair.first);
     }
-
-    // Optional: Manually add special tokens if they are not guaranteed to be in statOfTokens
-    // by the training process, but are expected for tokenization.
-    // Example: If "</w>" or "<@#0>" might be missing from statOfTokens.
-    // if (std::find(this->tokens.begin(), this->tokens.end(), "<@#0>") == this->tokens.end()) {
-    //     this->tokens.push_back("<@#0>");
-    // }
-    // if (std::find(this->tokens.begin(), this->tokens.end(), "</w>") == this->tokens.end()) {
-    //     this->tokens.push_back("</w>");
-    // }
-
-    // 3. IMPORTANT: Sort the tokens by length in descending order.
-    // This is crucial for the greedy longest-match logic in splitWord.
-    std::sort(this->tokens.begin(), this->tokens.end(),
+    std::sort(sorted_tokens_from_stats.begin(), sorted_tokens_from_stats.end(),
         [](const std::string& a, const std::string& b) {
-            // Sort by length descending. For ties, sort alphabetically for consistent behavior.
             if (a.length() != b.length()) {
-                return a.length() > b.length();
+                return a.length() > b.length(); // Longer tokens first
             }
-            return a < b; // Tie-breaking: alphabetical order
+            return a < b; // Alphabetical for tie-breaking
         }
     );
+    this->tokens = sorted_tokens_from_stats; // Populate `this->tokens` with the sorted list
 
-    // Update vocabulary size and embedding dimension based on loaded data
-    this->vocSize = this->tokens.size();
+    // Now populate 'this->embeddings' and 'this->deEmbeddings' based on `this->tokens` and `this->mappedEmbeddings`
+    this->d = 0; // Initialize embedding dimension
     if (!this->mappedEmbeddings.empty()) {
-        // Set 'd' based on the dimension of the first loaded embedding
-        this->d = this->mappedEmbeddings.begin()->second.size();
-    }
-    else {
-        this->d = 0;
-        std::cerr << "Warning: No embeddings loaded, embedding dimension (d) set to 0. This might affect subsequent operations." << std::endl;
+        this->d = this->mappedEmbeddings.begin()->second.size(); // Set 'd' based on the first loaded embedding
     }
 
-    // Populate 'embeddings' and 'deEmbeddings' vectors if they are used directly elsewhere
-    // and need to be ordered consistently with 'this->tokens'.
-    this->embeddings.clear();
-    this->embeddings.reserve(this->tokens.size()); // Pre-allocate memory
     for (const auto& token_str : this->tokens) {
         auto it = this->mappedEmbeddings.find(token_str);
         if (it != this->mappedEmbeddings.end()) {
             this->embeddings.push_back(it->second);
         }
         else {
-            // This is the warning that's being triggered.
-            std::cerr << "Warning: Token '" << token_str << "' present in vocabulary but missing embedding in '_tokenEmbedding.csv'. Adding zero vector." << std::endl;
-            // use _embeddings_only.csv for reading embeddings of this token by finding out the index of this string
+            // This warning will trigger if a token in _final_token_stats.csv is not in _tokenEmbedding.csv
+            // The original warning for '"' means your BPE process likely produced a token that was not embedded.
+            std::cerr << "Warning: Token '" << token_str << "' from '_final_token_stats.csv' missing embedding in '_tokenEmbedding.csv'. Adding zero vector." << std::endl;
             this->embeddings.push_back(std::vector<float>(this->d, 0.0f)); // Provide a zero vector as a fallback
         }
     }
 
     // Similarly for deEmbeddings if applicable
-    // this->deEmbeddings.clear();
-    // this->deEmbeddings.reserve(this->tokens.size());
-    // for (const auto& embedding_vec : this->embeddings) {
-    //     this->deEmbeddings.push_back(vectorInverse(embedding_vec));
-    // }
+    this->deEmbeddings.clear();
+    this->deEmbeddings.reserve(this->embeddings.size()); // Reserve space
+    for (const auto& embedding_vec : this->embeddings) {
+        this->deEmbeddings.push_back(vectorInverse(embedding_vec));
+    }
+
+
+    // Update vocabulary size based on loaded data
+    this->vocSize = this->tokens.size();
+
 
     std::cout << "Tokenizer initialized successfully:" << std::endl;
     std::cout << "  - Tokens loaded: " << this->tokens.size() << std::endl;
     std::cout << "  - Vocabulary size: " << this->vocSize << std::endl;
     std::cout << "  - Embedding dimension: " << this->d << std::endl;
-    // std::cout << "  - deEmbedding dimension: " << this->d << std::endl;
+    std::cout << "  - deEmbedding count: " << this->deEmbeddings.size() << std::endl;
 }

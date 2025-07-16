@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include <cuda_runtime.h>
@@ -22,7 +23,6 @@
 /**
  * @brief Computes KdotQ in parallel for a column during TRAINING using K and Q matrices.
  *        Uses kernelKdotQforSelf_train or kernelKdotQforCross_train.
- *
  * @param columnNumber Index of the column of attention heads.
  * @param blockNumber 1-based index of the current block.
  * @param tokenCount Global token count *before* adding the prompt.
@@ -144,7 +144,6 @@ void block::cuParallelKdotQ(int& columnNumber, int& blockNumber, int& tokenCount
  * @brief Computes KdotQ in parallel for a column during INFERENCE for BLOCK 1.
  *        Uses global tokenEmbed and head.qkCache (M).
  *        Uses kernelKdotQ_Block1_Self_Inference or kernelKdotQ_Block1_Cross_Inference.
- *
  * @param tokenEmbed Global token embeddings (Host). Should contain full context.
  * @param columnNumber Index of the column of attention heads.
  * @param tokenCount Global token count *before* adding the prompt.
@@ -255,7 +254,6 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<float>>& tokenEmbed
  * @brief Computes KdotQ in parallel for a column during INFERENCE for BLOCK N > 1.
  *        Uses block-local tokForBlock, previous block's EVp, and head.qkCache (M).
  *        Uses kernelKdotQ_BlockN_Self_Inference or kernelKdotQ_BlockN_Cross_Inference.
- *
  * @param EVp Vertical retention vectors from the previous block (Host). Structure: EVp[head_idx][token_idx][embedding_dim].
  * @param columnNumber Index of the column of attention heads.
  * @param blockNumber 1-based index of the current block (must be > 1).
@@ -421,3 +419,5 @@ void block::cuParallelUseKdotQ(const std::vector<std::vector<std::vector<float>>
     if (d_tokForBlock_flat) cudaFree(d_tokForBlock_flat);
     cudaFree(agg_d_M_qkCache); cudaFree(agg_d_KdotQ); cudaFree(agg_d_EVp_head_flat);
 }
+
+#endif

@@ -10,6 +10,11 @@
 // --- Static helper cl_compute_dot_product_vec is NO LONGER NEEDED by these kernels ---
 // --- It can be removed if no other kernels use it ---
 
+// Helper for sign function
+inline float sign_f(float x) {
+    return (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f);
+}
+
 __kernel void vectorAddKernel_attention(__global const float* A,
     __global const float* B,
     __global float* C, int len)
@@ -881,6 +886,193 @@ __kernel void kernelCompute_single_kq_vector( __global const float* d_token_embe
                 dot_product += d_token_embedding[j] * matrix_row_i[j];
             }
             d_output_kq_vector[i] = dot_product;
+        }
+    }
+}
+
+
+////////////////////////////
+
+__kernel void kernelUpdateWeights_EH_EV_ElasticNet(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                        __global float* eh, __global float* ev,
+                                        __global const float* grad_mh, __global const float* grad_mv,
+                                        __global const float* grad_mq, __global const float* grad_mk,
+                                        __global const float* grad_eh, __global const float* grad_ev_scaled,
+                                        float learning_rate, int update_eh, int update_ev,
+                                        float lambda_l1, float lambda_l2, // ADDED: Elastic Net regularization parameters
+                                        int mat_heights, int embedding_dim, int context_win)
+{
+    int idx = get_global_id(0);
+    int ev_size = context_win * embedding_dim;
+    int matrix_size = mat_heights * embedding_dim;
+
+    if (idx < matrix_size) {
+        // MH update with Elastic Net
+        if (grad_mh != NULL) {
+            float sgn_MH = sign_f(mh_a[idx]);
+            float l1_reg_term_MH = lambda_l1 * sgn_MH;
+            float l2_reg_term_MH = 2.0f * lambda_l2 * mh_a[idx];
+            mh_a[idx] -= learning_rate * (grad_mh[idx] + l1_reg_term_MH + l2_reg_term_MH);
+        }
+
+        // MV update with Elastic Net
+        if (grad_mv != NULL) {
+            float sgn_MV = sign_f(mv_a[idx]);
+            float l1_reg_term_MV = lambda_l1 * sgn_MV;
+            float l2_reg_term_MV = 2.0f * lambda_l2 * mv_a[idx];
+            mv_a[idx] -= learning_rate * (grad_mv[idx] + l1_reg_term_MV + l2_reg_term_MV);
+        }
+
+        // MQ update with Elastic Net
+        if (grad_mq != NULL) {
+            float sgn_MQ = sign_f(mq_a[idx]);
+            float l1_reg_term_MQ = lambda_l1 * sgn_MQ;
+            float l2_reg_term_MQ = 2.0f * lambda_l2 * mq_a[idx];
+            mq_a[idx] -= learning_rate * (grad_mq[idx] + l1_reg_term_MQ + l2_reg_term_MQ);
+        }
+
+        // MK update with Elastic Net
+        if (grad_mk != NULL) {
+            float sgn_MK = sign_f(mk_a[idx]);
+            float l1_reg_term_MK = lambda_l1 * sgn_MK;
+            float l2_reg_term_MK = 2.0f * lambda_l2 * mk_a[idx];
+            mk_a[idx] -= learning_rate * (grad_mk[idx] + l1_reg_term_MK + l2_reg_term_MK);
+        }
+    }
+    // EH and EV updates (not weight matrices, so no Elastic Net here)
+    if (update_eh != 0 && idx < embedding_dim) {
+        if(grad_eh != NULL) eh[idx] -= learning_rate * grad_eh[idx];
+    }
+    if (update_ev != 0) {
+        if (idx < ev_size) {
+            int embed_idx = idx % embedding_dim;
+            if(grad_ev_scaled != NULL) ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
+        }
+    }
+}
+
+__kernel void kernelUpdateWeights_1stHead_H_ElasticNet(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                            __global float* eh,
+                                            __global const float* grad_mh, __global const float* grad_mv,
+                                            __global const float* grad_mq, __global const float* grad_mk,
+                                            __global const float* grad_eh,
+                                            float learning_rate, int update_eh,
+                                            float lambda_l1, float lambda_l2, // ADDED: Elastic Net regularization parameters
+                                            int mat_heights, int embedding_dim)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+
+    if (idx < matrix_size) {
+        // MH update with Elastic Net
+        if(grad_mh != NULL) {
+            float sgn_MH = sign_f(mh_a[idx]);
+            float l1_reg_term_MH = lambda_l1 * sgn_MH;
+            float l2_reg_term_MH = 2.0f * lambda_l2 * mh_a[idx];
+            mh_a[idx] -= learning_rate * (grad_mh[idx] + l1_reg_term_MH + l2_reg_term_MH);
+        }
+        // MV update with Elastic Net
+        if(grad_mv != NULL) {
+            float sgn_MV = sign_f(mv_a[idx]);
+            float l1_reg_term_MV = lambda_l1 * sgn_MV;
+            float l2_reg_term_MV = 2.0f * lambda_l2 * mv_a[idx];
+            mv_a[idx] -= learning_rate * (grad_mv[idx] + l1_reg_term_MV + l2_reg_term_MV);
+        }
+        // MQ update with Elastic Net
+        if(grad_mq != NULL) {
+            float sgn_MQ = sign_f(mq_a[idx]);
+            float l1_reg_term_MQ = lambda_l1 * sgn_MQ;
+            float l2_reg_term_MQ = 2.0f * lambda_l2 * mq_a[idx];
+            mq_a[idx] -= learning_rate * (grad_mq[idx] + l1_reg_term_MQ + l2_reg_term_MQ);
+        }
+        // MK update with Elastic Net
+        if(grad_mk != NULL) {
+            float sgn_MK = sign_f(mk_a[idx]);
+            float l1_reg_term_MK = lambda_l1 * sgn_MK;
+            float l2_reg_term_MK = 2.0f * lambda_l2 * mk_a[idx];
+            mk_a[idx] -= learning_rate * (grad_mk[idx] + l1_reg_term_MK + l2_reg_term_MK);
+        }
+    }
+    // EH update (not a weight matrix, no Elastic Net here)
+    if (update_eh != 0 && idx < embedding_dim) {
+        if(grad_eh != NULL) eh[idx] -= learning_rate * grad_eh[idx];
+    }
+}
+
+__kernel void kernelUpdateWeights_1stHead_V_ElasticNet(__global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                            __global const float* grad_mv, __global const float* grad_mq,
+                                            __global const float* grad_mk_correction,
+                                            float learning_rate,
+                                            float lambda_l1, float lambda_l2, // ADDED: Elastic Net regularization parameters
+                                            int mat_heights, int embedding_dim)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+
+    if (idx < matrix_size) {
+        // MV update with Elastic Net
+        if(grad_mv != NULL) {
+            float sgn_MV = sign_f(mv_a[idx]);
+            float l1_reg_term_MV = lambda_l1 * sgn_MV;
+            float l2_reg_term_MV = 2.0f * lambda_l2 * mv_a[idx];
+            mv_a[idx] -= learning_rate * (grad_mv[idx] + l1_reg_term_MV + l2_reg_term_MV);
+        }
+        // MQ update with Elastic Net
+        if(grad_mq != NULL) {
+            float sgn_MQ = sign_f(mq_a[idx]);
+            float l1_reg_term_MQ = lambda_l1 * sgn_MQ;
+            float l2_reg_term_MQ = 2.0f * lambda_l2 * mq_a[idx];
+            mq_a[idx] -= learning_rate * (grad_mq[idx] + l1_reg_term_MQ + l2_reg_term_MQ);
+        }
+        // MK update with Elastic Net
+        if(grad_mk_correction != NULL) {
+            float sgn_MK = sign_f(mk_a[idx]);
+            float l1_reg_term_MK = lambda_l1 * sgn_MK;
+            float l2_reg_term_MK = 2.0f * lambda_l2 * mk_a[idx];
+            mk_a[idx] -= learning_rate * (grad_mk_correction[idx] + l1_reg_term_MK + l2_reg_term_MK);
+        }
+    }
+}
+
+__kernel void kernelUpdateWeights_EV_V_ElasticNet(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
+                                       __global const float* grad_mv, __global const float* grad_mq,
+                                       __global const float* grad_mk_correction,
+                                       __global const float* grad_ev_full,
+                                       float learning_rate,
+                                       float lambda_l1, float lambda_l2, // ADDED: Elastic Net regularization parameters
+                                       int update_ev, int mat_heights, int embedding_dim, int context_win)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+
+    if (idx < matrix_size) {
+        // MV update with Elastic Net
+        if(grad_mv != NULL) {
+            float sgn_MV = sign_f(mv_a[idx]);
+            float l1_reg_term_MV = lambda_l1 * sgn_MV;
+            float l2_reg_term_MV = 2.0f * lambda_l2 * mv_a[idx];
+            mv_a[idx] -= learning_rate * (grad_mv[idx] + l1_reg_term_MV + l2_reg_term_MV);
+        }
+        // MQ update with Elastic Net
+        if(grad_mq != NULL) {
+            float sgn_MQ = sign_f(mq_a[idx]);
+            float l1_reg_term_MQ = lambda_l1 * sgn_MQ;
+            float l2_reg_term_MQ = 2.0f * lambda_l2 * mq_a[idx];
+            mq_a[idx] -= learning_rate * (grad_mq[idx] + l1_reg_term_MQ + l2_reg_term_MQ);
+        }
+        // MK update with Elastic Net
+        if(grad_mk_correction != NULL) {
+            float sgn_MK = sign_f(mk_a[idx]);
+            float l1_reg_term_MK = lambda_l1 * sgn_MK;
+            float l2_reg_term_MK = 2.0f * lambda_l2 * mk_a[idx];
+            mk_a[idx] -= learning_rate * (grad_mk_correction[idx] + l1_reg_term_MK + l2_reg_term_MK);
+        }
+    }
+    // EV update (not a weight matrix, no Elastic Net here)
+    if (update_ev != 0) {
+        int ev_size = context_win * embedding_dim;
+        if (idx < ev_size) {
+            if(grad_ev_full != NULL) ev[idx] -= learning_rate * grad_ev_full[idx];
         }
     }
 }

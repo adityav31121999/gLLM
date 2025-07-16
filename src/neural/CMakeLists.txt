@@ -3,8 +3,6 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(neural C CXX)
 
-include_directories(include)
-
 add_library(neural STATIC
 # mlp files
     # C++
@@ -104,6 +102,12 @@ add_library(neural STATIC
     src/transformer/cl/train2cl.cpp
     src/transformer/cl/testcl.cpp
     src/transformer/cl/runcl.cpp
+)
+
+# Make the include directory available to this target and any
+# other target that links to it (like the main executable).
+target_include_directories(neural PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 # link libraries to this library

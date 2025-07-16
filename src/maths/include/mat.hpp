@@ -100,6 +100,7 @@ public:
 
     // File-based operations
     void serialise(long long int offset, const std::string& locationWithFileName);
+    void serialise(const std::string& locationWithFileName);
     void deserialise(long long int offset, const std::string& locationWithFileName);
 
     // Destructor

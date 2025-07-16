@@ -1,6 +1,5 @@
 
 // compute functions
-#include "include/block.hpp"
 #include "include/transformer.hpp"
 
 #ifdef USE_CPU
@@ -72,31 +71,6 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
     dot = std::inner_product(temp.begin(), temp.end(), T2.begin(), 0.0);
 }
 
-/**
- * @brief compute the prediction for possible token embedding output
- * @param output forward propagation from block: EH
- * @param embeddings token embeddings
- * @param voc size of token vocabulary
- * @param index position of highest probability token embedding
- * @note it is assumed in this function that the case of "all dot products being zero" will
- *      not occur
- */
-void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index)
-{
-    std::vector<float> pred(voc, 0.0f);     // hold predictions
-    for(int i = 0; i < voc; i++) {
-        pred[i] = std::inner_product(output.begin(), output.end(), embeddings[i].begin(), 0.0f); // dot product
-    }
-    // find the highest value in the pred vector
-    float max = pred[0];
-    index = 0;
-    for(int i = 1; i < voc; i++) {
-        if(pred[i] > max) {
-            max = pred[i];
-            index = i;
-        }
-    }
-}
 
 /**
  * @brief compute the prediction for possible token embedding output

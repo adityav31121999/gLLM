@@ -67,15 +67,17 @@ public:
     std::vector<float> dh;      // delta for EH: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
     std::vector<float> dv;      // delta for EV[i]: sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
     float learning_rate;        // learning rate for attention
+    float lambda_L1;            // L1 regularization strength
+    float lambda_L2;            // L2 regularization strength
     long long int params;       // parameters in each attention head
 
 #ifdef USE_OPENCL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
     OpenCLContext& clcontext;
-    attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
+    attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning, float lambda_L1, float lambda_L2);
 #elif USE_CUDA || USE_CPU
     // Constructors without OpenCLContext
-    attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
+    attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning, float lambda_L1, float lambda_L2);
 #endif // USE_OPENCL
 
     // Explicitly define copy constructor and copy assignment operator
@@ -148,6 +150,8 @@ inline attention::attention(const attention& other) :
     // Initialize common members
     isSelfAttention(other.isSelfAttention),
     inTraining(other.inTraining),
+    lambda_L1(other.lambda_L1),
+    lambda_L2(other.lambda_L2),
     tokenCount(other.tokenCount),
     MQ(other.MQ),
     MK(other.MK),
@@ -166,8 +170,7 @@ inline attention::attention(const attention& other) :
     dh(other.dh),
     dv(other.dv),
     params(other.params)
-{
-}
+{}
 
 inline attention& attention::operator=(const attention& other) {
     if (this == &other) {
@@ -184,6 +187,8 @@ inline attention& attention::operator=(const attention& other) {
     // Assign common members
     isSelfAttention = other.isSelfAttention;
     inTraining = other.inTraining;
+    lambda_L1 = other.lambda_L1;
+    lambda_L2 = other.lambda_L2;
     tokenCount = other.tokenCount;
     MQ = other.MQ; // mat assignment
     MK = other.MK;
@@ -202,7 +207,6 @@ inline attention& attention::operator=(const attention& other) {
     dh = other.dh;
     dv = other.dv;
     params = other.params;
-
     return *this;
 }
 

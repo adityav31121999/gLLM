@@ -192,7 +192,7 @@ void mlp::backwithL2(int in, int layers, float learning) {
  *        Updates weights directly.
  *        Should be used with standard SGD `train` method if regularization is desired without Adam.
  */
-void mlp::backwithElastic(int in, int layers, float learning) {
+void mlp::backwithElasticNet(int in, int layers, float learning) {
     backprop(in, layers, learning); // Calculate gradients
 
     for (unsigned int l = 0; l < num_layers - 1; ++l) {

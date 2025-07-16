@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/transformer.hpp"
 #include "include/block.hpp"
@@ -215,3 +216,5 @@ void transformer::cuBackward(std::vector<std::vector<float>>& expectedH, int& k)
          throw std::runtime_error("Exception during transformer::cuBackward(vector<vector<float>>, k=" + std::to_string(k) + "): " + std::string(e.what()));
     }
 }
+
+#endif

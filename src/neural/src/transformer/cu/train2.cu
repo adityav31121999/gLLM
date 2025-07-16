@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/transformer.hpp"
 #include "include/block.hpp"
@@ -298,3 +299,4 @@ void transformer::cuTrain(std::vector<std::vector<std::vector<float>>>& prompts,
         }
     }
 }
+#endif

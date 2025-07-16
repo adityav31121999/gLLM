@@ -111,6 +111,10 @@
         "accumulateEVRowsKernelCL",
         "updateEVRowsKernelCL",
         "kernelCompute_single_kq_vector",
+        "kernelUpdateWeights_EH_EV_ElasticNet",
+        "kernelUpdateWeights_1stHead_H_ElasticNet",
+        "kernelUpdateWeights_1stHead_V_ElasticNet",
+        "kernelUpdateWeights_EV_V_ElasticNet",
         // transformer.cl
         "kernelKdotQforSelf_train_transformer",
         "kernelKdotQforCross_train_transformer",

@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <future>
 #include <thread>
-#include <memory> // <--- NEW: For std::unique_ptr
+#include <memory>
 #include <utility> // For std::move
 
 // for fast multithreading operations
@@ -239,7 +239,7 @@ public:
     void generateAndSaveEmbeddings(const std::string& outputPath, float r1, float r2);
 
     #ifdef USE_CUDA
-        void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d, int& vocSize, float r1, float r2);
+        void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize);
         void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding, const std::vector<std::vector<float>>& embedding, int& d, int& vocSize);
     #elif USE_OPENCL
         void clEmbeddingFormula(OpenCLContext& ocl_context, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val, float r1, float r2);
@@ -327,7 +327,7 @@ std::string escapeAndQuoteCsvField(const std::string& field);
 bool isHeaderLine(const std::string& line);
 std::vector<std::string> readSingleColumnCsv(const std::string& filename);
 std::vector<std::string> readSpecificColumnFromCsv(const std::string& filename, int targetColumnIndex);
-std::vector<std::vector<std::string>> readCsvTo2DVector(const std::string& filename);
+std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename);
 std::unordered_map<std::string, int> readUnorderedMap(const std::string& filename);
 std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const std::string& filename);
 
@@ -338,8 +338,8 @@ std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const s
 #include <device_launch_parameters.h>
 
 // kernel for embedding calculation
-__global__ void embeddingFormulaBatchKernel(float* embeddings_out, const int d_dim,
-    const float r1, const float r2, const unsigned int initial_seed_offset);
+__global__ void embeddingFormulaBatchKernel(float* all_embeddings, const float* all_seeds,
+            const int N, const int d);
 // kernel for vector inverse calculation
 __global__ void batchedVectorInverseKernel(float* output, const float* input, int N, int d);
 #endif

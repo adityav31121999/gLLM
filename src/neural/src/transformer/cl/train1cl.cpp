@@ -98,48 +98,72 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
         int j = 0; // Epoch counter for this token
         while (j <= this->epochs) // Use member variable epochs
         {
+            long long int host_indexForToken = -1;
             // --- Forward Pass ---
             // KdotQ calculation (if needed, depends on clForward implementation)
             if (this->inTraining) {
-                // clParallelKdotQs(...); // Placeholder - Needs OpenCL adaptation based on data flow
+                // clParallelKdotQs(...); <- already in clForward
             }
             clForward(current_block_idx, effective_context_size, promptCount); // Operates on device data implicitly
+            std::vector<float> h_otok_buffer(d, 0.0f); // Initialize with zeros
+            h_otok_buffer = this->otok; // clForward populates this
+            if (h_otok_buffer.size() != static_cast<size_t>(d)) {
+                throw std::runtime_error("clTrain(sentence): this->otok from clForward has incorrect size.");
+            }
+            // use kernelComputePrediction for output prediction
+            {
+                cl::Buffer d_otok_buffer, d_result_index_buffer;
+                try {
+                    size_t otok_bytes = h_otok_buffer.size() * sizeof(float);
+                    d_otok_buffer = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, h_otok_buffer.data(), &cl_err); CL_CHECK(cl_err);
+                    d_result_index_buffer = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int), nullptr, &cl_err); CL_CHECK(cl_err);
 
+                    cl::Kernel kernel = this->clcontext.kernels.at("kernelComputePrediction");
+                    CL_CHECK(kernel.setArg(0, d_otok_buffer));  CL_CHECK(kernel.setArg(1, d_embeddings));
+                    CL_CHECK(kernel.setArg(2, d_result_index_buffer));
+                    CL_CHECK(kernel.setArg(3, static_cast<cl_int>(this->d)));
+                    CL_CHECK(kernel.setArg(4, static_cast<cl_int>(this->vocabsize)));
+                    cl::NDRange global(1);
+                    cl::NDRange local(1);
+                    CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local));
+                    int result_idx = -1;
+                    CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &result_idx));
+                    host_indexForToken = result_idx;
+                    this->indexForToken = result_idx; // Also update the class member
+                } 
+                catch (const std::exception& e) {
+                    std::cerr << "Error during kernelComputePrediction in clTrain: " << e.what() << std::endl;
+                    throw;
+                }
+            }
             // --- Get EH output from the relevant block ---
             std::cout << "clTrain(single): Getting output for block " << current_block_idx << " with effective context size " << effective_context_size << std::endl;
-            std::vector<float> h_otok_buffer(d, 0.0f); // Initialize with zeros
             h_otok_buffer = this->otok;
             if (h_otok_buffer.size() != static_cast<size_t>(d)) {
                 throw std::runtime_error("clTrain(single): this->otok from clForward has incorrect size. Expected " + std::to_string(d) + ", got " + std::to_string(h_otok_buffer.size()));
             }
-            current_error = errorofv(h_otok_buffer, expected); // Host-side error calculation
+            current_error = crossEntropy(h_otok_buffer, expected); // Host-side error calculation
             std::cout << "Training Error: " << current_error << " for token: " << expString << std::endl;
-            bool converged = (current_error < 0.01);
-            if (!converged && this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size())) {
-                converged = (tokens[this->indexForToken] == expString);
-            }
-
-            if (converged) {
+            if (this->tokens[host_indexForToken] == expString && this->tokens[host_indexForToken] != "INVALID_INDEX") {
                 size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
-                if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
-                    throw std::out_of_range("clTrain(single): Calculated offset for writing converged token exceeds buffer bounds.");
+                if (offset_bytes + outputBytes > tokenEmbedBytes) {
+                    throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                 }
-                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected.data())); // Write expected token
-                break;
-            }
-
-            if (current_error >= 0.01 && j == this->epochs) {
-                bool predicted_matches = (this->indexForToken >= 0 && this->indexForToken < static_cast<int>(tokens.size()) && tokens[this->indexForToken] == expString);
-                if (!predicted_matches) {
-                    this->epochs += 10;
+                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
+                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected.data()));
+                if(this->tokens[host_indexForToken]  == "@#0"){
+                    std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                 }
                 else {
-                    size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
-                    if (offset_bytes + singleTokenBytes > tokenEmbedBytes) {
-                        throw std::out_of_range("clTrain(single): Calculated offset for writing converged token exceeds buffer bounds.");
-                    }
-                    CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, singleTokenBytes, expected.data()));
+                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                    totalLearning += learning;
                     break;
+                }
+            }
+            else if (j == this->epochs - 1) {
+                if (this->tokens[host_indexForToken] != expString) {
+                    std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                    this->epochs += 10;
                 }
             }
 

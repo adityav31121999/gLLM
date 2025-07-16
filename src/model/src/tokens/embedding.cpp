@@ -90,8 +90,8 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
     std::cout << "-> Embedding generation complete." << std::endl;
     std::cout << "-> Saving only embeddings to: " << csvEmbeddingOnly << std::endl;
     std::cout << "-> Saving tokens and embeddings to: " << tokenEmbeddingcsv << std::endl;
-    std::ofstream outFile1(csvEmbeddingOnly);       // only embeddings
-    std::ofstream outFile2(tokenEmbeddingcsv);      // tokens and embeddings
+    std::ofstream outFile1(csvEmbeddingOnly);
+    std::ofstream outFile2(tokenEmbeddingcsv);
     if (!outFile1.is_open()) {
         std::cerr << "Error: Could not open file to save embeddings: " << csvEmbeddingOnly << std::endl;
         return;
@@ -111,7 +111,6 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
 
         // Write to CSV, handling quoting for tokens
         std::string escaped_token = token;
-        // ... (add CSV escaping logic for `escaped_token` if it contains commas or quotes) ...
         outFile2 << "\"" << escaped_token << "\""; // Always quote the token field
 
         for (float val : embedding) { outFile1 << "," << val; } outFile1 << "\n";

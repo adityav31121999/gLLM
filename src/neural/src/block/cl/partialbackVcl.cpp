@@ -455,8 +455,8 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             }
 
             // --- Step 9 & 10: Update Weights ---
-            cl::Kernel kernelUpdateWeights_1stHead_V_cl = clcontext.kernels.at("kernelUpdateWeights_1stHead_V");
-            cl::Kernel kernelUpdateSimple_cl = clcontext.kernels.at("kernelUpdateSimple");
+            cl::Kernel kernelUpdateWeights_1stHead_V_cl = clcontext.kernels.at("kernelUpdateWeights_1stHead_V_ElasticNet");
+            // cl::Kernel kernelUpdateSimple_cl = clcontext.kernels.at("kernelUpdateSimple"); // This line is not part of the update.
 
             // Combined update for MV, MQ, MK for the very first head
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(0, device_ptrs_cl.d_MV_a));
@@ -466,8 +466,10 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(4, device_ptrs_cl.d_grad_MQ));
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(5, device_ptrs_cl.d_grad_MK_correction));
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(6, learning_rate));
-            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(7, mat_heights));
-            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(8, embedding_dim));
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(7, lambda_l1));
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(8, lambda_l2));
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(9, mat_heights));
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(10, embedding_dim));
             CL_CHECK(current_stream_cl.enqueueNDRangeKernel(kernelUpdateWeights_1stHead_V_cl, cl::NullRange, global_matrix_proj, local_1d));
 
             // --- Data Transfer Device -> Host (Asynchronous) ---
@@ -868,7 +870,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
 
             // --- Step 9 & 10: Update Weights (MV, MQ, MK_correction) and EV ---
             // For non-first blocks, EV is updated.
-            cl::Kernel kernelUpdateWeights_EV_V_cl = clcontext.kernels.at("kernelUpdateWeights_EV_V");
+            cl::Kernel kernelUpdateWeights_EV_V_cl = clcontext.kernels.at("kernelUpdateWeights_EV_V_ElasticNet");
             cl_int cl_update_ev = (blocknumber_param > 1) ? 1 : 0; // Always update EV for non-first blocks
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(0, device_ptrs_cl.d_MV_a));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(1, device_ptrs_cl.d_MQ_a));
@@ -877,13 +879,15 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(4, device_ptrs_cl.d_grad_MV));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(5, device_ptrs_cl.d_grad_MQ));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(6, device_ptrs_cl.d_grad_MK_correction));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(7, device_ptrs_cl.d_grad_EV_full)); // Use full EV gradient
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(7, device_ptrs_cl.d_grad_EV_full));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(8, learning_rate));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(9, cl_update_ev));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(10, mat_heights));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(11, embedding_dim));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(12, context_win));
-            CL_CHECK(current_stream_cl.enqueueNDRangeKernel(kernelUpdateWeights_EV_V_cl, cl::NullRange, global_ev, local_1d)); // Launch with grid size covering largest update target (EV)
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(9, lambda_l1));
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(10, lambda_l2));
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(11, cl_update_ev));
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(12, mat_heights));
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(13, embedding_dim));
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(14, context_win));
+            CL_CHECK(current_stream_cl.enqueueNDRangeKernel(kernelUpdateWeights_EV_V_cl, cl::NullRange, global_ev, local_1d));
 
             // --- Data Transfer Device -> Host (Asynchronous) ---
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {

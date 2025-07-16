@@ -22,10 +22,11 @@ public:
     float learning_rate;        // Learning rate
     float lambda_l1;            // L1 regularization parameter
     float lambda_l2;            // L2 regularization parameter
-    float beta1;                // Adam hyperparameter (decay rate for first moment)
-    float beta2;                // Adam hyperparameter (decay rate for second moment)
-    float epsilon;              // Adam hyperparameter (small value to prevent division by zero)
     unsigned int t;             // Time step for Adam (number of updates), initialized to 0
+
+    // float beta1;                // Adam hyperparameter (decay rate for first moment)
+    // float beta2;                // Adam hyperparameter (decay rate for second moment)
+    // float epsilon;              // Adam hyperparameter (small value to prevent division by zero)
 
 // member containers
     std::vector<float> input;      // input vector
@@ -41,11 +42,11 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
-    mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2);
 #elif USE_CUDA || USE_CPU
     mlp() = default;
     // Constructor when OpenCL is disabled
-    mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator
@@ -93,7 +94,7 @@ public:
     void backprop(int layers, int in, float learning);
     void backwithL1(int layers, int in, float learning);
     void backwithL2(int layers, int in, float learning);
-    void backwithElastic(int in, int layers, float learning);
+    void backwithElasticNet(int in, int layers, float learning);
     void backprop2in(int layers, int in, float learning);
     void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void train(float& mse, int in, int layers, float learning);

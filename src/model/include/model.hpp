@@ -1,11 +1,9 @@
+
 // model class for file
 #ifndef MODEL_HPP
 #define MODEL_HPP 1
 
 #include "tokenise.hpp"
-#include <fstream>
-#include <string_view>
-#include <sstream>
 #include <string>
 #include <vector>
 #include <maths.hpp>
@@ -59,6 +57,11 @@ struct TrainingSessionData {
     int lastEpochCountState = 0;                    // Snapshot of T.epochCount at last save
     long long cumulativeTotalTrainCount = 0;        // Total train count (T.trainCount)
     long long vocabSizeSnapshot = 0;                // Snapshot of T.vocabsize
+    float lambdaL1;                                 // L1 penalty
+    float lambdaL2;                                 // L2 penalty
+    float currentLearning;                          // current line's learning rate
+    double totalLearning;                           // total learning rate from previous trainings
+    double adLearning;                              // average of total learning from last session
     float cumulativeError = 0;                      // total error throughout training
     std::string lastSaveTimestamp;                  // Timestamp of last progress saved
 
@@ -77,6 +80,11 @@ struct TrainingSessionData {
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lastEpochCountState; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeTotalTrainCount; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> vocabSizeSnapshot; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lambdaL1; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lambdaL2; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> currentLearning; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> totalLearning; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> adLearning; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeError; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) lastSaveTimestamp = line; else return false;
         
@@ -98,6 +106,11 @@ struct TrainingSessionData {
         ofs << lastEpochCountState << std::endl;
         ofs << cumulativeTotalTrainCount << std::endl;
         ofs << vocabSizeSnapshot << std::endl;
+        ofs << lambdaL1 << std::endl;
+        ofs << lambdaL2 << std::endl;
+        ofs << currentLearning << std::endl;
+        ofs << totalLearning << std::endl;
+        ofs << adLearning << std::endl;
         ofs << cumulativeError << std::endl;
         
         auto now = std::chrono::system_clock::now();
@@ -139,7 +152,9 @@ public:
     int d;                  // token dimension
     int l;                  // layers of mlp
     int total;              // total tokenLimit -> t*count m * n
-    float learning;         // learning rate for MLPs
+    float learning;         // learning rate
+    double totalLearning;   // total learning for all updates (adaptive learning)
+    double adLearning;      // = T.totalLearning/T.trainCount (average adaptive learning)
     float lambda_L1;        // lambda for L1 penalty
     float lambda_L2;        // lambda for L2 penalty
     bool isSelf;            // if self attention or cross attention
@@ -171,7 +186,7 @@ public:
     long long int totalParams;              // total parameters of transformer
     long long int totalTokens;              // total tokens used for training, testing and validation
     long long int vocabsize;                // total vocabulary size
-
+    long long int totalTrainingCount;       // total training count obtained from epochs based on token training
     tokeniser TOK;          // tokeniser
     transformer T;          // transformer
 
@@ -199,13 +214,13 @@ public:
     void setEmbeddingFromCSV(const std::string& path2file);
     void makeEmbedding(std::string& path2file);
 
-    // train first block promp-response and sentences
+    // train first block on promp-response and sentences
     void trainBlockPR(const std::string& trainingDataFolder);
     void trainBlockSentence(const std::string& trainingDataFolder);
     void testBlockPR(const std::string& testDataFolder);
     void testBlockSentence(const std::string& testDataFolder);
 
-    // train model promp-response and sentences
+    // train and test model on promp-response and sentences
     void trainModelPR(const std::string& trainingDataFolder);
     void trainModelSentence(const std::string& trainingDataFolder);
     void testModelPR(const std::string& testDataFolder);

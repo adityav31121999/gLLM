@@ -1,7 +1,7 @@
 #include "include/model.hpp"
 #include <filesystem>
-#include <sstream> // For std::istringstream
-#include <iomanip> // For std::put_time
+#include <sstream>
+#include <iomanip>
 #include <fstream>
 #include <neural.hpp>
 #include <maths.hpp>
@@ -101,9 +101,8 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
     std::string line;
 
     if (startLineForCurrentFile >= numberOfLines && sessionFileExistsAndIsValid && 
-        sessionData.lastTrainingFileName == txtFileLocation) 
-    {
-        std::cout << "All lines in " << txtFileLocation << " were already processed according to session data. Skipping." << std::endl;
+        sessionData.lastTrainingFileName == txtFileLocation) {
+        std::cout << "All lines in " << txtFileLocation << " were already processed according to session data. Skipping this file." << std::endl;
         return;
     }
     // Start timing here
@@ -121,6 +120,9 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
 
     long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     long long linesProcessedInThisRun = 0;
+
+    // deserialise .bin file for first block
+    T.t[0].deserialise(T.t[0].blockFilePath);
 
     // tokenise each line and povide their respective emebeddings
     for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
@@ -183,6 +185,12 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
         sessionData.lastBlockCountState = this->T.blockCount;
         sessionData.lastEpochCountState = this->T.epochCount;
         sessionData.vocabSizeSnapshot = this->T.vocabsize;
+        sessionData.lambdaL1 = this->lambda_L1;
+        sessionData.lambdaL2 = this->lambda_L2;
+        sessionData.currentLearning = this->T.learning;
+        sessionData.totalLearning = this->T.totalLearning;
+        sessionData.adLearning = this->T.totalLearning/this->T.trainCount;
+        sessionData.cumulativeError = this->T.error;
         if (!currentChatLogPath.empty()) {
             sessionData.save(currentChatLogPath);
         }
@@ -316,6 +324,9 @@ void model::trainModelSentence(const std::string& txtFileLocation)
     long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     long long linesProcessedInThisRun = 0;
 
+    // deserialise all blocks
+    for(int i = 0; i < m; i++) T.t[i].deserialise(T.t[i].blockFilePath);
+
     // tokenise each line and povide their respective emebeddings
     for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
     {
@@ -372,16 +383,21 @@ void model::trainModelSentence(const std::string& txtFileLocation)
         sessionData.lastBlockCountState = this->T.blockCount;
         sessionData.lastEpochCountState = this->T.epochCount;
         sessionData.vocabSizeSnapshot = this->T.vocabsize;
+        sessionData.lambdaL1 = this->lambda_L1;
+        sessionData.lambdaL2 = this->lambda_L2;
+        sessionData.currentLearning = this->T.learning;
+        sessionData.totalLearning = this->T.totalLearning;
+        sessionData.adLearning = this->T.totalLearning/this->T.trainCount;
+        sessionData.cumulativeError = this->T.error;
         if (!currentChatLogPath.empty()) {
             sessionData.save(currentChatLogPath);
         }
 
         std::cout << "complete " << k << "th part. Progress saved." << std::endl;
-        if(T.blockCount == 1) T.t[0].serialise(T.t[0].blockFilePath);
+        newChat();
     }
     std::cout << "Training complete for file " << txtFileLocation << std::endl;
-    newChat();
-
+    serialise();
     // copy to other blocks and serialise
     // End timing here
     auto endTime = std::chrono::high_resolution_clock::now();

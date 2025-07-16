@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(model C CXX)
 
-include_directories(include)
+# include_directories(include)
 
 add_library(model STATIC
     src/tokens/tokeniser.cpp
@@ -17,7 +17,7 @@ add_library(model STATIC
     src/tokens/group.cpp
     src/tokens/pairstats.cpp
     src/tokens/merge.cpp
-    src/tokens/readFile.cpp
+    src/tokens/readFiles.cpp
 
     src/model.cpp
     src/create.cpp
@@ -33,6 +33,12 @@ add_library(model STATIC
     src/training/testsent.cpp
     src/inference/chat.cpp
     src/inference/run.cpp
+)
+
+# Make the include directory available to this target and any
+# other target that links to it (like the main executable).
+target_include_directories(model PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 target_link_libraries(model

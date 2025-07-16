@@ -1,9 +1,11 @@
 
 #ifdef USE_CPU
-
-// transformer training
-#include "include/attention.hpp"
-#include "include/block.hpp"
+#include <vector>
+#include <stdexcept>
+#include <iostream>
+#include <string>
+#include <cmath>
+#include <maths.hpp>
 #include "include/transformer.hpp"
 
 /**
@@ -17,28 +19,57 @@
 void transformer::train(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected,
     std::string& expString) 
 {
+    float current_Error = 0.0f;
+    float prev_Error = 0.0f;
     // for first block
     if(blockCount == 1 && currentTokenCount < CONTEXT_WIN) {
         computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         // train from here
         forward(blockCount, currentTokenCount, promptCount);
-        int i = 0;
-        while (i <= epochs) {
+        int j = 0;
+        prev_Error = 0.0f;
+        while (j <= epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
-            if((errorofv(otok, expected) < 0.01) || tokens[indexForToken] == expString) {
-                break;
+            current_Error = crossEntropy(otok, expected);
+            if (this->tokens[indexForToken] == expString && this->tokens[indexForToken] != "INVALID_INDEX") {
+                if(this->tokens[indexForToken] == "@#0") {
+                    std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
+                }
+                else {
+                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                    totalLearning += learning;
+                    break;
+                }
             }
-            // if error is not corrected even after epochs, then increase epochs
-            if(errorofv(otok, expected) > 0.01 && i == epochs) {
-                epochs += 10;
+            else if (j == this->epochs - 1) {
+                if (this->tokens[indexForToken] != expString) {
+                    std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                    this->epochs += 10;
+                }
+            }
+            // update learning rate starting from second epoch and specific conditions
+            if(j > 0) {
+                if(current_Error <= prev_Error) {
+                    if(j <= 6)   
+                        learning *= 1.05;
+                    else if (j % 6 == 0)
+                        learning *= (1 + (j/6)*0.05);
+                }
+                else {
+                    if(j <= 6)   
+                        learning *= 0.95;
+                    else if (j % 6 == 0)
+                        learning *= (1 - (j/6)*0.05);
+                }
             }
             backward(expected);
             forward(blockCount, currentTokenCount, promptCount);
-            i++;
+            prev_Error = current_Error;
+            j++;
         }
         trainCount++;
-        epochCount += i;
-        error += errorofv(otok, expected);
+        epochCount += j;
+        error += crossEntropy(otok, expected);
         currentTokenCount += 1;
         if(currentTokenCount == CONTEXT_WIN) {
             blockCount += 1;
@@ -49,25 +80,49 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
         computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
         // train from here
         forward(blockCount, currentTokenCount, promptCount);
-        int i = 0;
-        while (i < epochs) {
+        int j = 0;
+        prev_Error = 0.0f;
+        while (j < epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
-            if(errorofv(otok, expected) < 0.01 || tokens[indexForToken] == expString) {
-                // tokenEmbed[currentTokenCount] = t[blockCount-1].EH; // This was problematic, EH is vector, tokenEmbed is mat
-                // If otok is the predicted embedding, and it's good, this might be where it's stored.
-                break;
+            current_Error = crossEntropy(otok, expected);
+            if (this->tokens[indexForToken] == expString && this->tokens[indexForToken] != "INVALID_INDEX") {
+                if(this->tokens[indexForToken] == "@#0") {
+                    std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
+                }
+                else {
+                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                    totalLearning += learning;
+                    break;
+                }
             }
-            // if error is not corrected even after epochs, then increase epochs
-            if(errorofv(otok, expected) > 0.01 && i == epochs) {
-                epochs += 10;
+            else if (j == this->epochs - 1) {
+                if (this->tokens[indexForToken] != expString) {
+                    std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                    this->epochs += 10;
+                }
             }
-            i++;
+            // update learning rate starting from second epoch and specific conditions
+            if(j > 0) {
+                if(current_Error <= prev_Error) {
+                    if(j <= 6)   
+                        learning *= 1.05;
+                    else if (j % 6 == 0)
+                        learning *= (1 + (j/6)*0.05);
+                }
+                else {
+                    if(j <= 6)   
+                        learning *= 0.95;
+                    else if (j % 6 == 0)
+                        learning *= (1 - (j/6)*0.05);
+                }
+            }
             backward(expected, blockCount);
             forward(blockCount, currentTokenCount, promptCount);
+            j++;
         }
         trainCount++;
-        epochCount += i;
-        error += errorofv(otok, expected);
+        epochCount += j;
+        error += crossEntropy(otok, expected);
         currentTokenCount += 1;
         if(currentTokenCount % CONTEXT_WIN == 0) {
             blockCount += 1;
@@ -94,6 +149,8 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
     setRow(tokenEmbed, 0, sentence[0]);
     promptCount = 1;
     blockCount = 1;
+    float current_Error = 0.0f;
+    float prev_Error = 0.0f;
     // keep this in a loop and train for each token in the sentence starting from second token
     for(int token_idx_in_sentence = 1; token_idx_in_sentence < sentence.size(); token_idx_in_sentence++) {
         // first block
@@ -117,17 +174,44 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
             int j_epoch = 0; // Renamed to avoid conflict with outer loop variable j
             // TRAIN FOR SENTENCE
             forward(blockCount, currentTokenCount, promptCount);
+            prev_Error = 0.0f;
             while (j_epoch <= epochs) {
                 computeOutput(otok, embeddings, vocabsize, indexForToken);
-                if((errorofv(otok, sentence[token_idx_in_sentence]) < 0.01) || tokens[indexForToken] == rString[token_idx_in_sentence]) {
-                    break;
+                current_Error = crossEntropy(otok, sentence[token_idx_in_sentence]);
+                if (this->tokens[indexForToken] == rString[token_idx_in_sentence] && this->tokens[indexForToken] != "INVALID_INDEX") {
+                    if(this->tokens[indexForToken] == "@#0") {
+                        std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
+                    }
+                    else {
+                        std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                        totalLearning += learning;
+                        break;
+                    }
                 }
-                // if error is not corrected even after epochs, then increase epochs
-                if(errorofv(otok, sentence[token_idx_in_sentence]) > 0.01 && j_epoch == epochs) {
-                    epochs += 10;
+                else if (j_epoch == this->epochs - 1) {
+                    if (this->tokens[indexForToken] != rString[token_idx_in_sentence]) {
+                        std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                        this->epochs += 10;
+                    }
+                }
+                // update learning rate starting from second epoch and specific conditions
+                if(j_epoch > 0) {
+                    if(current_Error <= prev_Error) {
+                        if(j_epoch <= 6)   
+                            learning *= 1.05;
+                        else if (j_epoch % 6 == 0)
+                            learning *= (1 + (j_epoch/6)*0.05);
+                    }
+                    else {
+                        if(j_epoch <= 6)   
+                            learning *= 0.95;
+                        else if (j_epoch % 6 == 0)
+                            learning *= (1 - (j_epoch/6)*0.05);
+                    }
                 }
                 backward(sentence[token_idx_in_sentence]);
                 forward(blockCount, currentTokenCount, promptCount);
+                prev_Error = current_Error;
                 j_epoch++;
             }
             // update variables
@@ -172,12 +256,36 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
             int j_epoch = 0; // Renamed
             while (j_epoch < epochs) {
                 computeOutput(otok, embeddings, vocabsize, indexForToken);
-                if(errorofv(otok, sentence[token_idx_in_sentence]) < 0.01 || tokens[indexForToken] == rString[token_idx_in_sentence]) {
-                    break;
+                if (this->tokens[indexForToken] == rString[token_idx_in_sentence] && this->tokens[indexForToken] != "INVALID_INDEX") {
+                    if(this->tokens[indexForToken] == "@#0") {
+                        std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
+                    }
+                    else {
+                        std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                        totalLearning += learning;
+                        break;
+                    }
                 }
-                // if error is not corrected even after epochs, then increase epochs
-                if(errorofv(otok, sentence[token_idx_in_sentence]) > 0.01 && j_epoch == epochs) {
-                    epochs += 10;
+                else if (j_epoch == this->epochs - 1) {
+                    if (this->tokens[indexForToken] != rString[token_idx_in_sentence]) {
+                        std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                        this->epochs += 10;
+                    }
+                }
+                // update learning rate starting from second epoch and specific conditions
+                if(j_epoch > 0) {
+                    if(current_Error <= prev_Error) {
+                        if(j_epoch <= 6)   
+                            learning *= 1.05;
+                        else if (j_epoch % 6 == 0)
+                            learning *= (1 + (j_epoch/6)*0.05);
+                    }
+                    else {
+                        if(j_epoch <= 6)   
+                            learning *= 0.95;
+                        else if (j_epoch % 6 == 0)
+                            learning *= (1 - (j_epoch/6)*0.05);
+                    }
                 }
                 j_epoch++;
                 backward(sentence[token_idx_in_sentence], blockCount);
@@ -219,6 +327,9 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
     }
     
     int initialTokCount = this->currentTokenCount;
+    float prev_Error = 0.0f;
+    float current_Error = 0.0f;
+
     // Keys and Queries of prompts
     if(blockCount == 1) {
         for(int i_pa = 0; i_pa < x; i_pa++) {
@@ -255,27 +366,31 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
         forward(blockCount, currentTokenCount, promptCount);
 
         int j_epoch = 0;
+        prev_Error = 0.0f;
         while (j_epoch < epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
-            float current_error = MSE(otok, response[i]);
-            if(tokens[this->indexForToken] == rString[i])
-            {
-                std::cout << "indexForToken: " << this->indexForToken << std::endl;
-                std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
-                break;
+            current_Error = crossEntropy(otok, response[i]);
+            std::string predicted_token_str = (indexForToken >= 0 && (indexForToken < vocabsize)) ? tokens[indexForToken] : "INVALID_INDEX";
+
+            std::cout << "Computed token is -> " << predicted_token_str << " (index: " << indexForToken << ") | with BCE error " << current_Error << " | MAE Error " << MAE(otok, response[i]) << std::endl;
+            if (predicted_token_str == rString[i] && predicted_token_str != "INVALID_INDEX") {
+                if(predicted_token_str == "@#0"){
+                    std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
+                }
+                else {
+                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
+                    break;
+                }
             }
-            else if(j_epoch == epochs - 1) {
-                std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
-                std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
-                epochs += 10;
-            }
-            else {
-                std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
+            else if (j_epoch == this->epochs - 1) {
+                if (predicted_token_str != rString[i]) {
+                    std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                    this->epochs += 10;
+                }
             }
 
             j_epoch++;
             backward(response[i], blockCount);
-
             // Keys and Queries of both prompts and response
             if(blockCount == 1) {
                 for(int i_pa = 0; i_pa < x; i_pa++) {
@@ -320,12 +435,13 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                 }
             }
             // forward(blockCount, currentTokenCount, promptCount);
+            prev_Error = current_Error;
         }
         // update variables
         resCount++;
         trainCount++;
         epochCount += j_epoch;
-        error += errorofv(otok, response[i]);
+        error += crossEntropy(otok, response[i]);
         currentTokenCount += 1;
         if(currentTokenCount % CONTEXT_WIN == 0) {
             blockCount += 1;

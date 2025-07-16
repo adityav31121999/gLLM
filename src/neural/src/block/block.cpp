@@ -23,7 +23,7 @@
  * @param blockFilePath_param The base path for the block's data file.
  */
 block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, bool attentionType, 
-    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning) : // Changed to pass by value
+    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning, float lambda_L1, float lambda_L2) :
     x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
     blockFilePath([&blockFilePath_param, blockCount]() {
@@ -39,7 +39,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
         throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
     }
-    b.resize(x, std::vector<attention>(y, attention(n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning)));
+    b.resize(x, std::vector<attention>(y, attention(n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning, lambda_L1, lambda_L2)));
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
     tokForBlock = mat(n_tokens, d_embed);
 
@@ -139,7 +139,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
  * @param blockFilePath_param The base path for the block's data file.
  */
 block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab,
-    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
+    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning, float lambda_L1, float lambda_L2) :
     clcontext(context), x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
         blockFilePath([&blockFilePath_param, blockCount]() {
@@ -157,7 +157,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
         throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
     }
-    b.resize(x, std::vector<attention>(y, attention(context, n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning)));
+    b.resize(x, std::vector<attention>(y, attention(context, n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning, lambda_L1, lambda_L2)));
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
     tokForBlock = mat(n_tokens, d_embed);
 

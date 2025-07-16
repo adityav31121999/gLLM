@@ -36,7 +36,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
     }
 
     cl::Buffer d_tokenEmbed, d_embeddings, d_expected_response_token;
-    float current_error = 1.0f;
+    float current_error = 0.0f;
+    float prev_Error = 0.0f;
     int initial_token_count = this->currentTokenCount; // Store initial count
     int initial_epochs = this->epochs;
     int resCount = 0;
@@ -363,6 +364,22 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                         this->epochs += 10;
                     }
                 }
+
+                if(j > 0) {
+                    if(current_error <= prev_Error) {
+                        if(j <= 6)   
+                            learning *= 1.05;
+                        else if (j % 6 == 0)
+                            learning *= (1 + (j/6)*0.05);
+                    }
+                    else {
+                        if(j <= 6)   
+                            learning *= 0.95;
+                        else if (j % 6 == 0)
+                            learning *= (1 - (j/6)*0.05);
+                    }
+                }
+                prev_Error = current_error;
 
                 // --- Backward Pass ---
                 clBackward(expected_vec, current_block_idx);

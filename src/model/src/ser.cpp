@@ -78,10 +78,10 @@ void transformer::makeCommon(std::string &path2folderOfAllBins)
                 // Ensure T.t[0].b[j][k] is valid before calling methods on it.
                 // This should be guaranteed if x and y match the dimensions of T.t[0].b
                 if (j < t[0].b.size() && k < t[0].b[j].size()) {
-                    t[0].b[j][k].MQ.serialise(0, commonBinPath);
-                    t[0].b[j][k].MK.serialise(0, commonBinPath);
-                    t[0].b[j][k].MV.serialise(0, commonBinPath);
-                    t[0].b[j][k].MH.serialise(0, commonBinPath);
+                    t[0].b[j][k].MQ.serialise(j * k * matOffset, commonBinPath);
+                    t[0].b[j][k].MK.serialise(j * k * matOffset, commonBinPath);
+                    t[0].b[j][k].MV.serialise(j * k * matOffset, commonBinPath);
+                    t[0].b[j][k].MH.serialise(j * k * matOffset, commonBinPath);
                     t[0].b[j][k].hor.serialise4train(commonBinPath);
                     t[0].b[j][k].ver.serialise4train(commonBinPath);
                 }

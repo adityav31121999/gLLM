@@ -66,6 +66,9 @@ public:
     int x, y;               // x layers with y heads in each layer
     int tokenCount;         // number of tokens in local context
     float error;            // error for block, mean of all Attention Heads
+    float learning;         // learning rate for block
+    float lambda_L1;        // L1 regularization strength
+    float lambda_L2;        // L2 regularization strength
     bool isSelfAttention;   // if its self (1) or cross (0) attention
     bool inTraining;        // = 1 for training, = 0 for in use
     std::string str;        // to check whether new token is "@#O" or part of conversation
@@ -81,11 +84,12 @@ public:
     OpenCLContext& clcontext;
     block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
         long long int vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
-        float& learning);
+        float& learning, float lambda_L1, float lambda_L2);
 #elif USE_CUDA || USE_CPU
     block() = default;
     block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, 
-        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning);
+        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning,
+        float lambda_L1, float lambda_L2);
 #endif
 
     // assignment operator to copy block
@@ -93,6 +97,9 @@ public:
         x = other.x;
         y = other.y;
         error = other.error;
+        learning = other.learning;
+        lambda_L1 = other.lambda_L1;
+        lambda_L2 = other.lambda_L2;
         isSelfAttention = other.isSelfAttention;
         inTraining = other.inTraining;
         str = other.str;

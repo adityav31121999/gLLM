@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <filesystem>
 #include <fstream>
-#include <locale> // for isspace
-#include <sys/stat.h> // For stat to check file existence (alternative to std::filesystem::exists)
+#include <locale>
+#include <sys/stat.h>
 
 #ifdef USE_OPENCL
 
@@ -49,7 +49,7 @@ model::model(OpenCLContext& context, const std::string& baseDirectory, int m_par
     info.totalContext = this->m * this->n;
     calculateAndSetLayout();
     std::cout << "MODEL CLASS CREATED with OpenCL device " << context.device.getInfo<CL_DEVICE_NAME>() << std::endl;
-    std::cout << "-----------------------------------------------------------------------------" << std::endl;
+    std::cout << "-----------------------------------------------------------------------" << std::endl;
 }
 
 #else
@@ -150,7 +150,7 @@ model::model(const std::string& baseDirectory, int m_param, int x_param, int y_p
     #elif USE_CPU
     std::cout << "Model Created using CPU" << std::endl;
     #endif
-    std::cout << "----------------------------------------------------------" << std::endl;
+    std::cout << "------------------------------------------------------------------------" << std::endl;
 }
 
 #endif

@@ -401,7 +401,7 @@ std::vector<float> LOTAder(const std::vector<float>& y) {
 
 
 /**
- * @brief Applies the LOTA activation function to a 2D vector (matrix),
+ * @brief Applies the LOTA (least of them all) activation function to a 2D vector (matrix),
  *        considering only relevant elements defined by 't' and 'attentionType'.
  * @param y Input 2D vector (const reference).
  * @param t Dimension limit (passed by value).

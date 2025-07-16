@@ -40,17 +40,13 @@ public:
     float lambda_L1;        // lambda for L1 penalty
     float lambda_L2;        // lambda for L2 penalty
     float error;            // error for transformer (after complete trainin)
-    float cErr;             // current error for ongoing iteration of training
-    float pErr1;            // previous iteration's error
-    float pErr2;            // previous to previous iteration's error
-    float fErr;             // next iteration's predicted error
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
     long long int params;           // parameters in transformer
     long long int trainCount;       // total training count
     long long int vocabsize;        // size of vocabulary
     long long int cacheOffset;      // for extracting caches
     long long int matOffset;        // for extracting matrices
-    long long int mlpOffset;        // for extracting MLPs
+    long long int mlpOffset;        // for extracting MLPs*
 
     std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
@@ -115,7 +111,7 @@ public:
 
 #else
 
-    void parallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
+    void parallelKdotQs(int &promptCount, int &currentTokenCount, int &blockCount, int &column, bool &isSelf, bool &inTraining);
     void computeKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& promptCount);
     void backward(std::vector<float>& expectedH);
@@ -155,11 +151,11 @@ std::string toLower(const std::string& str);
 
 // compute functions for dot, KdotQ and other values
 
-void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index);
-void computeOutput(const std::vector<float>& output, mat& embeddings, long long int& voc, int& index);
-void computeKorQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
+// void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index);
+void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index);
+void computeKorQ(const std::vector<float>& tokenEmbed, const mat& m, std::vector<float>& KorQ);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
-void computeDot(std::vector<float>& Ti, mat& M, std::vector<float>& Tj, float& dot);
+void computeDot(const std::vector<float>& Ti, const mat& M, const std::vector<float>& Tj, float& dot);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
     int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount,

@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/transformer.hpp"
 #include "include/block.hpp"
@@ -355,3 +356,5 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
     CUDA_CHECK(cudaFree(d_expected_token)); // Free the buffer for the expected token
     CUDA_CHECK(cudaFree(d_otok_buffer));    // Free the temporary output buffer
 }
+
+#endif

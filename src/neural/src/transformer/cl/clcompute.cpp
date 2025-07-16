@@ -62,9 +62,9 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         fprintf(stderr, "Error: Invalid dimensions (context_win_size=%d, embedding_dim=%d)\n", context_win_size, embedding_dim);
         return;
     }
-    const size_t k_q_ev_head_elems = static_cast<size_t>(context_win_size) * MATHEIGHTS;    // n * d
-    const size_t kdotq_head_elems = static_cast<size_t>(context_win_size) * context_win_size;  // n * n
-    const size_t qkcache_head_elems = static_cast<size_t>(embedding_dim) * embedding_dim;      // d * d
+    const size_t k_q_ev_head_elems = static_cast<size_t>(context_win_size) * MATHEIGHTS;        // n * d
+    const size_t kdotq_head_elems = static_cast<size_t>(context_win_size) * context_win_size;   // n * n
+    const size_t qkcache_head_elems = static_cast<size_t>(embedding_dim) * embedding_dim;       // d * d
 
     // --- Total Data Sizes for the Parallel (in elements) ---
     const size_t total_k_elems = num_heads_in_parallel * k_q_ev_head_elems;     // x * n * d
@@ -88,9 +88,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
     std::vector<float> h_all_kdotq_flat;                // Allocate later if needed for copy-back
     std::vector<float> h_transformer_tokenEmbed_flat;   // Flattened global embeddings
     std::vector<float> h_block_tokForBlock_flat;        // Flattened block-local embeddings
-
-    // --- Temporary Host Buffers for Flattening ---
-    std::vector<float> temp_flat_buffer;
+    std::vector<float> temp_flat_buffer;                // Temporary Host Buffers for Flattening
 
     // --- OpenCL Device Buffers (using cl::Buffer RAII wrapper) ---
     cl::Buffer d_all_kdotq;
@@ -311,12 +309,6 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                 global_work_size = calculate_global_size(context_len_in_block, effective_prompt_len); // Parenthesize std::min and std::max
             }
         }
-
-        // --- Select and Launch Kernels ---
-        // The provided OpenCL kernels calculate indices based on get_global_id.
-        // We launch one kernel per head, adjusting the arguments.
-        // This mirrors the CUDA approach more closely than one giant kernel launch.
-        
 
         for (int i = 0; i < num_heads_in_parallel; ++i) {
             int blk = (inTraining == 0) ? 0 : blockCount-1;
