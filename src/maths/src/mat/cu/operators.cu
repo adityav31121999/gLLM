@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include "mat.hpp" // Include the mat class definition
 
-#define CHECK_CUDA_ERROR(call)                                          \
+#define CUDA_CHECK_ERROR(call)                                          \
 do {                                                                    \
     cudaError_t err = call;                                             \
     if (err != cudaSuccess) {                                           \
@@ -166,13 +166,13 @@ mat host_dot(
         size_t matrix_size_bytes = static_cast<size_t>(input_mat.row) * input_mat.col * sizeof(float); // Use input_mat properties
         size_t output_vec_size_bytes = static_cast<size_t>(matrixRow) * sizeof(float);
 
-        CHECK_CUDA_ERROR(cudaMalloc(&d_vec, vec_size_bytes));
-        CHECK_CUDA_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
-        CHECK_CUDA_ERROR(cudaMalloc(&d_vecOutput, output_vec_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_vec, vec_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_vecOutput, output_vec_size_bytes));
 
         // --- Data Transfer (Host to Device) ---
-        CHECK_CUDA_ERROR(cudaMemcpy(d_vec, h_vec.data(), vec_size_bytes, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK_ERROR(cudaMemcpy(d_vec, h_vec.data(), vec_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
 
         // --- Kernel Launch Configuration ---
         int threadsPerBlock = 256; // Or another suitable block size
@@ -183,18 +183,18 @@ mat host_dot(
         // --- Kernel Launch ---
         // Use the correct kernel name
         dot<<<gridDim, blockDim>>>(d_vec, d_matrix, d_vecOutput, veclength, matrixRow, matrixColumn);
-        CHECK_CUDA_ERROR(cudaGetLastError()); // Check for launch errors
+        CUDA_CHECK_ERROR(cudaGetLastError()); // Check for launch errors
 
         // --- Synchronization ---
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
         // --- Data Transfer (Device to Host) into result_mat's mapped memory ---
-        CHECK_CUDA_ERROR(cudaMemcpy(result_mat.mapped_data, d_vecOutput, output_vec_size_bytes, cudaMemcpyDeviceToHost));
+        CUDA_CHECK_ERROR(cudaMemcpy(result_mat.mapped_data, d_vecOutput, output_vec_size_bytes, cudaMemcpyDeviceToHost));
 
         // --- GPU Resource Cleanup ---
-        CHECK_CUDA_ERROR(cudaFree(d_vec));
-        CHECK_CUDA_ERROR(cudaFree(d_matrix));
-        CHECK_CUDA_ERROR(cudaFree(d_vecOutput));
+        CUDA_CHECK_ERROR(cudaFree(d_vec));
+        CUDA_CHECK_ERROR(cudaFree(d_matrix));
+        CUDA_CHECK_ERROR(cudaFree(d_vecOutput));
 
     } catch (const std::exception& e) {
         // Ensure cleanup even if error occurs
@@ -259,15 +259,15 @@ float host_dot(
         size_t matrix_size_bytes = static_cast<size_t>(input_mat.row) * input_mat.col * sizeof(float); // Use input_mat properties
         size_t scalar_size_bytes = sizeof(float); // Corrected size calculation
 
-        CHECK_CUDA_ERROR(cudaMalloc(&d_vec1, vec_size_bytes));
-        CHECK_CUDA_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
-        CHECK_CUDA_ERROR(cudaMalloc(&d_vec2, vec_size_bytes));
-        CHECK_CUDA_ERROR(cudaMalloc(&d_scalarOutput, scalar_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_vec1, vec_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_vec2, vec_size_bytes));
+        CUDA_CHECK_ERROR(cudaMalloc(&d_scalarOutput, scalar_size_bytes));
 
         // --- Data Transfer (Host to Device) ---
-        CHECK_CUDA_ERROR(cudaMemcpy(d_vec1, h_vec1.data(), vec_size_bytes, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
-        CHECK_CUDA_ERROR(cudaMemcpy(d_vec2, h_vec2.data(), vec_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK_ERROR(cudaMemcpy(d_vec1, h_vec1.data(), vec_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK_ERROR(cudaMemcpy(d_vec2, h_vec2.data(), vec_size_bytes, cudaMemcpyHostToDevice));
 
         // --- Kernel Launch Configuration (Single Block Reduction) ---
         unsigned int numThreads = 1;
@@ -275,7 +275,7 @@ float host_dot(
         numThreads = std::max((unsigned int)N, numThreads);
 
         cudaDeviceProp prop;
-        CHECK_CUDA_ERROR(cudaGetDeviceProperties(&prop, 0));
+        CUDA_CHECK_ERROR(cudaGetDeviceProperties(&prop, 0));
         if (numThreads > (unsigned int)prop.maxThreadsPerBlock) {
              numThreads = prop.maxThreadsPerBlock;
              if (N > prop.maxThreadsPerBlock) {
@@ -291,19 +291,19 @@ float host_dot(
         // --- Kernel Launch ---
         // Use the correct kernel name
         dot<<<gridDim, blockDim, sharedMemBytes>>>(d_vec1, d_matrix, d_vec2, d_scalarOutput, N, N, N, N);
-        CHECK_CUDA_ERROR(cudaGetLastError());
+        CUDA_CHECK_ERROR(cudaGetLastError());
 
         // --- Synchronization ---
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
         // --- Data Transfer (Device to Host) ---
-        CHECK_CUDA_ERROR(cudaMemcpy(&h_scalarOutput, d_scalarOutput, scalar_size_bytes, cudaMemcpyDeviceToHost));
+        CUDA_CHECK_ERROR(cudaMemcpy(&h_scalarOutput, d_scalarOutput, scalar_size_bytes, cudaMemcpyDeviceToHost));
 
         // --- GPU Resource Cleanup ---
-        CHECK_CUDA_ERROR(cudaFree(d_vec1));
-        CHECK_CUDA_ERROR(cudaFree(d_matrix));
-        CHECK_CUDA_ERROR(cudaFree(d_vec2));
-        CHECK_CUDA_ERROR(cudaFree(d_scalarOutput));
+        CUDA_CHECK_ERROR(cudaFree(d_vec1));
+        CUDA_CHECK_ERROR(cudaFree(d_matrix));
+        CUDA_CHECK_ERROR(cudaFree(d_vec2));
+        CUDA_CHECK_ERROR(cudaFree(d_scalarOutput));
 
     } catch (const std::exception& e) {
         // Ensure cleanup even if error occurs

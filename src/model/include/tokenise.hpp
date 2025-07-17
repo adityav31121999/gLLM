@@ -239,7 +239,7 @@ public:
     void generateAndSaveEmbeddings(const std::string& outputPath, float r1, float r2);
 
     #ifdef USE_CUDA
-        void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize);
+        void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d_dim, int& vocSize, float r1, float r2);
         void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding, const std::vector<std::vector<float>>& embedding, int& d, int& vocSize);
     #elif USE_OPENCL
         void clEmbeddingFormula(OpenCLContext& ocl_context, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val, float r1, float r2);

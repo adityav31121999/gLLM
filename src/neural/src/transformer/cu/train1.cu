@@ -60,15 +60,34 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
         int host_indexForToken = -1;    // index obtained from training for response
         while (i <= epochs) 
         {
-            float* d_block0_EH_ptr = nullptr; // Hypothetical function to get device pointer
+            float* d_block0_EH_ptr = nullptr;
             CUDA_CHECK(cudaMalloc(&d_block0_EH_ptr, d * sizeof(float))); // This will hold the output from cuForward
             CUDA_CHECK(cudaMemcpy(d_block0_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy transformer's otok (output of cuForward)
 
             // Compute output token embedding and find best token index on GPU
-            cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
+            cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, host_indexForToken, d);
             std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back to host for error check
-            current_error = crossEntropy(h_otok_buffer, expected);
+            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost));    // Copy result back for error check
+            current_error = crossEntropy(h_otok_buffer, expected);        // Compare against target response[i]
+            // if(host_indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && tokens[host_indexForToken] == rString[i])
+            if(tokens[this->indexForToken] == expString) {
+                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
+                std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
+                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, expected.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
+                if(expString == "<@#0>")
+                    std::cout << "--------------------To next LINE------------->>>>>>>>>>>" << std::endl;
+                else
+                    std::cout << "--------------------To next token------------->>>>>>>>>>>" << std::endl;
+                break;
+            }
+            else if(i == epochs - 1) {
+                std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
+                std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                epochs += 10;
+            }
+            else {
+                std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
+            }
 
             if(i > 0) {
                 if(current_error <= prev_Error) {
@@ -84,17 +103,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
                         learning *= (1 - (i/6)*0.05);
                 }
             }
-
-            if(host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == expString) {
-                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToDevice));
-                break;
-            }
-
-            // Increase epochs if error is persistent
-            if(current_error > 0.01 && i == epochs) {
-                epochs += 10;
-            }
-
+            prev_Error = current_error;
             cuBackward(expected);
             cuForward(blockCount, currentTokenCount, promptCount);
             i++;
@@ -125,11 +134,31 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
             float* d_current_block_EH_ptr; // Pointer to the current block's EH on device
             CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, d * sizeof(float)));
             CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy transformer's otok
-            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
 
+            // Compute output token embedding and find best token index on GPU
+            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, host_indexForToken, d);
             std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
-            current_error = crossEntropy(h_otok_buffer, expected);
+            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost));    // Copy result back for error check
+            current_error = crossEntropy(h_otok_buffer, expected);        // Compare against target response[i]
+            // if(host_indexForToken >= 0 && static_cast<size_t>(indexForToken) < tokens.size() && tokens[host_indexForToken] == rString[i])
+            if(tokens[this->indexForToken] == expString) {
+                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
+                std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
+                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, expected.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
+                if(expString == "<@#0>")
+                    std::cout << "--------------------To next LINE------------->>>>>>>>>>>" << std::endl;
+                else
+                    std::cout << "--------------------To next token------------->>>>>>>>>>>" << std::endl;
+                break;
+            }
+            else if(i == epochs - 1) {
+                std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
+                std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                epochs += 10;
+            }
+            else {
+                std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
+            }
 
             if(i > 0) {
                 if(current_error <= prev_Error) {
@@ -145,20 +174,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
                         learning *= (1 - (i/6)*0.05);
                 }
             }
-
-            if(current_error < 0.01 || (host_indexForToken >= 0 && host_indexForToken 
-                < tokens.size() && tokens[host_indexForToken] == expString)) 
-            {
-                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToDevice));
-                break; // Exit training loop
-            }
-
-            // Increase epochs if error is persistent
-            if(current_error > 0.01 && i == epochs -1)
-            {
-                epochs += 10;
-            }
-
+            prev_Error = current_error;
             cuBackward(expected, blockCount);
             cuForward(blockCount, currentTokenCount, promptCount);
             i++;
@@ -214,9 +230,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
     size_t singleTokenBytes = static_cast<size_t>(d) * sizeof(float);
     size_t outputBytes = singleTokenBytes; // Size of h_otok_buffer
 
-    float* dQ; float* dK; float* mQ; float* mK; float* tok;
-    // int threadsPerBlock = 256;
-    CUDA_CHECK(cudaMalloc(&dQ, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
+    float* dQ; float* dK; float* mQ; float* mK; float* tok;    CUDA_CHECK(cudaMalloc(&dQ, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
     CUDA_CHECK(cudaMalloc(&dK, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
     CUDA_CHECK(cudaMalloc(&mQ, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MQ is MATHEIGHTS x EMBEDDING
     CUDA_CHECK(cudaMalloc(&mK, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MK is MATHEIGHTS x EMBEDDING
@@ -225,6 +239,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
     // start taking attention score for first token and then perform trainin
     // otherwise starting from zero means trying to perform training without attention score
     this->blockCount = 1, this->promptCount = 1;
+    float prev_Error = 0.0f;
 
     // Train for each subsequent token in the sentence, starting from the second token
     // first token is used to set kdotq
@@ -240,7 +255,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         float current_error = 1.0f;
         int host_indexForToken = -1;
         std::string& expected_str = rString[i];
-
+        prev_Error = 0.0f;
         while (j < epochs) 
         {
             float* d_current_block_EH_ptr; // Pointer to current block's EH on device
@@ -251,7 +266,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
             std::vector<float> h_otok_buffer(d);
             CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
 
-            current_error = errorofv(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
+            current_error = crossEntropy(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
             std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<long long int>(tokens.size()))
                                                   ? tokens[host_indexForToken] : "INVALID_INDEX";
             std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, sentence[i]) << std::endl;
@@ -279,17 +294,22 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
                 }
             }
 
-            if(current_error < 0.01 || (host_indexForToken >= 0 && 
-                host_indexForToken < tokens.size() && tokens[host_indexForToken] == rString[i])) 
-            {
-                
-                break;
+            if(i > 0) {
+                if(current_error <= prev_Error) {
+                    if(i <= 6)   
+                        learning *= 1.05;
+                    else if (i % 6 == 0)
+                        learning *= (1 + (i/6)*0.05);
+                }
+                else {
+                    if(i <= 6)   
+                        learning *= 0.95;
+                    else if (i % 6 == 0)
+                        learning *= (1 - (i/6)*0.05);
+                }
             }
 
-            if(current_error > 0.01 && j == epochs - 1) {
-                epochs += 10;
-            }
-
+            prev_Error = current_error;
             cuBackward(sentence[i], blockCount);
             // first block
             if(blockCount == 1 && (effective_context_size < CONTEXT_WIN)) 

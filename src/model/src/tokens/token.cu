@@ -1,5 +1,5 @@
 #ifdef USE_CUDA
-
+#include <chrono>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -9,7 +9,7 @@
 #include "include/tokenise.hpp"
 
 // Helper for CUDA Error Checking
-#define CHECK_CUDA(call) do {   \
+#define CUDA_CHECK(call) do {   \
     cudaError_t err = call;     \
     if (err != cudaSuccess) {   \
         fprintf(stderr, "CUDA Error: %s at %s:%d\n", cudaGetErrorString(err), __FILE__, __LINE__);  \
@@ -118,7 +118,7 @@ __global__ void batchedVectorInverseKernel(float* output, const float* input, in
 
 
 // Host-side wrapper function
-void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val) {
+void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val, float r1, float r2) {
     // Resize embedding vector to hold the results
     embedding.resize(vocSize_val, std::vector<float>(d_dim));
 
@@ -192,11 +192,11 @@ void tokeniser::cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
     // 2. Allocate device memory
     float *d_input, *d_output;
     size_t total_size = (size_t)vocSize * d * sizeof(float);
-    CHECK_CUDA(cudaMalloc(&d_input, total_size));
-    CHECK_CUDA(cudaMalloc(&d_output, total_size));
+    CUDA_CHECK(cudaMalloc(&d_input, total_size));
+    CUDA_CHECK(cudaMalloc(&d_output, total_size));
 
     // 3. Copy flattened input data to device
-    CHECK_CUDA(cudaMemcpy(d_input, h_flat_input.data(), total_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_input, h_flat_input.data(), total_size, cudaMemcpyHostToDevice));
 
     // 4. Configure and launch kernel
     const int block_size = 256; // Must be power of 2 for this reduction
@@ -204,10 +204,10 @@ void tokeniser::cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
     dim3 block_dim(block_size, 1, 1);
     size_t shared_mem_size = block_dim.x * sizeof(float);
     batchedVectorInverseKernel<<<grid_dim, block_dim, shared_mem_size>>>(d_output, d_input, vocSize, d);
-    CHECK_CUDA(cudaGetLastError());
+    CUDA_CHECK(cudaGetLastError());
 
     // 5. Copy flat results back to host
-    CHECK_CUDA(cudaMemcpy(h_flat_output.data(), d_output, total_size, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_flat_output.data(), d_output, total_size, cudaMemcpyDeviceToHost));
 
     // 6. "Un-flatten" the results into the 2D output vector
     for (int i = 0; i < vocSize; ++i) {
@@ -217,8 +217,8 @@ void tokeniser::cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
     }
 
     // 7. Free device memory
-    CHECK_CUDA(cudaFree(d_input));
-    CHECK_CUDA(cudaFree(d_output));
+    CUDA_CHECK(cudaFree(d_input));
+    CUDA_CHECK(cudaFree(d_output));
 }
 
 #endif
