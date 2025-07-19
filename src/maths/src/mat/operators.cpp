@@ -112,13 +112,13 @@ mat& mat::operator=(const std::vector<std::vector<float>>& b) {
  * @brief provide values to row from vector
  * @param i 0-based index of row
  */
-void mat::addRow(const std::vector<float> & vec, int i)
+void mat::addRow(const std::vector<float>& vec, int i)
 {
     if (i < 0 || i >= row) {
         throw std::out_of_range("Row index out of bounds.");
     }
     if (static_cast<int>(vec.size()) != col) {
-        throw std::invalid_argument("Data size does not match the number of columns.");
+        throw std::runtime_error("Vector size does not match matrix column size: " + std::to_string(vec.size()) + " != " + std::to_string(col) + ".");
     }
     size_t offset = static_cast<size_t>(i) * col;
     if (offset + col > mapped_size / sizeof(float)) {

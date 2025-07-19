@@ -63,9 +63,6 @@ void merge_pair(const std::pair<std::string, std::string>& best_pair,
     // Instead of collecting strings, collect iterators or keys.
     // For efficiency, a real BPE implementation often uses an inverted index
     // (token -> list of words containing token) to quickly find words.
-    // Since we don't have that, we iterate, but we can optimize the update.
-    
-    // We'll collect the keys of the words that need updating.
     std::vector<std::string> keys_to_update;
     keys_to_update.reserve(splits.size()); // Reserve to avoid reallocations
 
@@ -110,15 +107,7 @@ void merge_pair(const std::pair<std::string, std::string>& best_pair,
                 // Assuming `splits` is thread-safe for reads while threads are spawned.
                 // If `splits` can change during this phase, it needs read-write lock or similar.
                 // For BPE, `splits` is generally stable until the next merge.
-                
-                // OPTIMIZATION: Get existing subwords without locking global `splits` map.
-                // This implies `splits` itself is read-only at this stage, or protected by R/W lock.
-                // For simplicity, we'll assume `splits` is thread-safe for concurrent reads (or copied).
-                // A better design would be to pass a const reference to splits into the lambda
-                // or pre-copy the relevant parts for each thread.
-                // Given the original code's locking pattern, we'll fetch the *original* split.
                 const std::vector<std::string>& current_subwords = splits.at(word_key); // Use .at() for bounds checking
-
                 std::vector<std::string> new_subwords;
                 new_subwords.reserve(current_subwords.size()); // Optimize allocation
 
@@ -141,10 +130,6 @@ void merge_pair(const std::pair<std::string, std::string>& best_pair,
     }
 
     // Step 3: Aggregate results from all threads.
-    // This phase should be sequential or use a merge tree (if many threads)
-    // to apply the collected local changes to the global `splits` map.
-    // Since `splits` modification is an `std::unordered_map` assignment,
-    // it's best done sequentially from the main thread.
     for (auto& f : futures) {
         std::unordered_map<std::string, std::vector<std::string>> local_map = f.get(); // Get the thread's results
         for (auto& entry : local_map) {

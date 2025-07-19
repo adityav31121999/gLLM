@@ -179,7 +179,7 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
                 computeOutput(otok, embeddings, vocabsize, indexForToken);
                 current_Error = crossEntropy(otok, sentence[token_idx_in_sentence]);
                 if (this->tokens[indexForToken] == rString[token_idx_in_sentence] && this->tokens[indexForToken] != "INVALID_INDEX") {
-                    if(this->tokens[indexForToken] == "@#0") {
+                    if(this->tokens[indexForToken] == "<@#0>") {
                         std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                     }
                     else {

@@ -8,16 +8,17 @@ project(model C CXX)
 add_library(model STATIC
     src/tokens/tokeniser.cpp
     src/tokens/set.cpp
-    src/tokens/clHost.cpp
     src/tokens/embedding.cpp
     src/tokens/split.cpp
     src/tokens/corpus.cpp
     src/tokens/token.cu
     src/tokens/token.cl
+    src/tokens/clToken.cpp
     src/tokens/group.cpp
     src/tokens/pairstats.cpp
     src/tokens/merge.cpp
     src/tokens/readFiles.cpp
+    src/tokens/utility.cpp
 
     src/model.cpp
     src/create.cpp

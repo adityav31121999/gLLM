@@ -1,17 +1,19 @@
-
 // model class for file
 #ifndef MODEL_HPP
 #define MODEL_HPP 1
 
 #include "tokenise.hpp"
 #include <string>
+#include <sstream>
 #include <vector>
 #include <maths.hpp>
 #include <neural.hpp>
 #include <chrono>
+#include <cmath>
 
 #define MECH "SHADY-ATTENTION"      // attention mechanism
 #define ARCH "DIVIDED-CONTEXT"      // model architecture
+#define M_PI 3.14159                // no-so on-point value of pi
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -157,8 +159,8 @@ public:
     double adLearning;      // = T.totalLearning/T.trainCount (average adaptive learning)
     float lambda_L1;        // lambda for L1 penalty
     float lambda_L2;        // lambda for L2 penalty
-    bool isSelf;            // if self attention or cross attention
-    bool toTrain;           // if training of model, set to 1, or use of model, set to 0
+    bool isSelf;            // if self attention = 1 or cross attention = 0
+    bool toTrain;           // if training of model, set to 1, or inference, set to 0
 
 // files to hold data
     modelDataInfo info;     // model info
@@ -194,11 +196,12 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     model(OpenCLContext& context, const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, float learning, float lambda_L1, float lambda_L2, long long int vocab, bool isSelfAttention, bool toTrainModel);
+        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
+        const std::string& tokeniserPath);
 #elif USE_CUDA || USE_CPU
     model() = default;
     model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
-        float lambda_L1, float lambda_L2, long long int vocab, bool isSelfAttention, bool toTrainModel);
+        float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, const std::string& tokeniserPath);
 #endif
 
     void setLearning(float learning);
@@ -212,7 +215,7 @@ public:
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
             std::string& license, std::string& trainingData);
     void setEmbeddingFromCSV(const std::string& path2file);
-    void makeEmbedding(std::string& path2file);
+    void setTokenAndEmbeddingForTransformer(tokeniser& tok);
 
     // train first block on promp-response and sentences
     void trainBlockPR(const std::string& trainingDataFolder);
@@ -231,17 +234,22 @@ public:
     int getOffset(int blockCount, int paCount, int attentionCount, int matCount, int mlpCount);
 
     void serialise();               // serialise whole model
-    void fetchmat(mat& a, int blockCount, int x, int y, const std::string& trainLocation);        // cache and mat
-    void fetchmlp(mlp& network, int blockCount, int x, int y, const std::string& trainLocation);  // mlp
+    void fetchmat(mat& a, int blockCount, int x, int y, const std::string& trainLocation);          // cache and mat
+    void fetchmlp(mlp& network, int blockCount, int x, int y, const std::string& trainLocation);    // mlp
     void fetchForInference(const std::string& binDirectory);    // fetch for inference (mlp and cache)
     void fetchForTraining(const std::string& binDirectory);     // fetch for training (matrix and mlp)
 
     // chat with model
     void runModel(const std::string& binDirectory);     // run transformer for conversation
-    void takeInput();       // take required input for transformer
-    void newChat();         // for new chat clear everything and set all to 0
-    void endChat();         // end chat, save parameters and clear all the memory, exit transformer
-    void saveChat();        // save chat to file
+    void takeInput();               // take required input for transformer
+    void newChat();                 // for new chat clear everything and set all to 0
+    void endChat();                 // end chat, save parameters and clear all the memory, exit transformer
+    void saveChat();                // save chat to file
+
+    // lambda = i(sin(i) + cos(pi - i))
+    static constexpr auto terminatorEmbed = [](float i, int j) -> float {
+        return static_cast<float>(j * (std::sin(i) + std::cos(M_PI - i)));
+    };
 
     // Destructor to ensure modelFILE is closed
     ~model() {
@@ -260,15 +268,11 @@ public:
 
 long long int countLinesInCSV(const std::string& filename);
 long long int countLineInTXT(const std::string& filename);
-
 static bool is_sub_sentence_delimiter(char c);
 static bool is_digit(char c);
-
-void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens, bool& sortIt);
 void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
 void textSplit(std::string& path2file, std::vector<std::string>& tokensOfFile, std::vector<std::vector<std::string>>& oddSentence, 
                 std::vector<std::vector<std::string>>& evenSentence);
-
 void create(std::string &locationOfALLbins);
 void makeCSV(std::vector<std::string>& tokens, mat& tokenEmbed, const std::string& csvFilePath);
 

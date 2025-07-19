@@ -1,4 +1,4 @@
-#include "include/attention.hpp"
+#include <maths.hpp>
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 #include <cstring>
@@ -27,8 +27,11 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param),
     inTraining(inTraining_param), learning(learning_rate_param), lambda_L1(lambda_L1_param),
     lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), trainCount(0), epochCount(0), 
-    promptNresponse(nullptr), embeddings(this->vocabsize, d), tokenEmbed(this->n * this->m, d)
+    promptNresponse(nullptr), embeddings(this->vocabsize + 1, d), tokenEmbed(this->n * this->m, d)
 {
+    if(this->tokens.size() != this->embeddings.row - 1) {
+        throw std::runtime_error("Vocabulary size don't match");
+    }
     if(this->inTraining) {
         t.reserve(this->m); // Reserve space
         for (int i = 0; i < this->m; ++i) {
@@ -39,7 +42,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         // training
         std::cout << "block vector t initialised." << std::endl;
-        otok.resize(d, 0);        
+        otok.resize(d, 0);
         currentTokenCount = 0;
         blockCount = 1;
         promptCount = 0;
@@ -97,7 +100,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
     y(y_param), n(n_param), d(d_param), h(h_param), l(l_param), vocabsize(vocab_param),
     isSelf(attentionType_param),  inTraining(inTraining_param), learning(learning_rate_param),
     lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), trainCount(0),
-    epochCount(0), promptNresponse(nullptr), embeddings(vocab_param, d_param), tokenEmbed(m_param * n_param, d_param)
+    epochCount(0), promptNresponse(nullptr), embeddings(vocab_param + 1, d_param), tokenEmbed(m_param * n_param, d_param)
 {
     std::cout << "TRANSFORMER constructed with OpenCL context using device: "
               << clcontext.device.getInfo<CL_DEVICE_NAME>() << std::endl << std::flush;

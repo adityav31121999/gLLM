@@ -44,21 +44,10 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
         throw std::runtime_error("Error: Vocabulary is not trained. Cannot generate embeddings.");
     }
     this->vocSize = this->tokens.size();
-
     std::cout << "-> Creating a temporary, lexicographically sorted token list for saving..." << std::endl;
     std::vector<std::string> sorted_tokens_for_saving = this->tokens;
-    // std::sort(sorted_tokens_for_saving.begin(), sorted_tokens_for_saving.end());
-    std::unordered_map<std::string, int> token_to_original_index;
-
-    for(int i = 0; i < this->vocSize; ++i) {
-        token_to_original_index[this->tokens[i]] = i;
-    }
-
     std::string csvEmbeddingOnly = embeddingCSVpath + "/_embeddings_only.csv";
-    std::string tokenEmbeddingcsv = embeddingCSVpath + "/_tokenEmbedding.csv";
-    // std::string csvDeEmbeddings = embeddingCSVpath + "/_deEmbedding.csv";
     this->embeddings.resize(this->vocSize, std::vector<float>(this->d));
-    // this->deEmbeddings.resize(this->vocSize, std::vector<float>(this->d));   // or multiple of d (m*d)
     
     #ifdef USE_CUDA
         // Call the CUDA kernel wrapper
@@ -89,15 +78,9 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
 
     std::cout << "-> Embedding generation complete." << std::endl;
     std::cout << "-> Saving only embeddings to: " << csvEmbeddingOnly << std::endl;
-    std::cout << "-> Saving tokens and embeddings to: " << tokenEmbeddingcsv << std::endl;
     std::ofstream outFile1(csvEmbeddingOnly);
-    std::ofstream outFile2(tokenEmbeddingcsv);
     if (!outFile1.is_open()) {
         std::cerr << "Error: Could not open file to save embeddings: " << csvEmbeddingOnly << std::endl;
-        return;
-    }
-    if (!outFile2.is_open()) {
-        std::cerr << "Error: Could not open file to save tokens and embeddings: " << tokenEmbeddingcsv << std::endl;
         return;
     }
 
@@ -105,16 +88,10 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
     for (size_t i = 0; i < this->vocSize; ++i) {
         const std::string& token = this->tokens[i];
         std::vector<float> embedding = embeddings[i];
-
-        // Store in mappedEmbeddings for later use (optional, but good practice)
-        this->mappedEmbeddings[token] = embedding;
-
-        // Write to CSV, handling quoting for tokens
-        std::string escaped_token = token;
-        outFile2 << "\"" << escaped_token << "\""; // Always quote the token field
-
-        for (float val : embedding) { outFile1 << "," << val; } outFile1 << "\n";
-        for (float val : embedding) { outFile2 << "," << val; } outFile2 << "\n";
+        for (float val : embedding) { 
+            outFile1 << "," << val;
+        } 
+        outFile1 << "\n";
     }
     outFile1.close();
     std::cout << "Successfully saved " << this->tokens.size() << " embeddings to " << embeddingCSVpath << std::endl;

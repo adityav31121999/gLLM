@@ -165,8 +165,11 @@ void model::trainBlockPR(const std::string& txtFileLocation)
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
             for(int j = 0; j < oddSentence[i].size(); j++) {
-                std::vector<float> embed(d, 0.0f);
-                this->T.getEmbedding(oddSentence[i][j], embed);
+                std::vector<float> embed = TOK.getEmbeddingForToken(oddSentence[i][j]);
+                if (embed.empty()) {
+                    std::cerr << "Warning: No embedding found for prompt token '" << oddSentence[i][j] << "'. Using a zero vector." << std::endl;
+                    embed.assign(d, 0.0f);
+                }
                 promptEmbeddings.push_back(embed);
                 int actual_row_in_ev = (T.currentTokenCount + j) % CONTEXT_WIN;
                 for(int m1 = 0; m1 < x; m1++) {
@@ -180,8 +183,11 @@ void model::trainBlockPR(const std::string& txtFileLocation)
             }
             // get embedding for response
             for(int j = 0; j < evenSentence[i].size(); j++) {
-                std::vector<float> embed(d, 0.0f);
-                this->T.getEmbedding(evenSentence[i][j], embed);
+                std::vector<float> embed = TOK.getEmbeddingForToken(evenSentence[i][j]);
+                if (embed.empty()) {
+                    std::cerr << "Warning: No embedding found for response token '" << evenSentence[i][j] << "'. Using a zero vector." << std::endl;
+                    embed.assign(d, 0.0f);
+                }
                 responseEmbeddings.push_back(embed);
                 responseTokens.push_back(evenSentence[i][j]);
             }
@@ -397,8 +403,11 @@ void model::trainModelPR(const std::string& txtFileLocation)
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
             for(int j = 0; j < oddSentence[i].size(); j++) {
-                std::vector<float> embed(d, 0.0f);
-                this->T.getEmbedding(oddSentence[i][j], embed);
+                std::vector<float> embed = TOK.getEmbeddingForToken(oddSentence[i][j]);
+                if (embed.empty()) {
+                    std::cerr << "Warning: No embedding found for prompt token '" << oddSentence[i][j] << "'. Using a zero vector." << std::endl;
+                    embed.assign(d, 0.0f);
+                }
                 promptEmbeddings.push_back(embed);
                 int actual_row_in_ev = (T.currentTokenCount + j) % CONTEXT_WIN;
                 for(int m1 = 0; m1 < x; m1++) {
@@ -412,8 +421,11 @@ void model::trainModelPR(const std::string& txtFileLocation)
             }
             // get embedding for response
             for(int j = 0; j < evenSentence[i].size(); j++) {
-                std::vector<float> embed(d, 0.0f);
-                this->T.getEmbedding(evenSentence[i][j], embed);
+                std::vector<float> embed = TOK.getEmbeddingForToken(evenSentence[i][j]);
+                if (embed.empty()) {
+                    std::cerr << "Warning: No embedding found for response token '" << evenSentence[i][j] << "'. Using a zero vector." << std::endl;
+                    embed.assign(d, 0.0f);
+                }
                 responseEmbeddings.push_back(embed);
                 responseTokens.push_back(evenSentence[i][j]);
             }

@@ -8,15 +8,15 @@
 #include <map>
 #include <unordered_map>
 #include <cmath>
-#include <queue>                 // For std::queue
-#include <mutex>                 // For std::mutex, std::lock_guard
-#include <condition_variable>    // For std::condition_variable
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 #include <regex>
 #include <algorithm>
 #include <future>
 #include <thread>
 #include <memory>
-#include <utility> // For std::move
+#include <utility>
 
 // for fast multithreading operations
 struct PairHash {
@@ -72,8 +72,6 @@ private:
     std::vector<float> seeds;                       // seeds for all tokens (seeds.csv)
     std::vector<std::vector<float>> embeddings;     // vector for each token of dimension d
     std::vector<std::vector<float>> deEmbeddings;   // inverse of each token of dimension d
-    // map of tokens and their embeddings (embeddings.csv)
-    std::unordered_map<std::string, std::vector<float>> mappedEmbeddings;
     std::unordered_map<std::string, int> corpusWordCount;   // NEW (or similar if it's not a member)
     std::unordered_map<std::string, int> statOfTokens;      // hold tokens and their stats (unique_tokens.csv)
 
@@ -81,7 +79,6 @@ public:
 
     int num_threads;                        // number of threads
     int totalCorpusWordCount;               // corpus word count
-    // CHANGE HERE: Use std::unique_ptr for bpe_progress
     std::unique_ptr<ProgressData> bpe_progress;
 
 #ifdef USE_OPENCL
@@ -112,7 +109,6 @@ public:
           seeds(other.seeds),
           embeddings(other.embeddings),
           deEmbeddings(other.deEmbeddings),
-          mappedEmbeddings(other.mappedEmbeddings),
           corpusWordCount(other.corpusWordCount),
           statOfTokens(other.statOfTokens),
           num_threads(other.num_threads),
@@ -133,7 +129,6 @@ public:
           seeds(std::move(other.seeds)),
           embeddings(std::move(other.embeddings)),
           deEmbeddings(std::move(other.deEmbeddings)),
-          mappedEmbeddings(std::move(other.mappedEmbeddings)),
           corpusWordCount(std::move(other.corpusWordCount)),
           statOfTokens(std::move(other.statOfTokens)),
           num_threads(other.num_threads),
@@ -158,7 +153,6 @@ public:
         seeds = other.seeds;
         embeddings = other.embeddings;
         deEmbeddings = other.deEmbeddings;
-        mappedEmbeddings = other.mappedEmbeddings;
         corpusWordCount = other.corpusWordCount;
         statOfTokens = other.statOfTokens;
         num_threads = other.num_threads;
@@ -185,7 +179,6 @@ public:
         seeds = std::move(other.seeds);
         embeddings = std::move(other.embeddings);
         deEmbeddings = std::move(other.deEmbeddings);
-        mappedEmbeddings = std::move(other.mappedEmbeddings);
         corpusWordCount = std::move(other.corpusWordCount);
         statOfTokens = std::move(other.statOfTokens);
         num_threads = other.num_threads;
@@ -206,7 +199,6 @@ public:
         return *this;
     }
 
-
     // programs for setting values
     void setEmbeddingDimension(int d);
     void setDval(int d_val);
@@ -214,19 +206,19 @@ public:
     void setNumThreads();
     void setEmbedding(const std::string& token, std::vector<float> embedding);
     void readFromFiles(const std::string& path2ClassDataFolder);
+    void setStats(const std::unordered_map<std::string, int>& stats) { statOfTokens = stats; }
 
     // Getters for read-only access to internal state
     int getEmbeddingDimension() const { return d; }
     int getDval() const { return d_val; }
     int getVocabularySize() const { return vocSize; }
-    const std::unordered_map<std::string, int>& getTokenStats() const { return statOfTokens; }
-    const std::vector<std::string>& getTokens() const { return tokens; }
-    const std::unordered_map<std::string, std::vector<float>>& getMappedEmbeddings() const { return mappedEmbeddings; }
-    const std::vector<float>& getSeeds() const { return seeds; }
-    const std::vector<std::vector<float>>& getEmbeddings() const { return embeddings; }
-    const std::vector<std::vector<float>>& getDeEmbeddings() const { return deEmbeddings; }
+    const std::unordered_map<std::string, int> getTokenStats() const { return statOfTokens; }
+    // const std::unordered_map<std::string, std::vector<float>>& getMappedEmbeddings() const { return mappedEmbeddings; }
     std::vector<float> getEmbeddingForToken(int index) const { return embeddings[index]; };
     std::vector<float> getEmbeddingForToken(const std::string& token) const;
+    const std::vector<std::string>& getTokens() const { return tokens; }
+    const std::vector<std::vector<float>>& getEmbeddings() const { return embeddings; }
+    const std::vector<std::vector<float>>& getDeEmbeddings() const { return deEmbeddings; }
 
     void splitWord(const std::string& word, std::vector<std::string>& subwords) const;
     void splitSentence(const std::string& sentence, std::vector<std::string>& all_subwords) const;

@@ -10,7 +10,6 @@
 
 /**
  * @brief (OpenCL) Train the transformer for next token prediction (single token training).
- *        Mirrors the logic of transformer::cuTrain(..., std::vector<float>& expected, ...).
  * @param promptCount Number of tokens in the prompt.
  * @param currentTokenCount Number of tokens in the full context *before* this training step.
  * @param blockCount Current block index (1-based) in the full context.
@@ -40,6 +39,7 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
 
     try {
         float prev_Error = 0.0f;        // previous iterations error
+        float learnby = learning;
         // --- Device Buffer Allocation & H->D Transfer ---
         // Calculate the total size needed for all blocks' context windows
         size_t totalTokenEmbedFloats = static_cast<size_t>(m) * CONTEXT_WIN * d;
@@ -171,15 +171,15 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
             if(j > 0) {
                 if(current_error <= prev_Error) {
                     if(j <= 6)   
-                        learning *= 1.05;
+                        learning *= 1.1;
                     else if (j % 6 == 0)
-                        learning *= (1 + (j/6)*0.05);
+                        learning *= (1.05 + (j/6)*0.15);
                 }
                 else {
                     if(j <= 6)   
                         learning *= 0.95;
                     else if (j % 6 == 0)
-                        learning *= (1 - (j/6)*0.05);
+                        learning *= (0.95 - (j/6)*0.01);
                 }
             }
 
@@ -195,6 +195,7 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
             prev_Error = current_error;
             j++;
         }
+        learning = learnby;
 
         this->trainCount++;
         this->epochCount += j; // Add epochs spent on this token
@@ -270,6 +271,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
     }
 
     try {
+        int learnby = learning;
         float prev_Error = 0.0f;    // error from previous epoch for same token
         // --- Device Buffer Allocation & H->D Transfer ---
         size_t totalTokenEmbedFloats = static_cast<size_t>(m) * CONTEXT_WIN * d;
@@ -292,8 +294,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
         d_tok_cl = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err); CL_CHECK(cl_err);
 
         // Prepare initial context buffer content
-        std::vector<float> flat_host_tokenEmbed;
-        flat_host_tokenEmbed.reserve(totalTokenEmbedFloats);
+        std::vector<float> flat_host_tokenEmbed(totalTokenEmbedFloats, 0.0f);
         if (this->tokenEmbed.mapped_data && this->tokenEmbed.row >= static_cast<size_t>(this->currentTokenCount) && this->tokenEmbed.col == static_cast<size_t>(d)) {
             for (int tk = 0; tk < this->currentTokenCount; ++tk) { // Copy existing context
                 float* row_ptr = this->tokenEmbed.mapped_data + (static_cast<size_t>(tk) * this->d);
@@ -438,12 +439,12 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                 }
 
                 // update learning rate starting from second epoch and specific conditions
-                if(j > 0) {
+                /*if(j > 0) {
                     if(current_error <= prev_Error) {
                         if(j <= 6)   
                             learning *= 1.1;
                         else if (j % 6 == 0)
-                            learning *= (1.05 + (j/6)*0.05);
+                            learning *= (1.05 + (j/6)*0.15);
                     }
                     else {
                         if(j <= 6)   
@@ -451,8 +452,21 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                         else if (j % 6 == 0)
                             learning *= (0.95 - (j/6)*0.01);
                     }
-                }
-
+                }*/
+               if(j > 0) {
+                    if(current_error <= prev_Error) {
+                        if(j <= 6)   
+                            learning *= 1.1;
+                        else if (j % 6 == 0)
+                            learning *= (1.05 + (j/6)*0.15);
+                    }
+                    else {
+                        if(j <= 6)   
+                            learning *= 0.95;
+                        else if (j % 6 == 0)
+                            learning *= (0.95 - (j/6)*0.01);
+                    }
+               }
                 clBackward(expected_vec, current_block_idx);
                 // --- Backward Pass ---
                 if(current_block_idx == 1) {
@@ -547,6 +561,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                     }
                     this->clcontext.queue.finish();
                 }
+                learning = learnby;
                 totalLearning += learning;
                 prev_Error = current_error;
                 j++;

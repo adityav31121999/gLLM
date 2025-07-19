@@ -46,24 +46,13 @@ void tokeniser::setNumThreads()
  * @param embedding The vector representing the embedding for the token.
  */
 void tokeniser::setEmbedding(const std::string& token, std::vector<float> embedding) {
-    // Using the map for lookup is much more efficient (O(log N)) than a linear scan.
-    auto map_it = mappedEmbeddings.find(token);
-    if (map_it != mappedEmbeddings.end()) {
-        // The token exists in the map. Now find it in the vector to update the parallel `embeddings` vector.
-        // This highlights the fragility of the parallel vector design.
-        // A linear search is still required here to find the index for the `embeddings` vector.
-        auto it = std::find(tokens.begin(), tokens.end(), token);
+    auto it = std::find(tokens.begin(), tokens.end(), token);
 
-        if (it != tokens.end()) {
-            auto index = std::distance(tokens.begin(), it);
-
-            // Update the map first with a copy of the embedding.
-            map_it->second = embedding;
-            // Then move the embedding into the vector to avoid a second copy.
-            embeddings[index] = std::move(embedding);
-        }
+    // set embedding for this token from this->embeddings
+    if (it != tokens.end()) {
+        auto index = std::distance(tokens.begin(), it);
+        embeddings[index] = std::move(embedding);
     }
-    // Note: This function doesn't handle adding a *new* token, only updating an existing one.
 }
 
 

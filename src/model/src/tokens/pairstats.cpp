@@ -14,21 +14,14 @@
  */
 void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::string, int>& corpus_word_counts, const std::string& outputPath) {
     this->statOfTokens.clear();
-
-    // ******************************************************************************
-    // FIX START: Initialize statOfTokens with ALL learned BPE tokens from this->tokens
-    // This ensures every learned token will be present in the final CSV, even if its count is 0.
     for (const auto& learned_bpe_token : this->tokens) {
         this->statOfTokens[learned_bpe_token] = 0; // Initialize count to 0
     }
-    // ******************************************************************************
-
     auto is_word_for_bpe = [](const std::string& s) -> bool {
         return !s.empty() && std::isalpha(static_cast<unsigned char>(s[0]));
     };
 
     std::cout << "Calculating final token statistics from " << corpus_word_counts.size() << " unique raw tokens..." << std::endl;
-
     const int num_threads = this->num_threads > 0 ? this->num_threads : 1;
     std::vector<std::future<std::unordered_map<std::string, int>>> futures;
 
@@ -54,7 +47,6 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
         futures.push_back(std::async(std::launch::async,
             [=, this]() -> std::unordered_map<std::string, int> { // Capture 'this' pointer for splitWord
             std::unordered_map<std::string, int> local_stats;
-
             for (auto current_it = chunk_start; current_it != chunk_end; ++current_it) {
                 const std::string& pre_token = current_it->first;
                 const int count = current_it->second;
@@ -67,9 +59,6 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
                         local_stats[subword] += count;
                     }
                 } else {
-                    // It's a non-alphabetic token (punctuation, numbers, etc.)
-                    // These should have been added to the base vocabulary in groupCommonTokens,
-                    // and their counts from corpus_word_counts should be applied directly.
                     local_stats[pre_token] += count;
                 }
             }
@@ -85,22 +74,18 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
         std::cout << merge_count << " ";
         auto local_map = f.get(); // Retrieve the unordered_map from the future
         for (const auto& pair : local_map) {
-            // Merge into global unordered_map. Since statOfTokens is pre-populated,
-            // this will either add to an existing count or update a 0 to a non-zero count.
             this->statOfTokens[pair.first] += pair.second;
         }
     }
     std::cout << std::endl;
     std::cout << "Calculation complete. Found " << this->statOfTokens.size() << " final BPE tokens." << std::endl;
 
-    // ******************************************************************************
     // Add a sanity check here after aggregation:
     if (this->statOfTokens.size() != this->tokens.size()) {
         std::cerr << "CRITICAL WARNING: The number of tokens in statOfTokens (" << this->statOfTokens.size()
                   << ") does not match the size of the learned BPE vocabulary (this->tokens.size() = "
                   << this->tokens.size() << ") after counting!" << std::endl;
 
-        // Optional: Print the missing tokens for debugging
         std::unordered_set<std::string> stat_tokens_set;
         for (const auto& pair : this->statOfTokens) {
             stat_tokens_set.insert(pair.first);
@@ -112,8 +97,6 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
             }
         }
     }
-    // ******************************************************************************
-
 
     if (!outputPath.empty()) {
         std::cout << "-> Sorting and saving token statistics to: " << outputPath << std::endl;

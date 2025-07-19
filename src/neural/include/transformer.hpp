@@ -9,7 +9,6 @@
 #include <fstream>
 #include <map>
 #include <maths.hpp>
-#include "attention.hpp"
 #include "block.hpp"
 
 /**
@@ -151,7 +150,6 @@ std::string toLower(const std::string& str);
 
 // compute functions for dot, KdotQ and other values
 
-// void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index);
 void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index);
 void computeKorQ(const std::vector<float>& tokenEmbed, const mat& m, std::vector<float>& KorQ);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);

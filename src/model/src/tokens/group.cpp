@@ -20,8 +20,6 @@
 /**
  * @brief (INVERTED INDEX OPTIMIZATION) Learns a BPE vocabulary with extreme speed.
  * This version uses an inverted index to track which words are affected by a merge.
- * It includes corrected initialization logic and robust debugging logs to verify
- * each stage of the process.
  * @param corpus_word_counts A map of unique words and their frequencies.
  * @param num_merges The number of merge operations to perform.
  * @param final_vocab Output vector to store the learned vocabulary tokens.
