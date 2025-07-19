@@ -215,6 +215,7 @@ public:
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
             std::string& license, std::string& trainingData);
     void setEmbeddingFromCSV(const std::string& path2file);
+    void positionalEmbedding(const std::vector<float>& originalmbedding, std::vector<float>& newEmbedding, int position);
     void setTokenAndEmbeddingForTransformer(tokeniser& tok);
 
     // train first block on promp-response and sentences

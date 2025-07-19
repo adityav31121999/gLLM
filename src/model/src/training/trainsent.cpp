@@ -134,18 +134,9 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
         std::vector<std::string> responseTokens;
         // get embeddings for prompt
         for(int j = 0; j < tokensOfLine.size(); j++) {
-            std::vector<float> embed(d, 0.0f);
+            std::vector<float> embed(d, 0.0f);          // embedding (loaded from tokeniser data)
             T.getEmbedding(tokensOfLine[j], embed);
-            sentenceEmbeddings[j] = embed;
-            int actual_row_in_ev = (T.currentTokenCount + j) % CONTEXT_WIN;
-            for(int m1 = 0; m1 < x; m1++) {
-                for(int m2 = 0; m2 < y; m2++) {
-                    std::vector<float> v(EMBEDDING, 0.0f);
-                    v = T.t[0].b[m1][m2].EV(actual_row_in_ev);
-                    v += embed;
-                    T.t[0].b[m1][m2].EV.addRow(v, actual_row_in_ev);
-                }
-            }
+            positionalEmbedding(embed, sentenceEmbeddings[j], j);
         }
         // Corrected logging to show the actual embedding vector for the first token
         std::cout << "trainBlockSentence: total tokens in vocabulary: " << T.tokens.size() << std::endl;

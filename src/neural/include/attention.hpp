@@ -31,7 +31,7 @@
 #define SCALING std::sqrt(EMBEDDING)        // SCALING FACTOR for ATTENTION HEAD
 #define LAYERS_MLP 4                        // layers of mlp
 #define EPOCHS 10                           // number of epochs for MLPs
-#define NUMBER_OF_PA 6                      // number of Partial Attentions in one Block
+#define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
 #define NUMBER_OF_HEADS 16                  // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
 #define MATHEIGHTS CONTEXT_WIN*2            // weight matrix heights

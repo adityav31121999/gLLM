@@ -99,6 +99,7 @@ void model::setTokenAndEmbeddingForTransformer(tokeniser &tok) {
         vec[i] = terminatorEmbed(f, i);
     }
     emb.push_back(vec);
+    // sort the T.tokens vector lexicograp
     T.embeddings = emb;
     std::cout << "setTokenAndEmbeddingForTransformer: Adding terminator embedding at index " << T.vocabsize << std::endl;
     // T.embeddings.addRow(vec, T.tokens.size());

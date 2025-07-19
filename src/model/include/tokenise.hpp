@@ -229,6 +229,7 @@ public:
     void calculateTokenStatsFromCounts(const std::unordered_map<std::string, int>& corpus_word_counts, const std::string& outputPath);
     void calculateTokenStats(const std::vector<std::string>& pre_tokens, const std::string& outputPath);
     void generateAndSaveEmbeddings(const std::string& outputPath, float r1, float r2);
+    
 
     #ifdef USE_CUDA
         void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d_dim, int& vocSize, float r1, float r2);

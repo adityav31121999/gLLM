@@ -352,3 +352,38 @@ void model::setEmbeddingFromCSV(const std::string& path2file) {
         std::cout << (this->T.d > 5 ? "..." : "") << std::endl;
     }
 }
+
+
+/**
+ * @brief Function to calculate and apply absolute sinusoidal positional embedding.
+ * This function takes an original token embedding, calculates its sinusoidal positional 
+ * encoding based on the given 'position', and adds it to create a new embedding vector.
+ * @param[in] originalEmbedding original embedding for the token
+ * @param[out] newEmbedding new embedding obtained after adding positional embedding
+ * @param[in] position The absolute position of the token in the sequence (0-indexed)
+ */
+void model::positionalEmbedding(const std::vector<float>& originalEmbedding, std::vector<float>& newEmbedding,
+    int position) 
+{
+    // The dimension of the embedding (d_model) is inferred from the size of the original embedding.
+    size_t d_model = originalEmbedding.size();
+    // Ensure newEmbedding has the correct size.
+    if (newEmbedding.size() != d_model) {
+        newEmbedding.resize(d_model);
+    }
+
+    // Iterate through each dimension of the embedding to calculate the positional encoding.
+    for (size_t i = 0; i < d_model; ++i) {
+        // The frequency term for the sine/cosine wave depends on the dimension index.
+        // The formula uses 10000^(2*k/d_model) where 'k' is floor(dimension_index / 2).
+        double div_term_exponent = static_cast<double>(i / 2) * 2.0 / d_model;
+        double div_term = std::pow(10000.0, div_term_exponent);
+
+        // Apply sine for even dimensions and cosine for odd dimensions.
+        if (i % 2 == 0) { // Even dimension indices (0, 2, 4, ...)
+            newEmbedding[i] = originalEmbedding[i] + std::sin(position / div_term);
+        } else { // Odd dimension indices (1, 3, 5, ...)
+            newEmbedding[i] = originalEmbedding[i] + std::cos(position / div_term);
+        }
+    }
+}

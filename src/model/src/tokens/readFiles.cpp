@@ -16,6 +16,7 @@
 std::string readCsvField(std::stringstream& ss) {
     std::string field = ""; // Initialize field to an empty string
     char c;
+
     // Consume leading whitespace before the field starts (if any)
     while (ss.peek() != EOF && std::isspace(static_cast<unsigned char>(ss.peek()))) {
         ss.get();
@@ -54,8 +55,11 @@ std::string readCsvField(std::stringstream& ss) {
     if (field.empty() && ss.tellg() == std::streampos(0)) {
         return ""; // Indicate an empty field at the start of the line
     }
+
     return field; // Return the field as read
 }
+
+
 
 
 // Function to read an entire CSV file into a 2D vector of floats

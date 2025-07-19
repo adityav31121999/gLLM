@@ -274,17 +274,16 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_h, cl::NullRange, global_embed, local_1d)); 
             }
 
-            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateElasticNet"); 
+            cl::Kernel k_update_weights_h = clcontext.kernels.at("kernelUpdateWeightsL2"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
                 CL_CHECK(k_update_weights_h.setArg(0, device_ptrs.d_hor_deltas[l+1])); // deltas
                 CL_CHECK(k_update_weights_h.setArg(1, device_ptrs.d_hor_activations[l])); // prev_activations
                 CL_CHECK(k_update_weights_h.setArg(2, device_ptrs.d_hor_weights[l])); // weights
-                CL_CHECK(k_update_weights_h.setArg(3, device_ptrs.d_hor_gweights[l])); // gweights
-                CL_CHECK(k_update_weights_h.setArg(4, learning_rate));
-                CL_CHECK(k_update_weights_h.setArg(5, lambda_l1));
-                CL_CHECK(k_update_weights_h.setArg(6, lambda_l2));
-                CL_CHECK(k_update_weights_h.setArg(7, embedding_dim));
-                CL_CHECK(k_update_weights_h.setArg(8, embedding_dim));
+                CL_CHECK(k_update_weights_h.setArg(3, learning_rate));
+                CL_CHECK(k_update_weights_h.setArg(4, lambda_l2)); // lambda_l2
+                CL_CHECK(k_update_weights_h.setArg(5, device_ptrs.d_hor_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_h.setArg(6, embedding_dim)); // current_layer_size
+                CL_CHECK(k_update_weights_h.setArg(7, embedding_dim)); // prev_layer_size
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_h, cl::NullRange, global_embed_2d, local_2d)); 
             }
 
@@ -306,17 +305,16 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_hidden_delta_v, cl::NullRange, global_embed, local_1d)); 
             }
 
-            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); 
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateWeightsL2"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) { 
                 CL_CHECK(k_update_weights_v.setArg(0, device_ptrs.d_ver_deltas[l+1])); // deltas
                 CL_CHECK(k_update_weights_v.setArg(1, device_ptrs.d_ver_activations[l])); // prev_activations
                 CL_CHECK(k_update_weights_v.setArg(2, device_ptrs.d_ver_weights[l])); // weights
-                CL_CHECK(k_update_weights_v.setArg(3, device_ptrs.d_ver_gweights[l])); // gweights
-                CL_CHECK(k_update_weights_v.setArg(4, learning_rate));
-                CL_CHECK(k_update_weights_v.setArg(5, lambda_l1));
-                CL_CHECK(k_update_weights_v.setArg(6, lambda_l2));
-                CL_CHECK(k_update_weights_v.setArg(7, embedding_dim));
-                CL_CHECK(k_update_weights_v.setArg(8, embedding_dim));
+                CL_CHECK(k_update_weights_v.setArg(3, learning_rate));
+                CL_CHECK(k_update_weights_h.setArg(4, lambda_l2)); // lambda_l2
+                CL_CHECK(k_update_weights_v.setArg(5, device_ptrs.d_ver_gweights[l])); // gweights
+                CL_CHECK(k_update_weights_h.setArg(6, embedding_dim)); // current_layer_size
+                CL_CHECK(k_update_weights_h.setArg(7, embedding_dim)); // prev_layer_size
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d)); 
             }
 
@@ -428,7 +426,7 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
 
             // Weight Updates
             cl_int cl_update_eh_flag_1sth = (layno_col_idx > 0) ? 1 : 0; // Renamed to avoid redeclaration issues
-            cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeights_1stHead_H_ElasticNet");
+            cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeights_1stHead_H_L2");
             CL_CHECK(k_update_1st_h.setArg(0, device_ptrs.d_MH_a));
             CL_CHECK(k_update_1st_h.setArg(1, device_ptrs.d_MV_a));
             CL_CHECK(k_update_1st_h.setArg(2, device_ptrs.d_MQ_a));
@@ -441,10 +439,9 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
             CL_CHECK(k_update_1st_h.setArg(9, device_ptrs.d_grad_EH));
             CL_CHECK(k_update_1st_h.setArg(10, learning_rate));
             CL_CHECK(k_update_1st_h.setArg(11, cl_update_eh_flag_1sth));
-            CL_CHECK(k_update_1st_h.setArg(12, lambda_l1));
-            CL_CHECK(k_update_1st_h.setArg(13, lambda_l2));
-            CL_CHECK(k_update_1st_h.setArg(14, mat_heights));
-            CL_CHECK(k_update_1st_h.setArg(15, embedding_dim));
+            CL_CHECK(k_update_1st_h.setArg(12, lambda_l2));
+            CL_CHECK(k_update_1st_h.setArg(13, mat_heights));
+            CL_CHECK(k_update_1st_h.setArg(14, embedding_dim));
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_1st_h, cl::NullRange, global_proj_mat, local_1d));
 
             // D->H Transfers

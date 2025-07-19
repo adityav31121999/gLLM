@@ -3,7 +3,7 @@
 
 ![alt text](gLLMicon.svg)
 
-- This idea is due to the need to train a AI Model on gaming gpu without causing heavy burden on VRAM and GPU compute capability.
+- This idea is inspired by the need to train an AI Model on gaming gpu or sigle gpu without causing heavy burden on VRAM and GPU computes.
 
 ## INTRO
 - Library for LLMs
@@ -120,7 +120,7 @@
 - `y`: Integer, parallel attention heads per partial attention layer.
 - `n`: Integer, context window size per head (e.g., `CONTEXT_WIN`).
 - `d`: Integer, token embedding dimension (e.g., `EMBEDDING`).
-- `h`: Integer, dimension for projection matrices (e.g., `MATHEIGHTS`).
+- `h`: Integer, feature dimension for projection matrices (e.g., `MATHEIGHTS`).
 - `l`: Integer, number of layers in MLPs (e.g., `LAYERS_MLP`).
 - `epochs`: Default training epochs.
 - `learning`: Default learning rate.
@@ -178,21 +178,24 @@
 - To access them head offset and block offset must be known
 - This table gives the total values, dimension, single offset and block offset of each file
 --------------------------------------------------------------------------
-|NAME|DIM1|DIM2|DIM3|QUANTITY|TOTAL PARAMETERS|SINGLE OFFSET|BLOCK OFFSET|
-|----|----|----|----|--------|----------------|-------------|------------|
-|MQ  |h   |d   |1   |x.y.m   |h.d.x.y.m       |h*d          |h.d.x.y     |
-|MK  |h   |d   |1   |x.y.m   |h.d.x.y.m       |h*d          |h.d.x.y     |
-|MV  |d   |h   |1   |x.y.m   |d.h.x.y.m       |d*h          |d.h.x.y     |
-|MH  |d   |h   |1   |x.y.m   |d.h.x.y.m       |d*h          |d.h.x.y     |
-|hor |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d* d *l      |d.d.l.x.y   |
-|ver |d   |d   |l   |x.y.m   |d.d.l.x.y.m     |d* d *l      |d.d.l.x.y   |
-|QK  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
-|QV  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
-|KH  |d   |d   |1   |x.y.m   |d.d.x.y.m       |d*d          |d.d.x.y     |
+| NAME | DIM1 | DIM2 | DIM3 | SINGLE OFFSET | BLOCK OFFSET | QUANTITY | TOTAL PARAMETERS |
+|------|------|------|------|---------------|--------------|----------|------------------|
+| MQ   | h    | d    | 1    | h*d           | h.d.x.y      | x.y.m    | h.d.x.y.m        |
+| MK   | h    | d    | 1    | h*d           | h.d.x.y      | x.y.m    | h.d.x.y.m        |
+| MV   | d    | h    | 1    | d*h           | d.h.x.y      | x.y.m    | d.h.x.y.m        |
+| MH   | d    | h    | 1    | d*h           | d.h.x.y      | x.y.m    | d.h.x.y.m        |
+| hor  | d    | d    | l    | d * d * l     | d.d.l.x.y    | x.y.m    | d.d.l.x.y.m      |
+| ver  | d    | d    | l    | d * d * l     | d.d.l.x.y    | x.y.m    | d.d.l.x.y.m      |
+| QK   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
+| QV   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
+| KH   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
 --------------------------------------------------------------------------
 - Here single offset refers to total number of values in single object i.e., Matrix, MLP or cache
 - Block Offset refers to total number of values of specific object in the single block i.e., number of object (matrix or mlp or cache) * single offset = x * y * single offset
 - In the table: `h` refers to `MATHEIGHTS` (e.g., 1024), `d` refers to `EMBEDDING` dimension (e.g., 64), and `l` refers to the number of weight matrices in an MLP (e.g., `LAYERS_MLP - 1`).
+- The total reduction from mats to cache is pretty huge and can be expressed as:
+  - percent reduction (r) = 100 * (3 * d * d * x * y * m)/(4 * h * d * x * y * m) = 75d/h
+  - if embedding dimension d = 128, feature dimension h = 2048, then r = 4.6875%
 - Following is the serialisation of MQ.bin file as example:
   - Q[i][j][k] represent MQ of kth head of jth row of ith block
 ```
