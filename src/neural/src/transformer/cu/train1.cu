@@ -267,7 +267,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
             CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
 
             current_error = crossEntropy(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
-            std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<long long int>(tokens.size()))
+            std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
                                                   ? tokens[host_indexForToken] : "INVALID_INDEX";
             std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, sentence[i]) << std::endl;
 

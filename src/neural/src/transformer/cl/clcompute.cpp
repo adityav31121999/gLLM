@@ -536,4 +536,4 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
     }
 }
 
-#endif // USE_OPENCL
+#endif

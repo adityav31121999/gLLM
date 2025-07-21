@@ -12,7 +12,7 @@
  * @param filename The name of the CSV file.
  * @return The number of lines in the file, or -1 if an error occurs.
  */
-long long int countLinesInCSV(const std::string& filename) 
+unsigned long long countLinesInCSV(const std::string& filename) 
 {
     // Open the file
     std::ifstream file(filename);
@@ -21,7 +21,7 @@ long long int countLinesInCSV(const std::string& filename)
         return -1; // Return -1 to indicate an error
     }
     // Count the number of lines
-    long long int lineCount = 0;
+    unsigned long long lineCount = 0;
     std::string line;
     while (std::getline(file, line)) {
         lineCount++;
@@ -36,7 +36,7 @@ long long int countLinesInCSV(const std::string& filename)
  * @param filename The name of the CSV file.
  * @return The number of lines in the file, or -1 if an error occurs.
  */
-long long int countLineInTXT(const std::string& filename) 
+unsigned long long countLineInTXT(const std::string& filename) 
 {
     // Open the file
     std::ifstream file(filename);

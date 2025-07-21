@@ -48,7 +48,7 @@ void transformer::makeCommon(std::string &path2folderOfAllBins)
     }
     commonFileStream.close(); // Close it now. serialise calls will reopen in append mode.
 
-    long long int single_mlp_params_from_instance = 0;
+    unsigned long long single_mlp_params_from_instance = 0;
     if (this->x > 0 && this->y > 0) {
         if (this->t.empty()) {
              throw std::runtime_error("transformer::makeCommon: Transformer has no blocks (T.t is empty) when x and y are positive.");
@@ -61,8 +61,8 @@ void transformer::makeCommon(std::string &path2folderOfAllBins)
     }
     // If x or y is 0, totalparams will correctly be 0.
 
-    long long int totalparams = static_cast<long long int>(this->x) * this->y *
-                               ((4 * static_cast<long long int>(this->h) * this->d) +
+    unsigned long long totalparams = static_cast<unsigned long long>(this->x) * this->y *
+                               ((4 * static_cast<unsigned long long>(this->h) * this->d) +
                                 (2 * single_mlp_params_from_instance));
 
     std::cout << "Size of Common Bin FIle: " << std::endl;

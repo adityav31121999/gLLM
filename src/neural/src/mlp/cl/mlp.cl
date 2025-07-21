@@ -2,9 +2,10 @@
 #define IDX(row, col, dim) ((row) * (dim) + (col))
 
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
 __kernel void l1PenaltyKernel(__global const float* weights,
                               __global float* result, // Output buffer for partial sums (size = num_groups)
@@ -536,4 +537,74 @@ __kernel void kernelUpdateElasticNet(__global const float* deltas, __global cons
         }
         weights[weight_idx] -= learning_rate * total_gradient;
     }
+}
+
+
+/**
+ * @brief OpenCL Kernel for Adam Optimizer weight update.
+ * @param weights       Global memory pointer to the weight matrix.
+ * @param gradients     Global memory pointer to the gradient matrix. (ADDED THIS PARAMETER)
+ * @param moments       Global memory pointer to the first moment (momentum) matrix.
+ * @param velocity      Global memory pointer to the second moment (velocity) matrix.
+ * @param learning_rate Current learning rate (base LR for Adam).
+ * @param beta1         Adam hyperparameter beta1.
+ * @param beta2         Adam hyperparameter beta2.
+ * @param epsilon       Adam hyperparameter epsilon.
+ * @param t_step        Global time step (1-indexed) for bias correction.
+ * @param num_elements  Total number of elements in the matrices.
+ */
+__kernel void adam_optimizer_kernel(__global float* weights,
+                                    __global const float* gradients, // Added const for read-only
+                                    __global float* moments,
+                                    __global float* velocity,
+                                    const float learning_rate,
+                                    const float beta1,
+                                    const float beta2,
+                                    const float epsilon,
+                                    // CORRECTED: Use 'ulong' for 64-bit unsigned integer in OpenCL C
+                                    const ulong t_step,
+                                    const int num_elements)
+{
+    int gid = get_global_id(0); // Global ID for the current element
+
+    // Boundary check
+    if (gid >= num_elements) {
+        return;
+    }
+
+    float g = gradients[gid];
+    float m = moments[gid];
+    float v = velocity[gid];
+
+    // Update biased first moment estimate
+    m = beta1 * m + (1.0f - beta1) * g;
+
+    // Update biased second raw moment estimate
+    v = beta2 * v + (1.0f - beta2) * g * g;
+
+    // Bias correction
+    // Use `pow` from OpenCL built-in functions. Need to cast t_step to float for pow.
+    // Ensure `pow` receives a floating-point exponent, which it expects.
+    float beta1_pow_t = pow(beta1, (float)t_step);
+    float beta2_pow_t = pow(beta2, (float)t_step);
+
+    // Prevent division by zero if (1.0f - beta1_pow_t) or (1.0f - beta2_pow_t) gets too close to zero
+    float denom_m = 1.0f - beta1_pow_t;
+    // Standard practice for Adam usually adds epsilon to the denominator of m_hat/v_hat directly for correction,
+    // not to the bias correction term's denominator. But if this is your desired behavior for robustness, keep it.
+    if (denom_m == 0.0f) denom_m = epsilon; // This line might be controversial in strict Adam, check ref. impl.
+
+    float denom_v = 1.0f - beta2_pow_t;
+    if (denom_v == 0.0f) denom_v = epsilon; // Same as above
+
+    float m_hat = m / denom_m;
+    float v_hat = v / denom_v;
+
+    // Update weights
+    // sqrt(v_hat) + epsilon in the denominator for numerical stability
+    weights[gid] -= (learning_rate / (sqrt(v_hat) + epsilon)) * m_hat;
+
+    // Store updated moments back to global memory
+    moments[gid] = m;
+    velocity[gid] = v;
 }

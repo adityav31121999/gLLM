@@ -2,9 +2,10 @@
 #define IDX(row, col, dim) ((row) * (dim) + (col))
 
 // Enable extensions for atomics and potentially double precision (which might include float atomics)
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
 __kernel void matrixMultiplyKernel(__global const float* A, __global const float* B,
                                    __global float* C, int rowsA, int colsA, int colsB)

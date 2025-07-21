@@ -1,4 +1,3 @@
-
 // attention.hpp: header source for attention class
 #ifndef ATTENTION_HPP
 #define ATTENTION_HPP 1
@@ -69,7 +68,19 @@ public:
     float learning_rate;        // learning rate for attention
     float lambda_L1;            // L1 regularization strength
     float lambda_L2;            // L2 regularization strength
-    long long int params;       // parameters in each attention head
+    unsigned long long params;       // parameters in each attention head
+
+    // matrices for gradients
+    mat gMQ;
+    mat gMK;
+    mat gMV;
+    mat gMH;
+
+    // Adam state for attention matrices (velocity and momentum)
+    mat m_MQ, v_MQ;
+    mat m_MK, v_MK;
+    mat m_MV, v_MV;
+    mat m_MH, v_MH;
 
 #ifdef USE_OPENCL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
@@ -80,9 +91,11 @@ public:
     attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning, float lambda_L1, float lambda_L2);
 #endif // USE_OPENCL
 
-    // Explicitly define copy constructor and copy assignment operator
     attention(const attention& other);
     attention& operator=(const attention& other);
+    
+    attention(attention&& other) noexcept;
+    attention& operator=(attention&& other) noexcept;
 
     void serialise(int offset, const std::string& locationWithFilename);
     void deserialise(int offset, const std::string& locationWithFilename);
@@ -98,6 +111,7 @@ public:
     void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
     void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
+    void cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #elif USE_OPENCL
 
@@ -115,7 +129,7 @@ public:
     void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
     void clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber, float& learning);
     void clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber, float& learning);
-
+    void clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 #else
 
     // cpp functions for cpu
@@ -127,9 +141,11 @@ public:
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
     void backward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
+    void adamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #endif
 
+    void initializeAdamMoments();
     void setAttentionType(bool attentionType);
     void clearValues();
     void serialiseattention4train(const std::string& locationWithFileName);
@@ -138,77 +154,6 @@ public:
     ~attention() = default;
 };
 
-
-// Inline implementations for copy constructor and copy assignment operator
-inline attention::attention(const attention& other) :
-#ifdef USE_OPENCL
-    clcontext(other.clcontext),
-    d_EV(other.d_EV),
-#elif USE_CUDA
-    d_EV(other.d_EV),
-#endif
-    // Initialize common members
-    isSelfAttention(other.isSelfAttention),
-    inTraining(other.inTraining),
-    lambda_L1(other.lambda_L1),
-    lambda_L2(other.lambda_L2),
-    tokenCount(other.tokenCount),
-    MQ(other.MQ),
-    MK(other.MK),
-    MV(other.MV),
-    MH(other.MH),
-    ver(other.ver), // mlp copy constructor
-    hor(other.hor), // mlp copy constructor
-    qkCache(other.qkCache),
-    qvCache(other.qvCache),
-    khCache(other.khCache),
-    K(other.K),
-    Q(other.Q),
-    KdotQ(other.KdotQ),
-    EH(other.EH),
-    EV(other.EV),
-    dh(other.dh),
-    dv(other.dv),
-    params(other.params)
-{}
-
-inline attention& attention::operator=(const attention& other) {
-    if (this == &other) {
-        return *this; // Self-assignment check
-    }
-
-    #ifdef USE_OPENCL
-        clcontext = other.clcontext;
-        d_EV = other.d_EV;
-    #elif USE_CUDA
-        d_EV = other.d_EV;
-    #endif
-
-    // Assign common members
-    isSelfAttention = other.isSelfAttention;
-    inTraining = other.inTraining;
-    lambda_L1 = other.lambda_L1;
-    lambda_L2 = other.lambda_L2;
-    tokenCount = other.tokenCount;
-    MQ = other.MQ; // mat assignment
-    MK = other.MK;
-    MV = other.MV;
-    MH = other.MH;
-    ver = other.ver; // mlp assignment
-    hor = other.hor;
-    qkCache = other.qkCache;
-    qvCache = other.qvCache;
-    khCache = other.khCache;
-    K = other.K;
-    Q = other.Q;
-    KdotQ = other.KdotQ;
-    EH = other.EH; // std::vector assignment
-    EV = other.EV;
-    dh = other.dh;
-    dv = other.dv;
-    params = other.params;
-    return *this;
-}
 
 #ifdef USE_CUDA
 // dot product and multiplication
@@ -300,5 +245,102 @@ inline attention& attention::operator=(const attention& other) {
                 int context_win, int embedding_dim);
 
 #endif
+
+
+// Inline implementations for copy constructor and copy assignment operator
+inline attention::attention(const attention& other) :
+#ifdef USE_OPENCL
+    clcontext(other.clcontext),
+    d_EV(other.d_EV),
+#elif USE_CUDA
+    d_EV(other.d_EV),
+#endif
+    // Initialize common members
+    isSelfAttention(other.isSelfAttention),
+    inTraining(other.inTraining),
+    lambda_L1(other.lambda_L1),
+    lambda_L2(other.lambda_L2),
+    tokenCount(other.tokenCount),
+    MQ(other.MQ),
+    MK(other.MK),
+    MV(other.MV),
+    MH(other.MH),
+    ver(other.ver), // mlp copy constructor
+    hor(other.hor), // mlp copy constructor
+    qkCache(other.qkCache),
+    qvCache(other.qvCache),
+    khCache(other.khCache),
+    K(other.K),
+    Q(other.Q),
+    KdotQ(other.KdotQ),
+    EH(other.EH),
+    EV(other.EV),
+    dh(other.dh),
+    dv(other.dv),
+    gMQ(other.gMQ),
+    gMK(other.gMK),
+    gMV(other.gMV),
+    gMH(other.gMH),
+    m_MQ(other.m_MQ),
+    m_MK(other.m_MK),
+    m_MV(other.m_MV),
+    m_MH(other.m_MH),
+    v_MQ(other.v_MQ),
+    v_MK(other.v_MK),
+    v_MV(other.v_MV),
+    v_MH(other.v_MH),
+    params(other.params)
+{}
+
+inline attention& attention::operator=(const attention& other) {
+    if (this == &other) {
+        return *this; // Self-assignment check
+    }
+
+    #ifdef USE_OPENCL
+        clcontext = other.clcontext;
+        d_EV = other.d_EV;
+    #elif USE_CUDA
+        d_EV = other.d_EV;
+    #endif
+
+    // Assign common members
+    isSelfAttention = other.isSelfAttention;
+    inTraining = other.inTraining;
+    lambda_L1 = other.lambda_L1;
+    lambda_L2 = other.lambda_L2;
+    tokenCount = other.tokenCount;
+    MQ = other.MQ;
+    MK = other.MK;
+    MV = other.MV;
+    MH = other.MH;
+    ver = other.ver; // mlp assignment
+    hor = other.hor;
+    qkCache = other.qkCache;
+    qvCache = other.qvCache;
+    khCache = other.khCache;
+    K = other.K;
+    Q = other.Q;
+    KdotQ = other.KdotQ;
+    EH = other.EH; // std::vector assignment
+    EV = other.EV;
+    dh = other.dh;
+    dv = other.dv;
+    gMQ = other.gMQ;
+    gMK = other.gMK;
+    gMV = other.gMV;
+    gMH = other.gMH;
+    m_MQ = other.m_MQ;
+    m_MK = other.m_MK;
+    m_MV = other.m_MV;
+    m_MH = other.m_MH;
+    v_MQ = other.v_MQ;
+    v_MK = other.v_MK;
+    v_MV = other.v_MV;
+    v_MH = other.v_MH;
+    params = other.params;
+    return *this;
+}
+
 
 #endif

@@ -1,6 +1,11 @@
-// OpenCL Kernels for Basic Statistics
+// Helper macro for indexing flattened matrix (assuming row-major)
+#define IDX(row, col, dim) ((row) * (dim) + (col))
 
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // Optional: For double precision if needed
+// Enable extensions for atomics and potentially double precision (which might include float atomics)
+// #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
 // --- Reduction Helper (Single Workgroup) ---
 // Reduces values in local memory array 'sdata'.

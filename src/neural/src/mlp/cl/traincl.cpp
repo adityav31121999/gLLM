@@ -8,6 +8,76 @@
 #include <numeric> // Required for std::accumulate
 #include <cmath>   // For std::pow (though MSE kernel handles squaring)
 
+/*void mlp::clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam_param, float beta1, float beta2,
+    float epsilon, float learning_rate) 
+{
+    this->t++; // Increment the global time step for the network
+
+    // Get the kernel from the context's map
+    cl::Kernel adam_kernel = clContext.kernels.at("adam_optimizer_kernel"); // clContext.kernels["adam_optimizer_kernel"];
+    if (!adam_kernel()) { // Check if the kernel object is valid (operator() returns cl_kernel)
+        throw std::runtime_error("OpenCL Error: Adam optimizer kernel not found in context.");
+    }
+
+    for (size_t l = 0; l < num_layers - 1; ++l) {
+        mat& current_weights = weights[l];
+        mat& current_gradients = gweights[l]; // Gradients computed in backward pass
+        mat& m = moments[l]; // First moment
+        mat& v = velocity[l]; // Second moment
+
+        int total_elements = current_weights.row * current_weights.col;
+        if (total_elements == 0) 
+            continue;
+        size_t matrix_byte_size = total_elements * sizeof(float);
+
+        // Create OpenCL buffers using cl::Buffer (RAII)
+        cl::Buffer d_weights(clContext.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                             matrix_byte_size, current_weights.mapped_data);
+        cl::Buffer d_gradients(clContext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                               matrix_byte_size, current_gradients.mapped_data);
+        cl::Buffer d_m(clContext.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                       matrix_byte_size, m.mapped_data);
+        cl::Buffer d_v(clContext.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                       matrix_byte_size, v.mapped_data);
+
+        // Set kernel arguments
+        // The order must match the kernel signature: weights, gradients, moments, velocity, LR, beta1, beta2, epsilon, t_step, num_elements
+        CL_CHECK(adam_kernel.setArg(0, d_weights));
+        CL_CHECK(adam_kernel.setArg(1, d_gradients));
+        CL_CHECK(adam_kernel.setArg(2, d_m));
+        CL_CHECK(adam_kernel.setArg(3, d_v));
+        CL_CHECK(adam_kernel.setArg(4, learning_rate));
+        CL_CHECK(adam_kernel.setArg(5, beta1));
+        CL_CHECK(adam_kernel.setArg(6, beta2));
+        CL_CHECK(adam_kernel.setArg(7, epsilon));
+        CL_CHECK(adam_kernel.setArg(8, this->t)); // Use this->t from MLP class
+        CL_CHECK(adam_kernel.setArg(9, total_elements));
+
+        // Determine global and local work sizes
+        size_t globalWorkSize[1] = { (size_t)total_elements };
+        size_t localWorkSize[1];
+        // Query for optimal local work group size
+        CL_CHECK(adam_kernel.getWorkGroupInfo(clContext.device, CL_KERNEL_WORK_GROUP_SIZE, localWorkSize));
+
+        // Adjust global work size to be a multiple of local work size for optimal performance
+        if (localWorkSize[0] == 0) localWorkSize[0] = 1; // Fallback for safety
+        globalWorkSize[0] = ((total_elements + localWorkSize[0] - 1) / localWorkSize[0]) * localWorkSize[0];
+
+        // Enqueue kernel
+        CL_CHECK(clContext.queue.enqueueNDRangeKernel(adam_kernel, cl::NullRange,
+                                                      cl::NDRange(globalWorkSize[0]),
+                                                      cl::NDRange(localWorkSize[0])));
+
+        // Read results back to host memory (mat objects' mapped_data)
+        // CL_TRUE makes this a blocking read, ensuring data is copied before function returns
+        CL_CHECK(clContext.queue.enqueueReadBuffer(d_weights, CL_TRUE, 0, matrix_byte_size, current_weights.mapped_data));
+        CL_CHECK(clContext.queue.enqueueReadBuffer(d_m, CL_TRUE, 0, matrix_byte_size, m.mapped_data));
+        CL_CHECK(clContext.queue.enqueueReadBuffer(d_v, CL_TRUE, 0, matrix_byte_size, v.mapped_data));
+    }
+    CL_CHECK(clContext.queue.finish()); // Ensure all operations in the queue are complete
+}
+*/
+
 /**
  * @brief Helper function to calculate MSE using the kernelMseReduction OpenCL kernel
  *        and the provided OpenCLContext.

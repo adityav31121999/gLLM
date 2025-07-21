@@ -22,7 +22,7 @@
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, bool attentionType, 
+block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
     bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning, float lambda_L1, float lambda_L2) :
     x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
@@ -44,12 +44,12 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     tokForBlock = mat(n_tokens, d_embed);
 
     params = (x * y * (b[0][0].params + (n_tokens * d_embed))) + (d_embed * n_tokens);
-    long long int totalBlockSize = params * sizeof(float);
+    unsigned long long totalBlockSize = params * sizeof(float);
 
     // File handling logic
     // Declare variables before conditional compilation block
     bool open_for_read_write_existing = false;
-    long long int existing_file_size = 0;
+    unsigned long long existing_file_size = 0;
     FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
 
     if (test_file) {
@@ -138,7 +138,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab,
+block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
     bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning, float lambda_L1, float lambda_L2) :
     clcontext(context), x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
@@ -162,7 +162,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     tokForBlock = mat(n_tokens, d_embed);
 
     params = (x * y * (b[0][0].params + (n_tokens * d_embed))) + (d_embed * n_tokens);
-    long long int totalBlockSize = params * sizeof(float);
+    unsigned long long totalBlockSize = params * sizeof(float);
 
     // File handling logic
     bool open_for_read_write_existing = false;
@@ -171,14 +171,14 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     if (test_file) { // File exists
         #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-                long long int existing_file_size = _ftelli64(test_file);
+                unsigned long long existing_file_size = _ftelli64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }
             }
         #else // Assuming POSIX-like environment (Linux, macOS)
             if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
-                long long int existing_file_size = ftello64(test_file);
+                unsigned long long existing_file_size = ftello64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }

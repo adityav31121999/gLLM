@@ -14,7 +14,7 @@ void block::randomValuesForBlock(float min, float max) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(min, max);
-    long long int offset = 0;
+    unsigned long long offset = 0;
     int row = b[0][0].MQ.row;
     int col = b[0][0].MQ.col;
     int mRow = b[0][0].hor.weights[0].row;

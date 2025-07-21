@@ -298,7 +298,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 clForward(current_block_idx, effective_context_size, current_prompt_count_in_block);
                 std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl;
                 
-                long long int host_indexForToken = -1;
+                unsigned long long host_indexForToken = -1;
                 h_otok_buffer = this->otok;
                 if (h_otok_buffer.size() != static_cast<size_t>(d)) {
                     throw std::runtime_error("clTrain(prompt-response): this->otok from clForward has incorrect size. Expected " + std::to_string(d) + ", got " + std::to_string(this->otok.size()));
@@ -337,7 +337,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 // calculate error
                 current_error = crossEntropy(h_otok_buffer, expected_vec);
                 // Unified logging and convergence check
-                std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<long long int>(tokens.size()))
+                std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
                                                   ? tokens[host_indexForToken]
                                                   : "INVALID_INDEX";
 

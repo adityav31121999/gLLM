@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/mlp.hpp"
 #include <iostream>
@@ -15,6 +16,85 @@
     } \
 } while (0)
 
+void mlp::cuAdamUpdate(unsigned long long t_adam_param, float beta1, float beta2, float epsilon, float learning_rate) {
+    // REMOVED: this->t++; // This increment is now expected to be handled by the caller (global time step)
+
+    for (size_t l = 0; l < num_layers - 1; ++l) {
+        mat& current_weights = weights[l];
+        mat& current_gradients = gweights[l]; // Gradients computed in backward pass
+        mat& m = moments[l]; // First moment
+        mat& v = velocity[l]; // Second moment
+
+        int total_elements = current_weights.row * current_weights.col;
+        if (total_elements == 0) { // Handle empty matrices gracefully
+            continue;
+        }
+        size_t matrix_byte_size = total_elements * sizeof(float);
+
+        // Device pointers
+        float *d_weights = nullptr, *d_gradients = nullptr, *d_m = nullptr, *d_v = nullptr;
+        cudaError_t cuda_err;
+
+        // Allocate device memory and copy host data
+        cuda_err = cudaMalloc(&d_weights, matrix_byte_size);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA malloc for weights failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+        cuda_err = cudaMemcpy(d_weights, current_weights.mapped_data, matrix_byte_size, cudaMemcpyHostToDevice);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyH2D for weights failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+
+        cuda_err = cudaMalloc(&d_gradients, matrix_byte_size);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA malloc for gradients failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+        cuda_err = cudaMemcpy(d_gradients, current_gradients.mapped_data, matrix_byte_size, cudaMemcpyHostToDevice);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyH2D for gradients failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+
+        cuda_err = cudaMalloc(&d_m, matrix_byte_size);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA malloc for moments failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+        cuda_err = cudaMemcpy(d_m, m.mapped_data, matrix_byte_size, cudaMemcpyHostToDevice);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyH2D for moments failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+
+        cuda_err = cudaMalloc(&d_v, matrix_byte_size);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA malloc for velocity failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+        cuda_err = cudaMemcpy(d_v, v.mapped_data, matrix_byte_size, cudaMemcpyHostToDevice);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyH2D for velocity failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+
+        // Determine grid and block dimensions
+        int blockSize = 256; // Typical block size, adjust for performance
+        int numBlocks = (total_elements + blockSize - 1) / blockSize;
+        // if (total_elements == 0) numBlocks = 0; // Already handled by the 'if (total_elements == 0)' check above
+
+        // Launch kernel
+        adam_optimizer_kernel_cuda<<<numBlocks, blockSize>>>(d_weights, d_gradients, d_m, d_v,
+                                                             learning_rate, beta1, beta2, epsilon,
+                                                             t_adam_param, // <-- Pass the global time step directly
+                                                             total_elements);
+
+        // Synchronize and check for errors after kernel launch
+        cuda_err = cudaGetLastError();
+        if (cuda_err != cudaSuccess) {
+            fprintf(stderr, "CUDA kernel launch failed: %s\n", cudaGetErrorString(cuda_err));
+            goto cleanup;
+        }
+        cuda_err = cudaDeviceSynchronize(); // Synchronize to ensure kernel completion before copying back
+        if (cuda_err != cudaSuccess) {
+            fprintf(stderr, "CUDA device synchronize failed: %s\n", cudaGetErrorString(cuda_err));
+            goto cleanup;
+        }
+
+        // Copy results back to host memory (mat objects)
+        cuda_err = cudaMemcpy(current_weights.mapped_data, d_weights, matrix_byte_size, cudaMemcpyDeviceToHost);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyD2H for weights failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+        cuda_err = cudaMemcpy(m.mapped_data, d_m, matrix_byte_size, cudaMemcpyDeviceToHost);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyD2H for moments failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+        cuda_err = cudaMemcpy(v.mapped_data, d_v, matrix_byte_size, cudaMemcpyDeviceToHost);
+        if (cuda_err != cudaSuccess) { fprintf(stderr, "CUDA memcpyD2H for velocity failed: %s\n", cudaGetErrorString(cuda_err)); goto cleanup; }
+
+    cleanup:
+        // Free device memory
+        if (d_weights) cudaFree(d_weights);
+        if (d_gradients) cudaFree(d_gradients);
+        if (d_m) cudaFree(d_m);
+        if (d_v) cudaFree(d_v);
+    }
+}
 
 /**
  * @brief Trains the MLP using CUDA for a single input-output pair.
@@ -199,3 +279,5 @@ void mlp::cuTest(int in, int layers) {
         std::cout << expected[i] << " <-> " << output[i] << std::endl;
     }
 }
+
+#endif

@@ -77,17 +77,17 @@ public:
     std::vector<std::vector<attention>> b;  // block complete attention
     FILE* blockFile = nullptr;              // bin file for block
     std::string blockFilePath;              // path to model file
-    long long int params;                   // parameters in block
-    long long int blockOffset;              // offset for block in training bin file
+    unsigned long long params;                   // parameters in block
+    unsigned long long blockOffset;              // offset for block in training bin file
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
-        long long int vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
+        unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
         float& learning, float lambda_L1, float lambda_L2);
 #elif USE_CUDA || USE_CPU
     block() = default;
-    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, 
+    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, 
         bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning,
         float lambda_L1, float lambda_L2);
 #endif
@@ -139,6 +139,9 @@ public:
     void cubackward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void cubackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
+    // adam update
+    void cuParallelAdamUpdate(unsigned long long t_adam, int columnNumber, float beta1, float beta2, float epsilon, float learning_rate);
+    void cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #elif USE_OPENCL
 
@@ -163,6 +166,8 @@ public:
     void clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
+    // adam update
+    void clAdamUpdate(int layers_mlp, unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #else
 
@@ -190,6 +195,9 @@ public:
     void backward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning);
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning);
     void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning);
+        // adam update
+    void parallelAdamUpdate(unsigned long long t_adam, int columnNumber, float beta1, float beta2, float epsilon, float learning_rate);
+    void adamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #endif
 

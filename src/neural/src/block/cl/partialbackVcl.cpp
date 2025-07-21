@@ -317,7 +317,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             CL_CHECK(current_stream_cl.enqueueNDRangeKernel(kernelComputeGradientsEV_V_cl, cl::NullRange, global_ev, local_1d));
 
             // --- Step 2: Backprop through ver MLP ---
-            cl::Kernel kernelLastLayerDelta_cl = clcontext.kernels.at("kernelLastLayerDelta");
+            cl::Kernel kernelLastLayerDelta_cl = clcontext.kernels.at("kernelLastLayerDeltaSigmoid");
             CL_CHECK(kernelLastLayerDelta_cl.setArg(0, device_ptrs_cl.d_grad_EV_scaled));
             CL_CHECK(kernelLastLayerDelta_cl.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1]));
             CL_CHECK(kernelLastLayerDelta_cl.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1]));
@@ -751,8 +751,18 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             current_stream_cl.flush();
 
             // --- Kernel Launches for steps 1-8 (same as clpartialbackward1stBlock) ---
-            cl::Kernel k_grad_ev_v = clcontext.kernels.at("kernelComputeGradientsEV_V"); CL_CHECK(k_grad_ev_v.setArg(0, device_ptrs_cl.d_EV)); CL_CHECK(k_grad_ev_v.setArg(1, device_ptrs_cl.d_expected_v)); CL_CHECK(k_grad_ev_v.setArg(2, device_ptrs_cl.d_grad_EV_full)); CL_CHECK(k_grad_ev_v.setArg(3, device_ptrs_cl.d_grad_EV_summed)); CL_CHECK(k_grad_ev_v.setArg(4, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_grad_ev_v.setArg(5, learning_rate)); CL_CHECK(k_grad_ev_v.setArg(6, context_win)); CL_CHECK(k_grad_ev_v.setArg(7, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_ev_v, cl::NullRange, global_ev, local_1d));
-            cl::Kernel k_last_delta = clcontext.kernels.at("kernelLastLayerDelta"); CL_CHECK(k_last_delta.setArg(0, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_last_delta.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1])); CL_CHECK(k_last_delta.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1])); CL_CHECK(k_last_delta.setArg(3, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_last_delta, cl::NullRange, global_embed, local_1d));
+            cl::Kernel k_grad_ev_v = clcontext.kernels.at("kernelComputeGradientsEV_V"); 
+            CL_CHECK(k_grad_ev_v.setArg(0, device_ptrs_cl.d_EV)); CL_CHECK(k_grad_ev_v.setArg(1, device_ptrs_cl.d_expected_v)); 
+            CL_CHECK(k_grad_ev_v.setArg(2, device_ptrs_cl.d_grad_EV_full)); CL_CHECK(k_grad_ev_v.setArg(3, device_ptrs_cl.d_grad_EV_summed)); 
+            CL_CHECK(k_grad_ev_v.setArg(4, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_grad_ev_v.setArg(5, learning_rate)); 
+            CL_CHECK(k_grad_ev_v.setArg(6, context_win)); CL_CHECK(k_grad_ev_v.setArg(7, embedding_dim)); 
+            CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_ev_v, cl::NullRange, global_ev, local_1d));
+
+            cl::Kernel k_last_delta = clcontext.kernels.at("kernelLastLayerDeltaSigmoid"); 
+            CL_CHECK(k_last_delta.setArg(0, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_last_delta.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1])); 
+            CL_CHECK(k_last_delta.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1])); CL_CHECK(k_last_delta.setArg(3, embedding_dim)); 
+            CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_last_delta, cl::NullRange, global_embed, local_1d));
+            
             cl::Kernel k_hidden_delta = clcontext.kernels.at("hiddenDeltaKernel"); 
             for (int l = num_weight_matrices_mlp - 1; l >= 1; --l) { 
                 CL_CHECK(k_hidden_delta.setArg(0, device_ptrs_cl.d_ver_deltas[l])); 

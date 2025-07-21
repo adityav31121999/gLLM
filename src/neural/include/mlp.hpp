@@ -38,6 +38,9 @@ public:
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
 
+    std::vector<mat> moments; // First moments for weights
+    std::vector<mat> velocity; // Second moments for weights
+
     // Constructor(s) modified to accept OpenCLContext when needed
 #ifdef USE_OPENCL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
@@ -52,6 +55,9 @@ public:
     // Explicitly define copy constructor and copy assignment operator
     mlp(const mlp& other);
     mlp& operator=(const mlp& other);
+
+    mlp(const mlp&& other);
+    mlp& operator=(const mlp&& other);
 
 #ifdef USE_CUDA
 
@@ -68,7 +74,7 @@ public:
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void cuValidate(int in, int layers);
     void cuTest(int in, int layers);
-    void cuAdamUpdate();
+    void cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #elif USE_OPENCL
 
@@ -85,7 +91,7 @@ public:
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void clValidate(int in, int layers);
     void clTest(int in, int layers);
-    void clAdamUpdate(); 
+    void clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam_param, float beta1, float beta2, float epsilon, float learning_rate); 
 
 #else
 
@@ -101,7 +107,7 @@ public:
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void validate(int in, int layers);
     void test(int in, int layers);
-    void adamUpdate(); 
+    void adamUpdate(unsigned long long t_adam_param, float beta1, float beta2, float epsilon, float learning_rate);
 
 #endif
     void initializeWeights();
@@ -129,9 +135,10 @@ public:
         }
     }
 
+    void initializeAdamMoments();
     void clearValues();
-    void serialise(long long int offset, const std::string& locationWithFilename);
-    void deserialise(long long int offset, const std::string& locationWithFilename);
+    void serialise(unsigned long long offset, const std::string& locationWithFilename);
+    void deserialise(unsigned long long offset, const std::string& locationWithFilename);
     void serialise4train(const std::string& locationWithFileName);
     void serialise4use(const std::string& locationWithFileName);
     
@@ -155,7 +162,9 @@ inline mlp::mlp(const mlp& other) :
     hlayers(other.hlayers),         // std::vector copy constructor
     activations(other.activations), // std::vector copy constructor
     gweights(other.gweights),       // Relies on mat's copy constructor and std::vector's copy constructor
-    params(other.params)
+    params(other.params),
+    moments(other.moments),
+    velocity(other.velocity)
 {}
 
 inline mlp& mlp::operator=(const mlp& other) {
@@ -182,7 +191,8 @@ inline mlp& mlp::operator=(const mlp& other) {
     activations = other.activations; // std::vector assignment
     gweights = other.gweights;       // Relies on mat's assignment operator and std::vector's assignment
     params = other.params;
-
+    moments = other.moments;
+    velocity = other.velocity;
     return *this;
 }
 

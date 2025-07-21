@@ -248,7 +248,7 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
             current_stream.flush();
 
             // Kernel Launches
-            cl::Kernel k_grad_eh_ev = clcontext.kernels.at("kernelComputeGradientsEH_EV"); 
+            cl::Kernel k_grad_eh_ev = clcontext.kernels.at("kernelComputeGradientsEH_EV");
             CL_CHECK(k_grad_eh_ev.setArg(0, device_ptrs.d_EH));
             CL_CHECK(k_grad_eh_ev.setArg(1, device_ptrs.d_expected_h));
             CL_CHECK(k_grad_eh_ev.setArg(2, device_ptrs.d_grad_EH));

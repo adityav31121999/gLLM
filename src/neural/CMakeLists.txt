@@ -25,6 +25,7 @@ add_library(neural STATIC
     src/mlp/cu/train.cu
     # OpenCL
     src/mlp/cl/mlp.cl
+    src/mlp/cl/mlpcomputecl.cpp
     src/mlp/cl/forpropcl.cpp
     src/mlp/cl/backpropcl.cpp
     src/mlp/cl/backwardcl.cpp
@@ -48,6 +49,7 @@ add_library(neural STATIC
     src/attention/cu/kernels.cu
     # OpenCL
     src/attention/cl/attention.cl
+    src/attention/cl/atcompute.cpp
     src/attention/cl/forwardcl.cpp
     src/attention/cl/backward1stheadcl.cpp
     src/attention/cl/backwardcl.cpp
@@ -71,6 +73,7 @@ add_library(neural STATIC
     src/block/cl/partialbackiHcl.cpp
     src/block/cl/partialbackVcl.cpp
     src/block/cl/backwardcl.cpp
+    src/block/cl/blockAdamcl.cpp
 
 # transformer
     # C++

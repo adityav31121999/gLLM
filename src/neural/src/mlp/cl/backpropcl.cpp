@@ -32,10 +32,10 @@ void mlp::clBackprop(int in, int layers, float learning) {
     // Check weight mat dimensions against 'in' (conceptual size for this function)
     for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
         if (this->weights[l].row != in || this->weights[l].col != in) {
-             // This indicates a mismatch between 'in' and actual mat dimensions.
-             // Depending on strictness, could throw or log. For now, proceed with 'in'.
-             std::cerr << "Warning: MLP clBackprop: Weight mat dimensions at layer " << l << " ("
-                       << this->weights[l].row << "x" << this->weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
+            // This indicates a mismatch between 'in' and actual mat dimensions.
+            // Depending on strictness, could throw or log. For now, proceed with 'in'.
+            std::cerr << "Warning: MLP clBackprop: Weight mat dimensions at layer " << l << " ("
+                      << this->weights[l].row << "x" << this->weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
      if (layers > 0) {
@@ -101,10 +101,9 @@ void mlp::clBackprop(int in, int layers, float learning) {
         }
         // Allocate hidden layer activation buffers
         for (int l = 0; l < layers; ++l) {
-             d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
-             CL_CHECK(err);
+            d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
+            CL_CHECK(err);
         }
-
 
         // --- Data Transfer: Host -> Device (using shared queue) ---
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_input, CL_TRUE, 0, layer_size_bytes, input.data()));
@@ -126,7 +125,6 @@ void mlp::clBackprop(int in, int layers, float learning) {
         cl::NDRange local_1d = cl::NullRange;
         cl::NDRange global_2d(in, in); // For weight/gradient updates
         cl::NDRange local_2d = cl::NullRange;
-
         cl_int cl_in = static_cast<cl_int>(in);
         cl_float cl_learning = static_cast<cl_float>(learning);
 

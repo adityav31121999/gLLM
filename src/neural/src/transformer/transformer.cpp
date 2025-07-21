@@ -21,12 +21,12 @@
  * @param modelDir_param Base directory path for model files.
  */
 transformer::transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, 
-    int l_param, long long int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, 
+    int l_param, unsigned long long vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, 
     bool attentionType_param, bool& inTraining_param, const std::string& modelDir_param) :
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param),
     d(d_param), h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param),
     inTraining(inTraining_param), learning(learning_rate_param), lambda_L1(lambda_L1_param),
-    lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), trainCount(0), epochCount(0), 
+    lambda_L2(lambda_L2_param), epsilon(0.0f), epochs(EPOCHS), error(0.0f), trainCount(0), epochCount(0), 
     promptNresponse(nullptr), embeddings(this->vocabsize + 1, d), tokenEmbed(this->n * this->m, d)
 {
     if(this->tokens.size() != this->embeddings.row - 1) {
@@ -48,6 +48,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         promptCount = 0;
         indexForToken = 0;
         isTerminate = 0;
+        t_step_adam = 0;
         params = (this->m * t[0].params) + d + (this->vocabsize * d) + (this->n*this->m)*d;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
@@ -93,13 +94,13 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
  * @param modelDir_param Base directory path for model files.
  */
 transformer::transformer(OpenCLContext& context_param, int m_param, int x_param, int y_param, 
-    int n_param, int d_param, int h_param, int l_param, long long int vocab_param, float learning_rate_param, 
+    int n_param, int d_param, int h_param, int l_param, unsigned long long vocab_param, float learning_rate_param, 
     float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
     const std::string& modelDir_param) :
     clcontext(context_param), m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param),
     y(y_param), n(n_param), d(d_param), h(h_param), l(l_param), vocabsize(vocab_param),
     isSelf(attentionType_param),  inTraining(inTraining_param), learning(learning_rate_param),
-    lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), trainCount(0),
+    lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epsilon(0.0f), epochs(EPOCHS), error(0.0f), trainCount(0),
     epochCount(0), promptNresponse(nullptr), embeddings(vocab_param + 1, d_param), tokenEmbed(m_param * n_param, d_param)
 {
     std::cout << "TRANSFORMER constructed with OpenCL context using device: "
@@ -122,6 +123,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         promptCount = 0;
         indexForToken = 0;
         isTerminate = 0;
+        t_step_adam = 0;
         // Corrected params calculation for training
         params = (this->m * t[0].params) + this->d + (this->vocabsize * this->d) + (this->m * this->n * this->d);
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;

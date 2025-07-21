@@ -48,32 +48,26 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
                                   << ",\nLast EpochCount: " << sessionData.lastEpochCountState << std::endl;
                         // deserialise all blocks
                         T.t[0].deserialise(T.t[0].blockFilePath);
-                    }
-                     else {
+                    } else {
                         std::cerr << "trainBlockSentence: Warning: Failed to parse session data from " << currentChatLogPath 
                                   << ". Starting with fresh session values." << std::endl;
                     }
-                } 
-                else {
+                } else {
                     std::cout << "trainBlockSentence: Session data file " << currentChatLogPath << " is empty. Starting with fresh session values." << std::endl;
                 }
                 tempInfoFile.close();
-            } 
-            else {
+            } else {
                 std::cerr << "trainBlockSentence: Warning: Could not open session data file " << currentChatLogPath 
                           << " for reading. Starting with fresh session values." << std::endl;
             }
-        }
-        else {
+        } else {
             std::cerr << "trainBlockSentence: Warning: Session data path " << currentChatLogPath 
                        << " is not a regular file. Starting with fresh session values." << std::endl;
         }
-    }
-    else {
+    } else {
         if (currentChatLogPath.empty()) {
             std::cout << "trainBlockSentence: Session data file path (currentChatLogPath) is not set. Starting with fresh session values." << std::endl;
-        }
-        else {
+        } else {
             std::cout << "trainBlockSentence: Session data file " << currentChatLogPath << " not found. Starting with fresh session values." << std::endl;
         }
     }
@@ -95,7 +89,7 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
     if (!file.is_open()) {
         throw std::runtime_error("trainBlockSentence: Error opening training data file: " + txtFileLocation);
     }
-    long long int numberOfLines = countLineInTXT(txtFileLocation);
+    unsigned long long numberOfLines = countLineInTXT(txtFileLocation);
     if (numberOfLines <= 0) {
         throw std::runtime_error("trainBlockSentence: No training data found in the specified file!");
     }
@@ -122,12 +116,10 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
     long long linesProcessedInThisRun = 0;
 
     // tokenise each line and povide their respective emebeddings
-    for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
+    for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfLine.clear();
-        T.currentTokenCount = 0;
-        int tok = 0;
-        T.currentTokenCount = 0;
+        T.currentTokenCount = 1;
         TOK.splitSentence(linesOfFile[k], tokensOfLine);
         tokensOfLine.back() = "<@#0>";          // sentece terminator
         std::vector<std::vector<float>> sentenceEmbeddings(tokensOfLine.size(), std::vector<float>(EMBEDDING, 0.0f));
@@ -137,12 +129,20 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
             std::vector<float> embed(d, 0.0f);          // embedding (loaded from tokeniser data)
             T.getEmbedding(tokensOfLine[j], embed);
             positionalEmbedding(embed, sentenceEmbeddings[j], j);
+            int actual_row_in_ev = T.currentTokenCount + j;
+            for(int m1 = 0; m1 < x; m1++) {
+                for(int m2 = 0; m2 < y; m2++) {
+                    std::vector<float> v(EMBEDDING, 0.0f);
+                    v = T.t[0].b[m1][m2].EV(actual_row_in_ev);
+                    v += embed;
+                    T.t[0].b[m1][m2].EV.addRow(v, actual_row_in_ev);
+                }
+            }
         }
         // Corrected logging to show the actual embedding vector for the first token
         std::cout << "trainBlockSentence: total tokens in vocabulary: " << T.tokens.size() << std::endl;
-        tok += tokensOfLine.size();
         // train the first block
-        if(tok < CONTEXT_WIN)
+        if(tokensOfLine.size() < CONTEXT_WIN)
         {
             std::cout << "Training line " << k << " with total number of tokens in it " << tokensOfLine.size() << std::endl;
             #ifdef USE_CUDA
@@ -159,7 +159,7 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
         else {
             throw std::runtime_error("trainBlockSentence: LOCAL CONTEXT LIMIT REACHED");
         }
-        totalTokens += tok;
+        totalTokens += tokensOfLine.size();
         linesProcessedInThisRun++;
 
         // Update and save session data after each line
@@ -282,7 +282,7 @@ void model::trainModelSentence(const std::string& txtFileLocation)
     if (!file.is_open()) {
         throw std::runtime_error("Error opening training data file: " + txtFileLocation);
     }
-    long long int numberOfLines = countLineInTXT(txtFileLocation);
+    unsigned long long numberOfLines = countLineInTXT(txtFileLocation);
     if (numberOfLines <= 0) {
         throw std::runtime_error("No training data found in the specified file!");
     }
@@ -321,7 +321,7 @@ void model::trainModelSentence(const std::string& txtFileLocation)
     for(int i = 0; i < m; i++) T.t[i].deserialise(T.t[i].blockFilePath);
 
     // tokenise each line and povide their respective emebeddings
-    for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
+    for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfLine.clear();
         T.currentTokenCount = 0;

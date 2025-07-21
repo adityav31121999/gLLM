@@ -42,7 +42,7 @@ typedef struct modelDataInfo {
     int matheight;          // height of MQ, MK and columns of MV, MH
     int totalParams;        // total parameters of transformer
     int totalContext;       // total tokenLimit -> t*count m * n
-    long long int tokens;   // total tokens (words and punctutations) for training, testing and validation
+    unsigned long long tokens;   // total tokens (words and punctutations) for training, testing and validation
     float learning;         // learning rate
     bool attentionType;     // if self attention or cross attention
 } modelDataInfo;
@@ -61,10 +61,12 @@ struct TrainingSessionData {
     long long vocabSizeSnapshot = 0;                // Snapshot of T.vocabsize
     float lambdaL1;                                 // L1 penalty
     float lambdaL2;                                 // L2 penalty
+    float epsilon;                                  // epsilon for adam optimiser
     float currentLearning;                          // current line's learning rate
     double totalLearning;                           // total learning rate from previous trainings
     double adLearning;                              // average of total learning from last session
     float cumulativeError = 0;                      // total error throughout training
+    unsigned long long t_adam_steps = 0;            // total adam steps
     std::string lastSaveTimestamp;                  // Timestamp of last progress saved
 
     bool load(const std::string& filepath) {
@@ -84,12 +86,14 @@ struct TrainingSessionData {
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> vocabSizeSnapshot; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lambdaL1; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lambdaL2; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> epsilon; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> currentLearning; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> totalLearning; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> adLearning; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeError; if(ss.fail()) return false; } else return false;
+        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> t_adam_steps; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) lastSaveTimestamp = line; else return false;
-        
+
         return ifs.eof() || ifs.peek() == EOF; // Ensure all expected data was read
     }
 
@@ -110,10 +114,12 @@ struct TrainingSessionData {
         ofs << vocabSizeSnapshot << std::endl;
         ofs << lambdaL1 << std::endl;
         ofs << lambdaL2 << std::endl;
+        ofs << epsilon << std::endl;
         ofs << currentLearning << std::endl;
         ofs << totalLearning << std::endl;
         ofs << adLearning << std::endl;
         ofs << cumulativeError << std::endl;
+        ofs << t_adam_steps << std::endl;
         
         auto now = std::chrono::system_clock::now();
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
@@ -159,8 +165,10 @@ public:
     double adLearning;      // = T.totalLearning/T.trainCount (average adaptive learning)
     float lambda_L1;        // lambda for L1 penalty
     float lambda_L2;        // lambda for L2 penalty
+    float epsilon;          // epsilon for adam optimiser
     bool isSelf;            // if self attention = 1 or cross attention = 0
     bool toTrain;           // if training of model, set to 1, or inference, set to 0
+    unsigned long long t_step_adam;         // for time steps, everytime adam optimiser is used
 
 // files to hold data
     modelDataInfo info;     // model info
@@ -173,22 +181,22 @@ public:
     std::string currentChatLogPath; // Stores the path of the currently open chat log file
 
 // using these strings, embeddings are provided to the transformer t (for training and application)
-    std::string userPrompt;                 // user prompt
-    std::vector<std::string> tinput;        // token input
-    std::vector<std::string> expected;      // expected token output
-    std::vector<std::string> toutput;       // predicted token output
-    std::vector<std::string> chatToken;     // Input + Expected/Output + Terminator
+    std::string userPrompt;                     // user prompt
+    std::vector<std::string> tinput;            // token input
+    std::vector<std::string> expected;          // expected token output
+    std::vector<std::string> toutput;           // predicted token output
+    std::vector<std::string> chatToken;         // Input + Expected/Output + Terminator
 
 // offsets
-    long long int matOffset;                // matrix offset
-    long long int mlpOffset;                // mlp offset
-    long long int cacheOffset;              // cache offset
-    long long int attentionOffset;          // attention offset
-    long long int blockOffset;              // block offset
-    long long int totalParams;              // total parameters of transformer
-    long long int totalTokens;              // total tokens used for training, testing and validation
-    long long int vocabsize;                // total vocabulary size
-    long long int totalTrainingCount;       // total training count obtained from epochs based on token training
+    unsigned long long matOffset;                // matrix offset
+    unsigned long long mlpOffset;                // mlp offset
+    unsigned long long cacheOffset;              // cache offset
+    unsigned long long attentionOffset;          // attention offset
+    unsigned long long blockOffset;              // block offset
+    unsigned long long totalParams;              // total parameters of transformer
+    unsigned long long totalTokens;              // total tokens used for training, testing and validation
+    unsigned long long vocabsize;                // total vocabulary size
+    unsigned long long totalTrainingCount;       // total training count obtained from epochs based on token training
     tokeniser TOK;          // tokeniser
     transformer T;          // transformer
 
@@ -267,8 +275,8 @@ public:
 
 // words and embeddings
 
-long long int countLinesInCSV(const std::string& filename);
-long long int countLineInTXT(const std::string& filename);
+unsigned long long countLinesInCSV(const std::string& filename);
+unsigned long long countLineInTXT(const std::string& filename);
 static bool is_sub_sentence_delimiter(char c);
 static bool is_digit(char c);
 void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);

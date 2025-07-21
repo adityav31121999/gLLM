@@ -40,12 +40,18 @@ public:
     float lambda_L2;        // lambda for L2 penalty
     float error;            // error for transformer (after complete trainin)
     bool isTerminate;       // when '@#0' is calculated, to end the forward propagation
-    long long int params;           // parameters in transformer
-    long long int trainCount;       // total training count
-    long long int vocabsize;        // size of vocabulary
-    long long int cacheOffset;      // for extracting caches
-    long long int matOffset;        // for extracting matrices
-    long long int mlpOffset;        // for extracting MLPs*
+    unsigned long long params;              // parameters in transformer
+    unsigned long long trainCount;          // total training count
+    unsigned long long vocabsize;           // size of vocabulary
+    unsigned long long cacheOffset;         // for extracting caches
+    unsigned long long matOffset;           // for extracting matrices
+    unsigned long long mlpOffset;           // for extracting MLPs*
+
+    // Adam Optimizer Hyperparameters and State
+    float beta1;                // Adam hyperparameter (decay rate for first moment)
+    float beta2;                // Adam hyperparameter (decay rate for second moment)
+    float epsilon;              // Adam hyperparameter (small value to prevent division by zero)
+    unsigned long long t_step_adam;     // Global Adam time step (number of updates), initialized to 0. Use unsigned long long for potentially many updates
 
     std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
@@ -62,12 +68,12 @@ public:
     OpenCLContext& clcontext;
     // Constructor with explicit learning rate
     transformer(OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
-        long long int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
+        unsigned long long vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
         bool& inTraining_param, const std::string& modelDir_param);
 #elif USE_CUDA || USE_CPU
     transformer() = default;
     // Constructor with explicit learning rate
-    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, long long int vocab_param, 
+    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, unsigned long long vocab_param, 
         float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
         const std::string& blockBinPath);
 #endif
@@ -150,7 +156,7 @@ std::string toLower(const std::string& str);
 
 // compute functions for dot, KdotQ and other values
 
-void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index);
+void computeOutput(const std::vector<float>& output, const mat& embeddings, unsigned long long& voc, int& index);
 void computeKorQ(const std::vector<float>& tokenEmbed, const mat& m, std::vector<float>& KorQ);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
 void computeDot(const std::vector<float>& Ti, const mat& M, const std::vector<float>& Tj, float& dot);

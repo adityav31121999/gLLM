@@ -7,6 +7,38 @@
 
 #ifdef USE_CPU
 
+void mlp::adamUpdate(unsigned long long t_adam_param, float beta1, float beta2, float epsilon, float learning_rate) {
+    this->t++; // Increment the global time step for the network
+    // Bias correction terms
+    float bias_correction1 = 1.0f - std::pow(beta1, this->t);
+    float bias_correction2 = 1.0f - std::pow(beta2, this->t);
+    for (size_t l = 0; l < num_layers - 1; ++l) {
+        mat& current_weights = weights[l];
+        mat& current_gradients = gweights[l]; // Gradients computed in backward pass
+        mat& m = moments[l]; // First moment
+        mat& v = velocity[l]; // Second moment
+        int rows = current_weights.row;
+        int cols = current_weights.col;
+
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                float grad = current_gradients(i, j);
+                // Update biased first moment estimate
+                m(i, j) = beta1 * m(i, j) + (1.0f - beta1) * grad;
+                // Update biased second raw moment estimate
+                v(i, j) = beta2 * v(i, j) + (1.0f - beta2) * (grad * grad);
+                // Compute bias-corrected first moment estimate
+                float m_hat = m(i, j) / bias_correction1;
+                // Compute bias-corrected second moment estimate
+                float v_hat = v(i, j) / bias_correction2;
+                // Update weights
+                current_weights(i, j) -= learning_rate * m_hat / (std::sqrt(v_hat) + epsilon);
+            }
+        }
+    }
+}
+
+
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)
  * @param mse Mean Squared Error

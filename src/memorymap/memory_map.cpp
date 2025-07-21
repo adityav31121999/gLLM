@@ -33,7 +33,7 @@
         size_t fileSize;
     };
 #else
-    #error "Unsupported platform. Please define _WIN32 or __linux__."
+    #error "Unsupported platform. Please define _WIN64 or __linux__."
     struct MappedFile { char _dummy; }; // Dummy for compilers that might proceed past #error
 #endif
 

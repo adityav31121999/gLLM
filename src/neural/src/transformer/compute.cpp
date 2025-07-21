@@ -81,7 +81,7 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index)
+void computeOutput(const std::vector<float>& output, const mat& embeddings, unsigned long long& voc, int& index)
 {
     if (output.size() != static_cast<size_t>(embeddings.col) || voc != embeddings.row) {
         throw std::invalid_argument("computeOutput: Dimension mismatch. output size (" + std::to_string(output.size()) + ") != embeddings.col (" + std::to_string(embeddings.col) + ") or voc (" + std::to_string(voc) + ") != embeddings.row (" + std::to_string(embeddings.row) + ")");
@@ -429,5 +429,73 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
         }
     }
 }
+
+
+// update weights using adam optimiser
+void transformer::adamUpdateWeights(float learning_rate) {
+    this->t_adam_step++; // Increment global time step for Adam bias correction
+
+    // Helper lambda to apply Adam to a single weight matrix
+    auto apply_adam_to_mat = [&](mat& weight, mat& gradient, mat& m_moment, mat& v_moment) {
+        if (!weight.mapped_data || !gradient.mapped_data || !m_moment.mapped_data || !v_moment.mapped_data) {
+            std::cerr << "Warning: Skipping Adam update for unmapped matrix." << std::endl;
+            return;
+        }
+
+        size_t num_elements = static_cast<size_t>(weight.row) * weight.col;
+        float beta1_pow_t = pow(this->beta1_adam, static_cast<float>(this->t_adam_step));
+        float beta2_pow_t = pow(this->beta2_adam, static_cast<float>(this->t_adam_step));
+
+        for (size_t k = 0; k < num_elements; ++k) {
+            float g = gradient.mapped_data[k];
+            float m = m_moment.mapped_data[k];
+            float v = v_moment.mapped_data[k];
+
+            m = this->beta1_adam * m + (1.0f - this->beta1_adam) * g;
+            v = this->beta2_adam * v + (1.0f - this->beta2_adam) * g * g;
+
+            float m_hat = m / (1.0f - beta1_pow_t);
+            float v_hat = v / (1.0f - beta2_pow_t);
+
+            weight.mapped_data[k] -= (learning_rate / (sqrt(v_hat) + this->epsilon_adam)) * m_hat;
+
+            m_moment.mapped_data[k] = m;
+            v_moment.mapped_data[k] = v;
+        }
+    };
+
+    // Iterate through all blocks
+    for (size_t block_idx = 0; block_idx < t.size(); ++block_idx) {
+        // Iterate through all attention layers (x) in the block
+        for (size_t layer_idx = 0; layer_idx < t[block_idx].b.size(); ++layer_idx) {
+            // Iterate through all attention heads (y) in the layer
+            for (size_t head_idx = 0; head_idx < t[block_idx].b[layer_idx].size(); ++head_idx) {
+                attention& attention_head = t[block_idx].b[layer_idx][head_idx];
+                
+                // Apply Adam to attention matrices
+                apply_adam_to_mat(attention_head.MQ, attention_head.gMQ, attention_head.m_MQ, attention_head.v_MQ);
+                apply_adam_to_mat(attention_head.MK, attention_head.gMK, attention_head.m_MK, attention_head.v_MK);
+                apply_adam_to_mat(attention_head.MV, attention_head.gMV, attention_head.m_MV, attention_head.v_MV);
+                apply_adam_to_mat(attention_head.MH, attention_head.gMH, attention_head.m_MH, attention_head.v_MH);
+
+                // Apply Adam to horizontal MLP weights
+                for (size_t i = 0; i < attention_head.hor.weights.size(); ++i) {
+                    apply_adam_to_mat(attention_head.hor.weights[i],
+                                      attention_head.hor.gweights[i],
+                                      attention_head.hor.moments[i],
+                                      attention_head.hor.velocity[i]);
+                }
+                // Apply Adam to vertical MLP weights
+                for (size_t i = 0; i < attention_head.ver.weights.size(); ++i) {
+                    apply_adam_to_mat(attention_head.ver.weights[i],
+                                      attention_head.ver.gweights[i],
+                                      attention_head.ver.moments[i],
+                                      attention_head.ver.velocity[i]);
+                }
+            }
+        }
+    }
+}
+
 
 #endif

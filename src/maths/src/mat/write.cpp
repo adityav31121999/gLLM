@@ -6,7 +6,7 @@
 /**
  * serialise the the matrix to a bin after offset number of float values
  */
-void mat::serialise(long long int offset, const std::string& locationofbinfile) {
+void mat::serialise(unsigned long long offset, const std::string& locationofbinfile) {
     // Open the file for binary read and write, expecting it to exist and be pre-sized.
     std::fstream outFile(locationofbinfile, std::ios::binary | std::ios::in | std::ios::out);
     if (!outFile.is_open()) {
@@ -107,7 +107,7 @@ void mat::serialise(const std::string& locationofbinfile) {
 /**
  * deserialise the the bin to a matrix from offset number of float values
  */
-void mat::deserialise(long long int offset, const std::string& locationofbinfile) {
+void mat::deserialise(unsigned long long offset, const std::string& locationofbinfile) {
     if (row == 0 || col == 0) {
         return;
     }

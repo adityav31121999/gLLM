@@ -94,7 +94,7 @@ void model::trainBlockPR(const std::string& txtFileLocation)
     if (!file.is_open()) {
         throw std::runtime_error("Error opening training data file: " + txtFileLocation);
     }
-    long long int numberOfLines = countLineInTXT(txtFileLocation);
+    unsigned long long numberOfLines = countLineInTXT(txtFileLocation);
     if (numberOfLines <= 0) {
         throw std::runtime_error("No training data found in the specified file!");
     }
@@ -121,7 +121,7 @@ void model::trainBlockPR(const std::string& txtFileLocation)
     long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     long long linesProcessedInThisRun = 0;
     bool sortIt = 0;    // off
-    for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
+    for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfFile.clear();
         oddSentence.clear();
@@ -332,7 +332,7 @@ void model::trainModelPR(const std::string& txtFileLocation)
     if (!file.is_open()) {
         throw std::runtime_error("Error opening training data file: " + txtFileLocation);
     }
-    long long int numberOfLines = countLineInTXT(txtFileLocation);
+    unsigned long long numberOfLines = countLineInTXT(txtFileLocation);
     if (numberOfLines <= 0) {
         throw std::runtime_error("No training data found in the specified file!");
     }
@@ -359,7 +359,7 @@ void model::trainModelPR(const std::string& txtFileLocation)
     long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     long long linesProcessedInThisRun = 0;
     bool sortIt = 0;    // off
-    for(long long int k = startLineForCurrentFile; k < numberOfLines; k++)
+    for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfFile.clear();
         oddSentence.clear();

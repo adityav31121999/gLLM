@@ -1,3 +1,11 @@
+// Helper macro for indexing flattened matrix (assuming row-major)
+#define IDX(row, col, dim) ((row) * (dim) + (col))
+
+// Enable extensions for atomics and potentially double precision (which might include float atomics)
+// #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
 __kernel void dot_matrix_vector(__global float* vec, __global float* matrix, __global float* vecOutput, int veclength, int matrixRow, int matrixColumn) {
     // Calculate the global work-item ID, corresponding to the row index 'i' of the matrix
