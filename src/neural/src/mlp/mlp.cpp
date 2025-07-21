@@ -31,9 +31,7 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
         }
     }
 
-
     num_layers = layerSizes.size();
-
     input.resize(layer_sizes[0], 0.0f);
     output.resize(layer_sizes.back(), 0.0f);
     expected.resize(layer_sizes.back(), 0.0f);

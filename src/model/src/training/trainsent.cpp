@@ -101,6 +101,7 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
         std::cout << "trainBlockSentence: All lines in " << txtFileLocation << " were already processed according to session data. Skipping this file." << std::endl;
         return;
     }
+    std::cout << "trainBlockSentence: total tokens in vocabulary: " << T.tokens.size() << std::endl;
     // Start timing here
     auto startTime = std::chrono::high_resolution_clock::now();
     // get tokens
@@ -140,7 +141,6 @@ void model::trainBlockSentence(const std::string& txtFileLocation)
             }
         }
         // Corrected logging to show the actual embedding vector for the first token
-        std::cout << "trainBlockSentence: total tokens in vocabulary: " << T.tokens.size() << std::endl;
         // train the first block
         if(tokensOfLine.size() < CONTEXT_WIN)
         {

@@ -43,6 +43,7 @@ add_library(neural STATIC
     src/attention/backward1sthead.cpp
     src/attention/writeatt.cpp
     # CUDA
+    src/attention/cu/atcompute.cu
     src/attention/cu/forward.cu
     src/attention/cu/backward.cu
     src/attention/cu/backward1sthead.cu

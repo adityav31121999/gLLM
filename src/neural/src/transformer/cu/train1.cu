@@ -1,5 +1,4 @@
 #ifdef USE_CUDA
-
 #include "include/transformer.hpp"
 #include "include/block.hpp"
 #include "include/attention.hpp" // Include necessary headers
@@ -51,8 +50,6 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
 
     // Training logic for the first block
     if(blockCount == 1 && currentTokenCount <= CONTEXT_WIN) {
-        // scaled dot product for all heads
-        cuParallelKdotQs(promptCount, currentTokenCount, blockCount, d, isSelf, inTraining);
         // forward pass for all columns
         cuForward(blockCount, currentTokenCount, promptCount);
         int i = 0;                      // epoch counter
@@ -247,8 +244,6 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         // Copy the expected token embedding to device
         CUDA_CHECK(cudaMemcpy(d_expected_token, sentence[i].data(), d * sizeof(float), cudaMemcpyHostToDevice));
         int effective_context_size = currentTokenCount; // Size of context *before* adding token i
-
-        cuParallelKdotQs(promptCount, effective_context_size, blockCount, d, isSelf, inTraining);
         cuForward(blockCount, effective_context_size, promptCount);
 
         int j = 0;
@@ -260,25 +255,25 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         {
             float* d_current_block_EH_ptr; // Pointer to current block's EH on device
             CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, d * sizeof(float))); // EH is size d
-            CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy transformer's otok
-
-            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
+            CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice));
+            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, host_indexForToken, d); this->indexForToken = host_indexForToken;
             std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
-
+            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost));
             current_error = crossEntropy(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
             std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
                                                   ? tokens[host_indexForToken] : "INVALID_INDEX";
-            std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, sentence[i]) << std::endl;
+            std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " 
+                      << current_error << " | MAE Error " << MAE(h_otok_buffer, sentence[i]) << std::endl;
 
             if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                 size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
                 if (offset_bytes + outputBytes > tokenEmbedBytes) {
                     throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                 }
-                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
-                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, expected_str.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Write expected_vec (target EH)
-                if(predicted_token_str == "@#0"){
+                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken 
+                          << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
+                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, expected_str.data(), d * sizeof(float), cudaMemcpyHostToDevice));
+                if(predicted_token_str == "<@#0>"){
                     std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                 }
                 else {
@@ -293,7 +288,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
                     this->epochs += 10;
                 }
             }
-
+/*
             if(i > 0) {
                 if(current_error <= prev_Error) {
                     if(i <= 6)   
@@ -308,7 +303,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
                         learning *= (1 - (i/6)*0.05);
                 }
             }
-
+*/
             prev_Error = current_error;
             cuBackward(sentence[i], blockCount);
             // first block
@@ -365,6 +360,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
         trainCount++;
         epochCount += j;
         error += current_error;
+        totalLearning += learning;
         currentTokenCount += 1;
         if(currentTokenCount % CONTEXT_WIN == 0) {
             blockCount += 1;

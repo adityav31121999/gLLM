@@ -148,9 +148,11 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
                 if (offset_bytes + outputBytes > tokenEmbedBytes) {
                     throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
                 }
-                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
+                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " 
+                          << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " 
+                          << currentTokenCount << std::endl;
                 CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected.data()));
-                if(this->tokens[host_indexForToken]  == "@#0"){
+                if(this->tokens[host_indexForToken]  == "<@#0>"){
                     std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                 }
                 else {
@@ -510,7 +512,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                     }
                     std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
                     CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected_vec.data())); // Write expected_vec (target EH)
-                    if(predicted_token_str == "@#0"){
+                    if(predicted_token_str == "<@#0>"){
                         std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                     }
                     else {

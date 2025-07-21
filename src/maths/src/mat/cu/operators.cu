@@ -134,9 +134,7 @@ __global__ void dot(float* vec1, float* matrix, float* vec2, float* d_scalarOutp
  * @throws std::invalid_argument if dimensions mismatch, matrix is ragged, or dimensions are non-positive.
  * @throws std::runtime_error on CUDA errors.
  */
-mat host_dot(
-    const std::vector<float>& h_vec,
-    const mat& input_mat)
+mat host_dot(const std::vector<float>& h_vec, const mat& input_mat)
 {
     // --- Validation ---
     if (input_mat.row <= 0 || input_mat.col <= 0 || !input_mat.mapped_data) {
@@ -208,7 +206,6 @@ mat host_dot(
     return result_mat;
 }
 
-
 // --- Host Function for Vector-Matrix-Vector Dot Product (Accepts 2D Vector Matrix) ---
 
 /**
@@ -221,10 +218,8 @@ mat host_dot(
  * @throws std::invalid_argument if dimensions mismatch, matrix not square, matrix ragged, or N is non-positive.
  * @throws std::runtime_error on CUDA errors or if N exceeds kernel limitations.
  */
-float host_dot(
-    const std::vector<float>& h_vec1,
-    const mat& input_mat,
-    const std::vector<float>& h_vec2)
+float host_dot(const std::vector<float>& h_vec1,
+    const mat& input_mat, const std::vector<float>& h_vec2)
 {
     // --- Validation ---
     if (!input_mat.ifsquare() || !input_mat.mapped_data) {
@@ -248,7 +243,6 @@ float host_dot(
             h_matrix_flat[static_cast<size_t>(i) * N + j] = h_matrix_2d[i][j];
         }
     }
-
     */
     // --- GPU Resource Allocation ---
     float *d_vec1 = nullptr, *d_matrix = nullptr, *d_vec2 = nullptr, *d_scalarOutput = nullptr;
@@ -277,11 +271,11 @@ float host_dot(
         cudaDeviceProp prop;
         CUDA_CHECK_ERROR(cudaGetDeviceProperties(&prop, 0));
         if (numThreads > (unsigned int)prop.maxThreadsPerBlock) {
-             numThreads = prop.maxThreadsPerBlock;
-             if (N > prop.maxThreadsPerBlock) {
-                 throw std::runtime_error("Dimension N exceeds maximum threads per block supported by this kernel implementation.");
-             }
-             std::cerr << "Warning: Clamping threads to maxThreadsPerBlock (" << numThreads << ")" << std::endl;
+            numThreads = prop.maxThreadsPerBlock;
+            if (N > prop.maxThreadsPerBlock) {
+                throw std::runtime_error("Dimension N exceeds maximum threads per block supported by this kernel implementation.");
+            }
+            std::cerr << "Warning: Clamping threads to maxThreadsPerBlock (" << numThreads << ")" << std::endl;
         }
 
         size_t sharedMemBytes = numThreads * sizeof(float);
@@ -292,10 +286,8 @@ float host_dot(
         // Use the correct kernel name
         dot<<<gridDim, blockDim, sharedMemBytes>>>(d_vec1, d_matrix, d_vec2, d_scalarOutput, N, N, N, N);
         CUDA_CHECK_ERROR(cudaGetLastError());
-
         // --- Synchronization ---
         CUDA_CHECK_ERROR(cudaDeviceSynchronize());
-
         // --- Data Transfer (Device to Host) ---
         CUDA_CHECK_ERROR(cudaMemcpy(&h_scalarOutput, d_scalarOutput, scalar_size_bytes, cudaMemcpyDeviceToHost));
 
