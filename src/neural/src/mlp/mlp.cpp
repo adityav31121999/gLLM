@@ -50,21 +50,21 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
 
     weights.resize(num_layers - 1);
     gweights.resize(num_layers - 1);
-    moments.resize(num_layers - 1);
-    velocity.resize(num_layers - 1);
+    // moments.resize(num_layers - 1);
+    // velocity.resize(num_layers - 1);
     for (unsigned int i = 0; i < num_layers - 1; ++i) {
         weights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
         gweights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        moments[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        velocity[i] = mat(layer_sizes[i+1], layer_sizes[i]);
+        // moments[i] = mat(layer_sizes[i+1], layer_sizes[i]);
+        // velocity[i] = mat(layer_sizes[i+1], layer_sizes[i]);
     }
 
     params = 0;
     for (unsigned int i = 0; i < num_layers - 1; i++) {
         params += weights[i].row * weights[i].col;
     }
-    params *= 4;
-    params += (num_layers*activations[0].size()*2) + 3*input.size();
+    params *= 2;
+    // params += (num_layers*activations[0].size()*2);
     // initializeAdamMoments();
     std::cout << "MLP constructed." << std::endl;
 }
@@ -116,21 +116,21 @@ mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, un
 
     weights.resize(num_layers - 1);
     gweights.resize(num_layers - 1);
-    moments.resize(num_layers - 1);
-    velocity.resize(num_layers - 1);
+    // moments.resize(num_layers - 1);
+    // velocity.resize(num_layers - 1);
     for (unsigned int i = 0; i < num_layers - 1; ++i) {
         weights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
         gweights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        moments[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        velocity[i] = mat(layer_sizes[i+1], layer_sizes[i]);
+        // moments[i] = mat(layer_sizes[i+1], layer_sizes[i]);
+        // velocity[i] = mat(layer_sizes[i+1], layer_sizes[i]);
     }
 
     params = 0;
     for (unsigned int i = 0; i < num_layers - 1; i++) {
         params += weights[i].row * weights[i].col;
     }
-    params *= 4;
-    params += (num_layers*activations[0].size()*2) + 3*input.size();
+    params *= 2;
+    // params += (num_layers*activations[0].size()*2 + 3*input.size());
     // initializeAdamMoments();
     std::cout << "MLP constructed with OpenCL." << std::endl;
 }
@@ -146,12 +146,12 @@ void mlp::initializeAdamMoments() {
         // moments.emplace_back(weights[i].row, weights[i].col); // Create new mat for moment
         // velocity.emplace_back(weights[i].row, weights[i].col); // Create new mat for moment
         // Set all elements to zero for initialization
-        for (int r = 0; r < moments.back().row; ++r) {
+        /*for (int r = 0; r < moments.back().row; ++r) {
             for (int c = 0; c < moments.back().col; ++c) {
-                moments.back()(r, c) = 0.0f;
-                velocity.back()(r, c) = 0.0f;
+                // moments.back()(r, c) = 0.0f;
+                / velocity.back()(r, c) = 0.0f;
             }
-        }
+        }*/
     }
 }
 

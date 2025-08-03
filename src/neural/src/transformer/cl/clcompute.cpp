@@ -42,20 +42,19 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
     block& current_block = (inTraining == 1) ? t[blockCount - 1] : t[0]; // 0-based index for vector t
     if (x <= 0) {
         fprintf(stderr, "Warning in clParallelKdotQs: Invalid number of parallels (layers) x = %d. No heads to process.\n", x);
-        return; // No heads to process
+        return;
     }
     if (promptCount < 0) {
         fprintf(stderr, "Warning in clParallelKdotQs: promptCount is negative (%d). Setting to 0.\n", promptCount);
-        // Decide if we should proceed with promptCount = 0 or return. Let's return for safety.
         return;
     }
 
     // --- Pre-computation and Setup ---
-    const float inv_scaling = 1.0f / sqrtf(static_cast<float>(EMBEDDING)); // Use static_cast for clarity
-    const cl_int embedding_dim = d;                    // 'd' is transformer's embedding dimension
-    const cl_int context_win_size = n;                 // 'n' is context window per head from transformer params
-    const cl_int kdotq_full_width = context_win_size;  // Max width/height of KdotQ matrix per head
-    const int num_heads_in_parallel = x;            // Number of heads in this column (layers)
+    const float inv_scaling = 1.0f / sqrtf(static_cast<float>(EMBEDDING));  // Use static_cast for clarity
+    const cl_int embedding_dim = d;                     // 'd' is transformer's embedding dimension
+    const cl_int context_win_size = n;                  // 'n' is context window per head from transformer params
+    const cl_int kdotq_full_width = context_win_size;   // Max width/height of KdotQ matrix per head
+    const int num_heads_in_parallel = x;                // Number of heads in this column (layers)
 
     // --- Data Sizes Per Head (in elements) ---
     if (context_win_size <= 0 || embedding_dim <= 0) {
@@ -91,16 +90,15 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
     std::vector<float> temp_flat_buffer;                // Temporary Host Buffers for Flattening
 
     // --- OpenCL Device Buffers (using cl::Buffer RAII wrapper) ---
-    cl::Buffer d_all_kdotq;
-    cl::Buffer d_all_keys;
-    cl::Buffer d_all_querys;
-    cl::Buffer d_all_M;
-    cl::Buffer d_all_EVp;
-    cl::Buffer d_transformer_tokenEmbed_flat; // Shared, single copy
-    cl::Buffer d_block_tokForBlock_flat;      // Shared, single copy
-
-    cl_int cl_err; // For OpenCL error codes
-    std::vector<cl::CommandQueue> clQueues; 
+    cl::Buffer d_all_kdotq;                     // KdotQ of single column
+    cl::Buffer d_all_keys;                      // Keys from single column
+    cl::Buffer d_all_querys;                    // Querys from single column
+    cl::Buffer d_all_M;                         // qkCache from single column
+    cl::Buffer d_all_EVp;                       // EVp from single column
+    cl::Buffer d_transformer_tokenEmbed_flat;   // token embeddings for full context
+    cl::Buffer d_block_tokForBlock_flat;        // token embeddings for single block
+    cl_int cl_err;
+    std::vector<cl::CommandQueue> clQueues;     // queues for parallel execution
 
     try {
         if (num_heads_in_parallel > 0) {
@@ -113,11 +111,8 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         // --- Allocate Large Device Buffers ---
         // Use cl_context (assumed member variable or accessible)
         d_all_kdotq = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, total_kdotq_bytes);
-        // Initialize KdotQ to 0 using the main context queue.
         cl_float zero = 0.0f;
         CL_CHECK(this->clcontext.queue.enqueueFillBuffer(d_all_kdotq, zero, 0, total_kdotq_bytes));
-        // Ensure fill is complete before proceeding (optional, depends on queue properties)
-        // CL_CHECK(cl_queue.finish());
 
         if (inTraining) {
             d_all_keys = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, total_k_bytes);
@@ -148,17 +143,12 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                 // Need block-local tokForBlock and EVp from previous block
                 h_block_tokForBlock_flat = flatten(current_block.tokForBlock);
                 if (!h_block_tokForBlock_flat.empty()) {
-                     d_block_tokForBlock_flat = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                    d_block_tokForBlock_flat = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                                           h_block_tokForBlock_flat.size() * sizeof(cl_float),
                                                           h_block_tokForBlock_flat.data(), &cl_err); CL_CHECK(cl_err);
                 }
                 else {
                     fprintf(stderr, "Warning: Block-local tokForBlock is empty during Block N > 1 Inference.\n");
-                    // Allocate a small dummy buffer if needed by kernel logic, otherwise might be okay.
-                    // Let's assume kernels handle empty inputs gracefully or checks prevent launch.
-                    // If a buffer *must* exist, create a minimal one:
-                    // cl_float dummy_val = 0.0f;
-                    // d_block_tokForBlock_flat = cl::Buffer(cl_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(cl_float), &dummy_val);
                 }
 
                 d_all_EVp = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY, total_evp_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -325,7 +315,6 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             size_t q_byte_offset        = i * k_q_ev_head_elems * sizeof(cl_float);
             size_t m_byte_offset        = i * qkcache_head_elems * sizeof(cl_float);
             size_t evp_byte_offset      = i * k_q_ev_head_elems * sizeof(cl_float);
-
             size_t kdotq_head_bytes     = kdotq_head_elems * sizeof(cl_float);
             size_t k_q_ev_head_bytes    = k_q_ev_head_elems * sizeof(cl_float);
             size_t qkcache_head_bytes   = qkcache_head_elems * sizeof(cl_float);
@@ -333,7 +322,6 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             // Create sub-buffer for KdotQ output for this head
             cl_buffer_region kdotq_region = {kdotq_byte_offset, kdotq_head_bytes};
             cl::Buffer d_kdotq_head = d_all_kdotq.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &kdotq_region, &cl_err); CL_CHECK(cl_err);
-
             cl::Kernel kernel; // Kernel object for this head's launch
 
             if (inTraining) {
@@ -341,7 +329,6 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     // Create sub-buffers for K and Q
                     cl_buffer_region k_region   = {k_byte_offset, k_q_ev_head_bytes};
                     cl::Buffer d_keys_head      = d_all_keys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &k_region, &cl_err); CL_CHECK(cl_err);
-
                     cl_buffer_region q_region   = {q_byte_offset, k_q_ev_head_bytes};
                     cl::Buffer d_querys_head    = d_all_querys.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &q_region, &cl_err); CL_CHECK(cl_err);
 
@@ -370,9 +357,10 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     if (global_work_size[0] > 0 && global_work_size[1] > 0) { // Ensure global size is valid
                         CL_CHECK(current_stream.enqueueNDRangeKernel(kernel, cl::NullRange, global_work_size, local_work_size));
                     }
-                 }
+                }
             } 
-            else { // Inference Mode
+            else { 
+                // Inference Mode
                 if (effective_prompt_len > 0) {
                     // Create sub-buffer for M
                     cl_buffer_region m_region   = {m_byte_offset, qkcache_head_bytes};
@@ -381,9 +369,9 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                     if (blockCount == 1) {
                         if (isSelf) {
                             kernel = this->clcontext.kernels.at("kernelKdotQBlock1Self_Inference");
-                            CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
-                            CL_CHECK(kernel.setArg(1, d_transformer_tokenEmbed_flat)); // Shared buffer (no sub-buffer needed)
-                            CL_CHECK(kernel.setArg(2, d_M_head));    // Pass sub-buffer: QK' cache
+                            CL_CHECK(kernel.setArg(0, d_kdotq_head));   // Pass sub-buffer
+                            CL_CHECK(kernel.setArg(1, d_transformer_tokenEmbed_flat));  // Shared buffer
+                            CL_CHECK(kernel.setArg(2, d_M_head));       // Pass sub-buffer: QK' cache
                             CL_CHECK(kernel.setArg(3, static_cast<cl_int>(prompt_start_index)));
                             CL_CHECK(kernel.setArg(4, static_cast<cl_int>(effective_prompt_len)));
                             CL_CHECK(kernel.setArg(5, static_cast<cl_int>(context_len)));
@@ -393,9 +381,9 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         } 
                         else {
                             kernel = this->clcontext.kernels.at("kernelKdotQBlock1Cross_Inference");
-                            CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
-                            CL_CHECK(kernel.setArg(1, d_transformer_tokenEmbed_flat));
-                            CL_CHECK(kernel.setArg(2, d_M_head));    // Pass sub-buffer: QK' cache
+                            CL_CHECK(kernel.setArg(0, d_kdotq_head));   // Pass sub-buffer
+                            CL_CHECK(kernel.setArg(1, d_transformer_tokenEmbed_flat));  // Shared buffer
+                            CL_CHECK(kernel.setArg(2, d_M_head));       // Pass sub-buffer: QK' cache
                             CL_CHECK(kernel.setArg(3, static_cast<cl_int>(prompt_start_index)));
                             CL_CHECK(kernel.setArg(4, static_cast<cl_int>(effective_prompt_len)));
                             CL_CHECK(kernel.setArg(5, static_cast<cl_int>(context_len)));
@@ -404,16 +392,17 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                             CL_CHECK(kernel.setArg(8, inv_scaling));
                         }
                     } 
-                    else { // Block N > 1
+                    else { 
+                        // Block N > 1
                         // Create sub-buffer for EVp
                         cl_buffer_region evp_region = {evp_byte_offset, k_q_ev_head_bytes};
                         cl::Buffer d_EVp_head       = d_all_EVp.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &evp_region, &cl_err); CL_CHECK(cl_err);
                         if (isSelf) {
                             kernel = this->clcontext.kernels.at("kernelKdotQBlockNSelf_Inference");
-                            CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
-                            CL_CHECK(kernel.setArg(1, d_block_tokForBlock_flat)); // Shared buffer
-                            CL_CHECK(kernel.setArg(2, d_EVp_head));   // Pass sub-buffer
-                            CL_CHECK(kernel.setArg(3, d_M_head));     // Pass sub-buffer: QK' cache
+                            CL_CHECK(kernel.setArg(0, d_kdotq_head));   // Pass sub-buffer
+                            CL_CHECK(kernel.setArg(1, d_block_tokForBlock_flat));   // Shared buffer
+                            CL_CHECK(kernel.setArg(2, d_EVp_head));     // Pass sub-buffer
+                            CL_CHECK(kernel.setArg(3, d_M_head));       // Pass sub-buffer: QK' cache
                             CL_CHECK(kernel.setArg(4, static_cast<cl_int>(prompt_start_index_in_block)));
                             CL_CHECK(kernel.setArg(5, static_cast<cl_int>(effective_prompt_len)));
                             CL_CHECK(kernel.setArg(6, static_cast<cl_int>(context_len_in_block)));
@@ -424,7 +413,7 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         else {
                             kernel = this->clcontext.kernels.at("kernelKdotQBlockNCross_Inference");
                             CL_CHECK(kernel.setArg(0, d_kdotq_head)); // Pass sub-buffer
-                            CL_CHECK(kernel.setArg(1, d_block_tokForBlock_flat));
+                            CL_CHECK(kernel.setArg(1, d_block_tokForBlock_flat));   // Shared buffer
                             CL_CHECK(kernel.setArg(2, d_EVp_head));   // Pass sub-buffer
                             CL_CHECK(kernel.setArg(3, d_M_head));     // Pass sub-buffer: QK' cache
                             CL_CHECK(kernel.setArg(4, static_cast<cl_int>(prompt_start_index_in_block)));
@@ -474,13 +463,9 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
             // head.KdotQ is a mat object, which should be initialized with correct dimensions
             // by the attention class constructor.
             if (head.KdotQ.row != context_win_size || head.KdotQ.col != context_win_size) {
-                // This indicates a potential logic error in initialization or that context_win_size
-                // has changed in a way not reflected in KdotQ. Re-initializing as a fallback.
                 fprintf(stderr, "Warning: KdotQ dimensions mismatch for head (%d, %d) in clParallelKdotQs. Expected %dx%d, Got %dx%d. Re-initializing KdotQ.\n",
                         i, column, context_win_size, context_win_size, head.KdotQ.row, head.KdotQ.col);
                 try {
-                    // Re-assigning will call mat's move assignment or create a new mat and assign.
-                    // This will create a new backing file for KdotQ.
                     head.KdotQ = mat(context_win_size, context_win_size);
                 }
                 catch (const std::exception& e) {
@@ -521,8 +506,6 @@ void transformer::clParallelKdotQs(int& promptCount, int& currentTokenCount, int
         d_block_tokForBlock_flat = cl::Buffer();
     }
     catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
-        // Explicitly release all aggregate OpenCL buffers in case of an exception
-        // before re-throwing or returning.
         d_all_kdotq = cl::Buffer();
         d_all_keys = cl::Buffer();
         d_all_querys = cl::Buffer();

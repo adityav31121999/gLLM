@@ -11,6 +11,8 @@
 #include <limits>
 #include <fstream>
 #include <cstring>
+#include <random>
+#include <cmath>
 #include "include/basic.hpp"
 #include <memory_map.h>
 
@@ -52,41 +54,40 @@ public:
     void row2Square(bool dia = 1);
     void col2Square(bool dia = 1);
 
-    mat& operator=(const mat& other); // Needs deep copy logic
-    mat& operator=(mat&& other) noexcept; // Needs move logic
-    std::vector<float> operator=(int i);    // return ith row
-    mat& operator=(const std::vector<std::vector<float>>& b); // Needs file creation/mapping/copy
-
+    mat& operator=(const mat& other);
+    mat& operator=(mat&& other) noexcept;
+    std::vector<float> operator=(int i);
+    mat& operator=(const std::vector<std::vector<float>>& b);
     float& operator()(int i, int j);
     const float& operator()(int i, int j) const;
     std::vector<float> operator()(int i) const;
-    void addRow(const std::vector<float>&, int i);   // add row in ith location of matrix
+    void addRow(const std::vector<float>&, int i);
     std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col);
 
     mat operator+(const mat& other) const;
     mat operator-(const mat& other) const;
     mat operator*(float scalar) const;
-    mat operator*(const mat& other) const; // Matrix multiplication
+    mat operator*(const mat& other) const;
     mat operator/(float scalar) const;
-    mat operator/(const mat& other) const; // Matrix division (A * B^-1)
-    mat operator+(const std::vector<std::vector<float>>& b) const; // Add vector
-    mat operator-(const std::vector<std::vector<float>>& b) const; // Subtract vector
+    mat operator/(const mat& other) const;
+    mat operator+(const std::vector<std::vector<float>>& b) const;
+    mat operator-(const std::vector<std::vector<float>>& b) const;
 
     mat& operator+=(const mat& other);
     mat& operator-=(const mat& other);
     mat& operator*=(float scalar);
     mat& operator*=(const mat& other);
     mat& operator/=(float scalar);
-    mat& operator/=(const mat& other); // Element-wise or matrix inverse? (Currently element-wise)
-    mat& operator+=(const std::vector<std::vector<float>>& other); // Add-assign vector
-    mat& operator-=(const std::vector<std::vector<float>>& other); // Subtract-assign vector
+    mat& operator/=(const mat& other);
+    mat& operator+=(const std::vector<std::vector<float>>& other);
+    mat& operator-=(const std::vector<std::vector<float>>& other);
 
     mat gaussjordan() const;
     void mult_A_Bt(const mat& a, const mat& b);
-    mat mult(const mat& a, const mat& b); // Static or friend? Needs update.
+    mat mult(const mat& a, const mat& b);
     float trace() const;
-    void set(int i, int j, float val);  // set val to (i, j)th element
-    bool ifsquare() const;              // check if matrix is square
+    void set(int i, int j, float val);
+    bool ifsquare() const;
 
     bool ifsymmetric() const;
     bool ifidentity() const;
@@ -94,9 +95,13 @@ public:
     bool ifupper() const;
     bool iflower() const;
     bool ifskew() const;
-    mat transpose() const; // Return new transposed matrix
-    void transpose_inplace(); // Transpose the current matrix (only if square)
-    static mat Random(int row, int col); // Static random matrix generator
+    mat transpose() const;
+    void transpose_inplace();
+    static mat Random(int row, int col);
+
+    // Weight initialization methods
+    static mat initXavier(int row, int col, bool use_gain = false, float gain = 1.0f);
+    static mat initHe(int row, int col, bool use_gain = false, float gain = 1.0f);
 
     // File-based operations
     void serialise(unsigned long long offset, const std::string& locationWithFileName);

@@ -363,6 +363,8 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
     this->embeddings.clear(); // Clear existing embeddings
     std::vector<std::vector<float>> embeddings1 = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
     this->embeddings = std::move(embeddings1);
+    std::vector<std::vector<float>> deEmbeddings1 = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
+    this->deEmbeddings = std::move(deEmbeddings1);
 
     // Update vocabulary size based on loaded data
     this->d = this->embeddings[0].size();
@@ -378,5 +380,5 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
     std::cout << "  - Tokens loaded: " << this->tokens.size() << std::endl;
     std::cout << "  - Vocabulary size: " << this->vocSize << std::endl;
     std::cout << "  - Embedding dimension: " << this->d << std::endl;
-    // std::cout << "  - deEmbedding count: " << this->deEmbeddings.size() << std::endl;
+    std::cout << "  - deEmbedding dimension: " << this->deEmbeddings[0].size() << std::endl;
 }

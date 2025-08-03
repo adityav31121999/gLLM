@@ -707,3 +707,73 @@ void write2filefrommat(const mat& matrix, const std::string& locationWithFileNam
         throw std::runtime_error("Error occurred while closing file (e.g., flush error): " + locationWithFileName);
     }
 }
+
+// Static method implementations for weight initialization
+
+/**
+ * @brief Creates a matrix with Xavier/Glorot initialization
+ * @param row Number of rows
+ * @param col Number of columns
+ * @param use_gain Whether to use the gain parameter (default: false)
+ * @param gain Scaling factor for the initialization (default: 1.0)
+ * @return A new matrix with Xavier/Glorot initialized values
+ */
+mat mat::initXavier(int row, int col, bool use_gain, float gain) {
+    // Xavier/Glorot initialization: scale = sqrt(2.0 / (fan_in + fan_out))
+    // For linear layers, fan_in is the input dimension and fan_out is the output dimension
+    float scale = 1.0f;
+    if (row > 0 && col > 0) {
+        scale = std::sqrt(2.0f / (row + col));
+    }
+    if (use_gain) {
+        scale *= gain;
+    }
+    
+    // Create a random matrix with values in [-scale, scale]
+    mat result(row, col);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(-scale, scale);
+    
+    for (int i = 0; i < row; ++i) {
+        for (int j = 0; j < col; ++j) {
+            result(i, j) = dist(gen);
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * @brief Creates a matrix with He initialization
+ * @param row Number of rows (output dimension for linear layers)
+ * @param col Number of columns (input dimension for linear layers)
+ * @param use_gain Whether to use the gain parameter (default: false)
+ * @param gain Scaling factor for the initialization (default: 1.0)
+ * @return A new matrix with He initialized values
+ */
+mat mat::initHe(int row, int col, bool use_gain, float gain) {
+    // He initialization: scale = sqrt(2.0 / fan_in)
+    // For linear layers, fan_in is the input dimension (col)
+    float scale = 1.0f;
+    if (col > 0) {
+        scale = std::sqrt(2.0f / col);
+    }
+    if (use_gain) {
+        scale *= gain;
+    }
+    
+    // Create a random matrix with normal distribution N(0, scale^2)
+    mat result(row, col);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<float> dist(0.0f, scale);
+    
+    for (int i = 0; i < row; ++i) {
+        for (int j = 0; j < col; ++j) {
+            result(i, j) = dist(gen);
+        }
+    }
+    
+    return result;
+}

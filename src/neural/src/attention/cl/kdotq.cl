@@ -167,3 +167,12 @@ __kernel void kernelKdotQ_BlockN_Cross_Inference(__global float* d_kdotq, __glob
         d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
     }
 }
+
+__kernel void kernelComputeGradKdotQ_LOTA(__global const float* grad_head, __global const float* lota_derivative,
+                                          __global float* grad_kdotq, float scaling_factor, int size)
+{
+    int idx = get_global_id(0);
+    if (idx < size) {
+        grad_kdotq[idx] = (fabs(scaling_factor) > 1e-9f) ? (grad_head[idx] * lota_derivative[idx] / scaling_factor) : 0.0f;
+    }
+}

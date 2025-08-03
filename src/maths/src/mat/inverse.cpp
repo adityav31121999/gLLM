@@ -201,7 +201,6 @@ mat LOTA(const mat& y, int t, bool attentionType) { // Pass t and attentionType 
             }
         }
     }
-    // Non-relevant elements remain 0
 
     return result; // Return the new mat object
 }
@@ -216,7 +215,7 @@ mat LOTA(const mat& y, int t, bool attentionType) { // Pass t and attentionType 
  * @param attentionType If true, process only the lower triangle; otherwise, up to t x t square (passed by value).
  * @return A new mat object containing LOTA derivative results for relevant elements.
  */
-mat LOTAder(const mat& y, int t, bool attentionType) { // Pass t and attentionType by value
+mat LOTAder(const mat& y, int t, bool attentionType) {
     if (y.row <= 0 || y.col <= 0 || t <= 0) {
         return mat(); // Return empty mat for invalid input
     }
@@ -244,7 +243,6 @@ mat LOTAder(const mat& y, int t, bool attentionType) { // Pass t and attentionTy
         }
     }
     if (!found_value) min_val = 0.0f;
-
     float abs_min_val = std::abs(min_val);
 
     // Calculate the sum of (element + abs(min_val)) in the relevant region
@@ -271,7 +269,6 @@ mat LOTAder(const mat& y, int t, bool attentionType) { // Pass t and attentionTy
             }
         }
     }
-    // Non-relevant elements remain 0 (already initialized)
 
     return result; // Return the derivative matrix
 }

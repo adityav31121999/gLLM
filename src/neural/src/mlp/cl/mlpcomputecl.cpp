@@ -17,6 +17,7 @@ void mlp::clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam, floa
 
     for (size_t i = 0; i < weights.size(); ++i) {
         // Ensure all required mapped data pointers are valid
+        /*
         if (!weights[i].mapped_data || !gweights[i].mapped_data || !moments[i].mapped_data || !velocity[i].mapped_data) {
             std::cerr << "Warning: MLP Adam update for layer " << i << " detected unmapped data. Skipping this layer." << std::endl;
             continue;
@@ -51,12 +52,13 @@ void mlp::clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam, floa
         // --- Read Updated Data back to Host Mapped Memory ---
         // CL_TRUE for blocking read, ensuring data is updated before the next iteration.
         CL_CHECK(clContext.queue.enqueueReadBuffer(d_weights, CL_TRUE, 0, bytes, weights[i].mapped_data));
-        CL_CHECK(clContext.queue.enqueueReadBuffer(d_moments, CL_TRUE, 0, bytes, moments[i].mapped_data));
-        CL_CHECK(clContext.queue.enqueueReadBuffer(d_velocity, CL_TRUE, 0, bytes, velocity[i].mapped_data));
+        // CL_CHECK(clContext.queue.enqueueReadBuffer(d_moments, CL_TRUE, 0, bytes, moments[i].mapped_data));
+        // CL_CHECK(clContext.queue.enqueueReadBuffer(d_velocity, CL_TRUE, 0, bytes, velocity[i].mapped_data));
         
         // Ensure all commands in the queue are finished before proceeding to the next matrix/loop iteration
         // (This might be redundant if enqueueReadBuffer is CL_TRUE, but good for explicit synchronization).
         clContext.queue.finish();
+        */
     }
 }
 

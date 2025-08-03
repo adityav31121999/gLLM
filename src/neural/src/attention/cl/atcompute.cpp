@@ -90,11 +90,12 @@ void attention::clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam
     };
 
     // Apply Adam to attention head's core matrices
+/*
     apply_adam_to_matrix_pair(MQ, gMQ, m_MQ, v_MQ);
     apply_adam_to_matrix_pair(MK, gMK, m_MK, v_MK);
     apply_adam_to_matrix_pair(MV, gMV, m_MV, v_MV);
     apply_adam_to_matrix_pair(MH, gMH, m_MH, v_MH);
-
+*/
     // Apply Adam to internal MLPs (recursive call)
     // Each MLP's clAdamUpdate will handle its own 'this->t' increment.
     hor.clAdamUpdate(clContext, t_adam, beta1, beta2, epsilon, learning_rate);

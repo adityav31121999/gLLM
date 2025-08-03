@@ -17,36 +17,22 @@
  */
 attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning, float lambda_L1, float lambda_L2) :
     isSelfAttention(isSelf), inTraining(trainMode), lambda_L1(lambda_L1), lambda_L2(lambda_L2),
-    tokenCount(0),
-    // Always initialize EV and KdotQ, as they seem to be always needed.
-    // If not needed in inference, they can be mat(0,0) and handled gracefully.
-    EV(n, d),
-    KdotQ(n, n),
-    dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
-    // Initialize MLP objects with correct parameters
+    tokenCount(0), EV(n, d), KdotQ(n, n), dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
     ver(std::vector<unsigned int>(l, d), EPOCHS, learning, lambda_L1, lambda_L2),
     hor(std::vector<unsigned int>(l, d), EPOCHS, learning, lambda_L1, lambda_L2),
-    
-    // Conditionally initialize primary matrices based on training mode
-    // These should always be valid dimensions if they are to be used.
-    // If trainMode is false, these will be (0,0) which our mat class handles as unmapped.
     MQ(trainMode ? h : 0, trainMode ? d : 0),
     MK(trainMode ? h : 0, trainMode ? d : 0),
     MV(trainMode ? d : 0, trainMode ? h : 0),
     MH(trainMode ? d : 0, trainMode ? h : 0),
-
-    // Initialize cache matrices for inference mode
-    // If trainMode is true, these will be (0,0) which our mat class handles as unmapped.
     qkCache(trainMode ? 0 : d, trainMode ? 0 : d),
     qvCache(trainMode ? 0 : d, trainMode ? 0 : d),
     khCache(trainMode ? 0 : d, trainMode ? 0 : d),
-
-    // Initialize K and Q only if in training mode, otherwise they are mat(0,0)
     K(trainMode ? n : 0, trainMode ? h : 0),
-    Q(trainMode ? n : 0, trainMode ? h : 0),
-
+    Q(trainMode ? n : 0, trainMode ? h : 0)
+{
     // Initialize gradient and Adam moment matrices only if in training mode
     // These must be constructed with proper dimensions if trainMode is true
+    /*    
     gMQ(trainMode ? h : 0, trainMode ? d : 0),
     gMK(trainMode ? h : 0, trainMode ? d : 0),
     gMV(trainMode ? d : 0, trainMode ? h : 0),
@@ -59,7 +45,8 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
     v_MK(trainMode ? h : 0, trainMode ? d : 0),
     v_MV(trainMode ? d : 0, trainMode ? h : 0),
     v_MH(trainMode ? d : 0, trainMode ? h : 0)
-{
+    */
+
     if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
         // Only throw if essential dimensions are invalid, as some can be 0 for specific modes.
         // For example, if n is 0, K and Q will be 0xH, KdotQ will be 0x0.
@@ -74,7 +61,10 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
         // If trainMode is 0, they are (0,0) and stay that way.
         
         initializeAdamMoments(); // Call this to zero out the moment matrices
-        params = hor.params + ver.params + (4*h*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
+        params = hor.params + ver.params + 
+                 // Mat                       eh        Kdotq                       tokforblock                     
+                 (4*static_cast<size_t>(h)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
+        attOffset = hor.params + ver.params + 4*h*d + n*n + 2*n*h * n*d + d;
     }
     else {
         // In inference mode, cache matrices are active, others are 0x0.
@@ -100,10 +90,7 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
  */
 attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning, float lambda_L1, float lambda_L2) :
     clcontext(context), isSelfAttention(isSelf), inTraining(trainMode),
-    tokenCount(0),
-    EV(n, d),
-    KdotQ(n, n),
-    dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
+    tokenCount(0), EV(n, d), KdotQ(n, n), dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
     lambda_L1(lambda_L1), lambda_L2(lambda_L2),
     ver(context, std::vector<unsigned int>(l, d), EPOCHS, learning, lambda_L1, lambda_L2),
     hor(context, std::vector<unsigned int>(l, d), EPOCHS, learning, lambda_L1, lambda_L2),
@@ -115,8 +102,10 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
     qvCache(trainMode ? 0 : d, trainMode ? 0 : d),
     khCache(trainMode ? 0 : d, trainMode ? 0 : d),
     K(trainMode ? n : 0, trainMode ? h : 0),
-    Q(trainMode ? n : 0, trainMode ? h : 0),
+    Q(trainMode ? n : 0, trainMode ? h : 0)
+{
     // Initialize gradient and Adam moment matrices only if in training mode
+    /*    
     gMQ(trainMode ? h : 0, trainMode ? d : 0),
     gMK(trainMode ? h : 0, trainMode ? d : 0),
     gMV(trainMode ? d : 0, trainMode ? h : 0),
@@ -129,7 +118,8 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
     v_MK(trainMode ? h : 0, trainMode ? d : 0),
     v_MV(trainMode ? d : 0, trainMode ? h : 0),
     v_MH(trainMode ? d : 0, trainMode ? h : 0)
-{
+    */
+
     if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
         throw std::invalid_argument("Attention dimensions (n, d, h, l) must be positive.");
     }
@@ -143,11 +133,19 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
     CL_CHECK(cl_err); // Your CL_CHECK macro will handle the error
 
     if (trainMode == 1) {
-        initializeAdamMoments(); // Call this to zero out the moment matrices
-        params = hor.params + ver.params + (4*static_cast<size_t>(h)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
+        // initializeAdamMoments(); // Call this to zero out the moment matrices
+        // hor + ver
+        // weght matrices
+        // kdotq
+        // EV, Q, K
+        params = hor.params + ver.params + 
+                 // Mat                       eh        Kdotq                       tokforblock                     
+                 (4*static_cast<size_t>(h)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
+        attOffset = hor.params + ver.params + 4*h*d + n*n + 2*n*h * n*d + d;
     }
     else {
-        params = hor.params + ver.params + (3*static_cast<size_t>(d)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d);
+        params = hor.params + ver.params + 
+                 (3*static_cast<size_t>(d)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d);
     }
     std::cout << "ATTENTION constructed with OpenCL."<< std::endl;
 }
@@ -168,6 +166,7 @@ void attention::initializeAdamMoments() {
     if (inTraining) { // Only initialize/zero if in training mode
         // Zero out moment and velocity matrices if they are mapped and have data
         // Corrected conditions to check the moment/velocity matrices themselves
+    /*
         if (m_MQ.mapped_data && m_MQ.mapped_size > 0) {
             std::memset(m_MQ.mapped_data, 0, m_MQ.mapped_size);
         }
@@ -195,6 +194,7 @@ void attention::initializeAdamMoments() {
         if (v_MH.mapped_data && v_MH.mapped_size > 0) {
             std::memset(v_MH.mapped_data, 0, v_MH.mapped_size);
         }
+    */
     }
     // Initialize moments for internal MLPs (they handle their own logic,
     // and should also be fixed with the same logic as mlp::initializeAdamMoments if not already)

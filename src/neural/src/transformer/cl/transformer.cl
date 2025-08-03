@@ -1,12 +1,3 @@
-// Helper macro for indexing flattened matrix (assuming row-major)
-#define IDX(row, col, dim) ((row) * (dim) + (col))
-
-// Enable extensions for atomics and potentially double precision (which might include float atomics)
-// #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-// #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
-// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
-
 // Forward declarations to prevent implicit declaration warnings/errors
 inline float compute_dot_product(__global const float* vec1, __global const float* vec2, int dim);
 inline float compute_dot_product_mat(__global const float* vec1, __global const float* vec2, __global const float* matrix, int dim);
@@ -21,7 +12,8 @@ inline float compute_dot_product(__global const float* vec1, __global const floa
     return dot_product;
 }
 
-inline float compute_dot_product_mat(__global const float* vec1, __global const float* vec2, __global const float* matrix,
+inline float compute_dot_product_mat(__global const float* vec1, 
+    __global const float* vec2, __global const float* matrix,
     int dim)
 {
     float final_dot_product = 0.0f;
@@ -65,8 +57,171 @@ int compute_prediction(__global const float* EH, __global const float* embedding
     return predicted_index;
 }
 
-/**------------------------------------TRAINING------------------------------------**/
+/**
+ * @brief Computes the gradient for a weight matrix in a linear layer (dL/dW).
+ *        Assumes the input `h_prev` is a vector and `dL_d_logits` is a vector.
+ *        The gradient is calculated as an outer product: dL/dW = dL/du * (h_prev)^T.
+ * @param dL_d_logits       Global pointer to the error signal for the output (dL/du). (vocab_size x 1)
+ * @param h_prev            Global pointer to the activations from the previous layer (input to this layer). (hidden_dim x 1)
+ * @param grad_weights      Global pointer to the gradient matrix (dL/dW). (vocab_size x hidden_dim)
+ *                          This buffer should be zeroed before accumulation over a batch/sample if needed.
+ * @param vocab_size        Number of rows in grad_weights (e.g., vocab_size for deEmbeddings).
+ * @param hidden_dim        Number of columns in grad_weights (e.g., embedding_dim for deEmbeddings).
+ */
+__kernel void clComputeGradientDeEmbeddings(
+    __global const float* dL_d_logits,
+    __global const float* h_prev,
+    __global float* grad_weights,
+    const int vocab_size,
+    const int hidden_dim
+) {
+    int global_idx = get_global_id(0);
 
+    if (global_idx < vocab_size * hidden_dim) {
+        int row_idx = global_idx / hidden_dim;
+        int col_idx = global_idx % hidden_dim;
+
+        grad_weights[global_idx] = dL_d_logits[row_idx] * h_prev[col_idx];
+    }
+}
+
+
+/**
+ * @brief Calculates the error signal (dL/du) for logits, assuming Categorical Cross-Entropy loss
+ *        and a softmax-like activation (like LOTA). The derivative simplifies to P_hat - y.
+ * @param predicted_probs Global pointer to the predicted probabilities (P_hat from LOTA).
+ * @param oneHotEncoding Global pointer to the one hot encoded vector for 1 at predicted index and 0 at rest of the places.
+ * @param deltas          Global pointer to store the computed error signal (dL/du).
+ * @param vocab_size      Total number of vocabulary tokens.
+ */
+__kernel void clCalculateOutputDeltaLOTA(
+    __global const float* predicted_probs,
+    __global const float* oneHotEncoding,
+    __global float* deltas,
+    const int vocab_size
+) {
+    int idx = get_global_id(0);
+
+    if (idx < vocab_size) {
+        deltas[idx] = predicted_probs[idx] - oneHotEncoding[idx];
+    }
+}
+
+/**
+ * @brief Propagates the error signal back to the previous layer's activations (dL/dh_prev).
+ *        Calculates: dL/dh_prev = W^T * dL/du.
+ * @param weights           Global pointer to the weight matrix (W). (vocab_size x hidden_dim)
+ * @param dL_d_logits       Global pointer to the error signal for the current layer's output (dL/du). (vocab_size x 1)
+ * @param dL_d_h_prev       Global pointer to store the propagated error for the previous layer (dL/dh_prev). (hidden_dim x 1)
+ * @param vocab_size        Number of rows in weights.
+ * @param hidden_dim        Number of columns in weights.
+ */
+__kernel void clPropagateErrorToHidden(
+    __global const float* weights,
+    __global const float* dL_d_logits,
+    __global float* dL_d_h_prev,
+    const int vocab_size,
+    const int hidden_dim
+) {
+    int h_idx = get_global_id(0);
+
+    if (h_idx < hidden_dim) {
+        float sum_error = 0.0f;
+        for (int v_idx = 0; v_idx < vocab_size; ++v_idx) {
+            sum_error += weights[v_idx * hidden_dim + h_idx] * dL_d_logits[v_idx];
+        }
+        dL_d_h_prev[h_idx] = sum_error;
+    }
+}
+
+/**
+ * @brief Computes the gradient for the input TokenEmbed matrix for a single attention head.
+ *        Calculates: dL/dX_block = dL/dQ @ W_Q^T + dL/dK @ W_K^T + dL/dV @ W_V^T + dL/dV @ W_V^T
+ *        This kernel expects to be launched with (token_count x embedding_dim) work-items.
+ */
+__kernel void clComputeGradTokenEmbedForHead(
+    __global const float* d_grad_K,     // Input: dL/dK (token_count x embedding_dim)
+    __global const float* d_grad_Q,     // Input: dL/dQ (token_count x embedding_dim)
+    __global const float* d_grad_H,     // Input: dL/dQ (token_count x embedding_dim)
+    __global const float* d_grad_V,     // Input: dL/dV (token_count x embedding_dim)
+    __global const float* d_MK_weights, // Input: MK (mat_heights x embedding_dim)
+    __global const float* d_MQ_weights, // Input: MQ (mat_heights x embedding_dim)
+    __global const float* d_MH_weights, // Input: MH (mat_heights x embedding_dim)
+    __global const float* d_MV_weights, // Input: MV (mat_heights x embedding_dim)
+    __global float* d_grad_token,       // Output: dL/dX_block (token_count x mat_heights)
+    int token_count,                    // N_seq
+    int mat_heights,                    // D_features
+    int embedding_dim                   // D_head
+) {
+}
+
+// Helper to sum multiple matrices element-wise into one (e.g., summing per-head dL/dTokenEmbed)
+// Needs to be launched with (total_elements) work items.
+// Assumes output_summed is zeroed initially.
+__kernel void clSumMatricesElementwise(
+    __global float* output_summed,     // Accumulator
+    __global const float* input_matrix, // Matrix to add
+    const int num_elements
+) {
+    int idx = get_global_id(0);
+    if (idx < num_elements) {
+        // This is safe if work-items for THIS kernel are unique.
+        // It's for summing up results from parallel work_groups/heads.
+        output_summed[idx] += input_matrix[idx];
+    }
+}
+
+/**
+ * @brief Accumulates gradients from the sequence's embeddings (TokenEmbed)
+ *        back into the global vocabulary embedding gradient table.
+ *        This kernel expects to be launched with `num_tokens_in_context` work-items
+ *        (each work-item handles one token's embedding gradient) and `embedding_dim`
+ *        secondary dimension for 2D launch.
+ * @param d_gEmbeddings_global   Global pointer to the **global** embedding gradient matrix 
+ *        (vocab_size x embedding_dim). This buffer must be zeroed before starting a batch's accumulation.
+ * @param d_dL_dTokenEmbed_seq   Global pointer to the gradients for the current sequence's embeddings.
+ *                               (num_tokens_in_context x embedding_dim, row-major).
+ * @param d_vocab_indices_seq    Global pointer to the vocabulary index for each token in the current sequence.
+ *                               (num_tokens_in_context x 1).
+ * @param num_tokens_in_context  Number of tokens in the current sequence (rows in d_dL_dTokenEmbed_seq).
+ * @param embedding_dim          Dimension of each embedding vector (columns in d_dL_dTokenEmbed_seq and d_gEmbeddings_global).
+ * @param vocab_size             Total size of the vocabulary (rows in d_gEmbeddings_global).
+ */
+__kernel void clAccumulateEmbeddingGradients(
+    __global float* d_gEmbeddings_global,
+    __global const float* d_dL_dTokenEmbed_seq,
+    __global const int* d_vocab_indices_seq, // Indices of tokens in the sequence
+    const int num_tokens_in_context,
+    const int embedding_dim,
+    const int vocab_size
+) {
+    // Each work-item handles one element of the dL/dTokenEmbed_seq matrix.
+    // Map global_id(0) to column (embedding dimension index)
+    // Map global_id(1) to row (token position in sequence)
+    int embed_dim_idx = get_global_id(0);   // Corresponds to 'j' in (dL/dE)_ij
+    int token_pos_idx = get_global_id(1);   // Corresponds to 'i' in (dL/dE)_ij
+
+    if (embed_dim_idx < embedding_dim && token_pos_idx < num_tokens_in_context) {
+        // 1. Get the gradient value for this specific embedding dimension and token position.
+        // d_dL_dTokenEmbed_seq is (num_tokens_in_context x embedding_dim) row-major.
+        float grad_value_at_pos = d_dL_dTokenEmbed_seq[token_pos_idx * embedding_dim + embed_dim_idx];
+
+        // 2. Get the global vocabulary index for the token at this position.
+        int vocab_idx = d_vocab_indices_seq[token_pos_idx];
+
+        // 3. Accumulate this gradient into the global embedding gradient matrix.
+        // d_gEmbeddings_global is (vocab_size x embedding_dim) row-major.
+        if (vocab_idx >= 0 && vocab_idx < vocab_size) { // Ensure valid vocabulary index
+            int global_grad_idx = vocab_idx * embedding_dim + embed_dim_idx;
+            // Use atomic add to prevent race conditions when multiple tokens
+            // in the sequence (or across different samples in a batch) correspond
+            // to the same vocabulary word.
+            atomic_add_float(&d_gEmbeddings_global[global_grad_idx], grad_value_at_pos);
+        }
+    }
+}
+
+/**------------------------------------TRAINING------------------------------------**/
 
 __kernel void kernelKdotQforSelf_train_transformer(__global float* d_kdotq, __global const float* d_keys, 
             __global const float* d_querys, int num_queries_eff, int num_keys_eff, int kdotq_width, 

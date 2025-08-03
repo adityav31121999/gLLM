@@ -382,7 +382,8 @@ void model::positionalEmbedding(const std::vector<float>& originalEmbedding, std
         // Apply sine for even dimensions and cosine for odd dimensions.
         if (i % 2 == 0) { // Even dimension indices (0, 2, 4, ...)
             newEmbedding[i] = originalEmbedding[i] + std::sin(position / div_term);
-        } else { // Odd dimension indices (1, 3, 5, ...)
+        }
+        else { // Odd dimension indices (1, 3, 5, ...)
             newEmbedding[i] = originalEmbedding[i] + std::cos(position / div_term);
         }
     }

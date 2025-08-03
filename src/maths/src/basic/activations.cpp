@@ -309,7 +309,6 @@ std::vector<std::vector<float>> ReLUder(const std::vector<std::vector<float>>& x
     return result;
 }
 
-
 //----------------Least of them all (LOTA)----------------//
 
 /**
@@ -349,7 +348,6 @@ std::vector<float> LOTA(const std::vector<float>& y) {
         std::fill(transformed_x.begin(), transformed_x.end(), uniform_prob);
     }
     // If sum is non-positive and vector is empty, it returns empty anyway
-
     return transformed_x; // Return the normalized vector
 }
 

@@ -71,7 +71,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
                 std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
                 std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
                 CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, expected.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
-                if(expString == "<@#0>")
+                if(expString == "</s>")
                     std::cout << "--------------------To next LINE------------->>>>>>>>>>>" << std::endl;
                 else
                     std::cout << "--------------------To next token------------->>>>>>>>>>>" << std::endl;
@@ -142,7 +142,7 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
                 std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
                 std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, expected) << std::endl;
                 CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, expected.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
-                if(expString == "<@#0>")
+                if(expString == "</s>")
                     std::cout << "--------------------To next LINE------------->>>>>>>>>>>" << std::endl;
                 else
                     std::cout << "--------------------To next token------------->>>>>>>>>>>" << std::endl;
@@ -273,7 +273,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
                 std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken 
                           << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
                 CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, expected_str.data(), d * sizeof(float), cudaMemcpyHostToDevice));
-                if(predicted_token_str == "<@#0>"){
+                if(predicted_token_str == "</s>"){
                     std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                 }
                 else {

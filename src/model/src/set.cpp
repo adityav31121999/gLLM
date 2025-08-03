@@ -84,29 +84,22 @@ void model::setInfo(std::string& modelName, std::string& version, std::string& a
 void model::setTokenAndEmbeddingForTransformer(tokeniser &tok) {
     std::cout << "TOK.embeddings dimensions: " << tok.getEmbeddingDimension() << " x " << tok.getVocabularySize() << std::endl;
     // set tokens to T.tokens
-    T.tokens = tok.getTokens();         // take tokens from token
-    T.tokens.push_back("<@#0>");        // add terminator
+    T.tokens = tok.getTokens();         // take tokens from tokenISER
     // set embeddings to T.embeddings
     if(T.tokens.size() != T.embeddings.row) {
-        throw std::runtime_error("setTokenAndEmbeddingForTransformer: Vocabulary size don't match. Size is " + std::to_string(T.tokens.size()) + "and " + std::to_string(T.embeddings.row) + ".");
+        throw std::runtime_error("setTokenAndEmbeddingForTransformer: Vocabulary size don't match. Size is " 
+                + std::to_string(T.tokens.size()) + "and " + std::to_string(T.embeddings.row) + ".");
     }
-    std::cout << "setTokenAndEmbeddingForTransformer: Adding embeddings from index '0' to second last i.e., " << T.vocabsize - 1 << std::endl;
+    std::cout << "setTokenAndEmbeddingForTransformer: Adding embeddings from index '0' to  " 
+              << T.vocabsize - 1 << std::endl;
     std::vector<std::vector<float>> emb = tok.getEmbeddings();
-    float f = 10.0f;
-    int i = 0;
-    std::vector<float> vec(EMBEDDING);
-    for (int i = 0; i < EMBEDDING; ++i) {
-        vec[i] = terminatorEmbed(f, i);
-    }
-    emb.push_back(vec);
-    // sort the T.tokens vector lexicograp
+    std::vector<std::vector<float>> demb = tok.getDeEmbeddings();
     T.embeddings = emb;
-    std::cout << "setTokenAndEmbeddingForTransformer: Adding terminator embedding at index " << T.vocabsize << std::endl;
-    // T.embeddings.addRow(vec, T.tokens.size());
+    T.deEmbeddings = demb;
     T.vocabsize = T.tokens.size();
     vocabsize = T.tokens.size();
     if(T.d != tok.getEmbeddingDimension()) {
-        throw std::runtime_error("setTokenAndEmbeddingForTransformer: Embedding dimension don't match. Size is " + std::to_string(T.d) + " and " + std::to_string(tok.getEmbeddingDimension()) + ".");
+        throw std::runtime_error("setTokenAndEmbeddingForTransformer: Embedding dimension don't match. Size is " 
+                + std::to_string(T.d) + " and " + std::to_string(tok.getEmbeddingDimension()) + ".");
     }
-    std::cout << "setTokenAndEmbeddingForTransformer: Tokens and Embeddings set to transformer with vocabulary size of " << T.vocabsize << std::endl;
 }

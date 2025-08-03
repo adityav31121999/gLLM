@@ -34,6 +34,7 @@ add_library(neural STATIC
     src/mlp/cl/backwithElasticNetcl.cpp
     src/mlp/cl/rpropcl.cpp
     src/mlp/cl/traincl.cpp
+    src/mlp/cl/gradClipcl.cpp
 
 # attention files
     # C++

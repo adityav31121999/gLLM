@@ -169,7 +169,7 @@ void transformer::cuTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
                 std::cout << "Computed token is -> " << tokens[host_indexForToken] << " | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, response[i]) << std::endl;
                 CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, response[i].data(), d * sizeof(float), cudaMemcpyHostToDevice)); // H->D
-                if(rString[i] == "<@#0>")
+                if(rString[i] == "</s>")
                     std::cout << "--------------------To next LINE------------->>>>>>>>>>>" << std::endl;
                 else
                     std::cout << "--------------------To next token------------->>>>>>>>>>>" << std::endl;

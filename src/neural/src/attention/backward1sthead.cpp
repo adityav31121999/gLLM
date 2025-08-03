@@ -29,24 +29,25 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] = 2.0f * (EH[i] - expected[i]);
-        grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation);
+        // for BCE (no activations performed over Eh)
+        grad_EH[i] = (EH[i] - expected[i])/(EH[i] * (1 - EH[i]));
+        // EV gets a smaller portion of gradient (context preservation);
+        grad_EV[i] = grad_EH[i] * 0.01f;
     }
 
     // Step 2: Backprop through MLPs (hor for EH, ver for EV)
-    // Pass gradients through ReLU derivatives
-    std::vector<float> grad_hor_input(EMBEDDING, 0.0f);
-    std::vector<float> grad_ver_input(EMBEDDING, 0.0f);
+    // Pass gradients through sigmoid derivatives
+    std::vector<float> grad_hor_output(EMBEDDING, 0.0f);
+    std::vector<float> grad_ver_output(EMBEDDING, 0.0f);
+    // gradient for mlp output = (gradient of output) + (derivative of activation of mlp output)
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_hor_input[i] = grad_EH[i] * (hor.output[i] > 0 ? 1.0f : 0.0f);
-        grad_ver_input[i] = grad_EV[i] * (ver.output[i] > 0 ? 1.0f : 0.0f);
+        grad_hor_output[i] = grad_EH[i] * (sigmoidder(hor.output[i]));
+        grad_ver_output[i] = grad_EV[i] * (sigmoidder(ver.output[i]));
     }
 
     // Set MLP for backprop
-    hor.expected = grad_hor_input;
-    // Note: The original code assigns to ver.output, which is unusual for 'expected' values in backprop.
-    // Assuming ver.output here is meant to be ver.expected based on common backprop patterns.
-    ver.expected = grad_ver_input;
+    hor.expected = grad_hor_output;
+    ver.expected = grad_ver_output;
     hor.backwithElasticNet(in, layers, learning);
     ver.backwithElasticNet(in, layers, learning);
 
@@ -82,7 +83,8 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
         limit_j = std::min(limit_j, head.col);
         for (int j = 0; j < limit_j; j++) {
             sum_head_row += head(i, j);
-            if (j < head.row && i < head.col) { // Original condition for sum_head_col
+            // Original condition for sum_head_col
+            if (j < head.row && i < head.col) {
                 sum_head_col += head(j, i);
             }
         }
@@ -167,8 +169,7 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
             std::vector<float> Q_row_j = getRow(Q, j);
             float grad_kq_ij = (i < grad_KdotQ.row && j < grad_KdotQ.col) ? grad_KdotQ(i, j) : 0.0f;
             for (int h = 0; h < MATHEIGHTS; h++) {
-                if (h < Q_row_j.size())
-                {
+                if (h < Q_row_j.size()) {
                     grad_K(i, h) += grad_kq_ij * Q_row_j[h];
                 }
             }

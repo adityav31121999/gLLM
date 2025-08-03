@@ -14,7 +14,7 @@
 /**
  * @brief Transformer (FULL CONTEXT) class for token/chunk prediction and context 
  * retention. This can be single or multi-block architecture based on use case i.e.,
- * single block for operation or application or use and multi-block for training.
+ * single block for infernce and multi-block for training.
  */
 class transformer {
 public:
@@ -33,6 +33,7 @@ public:
     int promptCount;        // number of tokens in the prompt
     int currentTokenCount;  // current count of tokens in full context
     int indexForToken;      // this is to set token index from embedding list
+    int expectedIndex;      // expected index
     int resCount;           // response count for every prompt
     float learning;         // learning rate for MLPs
     double totalLearning;   // total learning for all updates (adaptive learning)
@@ -48,34 +49,49 @@ public:
     unsigned long long mlpOffset;           // for extracting MLPs*
 
     // Adam Optimizer Hyperparameters and State
-    float beta1;                // Adam hyperparameter (decay rate for first moment)
-    float beta2;                // Adam hyperparameter (decay rate for second moment)
-    float epsilon;              // Adam hyperparameter (small value to prevent division by zero)
-    unsigned long long t_step_adam;     // Global Adam time step (number of updates), initialized to 0. Use unsigned long long for potentially many updates
+    float clip_norm;            // gradient clipping norm
+    float beta1;                // decay rate for first moment
+    float beta2;                // decay rate for second moment
+    float epsilon;              // small value to prevent division by zero
+    unsigned long long t_step_adam;         // Global Adam time step (number of updates), initialized to 0. Use unsigned long long for potentially many updates
+
+    // Parameters for ReduceLROnPlateau
+    float best_loss_for_lr_schedule;        // Stores the lowest loss seen so far for LR adjustments
+    int lr_patience_counter;                // Counts epochs without improvement
+    int LR_PATIENCE_CONFIG = 10;            // Increased patience (e.g., 10-20)
+    float LR_DECAY_FACTOR_CONFIG = 0.5f;    // Halve the LR (common and gentler)
+    float LR_MIN_DELTA_CONFIG = 1e-3f;      // More significant improvement required (e.g., 0.001 to 0.01)
 
     std::vector<block> t;               // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
     std::vector<std::string> mTokens;   // prompts and response tokens
-    std::vector<float> otok;            // output token (vector, size d)
+    std::vector<int> indexVec;          // indices vector
+    std::vector<int> expIndex;          // expected index vector
+    std::vector<float> otok;            // output token (vector, size d * NUMBER_OF_HEADS)
+    std::vector<float> pred;            // prediction from forprop
+    std::vector<float> oneHotEncode;    // one hot encoding with 1 at predicted token index and rest are set to 0
     mat embeddings;                     // all trained embeddings (Mapped, vocabsize x d)
+    mat deEmbeddings;                   // deEmbeddings obtained while training
     mat tokenEmbed;                     // token embedding (prompt + response) (Mapped, currentTokenCount x d)
     FILE* promptNresponse;              // prompt and response text file
     // when model is in inference, hold EV of ith block here
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse; // Keeping as vector due to complexity
     mat tokForBlock;                    // token embeddings for local context for inference (Mapped, n x d)
+    std::vector<std::vector<float>> gradForTokenEmbed;          // gradients for token embeddings in use
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     // Constructor with explicit learning rate
-    transformer(OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
-        unsigned long long vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
-        bool& inTraining_param, const std::string& modelDir_param);
+    transformer(OpenCLContext& context_param, int m_param, int x_param, int y_param, int n_param, 
+        int d_param, int h_param, int l_param, unsigned long long vocab_param, float learning_rate_param, 
+        float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
+        int epoch, const std::string& blockBinPath);
 #elif USE_CUDA || USE_CPU
     transformer() = default;
     // Constructor with explicit learning rate
-    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, unsigned long long vocab_param, 
-        float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
-        const std::string& blockBinPath);
+    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
+        unsigned long long vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, 
+        bool attentionType_param, bool& inTraining_param, int epoch, const std::string& blockBinPath);
 #endif
 
 #ifdef USE_CUDA
@@ -91,6 +107,9 @@ public:
     void cuTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
+    void cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken,
+                                std::vector<float> expected_one_hot_host, float learning, float lambda_L1,
+                                float lambda_L2, float clip_norm, std::vector<float> &gradForEh);
     void cuTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void cuTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
              std::vector<std::vector<std::string>>& rString);
@@ -100,15 +119,21 @@ public:
 // opencl implementation
     void clParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void clForward(int& blockCount, int& currentTokenCount, int& promptCount);
-    void clBackward(std::vector<float>& expectedH);
-    void clBackward(std::vector<float>& expectedH, int& blockCount);
-    void clBackward(std::vector<std::vector<float>>& expectedH);
-    void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void clBackward(std::vector<float>& expectedH, float& clip_norm);
+    void clBackward(std::vector<float>& expectedH, int& blockCount, float& clip_norm);
+    void clBackward(std::vector<std::vector<float>>& expectedH, float& clip_norm);
+    void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount, float& clip_norm);
     void clTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected, std::string& rString);
     void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
+    void clUpdateEmbeddings(mat& tokenEmbed, std::vector<float> logit, std::vector<float> calculatedToken,
+                            std::vector<std::vector<float>> gradForTokenEmbed, float learning, float lambda_L1, float lambda_L2,
+                            float clip_norm);
+    void clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken,
+                                std::vector<float> expected_one_hot_host, int indexForToken, float learning, float lambda_L1,
+                                float lambda_L2, float clip_norm, std::vector<float> &gradForEh);
     void clTest(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
              std::vector<std::vector<std::string>>& rString);
@@ -128,6 +153,9 @@ public:
     void train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
+    void updateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken,
+                                std::vector<float> expected_one_hot_host, float learning, float lambda_L1,
+                                float lambda_L2, float clip_norm, std::vector<float> &gradForEh);
     void test(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, std::vector<std::string>& rString);
     void test(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
                 std::vector<std::vector<std::string>>& rString);
@@ -136,6 +164,7 @@ public:
 #endif
 
     float adaptiveLearningOptimiser(float prev_Error, float current_Error, float learning, int epochCount);
+    void adjustLearningRateOnPlateau(float current_loss);
     void setDims(int m, int x, int y, int n, int d, int h, int l);      // set dimension of transformer
     void setLearning(float learning);           // set learning rate for MLPs
     void setEpochs(int epochs);                 // set epochs for MLPs
@@ -145,7 +174,6 @@ public:
     void getmat(int blockCount, int i, int j, mat& q, std::string path2file, int& row, int& column);
     void getmlp(int blockCount, int i, int j, std::vector<mat>& weights, std::string path2file);
     void getEmbedding(std::string& word, std::vector<float>& embed);
-    void updateLearning(float& pErr, float& cErr);
     void makeCommon(std::string& path2folderOfAllBins);
     void clearValues();
 

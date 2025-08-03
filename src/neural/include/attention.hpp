@@ -24,25 +24,26 @@
 
 // macros for models
 #define TERMINATE "@#O"                     // end of conversation (And Its Over)
-#define CONTEXT_WIN 1024                    // context window or number of tokens for each head
-#define PROMPT_THRESHOLD CONTEXT_WIN/2      // token limit for prompt
-#define EMBEDDING 64                        // embedding dimension for each token
+#define EMBEDDING 128                       // embedding dimension for each token
 #define SCALING std::sqrt(EMBEDDING)        // SCALING FACTOR for ATTENTION HEAD
 #define LAYERS_MLP 4                        // layers of mlp
-#define EPOCHS 10                           // number of epochs for MLPs
-#define NUMBER_OF_PA 6                      // number of Partial Attentions in one Block
-#define NUMBER_OF_HEADS 16                  // number of heads in each layer (partial attention)
+#define EPOCHS 200                          // number of epochs for training of token
+#define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
+#define NUMBER_OF_HEADS 12                  // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
+#define CONTEXT_WIN 1024                    // context window or number of tokens for each head (or number of PA * embedding)
+#define PROMPT_THRESHOLD CONTEXT_WIN/2      // token limit for prompt
 #define MATHEIGHTS CONTEXT_WIN*2            // weight matrix heights
 #define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS       // maximum tokens for full context
-#define LEARNING_MAX 0.1                    // maximum learning rate allowable
-#define LEARNING_MIN 0.00001                // minimum learning rate allowable
+#define LEARNING_MAX 0.1f                   // maximum learning rate allowable
+#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
+#define P_DIM_CONCATENATED_HEADS (EMBEDDING * NUMBER_OF_PA) 
+#define MAX_GRAD_CLIP 10.0f                 // maximum gradient clupping allowed
 
 /**
- * @brief ATTENTION CLASS for calculating attention head and Embeddings.
- * An array of attention head is Partial Attention (LAYER) and an array 
- * of partial attention (BLOCK) is complete attention. Attention head in 
- * complete attention working in parallel are referred as PARALLELs.
+ * @brief ATTENTION CLASS for calculating attention head and head output EH.
+ * This heads consists of weight matrices and mlps for model as a basic unit
+ * of transformer model.
  */
 class attention {
 public:
@@ -68,19 +69,8 @@ public:
     float learning_rate;        // learning rate for attention
     float lambda_L1;            // L1 regularization strength
     float lambda_L2;            // L2 regularization strength
-    unsigned long long params;       // parameters in each attention head
-
-    // matrices for gradients
-    mat gMQ;
-    mat gMK;
-    mat gMV;
-    mat gMH;
-
-    // Adam state for attention matrices (velocity and momentum)
-    mat m_MQ, v_MQ;
-    mat m_MK, v_MK;
-    mat m_MV, v_MV;
-    mat m_MH, v_MH;
+    unsigned long long params;  // parameters in each attention head
+    unsigned long long attOffset;       // attention offset
 
 #ifdef USE_OPENCL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
@@ -104,7 +94,6 @@ public:
 
     float* d_EV; // Device pointer for Vertical Retention
     float* getDeviceEVPointer();
-
     void cuforprop(int& in, int& layers, int& tokenCount);
     void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
@@ -277,18 +266,6 @@ inline attention::attention(const attention& other) :
     EV(other.EV),
     dh(other.dh),
     dv(other.dv),
-    gMQ(other.gMQ),
-    gMK(other.gMK),
-    gMV(other.gMV),
-    gMH(other.gMH),
-    m_MQ(other.m_MQ),
-    m_MK(other.m_MK),
-    m_MV(other.m_MV),
-    m_MH(other.m_MH),
-    v_MQ(other.v_MQ),
-    v_MK(other.v_MK),
-    v_MV(other.v_MV),
-    v_MH(other.v_MH),
     params(other.params)
 {}
 
@@ -326,18 +303,6 @@ inline attention& attention::operator=(const attention& other) {
     EV = other.EV;
     dh = other.dh;
     dv = other.dv;
-    gMQ = other.gMQ;
-    gMK = other.gMK;
-    gMV = other.gMV;
-    gMH = other.gMH;
-    m_MQ = other.m_MQ;
-    m_MK = other.m_MK;
-    m_MV = other.m_MV;
-    m_MH = other.m_MH;
-    v_MQ = other.v_MQ;
-    v_MK = other.v_MK;
-    v_MV = other.v_MV;
-    v_MH = other.v_MH;
     params = other.params;
     return *this;
 }

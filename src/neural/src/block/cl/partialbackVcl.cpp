@@ -5,7 +5,10 @@
     #include <CL/opencl.hpp>
 #endif
 #include <iostream>
-#include <maths.hpp>
+#include <vector> // Required for std::vector
+#include <cmath>  // Required for std::sqrt
+#include "maths.hpp"
+#include "include/mlp.hpp"
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
@@ -47,11 +50,15 @@ struct HeadDeviceSubBuffersV {
  * @param in embedding dimension and mlp input-output vector dimension
  * @param layers number of mlp activations layers
  * @param k column number
+ * @param learning learning rate
+ * @param lambda_l1 L1 regularization parameter
+ * @param lambda_l2 L2 regularization parameter
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter)
  */
 void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k,
-    float& learning, float& lambda_l1, float& lambda_l2)
+    float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm) // Added clip_norm
 {
-        cl_int cl_err; // For OpenCL error codes
+    cl_int cl_err; // For OpenCL error codes
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
     // Validate column number and input shape
@@ -97,9 +104,9 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     // Kernel Launch Config (fixed block/local sizes, global size will be calculated per kernel)
     const size_t local_work_size_1d = 256;
     cl::NDRange local_1d(local_work_size_1d);
-
     const size_t local_work_size_2d[2] = { 16, 16 };
     cl::NDRange local_2d(local_work_size_2d[0], local_work_size_2d[1]);
+    OpenCLContext& clcontext = this->clcontext;
 
     // Aggregate OpenCL Buffers - These are the large buffers holding data for ALL heads
     cl::Buffer agg_d_expected_v_buf, agg_d_EV_buf;
@@ -129,7 +136,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
     };
 
     try {
-        OpenCLContext& clcontext = this->clcontext;
         // --- Allocate Aggregate Memory on Device ---
         // These buffers are allocated once for all heads combined.
         agg_d_expected_v_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * ev_total_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -318,7 +324,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
 
             // --- Step 2: Backprop through ver MLP ---
             cl::Kernel kernelLastLayerDelta_cl = clcontext.kernels.at("kernelLastLayerDeltaSigmoid");
-            CL_CHECK(kernelLastLayerDelta_cl.setArg(0, device_ptrs_cl.d_grad_EV_scaled));
+            CL_CHECK(kernelLastLayerDelta_cl.setArg(0, device_ptrs_cl.d_grad_EV_scaled)); // Now uses potentially clipped d_grad_EV_scaled
             CL_CHECK(kernelLastLayerDelta_cl.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1]));
             CL_CHECK(kernelLastLayerDelta_cl.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1]));
             CL_CHECK(kernelLastLayerDelta_cl.setArg(3, embedding_dim));
@@ -347,6 +353,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 CL_CHECK(k_update_weights_v.setArg(8, embedding_dim)); // prev_layer_size
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d));
             }
+            current_stream_cl.finish(); // Ensure clipping completes before next step.
 
             // --- Step 3: Compute grad_dv ---
             cl::Kernel kernelComputeGradMLPInput_cl = clcontext.kernels.at("kernelComputeGradMLPInput");
@@ -403,7 +410,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 CL_CHECK(cuLOTAder_cl.setArg(2, context_win)); // M (rows)
                 CL_CHECK(cuLOTAder_cl.setArg(3, context_win)); // N (cols)
                 CL_CHECK(cuLOTAder_cl.setArg(4, token_count)); // active_dim
-                // cl_int cl_att_is_self_lota_der = attention_type ? 1 : 0;
+                // cl_int cl_att_is_self_lota_der = attention_type ? 1 : 0; // Already defined earlier.
                 CL_CHECK(cuLOTAder_cl.setArg(5, cl_att_is_self_lota_der));
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(cuLOTAder_cl, cl::NullRange, global_head_2d, local_2d));
 
@@ -427,7 +434,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 // --- Step 8: Compute grad_MQ and grad_MK_correction ---
                 cl::Kernel kernelComputeGradMQ_V_cl = clcontext.kernels.at("kernelComputeGradMQ_V");
                 // For the `nullptr` argument in CUDA, use a 0-sized `cl::Buffer` in OpenCL
-                cl::Buffer d_null_buffer(clcontext.context, 0, 0, nullptr, &cl_err);
+                cl::Buffer d_null_buffer(clcontext.context, 0, 0, nullptr, &cl_err); // Re-initialize as it's used in arguments.
                 if (cl_err != CL_SUCCESS && cl_err != CL_INVALID_BUFFER_SIZE) CL_CHECK(cl_err);
                 CL_CHECK(kernelComputeGradMQ_V_cl.setArg(0, device_ptrs_cl.d_grad_Q));
                 CL_CHECK(kernelComputeGradMQ_V_cl.setArg(1, d_null_buffer)); // d_Q_embed (nullptr equivalent)
@@ -446,6 +453,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
                 CL_CHECK(kernelComputeGradMKCorrection_cl.setArg(5, mat_heights));
                 CL_CHECK(kernelComputeGradMKCorrection_cl.setArg(6, embedding_dim));
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(kernelComputeGradMKCorrection_cl, cl::NullRange, global_matrix_2d, local_2d));
+                current_stream_cl.finish(); // Ensure clipping completes before next step.
             }
             else {
                 // If token_count is 0, CUDA memsets. OpenCL `enqueueFillBuffer` is equivalent.
@@ -462,9 +470,9 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(0, device_ptrs_cl.d_MV_a));
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(1, device_ptrs_cl.d_MQ_a));
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(2, device_ptrs_cl.d_MK_a));
-            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(3, device_ptrs_cl.d_grad_MV));
-            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(4, device_ptrs_cl.d_grad_MQ));
-            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(5, device_ptrs_cl.d_grad_MK_correction));
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(3, device_ptrs_cl.d_grad_MV)); // Clipped gradient used here
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(4, device_ptrs_cl.d_grad_MQ)); // Clipped gradient used here
+            CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(5, device_ptrs_cl.d_grad_MK_correction)); // Clipped gradient used here
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(6, learning_rate));
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(7, lambda_l1));
             CL_CHECK(kernelUpdateWeights_1stHead_V_cl.setArg(8, lambda_l2));
@@ -531,11 +539,15 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>
  * @param expectedV vertical retention vectors for each head of column
  * @param in embedding dimension and mlp input-output vector dimension
  * @param layers number of mlp activations layers
- * @param k column number
+ * @param k_col_idx column number
  * @param blocknumber current block position (1-based index)
+ * @param learning learning rate
+ * @param lambda_l1 L1 regularization parameter
+ * @param lambda_l2 L2 regularization parameter
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter)
  */
 void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k_col_idx, 
-    int& blocknumber_param, float& learning, float& lambda_l1, float& lambda_l2)
+    int& blocknumber_param, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm) // Added clip_norm
 {
     cl_int cl_err; // For OpenCL error codes
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
@@ -584,6 +596,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     cl::NDRange local_1d(local_work_size_1d);
     const size_t local_work_size_2d[2] = { 16, 16 };
     cl::NDRange local_2d(local_work_size_2d[0], local_work_size_2d[1]);
+    OpenCLContext& clcontext = this->clcontext;
 
     cl::Buffer agg_d_expected_v_buf, agg_d_EV_buf;
     cl::Buffer agg_d_grad_EV_full_buf, agg_d_grad_EV_summed_buf, agg_d_grad_EV_scaled_buf;
@@ -607,10 +620,8 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
     std::vector<HeadDeviceSubBuffersV> head_gpu_data_cl(num_heads_to_process);
 
     try {
-        OpenCLContext& clcontext = this->clcontext;
         agg_d_expected_v_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * ev_total_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_EV_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * ev_total_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
-        // ... (all other aggregate buffer allocations, same as clpartialbackward1stBlock)
         agg_d_grad_EV_full_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * ev_total_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_grad_EV_summed_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_grad_EV_scaled_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -633,7 +644,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
         agg_d_ver_activations_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_neuron_layers_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_ver_weights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_ver_deltas_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
-
+        agg_d_ver_gweights_storage_buf = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * num_weight_matrices_mlp * mlp_weights_bytes, nullptr, &cl_err); CL_CHECK(cl_err); // Added
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             streams_cl[head_idx] = cl::CommandQueue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
@@ -643,7 +654,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             head_gpu_data_cl[head_idx].d_ver_deltas.resize(num_weight_matrices_mlp);
 
             cl_buffer_region region;
-            // ... (all sub-buffer creations, same as clpartialbackward1stBlock)
             region = { head_idx * ev_total_bytes, ev_total_bytes };
             head_gpu_data_cl[head_idx].d_expected_v = agg_d_expected_v_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
             head_gpu_data_cl[head_idx].d_EV = agg_d_EV_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
@@ -723,7 +733,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             }
 
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_expected_v, CL_FALSE, 0, ev_total_bytes, flat_expectedV_head.data()));
-            // ... (all other H->D transfers, same as clpartialbackward1stBlock)
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_EV, CL_FALSE, 0, ev_total_bytes, head_obj.EV.mapped_data));
             if (token_count > 0) { 
                 CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_KdotQ, CL_FALSE, 0, active_head_bytes, head_obj.KdotQ.mapped_data)); 
@@ -732,7 +741,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             }
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MV_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MV.mapped_data)); 
             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MQ_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MQ.mapped_data));
-             CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
+            CL_CHECK(current_stream_cl.enqueueWriteBuffer(device_ptrs_cl.d_MK_a, CL_FALSE, 0, proj_mat_bytes, head_obj.MK.mapped_data));
             if (head_obj.ver.activations.size()!=static_cast<size_t>(num_neuron_layers_mlp) || head_obj.ver.weights.size()!=static_cast<size_t>(num_weight_matrices_mlp)) { 
                 throw std::runtime_error("MLP host ver vector size mismatch for head [" + std::to_string(head_idx) + "][" + std::to_string(k_col_idx) + "]"); 
             }
@@ -750,17 +759,23 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             }
             current_stream_cl.flush();
 
-            // --- Kernel Launches for steps 1-8 (same as clpartialbackward1stBlock) ---
+            // --- Kernel Launches ---
             cl::Kernel k_grad_ev_v = clcontext.kernels.at("kernelComputeGradientsEV_V"); 
-            CL_CHECK(k_grad_ev_v.setArg(0, device_ptrs_cl.d_EV)); CL_CHECK(k_grad_ev_v.setArg(1, device_ptrs_cl.d_expected_v)); 
-            CL_CHECK(k_grad_ev_v.setArg(2, device_ptrs_cl.d_grad_EV_full)); CL_CHECK(k_grad_ev_v.setArg(3, device_ptrs_cl.d_grad_EV_summed)); 
-            CL_CHECK(k_grad_ev_v.setArg(4, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_grad_ev_v.setArg(5, learning_rate)); 
-            CL_CHECK(k_grad_ev_v.setArg(6, context_win)); CL_CHECK(k_grad_ev_v.setArg(7, embedding_dim)); 
+            CL_CHECK(k_grad_ev_v.setArg(0, device_ptrs_cl.d_EV));
+            CL_CHECK(k_grad_ev_v.setArg(1, device_ptrs_cl.d_expected_v)); 
+            CL_CHECK(k_grad_ev_v.setArg(2, device_ptrs_cl.d_grad_EV_full));
+            CL_CHECK(k_grad_ev_v.setArg(3, device_ptrs_cl.d_grad_EV_summed)); 
+            CL_CHECK(k_grad_ev_v.setArg(4, device_ptrs_cl.d_grad_EV_scaled));
+            CL_CHECK(k_grad_ev_v.setArg(5, learning_rate)); 
+            CL_CHECK(k_grad_ev_v.setArg(6, context_win));
+            CL_CHECK(k_grad_ev_v.setArg(7, embedding_dim)); 
             CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_ev_v, cl::NullRange, global_ev, local_1d));
-
+            
             cl::Kernel k_last_delta = clcontext.kernels.at("kernelLastLayerDeltaSigmoid"); 
-            CL_CHECK(k_last_delta.setArg(0, device_ptrs_cl.d_grad_EV_scaled)); CL_CHECK(k_last_delta.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1])); 
-            CL_CHECK(k_last_delta.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1])); CL_CHECK(k_last_delta.setArg(3, embedding_dim)); 
+            CL_CHECK(k_last_delta.setArg(0, device_ptrs_cl.d_grad_EV_scaled)); // Now uses potentially clipped d_grad_EV_scaled
+            CL_CHECK(k_last_delta.setArg(1, device_ptrs_cl.d_ver_activations[num_neuron_layers_mlp - 1])); 
+            CL_CHECK(k_last_delta.setArg(2, device_ptrs_cl.d_ver_deltas[num_weight_matrices_mlp - 1])); 
+            CL_CHECK(k_last_delta.setArg(3, embedding_dim)); 
             CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_last_delta, cl::NullRange, global_embed, local_1d));
             
             cl::Kernel k_hidden_delta = clcontext.kernels.at("hiddenDeltaKernel"); 
@@ -773,7 +788,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
                 CL_CHECK(k_hidden_delta.setArg(5, embedding_dim)); 
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_hidden_delta, cl::NullRange, global_embed, local_1d)); 
             }
-            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); // Changed to ElasticNet
+            cl::Kernel k_update_weights_v = clcontext.kernels.at("kernelUpdateElasticNet"); 
             for (int l = 0; l < num_weight_matrices_mlp; ++l) {
                 CL_CHECK(k_update_weights_v.setArg(0, device_ptrs_cl.d_ver_deltas[l])); // deltas
                 CL_CHECK(k_update_weights_v.setArg(1, device_ptrs_cl.d_ver_activations[l])); // prev_activations
@@ -786,7 +801,15 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
                 CL_CHECK(k_update_weights_v.setArg(8, embedding_dim)); // prev_layer_size
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d));
             }
-            cl::Kernel k_grad_mlp_input = clcontext.kernels.at("kernelComputeGradMLPInput"); CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs_cl.d_ver_deltas[0])); CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs_cl.d_ver_weights[0])); CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs_cl.d_grad_dv)); CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim)); CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim)); CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
+            current_stream_cl.finish(); // Ensure clipping completes before next step.
+
+            cl::Kernel k_grad_mlp_input = clcontext.kernels.at("kernelComputeGradMLPInput"); 
+            CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs_cl.d_ver_deltas[0]));
+            CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs_cl.d_ver_weights[0]));
+            CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs_cl.d_grad_dv));
+            CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim));
+            CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim));
+            CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
 
             if (token_count > 0) {
                 cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
@@ -831,7 +854,6 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
                 CL_CHECK(k_lota_der.setArg(2, context_win));
                 CL_CHECK(k_lota_der.setArg(3, context_win));
                 CL_CHECK(k_lota_der.setArg(4, token_count));
-                // cl_int cl_att_is_self_lota_der = attention_type ? 1 : 0;
                 CL_CHECK(k_lota_der.setArg(5, cl_att_is_self_lota_der));
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_lota_der, cl::NullRange, global_head_2d, local_2d));
                 
@@ -852,10 +874,11 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_q_v, cl::NullRange, global_kq_grad_2d, local_2d));
                 
                 cl::Kernel k_grad_mq_v = clcontext.kernels.at("kernelComputeGradMQ_V"); 
-                cl::Buffer d_null_buf(clcontext.context,0,0,nullptr,&cl_err); 
+                cl::Buffer d_null_buf_mq(clcontext.context,0,0,nullptr,&cl_err); // Re-initialize for this use
                 if(cl_err!=CL_SUCCESS && cl_err!=CL_INVALID_BUFFER_SIZE) 
-                    CL_CHECK(cl_err); CL_CHECK(k_grad_mq_v.setArg(0, device_ptrs_cl.d_grad_Q));
-                CL_CHECK(k_grad_mq_v.setArg(1, d_null_buf));
+                    CL_CHECK(cl_err);
+                CL_CHECK(k_grad_mq_v.setArg(0, device_ptrs_cl.d_grad_Q));
+                CL_CHECK(k_grad_mq_v.setArg(1, d_null_buf_mq)); // d_Q_embed (nullptr equivalent)
                 CL_CHECK(k_grad_mq_v.setArg(2, device_ptrs_cl.d_grad_MQ));
                 CL_CHECK(k_grad_mq_v.setArg(3, token_count));
                 CL_CHECK(k_grad_mq_v.setArg(4, mat_heights));
@@ -871,6 +894,7 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
                 CL_CHECK(k_grad_mk_corr.setArg(5, mat_heights));
                 CL_CHECK(k_grad_mk_corr.setArg(6, embedding_dim));
                 CL_CHECK(current_stream_cl.enqueueNDRangeKernel(k_grad_mk_corr, cl::NullRange, global_matrix_2d, local_2d));
+                current_stream_cl.finish(); // Ensure clipping completes before next step.
             }
             else {
                 CL_CHECK(current_stream_cl.enqueueFillBuffer(device_ptrs_cl.d_grad_MV, 0.0f, 0, proj_mat_bytes));
@@ -886,10 +910,10 @@ void block::clpartialbackward(std::vector<std::vector<std::vector<float>>>& expe
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(1, device_ptrs_cl.d_MQ_a));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(2, device_ptrs_cl.d_MK_a));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(3, device_ptrs_cl.d_EV));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(4, device_ptrs_cl.d_grad_MV));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(5, device_ptrs_cl.d_grad_MQ));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(6, device_ptrs_cl.d_grad_MK_correction));
-            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(7, device_ptrs_cl.d_grad_EV_full));
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(4, device_ptrs_cl.d_grad_MV)); // Clipped gradient used here
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(5, device_ptrs_cl.d_grad_MQ)); // Clipped gradient used here
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(6, device_ptrs_cl.d_grad_MK_correction)); // Clipped gradient used here
+            CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(7, device_ptrs_cl.d_grad_EV_full)); // Potentially clipped d_grad_EV_full used here
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(8, learning_rate));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(9, lambda_l1));
             CL_CHECK(kernelUpdateWeights_EV_V_cl.setArg(10, lambda_l2));

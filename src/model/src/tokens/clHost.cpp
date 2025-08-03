@@ -6,7 +6,7 @@
 // Now, the clEmbeddingFormula implementation within the tokeniser class
 // Signature updated to include r1 and r2
 void tokeniser::clEmbeddingFormula(OpenCLContext& ocl_context, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, 
-    int& vocSize_val, float r1, float r2)
+    int& vocSize_val, float r1)
 {
     if (!ocl_context.context() || !ocl_context.queue()) { // Use () for cl.hpp accessors
         std::cerr << "OpenCL context or command queue not initialized via singleton." << std::endl;
@@ -37,10 +37,8 @@ void tokeniser::clEmbeddingFormula(OpenCLContext& ocl_context, std::vector<std::
     kernel.setArg(0, embeddings_buffer);
     kernel.setArg(1, d_dim);
     kernel.setArg(2, r1); // <--- Using the passed r1
-    kernel.setArg(3, r2); // <--- Using the passed r2
     unsigned int initial_seed_offset = static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-    kernel.setArg(4, initial_seed_offset);
-
+    kernel.setArg(3, initial_seed_offset);
 
     // Execute Kernel
     cl::NDRange global_work_size(total_elements);

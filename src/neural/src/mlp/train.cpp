@@ -12,6 +12,7 @@ void mlp::adamUpdate(unsigned long long t_adam_param, float beta1, float beta2, 
     // Bias correction terms
     float bias_correction1 = 1.0f - std::pow(beta1, this->t);
     float bias_correction2 = 1.0f - std::pow(beta2, this->t);
+/*
     for (size_t l = 0; l < num_layers - 1; ++l) {
         mat& current_weights = weights[l];
         mat& current_gradients = gweights[l]; // Gradients computed in backward pass
@@ -36,6 +37,7 @@ void mlp::adamUpdate(unsigned long long t_adam_param, float beta1, float beta2, 
             }
         }
     }
+*/
 }
 
 

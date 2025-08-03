@@ -1,31 +1,24 @@
 // Basic XorShift32 PRNG for OpenCL
 // seed must be unique per work-item
-unsigned int xorshift32(unsigned int x) 
-{
+unsigned int xorshift32(unsigned int x) {
     x ^= x << 13;
     x ^= x >> 17;
     x ^= x << 5;
     return x;
 }
 
-
-// Function to convert a normalized [0,1] float to a custom range [r1, r2]
-float scale_random(unsigned int* seed_ptr, float r1, float r2) 
-{
+float scale_random(unsigned int* seed_ptr, float r1) {
     // Generate a random unsigned int
     *seed_ptr = xorshift32(*seed_ptr);
     // Convert to float in [0, 1] range
     float normalized_val = (float)(*seed_ptr) / (float)0xFFFFFFFFU;
-    // Scale to [r1, r2]
-    return r1 + normalized_val * (r2 - r1);
+    return r1 + normalized_val * (10.0f - r1);
 }
-
 
 __kernel void generate_embeddings(
     __global float* embeddings_out,
     const int d_dim,
     const float r1,
-    const float r2,
     const unsigned int initial_seed_offset) {
 
     int global_id = get_global_id(0); // 0-indexed global work-item ID
@@ -34,8 +27,7 @@ __kernel void generate_embeddings(
     // --- MISSING LINE ADDED HERE ---
     unsigned int seed = initial_seed_offset + global_id + 1; // Declare and initialize 'seed' for this work-item
 
-    // Generate random float in [r1, r2] using the local 'seed'
-    embeddings_out[global_id] = scale_random(&seed, r1, r2);
+    embeddings_out[global_id] = scale_random(&seed, r1);
 }
 
 

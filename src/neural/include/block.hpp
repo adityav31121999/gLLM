@@ -59,7 +59,10 @@ struct HeadDevicePointers {
 
 
 /**
- * @brief block for complete attention (local context)
+ * @brief block for complete attention (local context), each row is called as partial attention,
+ * each column is called parallel (since they are performed in parallel on GPUs),
+ * and the concatenated/summed output of block is called as complete attention. Blokc has a 
+ * 2D matrix of all attention unit.
  */
 class block {
 public:
@@ -73,12 +76,14 @@ public:
     bool inTraining;        // = 1 for training, = 0 for in use
     std::string str;        // to check whether new token is "@#O" or part of conversation
     std::vector<std::vector<std::vector<std::vector<float>>>> EV;
+    std::vector<std::vector<float>> gradForTokens;
     mat tokForBlock;        // tokens for block
     std::vector<std::vector<attention>> b;  // block complete attention
     FILE* blockFile = nullptr;              // bin file for block
     std::string blockFilePath;              // path to model file
-    unsigned long long params;                   // parameters in block
-    unsigned long long blockOffset;              // offset for block in training bin file
+    unsigned long long params;              // parameters in block
+    unsigned long long blockOffset;         // offset for block in training bin file
+    
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
@@ -153,19 +158,19 @@ public:
     void clForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
     // for single parallel
     // partial attention backward
-    void clpartialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, float& learning, float& lambda_l1, float& lambda_l2);
-    void clpartialbackward(std::vector<float>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void clpartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, int& blocknumber, float& learning, float& lambda_l1, float& lambda_l2);
+    void clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clpartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, int& blocknumber, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
     // parallel partialbackward(i)
-    void clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
-    void clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
-    void clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
-    void clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
-    void clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
-    void clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
+    void clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
     // adam update
     void clAdamUpdate(int layers_mlp, unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
@@ -201,7 +206,7 @@ public:
 
 #endif
 
-    void randomValuesForBlock(float min, float max);
+    void randomValuesForBlock(int type);
     void setVerticalRetention(std::vector<std::vector<std::vector<std::vector<float>>>>& EV);
     void clearValues();
     void serialise(const std::string& locationWithFilename);

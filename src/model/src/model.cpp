@@ -11,24 +11,24 @@
 
 /**
  * @brief Constructor for single transformer model with learning rate
- * @param m number of blocks
- * @param x number of incomplete attentions in each partial attention
+ * @param m_param number of blocks
+ * @param x_param number of incomplete attentions in each partial attention
  * @param y number of layers of partial attention for complete attention block
  * @param n total tokens for each attention head
  * @param d token dimension
  * @param h height of MQ, MK and columns of MV, MH
  * @param l layers of mlp
- * @param learning learning rate for MLPs
+ * @param learning_param learning rate for MLPs
  */
 model::model(OpenCLContext& context, const std::string& baseDirectory, int m_param, int x_param, int y_param, int n_param, int d_param, 
-    int matheight_param, int l_param, float learning_param, float lambda_L1, float lambda_L2, bool isSelfAttention_param, 
+    int matheight_param, int l_param, int epoch, float learning_param, float lambda_L1, float lambda_L2, bool isSelfAttention_param, 
     bool toTrainModel_param, const std::string& tokeniserPath) :
     baseDir(baseDirectory), clcontext(context), m(toTrainModel_param ? m_param : 1), x(x_param), y(y_param), n(n_param), 
     d(d_param), matheight(matheight_param), l(l_param), learning(learning_param), lambda_L1(lambda_L1), lambda_L2(lambda_L2), 
     epsilon(0.0f), total(m * n), isSelf(isSelfAttention_param), toTrain(toTrainModel_param), metadata(nullptr), chat(nullptr), 
-    currentChatLogPath(""), TOK(tokeniserPath, context),
+    currentChatLogPath(""), TOK(tokeniserPath, context), epoch(epoch),
     T(context, this->m, x_param, y_param, n_param, d_param, matheight_param, l_param, TOK.getVocabularySize(),
-        this->learning, this->lambda_L1, this->lambda_L2, this->isSelf, this->toTrain, baseDirectory)
+        this->learning, this->lambda_L1, this->lambda_L2, this->isSelf, this->toTrain, epoch, baseDirectory)
 {
     total = this->m * this->n;
     info = {}; // Zero-initialize info struct
@@ -46,13 +46,10 @@ model::model(OpenCLContext& context, const std::string& baseDirectory, int m_par
     info.matheight = this->matheight;
     info.attentionType = this->isSelf;
     info.totalContext = this->m * this->n;
-    if(toTrain == 1) {
-        std::cout << "Setting tokens and embeddings from tokeniser into transformer" << std::endl;
-        setTokenAndEmbeddingForTransformer(TOK);
-    }
-    else {
-        // read from csv file
-    }
+    std::cout << "Setting tokens and embeddings from tokeniser into transformer" << std::endl;
+    setTokenAndEmbeddingForTransformer(TOK);
+    T.deEmbeddings = TOK.getDeEmbeddings();
+    T.embeddings = TOK.getEmbeddings();
     calculateAndSetLayout();
     std::cout << "MODEL CLASS CREATED with OpenCL device " << context.device.getInfo<CL_DEVICE_NAME>() << std::endl;
     std::cout << "-----------------------------------------------------------------------" << std::endl;
@@ -119,17 +116,17 @@ void printCudaDeviceName() {
  * @param d token dimension
  * @param h height of MQ, MK and columns of MV, MH
  * @param l layers of mlp
- * @param learning learning rate for MLPs
+ * @param learning_param learning rate for MLPs
  */
 model::model(const std::string& baseDirectory, int m_param, int x_param, int y_param, int n_param, int d_param, 
-    int matHeightParam, int l_param, float learning_param, float lambda_L1, float lambda_L2, bool isSelfAttention_param, 
-    bool toTrainModel_param, const std::string& tokeniserPath) :
+    int matHeightParam, int l_param, int epoch, float learning_param, float lambda_L1, float lambda_L2, 
+    bool isSelfAttention_param, bool toTrainModel_param, const std::string& tokeniserPath) :
     baseDir(baseDirectory), m(toTrainModel_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), 
     n(n_param), d(d_param), matheight(matHeightParam), l(l_param), learning(learning_param), lambda_L1(lambda_L1), 
-    lambda_L2(lambda_L2), epsilon(0.0f), total(m * n), isSelf(isSelfAttention_param), toTrain(toTrainModel_param), metadata(nullptr), 
-    chat(nullptr), currentChatLogPath(""), TOK(tokeniserPath), 
-    T(this->m, x_param, y_param, n_param, d_param, matHeightParam, l_param, TOK.getVocabularySize(), this->learning, lambda_L1, lambda_L2, 
-        this->isSelf, this->toTrain, baseDirectory)
+    lambda_L2(lambda_L2), epsilon(0.0f), total(m * n), isSelf(isSelfAttention_param), toTrain(toTrainModel_param), 
+    metadata(nullptr), chat(nullptr), currentChatLogPath(""), TOK(tokeniserPath), epoch(epoch),
+    T(this->m, x_param, y_param, n_param, d_param, matHeightParam, l_param, TOK.getVocabularySize(), this->learning, 
+        lambda_L1, lambda_L2, this->isSelf, epoch, this->toTrain, baseDirectory)
 {
     total = this->m * this->n;
     info = {}; // Zero-initialize info struct
@@ -148,12 +145,9 @@ model::model(const std::string& baseDirectory, int m_param, int x_param, int y_p
     info.attentionType = this->isSelf;
     info.totalContext = this->m * this->n;
     std::cout << "Setting tokens and embeddings from tokeniser into transformer" << std::endl;
-    if(toTrain == 1) {
-        setTokenAndEmbeddingForTransformer(TOK);
-    }
-    else {
-        // read from csv file directly
-    }
+    setTokenAndEmbeddingForTransformer(TOK);
+    T.deEmbeddings = TOK.getDeEmbeddings();
+    T.embeddings = TOK.getEmbeddings();
     calculateAndSetLayout();
     #ifdef USE_CUDA
     std::cout << "Model Created. "; printCudaDeviceName();

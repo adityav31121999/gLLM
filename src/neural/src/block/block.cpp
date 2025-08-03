@@ -161,7 +161,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
     tokForBlock = mat(n_tokens, d_embed);
 
-    params = (x * y * (b[0][0].params + (n_tokens * d_embed))) + (d_embed * n_tokens);
+    params = (x * y * b[0][0].params);
     unsigned long long totalBlockSize = params * sizeof(float);
 
     // File handling logic

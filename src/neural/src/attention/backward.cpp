@@ -20,7 +20,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] = 2.0f * (EH[i] - expected[i]); // MSE gradient for EH
+        grad_EH[i] = (EH[i] - expected[i]);
         grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation)
     }
 
@@ -28,8 +28,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     std::vector<float> grad_hor_output(EMBEDDING, 0.0f);
     std::vector<float> grad_ver_output(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_hor_output[i] = grad_EH[i] * (hor.output[i] > 0 ? 1.0f : 0.0f);
-        grad_ver_output[i] = grad_EV[i] * (ver.output[i] > 0 ? 1.0f : 0.0f);
+        grad_hor_output[i] = grad_EH[i] * (sigmoidder(hor.output[i]));
+        grad_ver_output[i] = grad_EV[i] * (sigmoidder(ver.output[i]));
     }
 
     // Set MLP inputs for backprop
@@ -58,9 +58,9 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     mat grad_MV(MATHEIGHTS, EMBEDDING);
     std::fill_n(grad_MH.mapped_data, grad_MH.row * grad_MH.col, 0.0f);
     std::fill_n(grad_MV.mapped_data, grad_MV.row * grad_MV.col, 0.0f);
+
     std::vector<float> pre_MH(MATHEIGHTS, 0.0f);
     std::vector<float> pre_MV(MATHEIGHTS, 0.0f);
-
     mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
 
     for (int i = 0; i < this->tokenCount; i++) {

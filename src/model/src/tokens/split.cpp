@@ -132,3 +132,66 @@ void tokeniser::splitSentence(const std::string& sentence, std::vector<std::stri
         }
     }
 }
+
+
+/**
+ * @brief Tokenizes a full sentence into a sequence of subword tokens and their corresponding indices.
+ * This function splits a sentence into words and punctuation, tokenizes each word using the `splitWord` method,
+ * and retrieves the index for each resulting subword from the `statOfTokens` map.
+ * @param sentence The input sentence string.
+ * @param all_subwords Output vector to store the final sequence of subword tokens.
+ * @param indices Output vector to store the index of each token from `statOfTokens`.
+ */
+void tokeniser::splitSentence(const std::string& sentence, std::vector<std::string>& all_subwords, std::vector<int>& indices) const {
+    all_subwords.clear();
+    indices.clear();
+
+    // Regex to split sentence by words and punctuation.
+    // It captures sequences of letters OR single non-letter, non-space characters.
+    std::regex re(R"([a-zA-Z]+|[^a-zA-Z\s])");
+    auto words_begin = std::sregex_iterator(sentence.begin(), sentence.end(), re);
+    auto words_end = std::sregex_iterator();
+
+    // Helper lambda to find the index of a token and add it to the indices vector.
+    auto find_and_add_index = [&](const std::string& token) {
+        auto it = statOfTokens.find(token);
+        if (it != statOfTokens.end()) {
+            indices.push_back(it->second);
+        } else {
+            // Handle unknown tokens. Attempt to find a generic "<UNK>" token.
+            auto unk_it = statOfTokens.find("<UNK>");
+            if (unk_it != statOfTokens.end()) {
+                indices.push_back(unk_it->second);
+            } else {
+                // If no "<UNK>" token, use -1 to signify an unknown token.
+                indices.push_back(-1);
+            }
+        }
+    };
+    indices.clear();
+    indices.resize(sentence.length(), 0.0f);
+    for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+        std::string token_str = (*i).str();
+        
+        // If it's a word (starts with a letter), split it using our learned vocabulary.
+        if (!token_str.empty() && std::isalpha(token_str[0])) {
+            std::string lower_token_str = token_str;
+            // Convert to lowercase for consistent tokenization.
+            std::transform(lower_token_str.begin(), lower_token_str.end(), lower_token_str.begin(), ::tolower);
+            
+            std::vector<std::string> word_subwords;
+            splitWord(lower_token_str, word_subwords);
+            
+            // Add the generated subwords and their corresponding indices.
+            all_subwords.insert(all_subwords.end(), word_subwords.begin(), word_subwords.end());
+            for (const auto& subword : word_subwords) {
+                find_and_add_index(subword);
+            }
+        } 
+        else {
+            // It's punctuation or another symbol, keep it as a single token.
+            all_subwords.push_back(token_str);
+            find_and_add_index(token_str);
+        }
+    }
+}

@@ -39,7 +39,7 @@ std::vector<float> vectorInverse(const std::vector<float> &vec)
  * @param r2 The upper bound for the random seed generation.
  * @throws std::runtime_error if the output file cannot be opened.
  */
-void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, float r1, float r2) {
+void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, float r1) {
     if (this->tokens.empty()) {
         throw std::runtime_error("Error: Vocabulary is not trained. Cannot generate embeddings.");
     }
@@ -54,24 +54,20 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
         cuEmbeddingFormula(this->embeddings, this->seeds, this->d, this->vocSize, r1, r2);
     #elif USE_OPENCL
         // Call the OpenCL kernel wrapper
-        clEmbeddingFormula(this->ocl, this->embeddings, this->seeds, this->d, this->vocSize, r1, r2);
+        clEmbeddingFormula(this->ocl, this->embeddings, this->seeds, this->d, this->vocSize, r1);
     #else
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_real_distribution<float> dis(r1, r2);
-
-        // Ensure the embeddings vector is correctly sized before populating
-        // This is a crucial step if embeddings is not pre-sized in a constructor.
+        // std::uniform_real_distribution<float> dis(r1, r2);
+        std::poisson_distribution<int> dis(r1);
         this->embeddings.resize(this->vocSize);
+        // resizinig of each row and assigning embeddings
         for (int i = 0; i < this->vocSize; ++i) {
             this->embeddings[i].resize(this->d);
-        }
-
-        // Fallback to CPU implementation
-        for (int i = 0; i < this->vocSize; ++i) {
-            // Note: `i` here corresponds to the index in the original `this->tokens` list
             for (int j = 0; j < this->d; ++j) {
-                this->embeddings[i][j] = dis(gen); // <--- CORRECTED: Call dis with the generator 'gen'
+                // random number * (-1)^(i+j) * (sin(i+1) + cos(j-1)) = 0.01
+                // possibly no zeroes allowed
+                this->embeddings[i][j] = dis(gen) * (std::sin(i+1) + std::cos(j-1)) * 0.1 + 0.01;
             }
         }
     #endif
@@ -95,4 +91,27 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
     }
     outFile1.close();
     std::cout << "Successfully saved " << this->tokens.size() << " embeddings to " << embeddingCSVpath << std::endl;
+}
+
+
+/**
+ * @brief save deEmbeddings obtained from LLM training
+ * @param[out] outputPath output path for deEmbedding csv
+ * @param[in] deEmbedding de-embeddings from LLM training
+ */
+void tokeniser::savedeEmbeddings(const std::string &outputPath, const std::vector<std::vector<float>>& deEmebdding)
+{
+    // save deEmbeddings that is obtained from LLM training
+    std::ofstream file(outputPath);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file for writing: " << outputPath << std::endl;
+        return;
+    }
+    for (const auto& deEmbed : deEmebdding) {
+        for (float val : deEmbed) {
+            file << val << ",";
+        }
+        file << "\n";
+    }
+    file.close();
 }

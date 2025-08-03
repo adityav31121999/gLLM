@@ -32,13 +32,13 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         throw std::runtime_error("transformer::forward: Embeddings not loaded/initialized or vocabsize is zero/negative.");
     }
     if (d <= 0 || x <= 0 || y <= 0 || l <= 0) {
-         throw std::runtime_error("clForward: Transformer dimensions (d, x, y, l) are not valid.");
+        throw std::runtime_error("clForward: Transformer dimensions (d, x, y, l) are not valid.");
     }
 
     // Ensure output token vector is sized correctly on the host
     if (otok.size() != static_cast<size_t>(d)) {
         otok.resize(d, 0.0f);
-        std::cout << "clForward: Resized host otok vector to size " << d << std::endl;
+        std::cout << "clForward: Resized host otok vector to size " << d * x << std::endl;
     }
     else {
         // Reset host accumulator before accumulating new values
@@ -75,7 +75,7 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         }
 
         // Step 3.5: Accumulate EH from the last column of the current block (HOST-SIDE)
-        // std::cout << "clForward: Accumulating EH from last column (y-1=" << y-1 << ") of Block " << blockCount << " on host..." << std::endl;
+        // std::cout << "clForward: Concatanating EH from last column (y-1=" << y-1 << ") of Block " << blockCount << " on host..." << std::endl;
         if (y > 0) {
             for (int j = 0; j < x; ++j) {
                 const std::vector<float>& eh_vector = t[blockCount-1].b[j][y - 1].EH;
@@ -84,12 +84,11 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
                                              + std::to_string(j) + "][" + std::to_string(y - 1) + "]. Expected "
                                              + std::to_string(d) + ", got " + std::to_string(eh_vector.size()));
                 }
-                for (int k = 0; k < d; ++k) {
+                for (int k = 0; k < EMBEDDING; ++k) {
                     otok[k] += eh_vector[k];
                 }
             }
-            // std::cout << "clForward: Host EH accumulation finished." << std::endl;
-        } 
+        }
         else {
             std::cerr << "Warning: clForward called with y=0 columns. Cannot accumulate EH." << std::endl;
         }
@@ -98,7 +97,6 @@ void transformer::clForward(int &blockCount, int &currentTokenCount, int &prompt
         std::cerr << "Standard Exception in transformer::clForward: " << e.what() << std::endl;
         throw;
     }
-    // std::cout << "clForward: Finished forward propagation for block " << blockCount << "." << std::endl;
 }
 
 #endif // USE_OPENCL

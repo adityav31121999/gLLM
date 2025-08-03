@@ -69,3 +69,26 @@ std::vector<float> tokeniser::getEmbeddingForToken(const std::string& token) con
     }
     return {}; // Return empty vector if not found
 }
+
+
+/**
+ * @brief Retrieves the index for a given token string.
+ * This function performs an efficient lookup in the internal token-to-index map.
+ * @param token The token string (e.g., "hello", "ing") whose index is needed.
+ * @return The integer index of the token if it exists in the vocabulary.
+ *         Returns -1 if the token is not found.
+ */
+const int tokeniser::getIndexOfToken(const std::string &token) const
+{
+    auto it = std::find(tokens.begin(), tokens.end(), token);
+    if (it != tokens.end()) {
+        auto index = std::distance(tokens.begin(), it);
+        if(index < tokens.size())
+            return index;
+        else
+            return -1;
+    }
+    else {
+        return -1;
+    }
+}

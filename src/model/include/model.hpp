@@ -160,6 +160,7 @@ public:
     int d;                  // token dimension
     int l;                  // layers of mlp
     int total;              // total tokenLimit -> t*count m * n
+    int epoch;              // epoch for training single token
     float learning;         // learning rate
     double totalLearning;   // total learning for all updates (adaptive learning)
     double adLearning;      // = T.totalLearning/T.trainCount (average adaptive learning)
@@ -179,6 +180,7 @@ public:
 // paths
     std::string baseDir;            // Base directory for model files (e.g., D:/train)
     std::string currentChatLogPath; // Stores the path of the currently open chat log file
+    std::string path2token;         // path to tokeniser data
 
 // using these strings, embeddings are provided to the transformer t (for training and application)
     std::string userPrompt;                     // user prompt
@@ -204,12 +206,13 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     model(OpenCLContext& context, const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
+        int l, int epoch, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
         const std::string& tokeniserPath);
 #elif USE_CUDA || USE_CPU
     model() = default;
-    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
-        float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, const std::string& tokeniserPath);
+    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, int l, int epoch, 
+        float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
+        const std::string& tokeniserPath);
 #endif
 
     void setLearning(float learning);
@@ -221,12 +224,12 @@ public:
     void setLicense(const std::string& license);
     void setInfo(modelDataInfo& info);
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
-            std::string& license, std::string& trainingData);
+                    std::string& license, std::string& trainingData);
     void setEmbeddingFromCSV(const std::string& path2file);
     void positionalEmbedding(const std::vector<float>& originalmbedding, std::vector<float>& newEmbedding, int position);
     void setTokenAndEmbeddingForTransformer(tokeniser& tok);
 
-    // train first block on promp-response and sentences
+    // train AND test first block on promp-response and sentences
     void trainBlockPR(const std::string& trainingDataFolder);
     void trainBlockSentence(const std::string& trainingDataFolder);
     void testBlockPR(const std::string& testDataFolder);

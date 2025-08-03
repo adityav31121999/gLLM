@@ -160,104 +160,6 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         }
         this->blockCount = (this->currentTokenCount == 0) ? 1 : ((this->currentTokenCount - 1) / CONTEXT_WIN) + 1;
         this->promptCount = prompt.size();
-        std::cout << "get keys and queries" << std::endl;
-        // Compute K/Q vectors from prompt and/or previous block's EV
-        if (mat_heights_cl > 0 && x > 0 && y > 0) {
-            int current_processing_block_idx = this->blockCount;
-            size_t embedding_bytes_loc = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
-            size_t projection_matrix_bytes = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
-            size_t matheights_bytes = static_cast<size_t>(mat_heights_cl) * sizeof(float);
-
-            if (current_processing_block_idx == 1) {
-                for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
-                    for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
-                        auto& attention_head = t[0].b[layer_idx][parallel_idx];
-                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mQ_cl, CL_TRUE, 0, projection_matrix_bytes, attention_head.MQ.mapped_data));
-                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mK_cl, CL_TRUE, 0, projection_matrix_bytes, attention_head.MK.mapped_data));
-
-                        for (size_t k = 0; k < prompt.size(); ++k) {
-                            size_t qk_vector_idx_in_block = (static_cast<size_t>(initial_token_count) % CONTEXT_WIN) + k;
-                            if (qk_vector_idx_in_block >= CONTEXT_WIN) {
-                                std::cerr << "Warning: qk_vector_idx_in_block ("<< qk_vector_idx_in_block << ") exceeds CONTEXT_WIN in clTrain K/Q for prompt (block 1)." << std::endl;
-                                continue;
-                            }
-                            size_t host_qk_offset = qk_vector_idx_in_block * mat_heights_cl;
-
-                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc, prompt[k].data()));
-                            
-                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
-                            kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
-                            CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
-                            if (attention_head.Q.mapped_data && (host_qk_offset + mat_heights_cl) <= (attention_head.Q.row * attention_head.Q.col)) {
-                                CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes, attention_head.Q.mapped_data + host_qk_offset));
-                            } 
-                            else { 
-                                std::cerr << "Error: Host Q buffer invalid or out of bounds for block 0." << std::endl;
-                                break;
-                            }
-
-                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
-                            CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
-                            if (attention_head.K.mapped_data && (host_qk_offset + mat_heights_cl) <= (attention_head.K.row * attention_head.K.col)) {
-                                CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_K_cl, CL_TRUE, 0, matheights_bytes, attention_head.K.mapped_data + host_qk_offset));
-                            } 
-                            else { 
-                                std::cerr << "Error: Host K buffer invalid or out of bounds for block 0." << std::endl;
-                                break;
-                            }
-                        }
-                    }
-                }
-                this->clcontext.queue.finish();
-            }
-            else if (current_processing_block_idx > 1) {
-                for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
-                    for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
-                        auto& current_block_attention = t[current_processing_block_idx - 1].b[layer_idx][parallel_idx];
-                        auto& prev_block_attention = t[current_processing_block_idx - 2].b[layer_idx][parallel_idx];
-
-                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mQ_cl, CL_TRUE, 0, projection_matrix_bytes, current_block_attention.MQ.mapped_data));
-                        CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mK_cl, CL_TRUE, 0, projection_matrix_bytes, current_block_attention.MK.mapped_data));
-
-                        // Keys from current prompt tokens for the current block
-                        for (size_t k = 0; k < prompt.size(); ++k) {
-                            size_t qk_vector_idx_in_block = (static_cast<size_t>(initial_token_count) % CONTEXT_WIN) + k;
-                            if (qk_vector_idx_in_block >= CONTEXT_WIN) { std::cerr << "Warning: qk_vector_idx_in_block ("<< qk_vector_idx_in_block << ") exceeds CONTEXT_WIN in clTrain K/Q for prompt (block N)." << std::endl; continue; }
-                            size_t host_k_offset = qk_vector_idx_in_block * mat_heights_cl;
-                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc, prompt[k].data()));
-                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
-                            kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
-                            CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
-                            if (current_block_attention.K.mapped_data && (host_k_offset + mat_heights_cl) <= (current_block_attention.K.row * current_block_attention.K.col)) {
-                                CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_K_cl, CL_TRUE, 0, matheights_bytes, current_block_attention.K.mapped_data + host_k_offset));
-                            } 
-                            else { 
-                                std::cerr << "Error: Host K buffer invalid or out of bounds for block " << current_processing_block_idx << std::endl;
-                            }
-                        }
-
-                        // Queries from previous block's EV for the current block
-                        for (int k_ev = 0; k_ev < CONTEXT_WIN; ++k_ev) {
-                            size_t q_vector_idx_in_block = k_ev;
-                            size_t host_q_offset = q_vector_idx_in_block * mat_heights_cl;
-                            if (!prev_block_attention.EV.mapped_data || (static_cast<size_t>(k_ev) * embedding_dim_cl + embedding_dim_cl) > (prev_block_attention.EV.row * prev_block_attention.EV.col)) {
-                                std::cerr << "Warning: Prev block EV data invalid or out of bounds for index " << k_ev << " in clTrain K/Q." << std::endl; continue;
-                            }
-                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc, prev_block_attention.EV.mapped_data + static_cast<size_t>(k_ev) * embedding_dim_cl));
-                            kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
-                            CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
-                            if (current_block_attention.Q.mapped_data && (host_q_offset + mat_heights_cl) <= (current_block_attention.Q.row * current_block_attention.Q.col)) {
-                                CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes, current_block_attention.Q.mapped_data + host_q_offset));
-                            } 
-                            else { 
-                                std::cerr << "Error: Host Q buffer invalid or out of bounds for block " << current_processing_block_idx << std::endl; 
-                            }
-                        }
-                    }
-                }
-                this->clcontext.queue.finish();
-            }
-        }
 
         std::cout << "Here for response training" << std::endl;
         // --- Train for Response ---
@@ -287,115 +189,104 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                                         + std::to_string(m) + "].");
             }
 
-            // --- Training Loop for response token i ---
-            int j = 0; // Epoch counter
-            // current_error = 1.0f; // Error is calculated fresh each iteration
-            while (j < this->epochs) { // Changed loop condition to match CUDA (j < epochs)
-                // --- Forward Pass ---
-                // Pass the promptCount relevant for the *current* block/context state
-                int current_prompt_count_in_block = effective_context_size % CONTEXT_WIN;
-                if (current_prompt_count_in_block == 0 && effective_context_size > 0) current_prompt_count_in_block = CONTEXT_WIN;
-                clForward(current_block_idx, effective_context_size, current_prompt_count_in_block);
-                std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl;
-                
-                unsigned long long host_indexForToken = -1;
-                h_otok_buffer = this->otok;
-                if (h_otok_buffer.size() != static_cast<size_t>(d)) {
-                    throw std::runtime_error("clTrain(prompt-response): this->otok from clForward has incorrect size. Expected " + std::to_string(d) + ", got " + std::to_string(this->otok.size()));
+            // Compute K/Q vectors from prompt and/or previous block's EV
+            if (mat_heights_cl > 0 && x > 0 && y > 0) {
+                int current_processing_block_idx = this->blockCount;
+                size_t embedding_bytes_loc = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
+                size_t projection_matrix_bytes = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
+                size_t matheights_bytes = static_cast<size_t>(mat_heights_cl) * sizeof(float);
+
+                if (current_processing_block_idx == 1) {
+                    for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
+                        for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
+                            auto& attention_head = t[0].b[layer_idx][parallel_idx];
+                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mQ_cl, CL_TRUE, 0, projection_matrix_bytes, attention_head.MQ.mapped_data));
+                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mK_cl, CL_TRUE, 0, projection_matrix_bytes, attention_head.MK.mapped_data));
+
+                            for (size_t k = 0; k < prompt.size(); ++k) {
+                                size_t qk_vector_idx_in_block = (static_cast<size_t>(initial_token_count) % CONTEXT_WIN) + k;
+                                if (qk_vector_idx_in_block >= CONTEXT_WIN) {
+                                    std::cerr << "Warning: qk_vector_idx_in_block ("<< qk_vector_idx_in_block << ") exceeds CONTEXT_WIN in clTrain K/Q for prompt (block 1)." << std::endl;
+                                    continue;
+                                }
+                                size_t host_qk_offset = qk_vector_idx_in_block * mat_heights_cl;
+
+                                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc, prompt[k].data()));
+                                
+                                kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                                kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
+                                CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                                if (attention_head.Q.mapped_data && (host_qk_offset + mat_heights_cl) <= (attention_head.Q.row * attention_head.Q.col)) {
+                                    CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes, attention_head.Q.mapped_data + host_qk_offset));
+                                } 
+                                else { 
+                                    std::cerr << "Error: Host Q buffer invalid or out of bounds for block 0." << std::endl;
+                                    break;
+                                }
+
+                                kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
+                                CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                                if (attention_head.K.mapped_data && (host_qk_offset + mat_heights_cl) <= (attention_head.K.row * attention_head.K.col)) {
+                                    CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_K_cl, CL_TRUE, 0, matheights_bytes, attention_head.K.mapped_data + host_qk_offset));
+                                } 
+                                else { 
+                                    std::cerr << "Error: Host K buffer invalid or out of bounds for block 0." << std::endl;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    this->clcontext.queue.finish();
                 }
-                // use kernelComputePrediction for output prediction
-                {
-                    cl::Buffer d_otok_buffer, d_result_index_buffer;
-                    try {
-                        size_t otok_bytes = h_otok_buffer.size() * sizeof(float);
-                        d_otok_buffer = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, h_otok_buffer.data(), &cl_err); CL_CHECK(cl_err);
-                        d_result_index_buffer = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int), nullptr, &cl_err); CL_CHECK(cl_err);
+                else if (current_processing_block_idx > 1) {
+                    for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
+                        for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
+                            auto& current_block_attention = t[current_processing_block_idx - 1].b[layer_idx][parallel_idx];
+                            auto& prev_block_attention = t[current_processing_block_idx - 2].b[layer_idx][parallel_idx];
 
-                        cl::Kernel kernel = this->clcontext.kernels.at("kernelComputePrediction");
+                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mQ_cl, CL_TRUE, 0, projection_matrix_bytes, current_block_attention.MQ.mapped_data));
+                            CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_mK_cl, CL_TRUE, 0, projection_matrix_bytes, current_block_attention.MK.mapped_data));
 
-                        CL_CHECK(kernel.setArg(0, d_otok_buffer));
-                        CL_CHECK(kernel.setArg(1, d_embeddings));
-                        CL_CHECK(kernel.setArg(2, d_result_index_buffer));
-                        CL_CHECK(kernel.setArg(3, static_cast<cl_int>(this->d)));
-                        CL_CHECK(kernel.setArg(4, static_cast<cl_int>(this->vocabsize)));
+                            // Keys from current prompt tokens for the current block
+                            for (size_t k = 0; k < prompt.size(); ++k) {
+                                size_t qk_vector_idx_in_block = (static_cast<size_t>(initial_token_count) % CONTEXT_WIN) + k;
+                                if (qk_vector_idx_in_block >= CONTEXT_WIN) { std::cerr << "Warning: qk_vector_idx_in_block ("<< qk_vector_idx_in_block << ") exceeds CONTEXT_WIN in clTrain K/Q for prompt (block N)." << std::endl; continue; }
+                                size_t host_k_offset = qk_vector_idx_in_block * mat_heights_cl;
+                                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc, prompt[k].data()));
+                                kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mK_cl); kq_kernel.setArg(2, d_K_cl);
+                                kq_kernel.setArg(3, embedding_dim_cl); kq_kernel.setArg(4, mat_heights_cl);
+                                CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                                if (current_block_attention.K.mapped_data && (host_k_offset + mat_heights_cl) <= (current_block_attention.K.row * current_block_attention.K.col)) {
+                                    CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_K_cl, CL_TRUE, 0, matheights_bytes, current_block_attention.K.mapped_data + host_k_offset));
+                                } 
+                                else { 
+                                    std::cerr << "Error: Host K buffer invalid or out of bounds for block " << current_processing_block_idx << std::endl;
+                                }
+                            }
 
-                        cl::NDRange global(1);
-                        cl::NDRange local(1);
-                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local));
-
-                        int result_idx = -1;
-                        CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &result_idx));
-                        host_indexForToken = result_idx;
-                        this->indexForToken = result_idx; // Also update the class member
-                    } 
-                    catch (const std::exception& e) {
-                        std::cerr << "Error during kernelComputePrediction in clTrain: " << e.what() << std::endl;
-                        throw;
+                            // Queries from previous block's EV for the current block
+                            for (int k_ev = 0; k_ev < CONTEXT_WIN; ++k_ev) {
+                                size_t q_vector_idx_in_block = k_ev;
+                                size_t host_q_offset = q_vector_idx_in_block * mat_heights_cl;
+                                if (!prev_block_attention.EV.mapped_data || (static_cast<size_t>(k_ev) * embedding_dim_cl + embedding_dim_cl) > (prev_block_attention.EV.row * prev_block_attention.EV.col)) {
+                                    std::cerr << "Warning: Prev block EV data invalid or out of bounds for index " << k_ev << " in clTrain K/Q." << std::endl; continue;
+                                }
+                                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, embedding_bytes_loc, prev_block_attention.EV.mapped_data + static_cast<size_t>(k_ev) * embedding_dim_cl));
+                                kq_kernel.setArg(0, d_tok_cl); kq_kernel.setArg(1, d_mQ_cl); kq_kernel.setArg(2, d_Q_cl);
+                                CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kq_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange));
+                                if (current_block_attention.Q.mapped_data && (host_q_offset + mat_heights_cl) <= (current_block_attention.Q.row * current_block_attention.Q.col)) {
+                                    CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_Q_cl, CL_TRUE, 0, matheights_bytes, current_block_attention.Q.mapped_data + host_q_offset));
+                                } 
+                                else { 
+                                    std::cerr << "Error: Host Q buffer invalid or out of bounds for block " << current_processing_block_idx << std::endl; 
+                                }
+                            }
+                        }
                     }
+                    this->clcontext.queue.finish();
                 }
-
-                // calculate error
-                current_error = crossEntropy(h_otok_buffer, expected_vec);
-                // Unified logging and convergence check
-                std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
-                                                  ? tokens[host_indexForToken]
-                                                  : "INVALID_INDEX";
-
-                std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, response[i]) << std::endl;
-
-                if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
-                    size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
-                    if (offset_bytes + outputBytes > tokenEmbedBytes) {
-                        throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
-                    }
-                    std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
-                    CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected_vec.data())); // Write expected_vec (target EH)
-                    if(predicted_token_str == "@#0"){
-                        std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
-                    }
-                    else {
-                        std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
-                        break;
-                    }
-                }
-                else if (j == this->epochs - 1) {
-                    if (predicted_token_str != expected_str) {
-                        std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
-                        this->epochs += 10;
-                    }
-                }
-
-                if(j > 0) {
-                    if(current_error <= prev_Error) {
-                        if(j <= 6)   
-                            learning *= 1.05;
-                        else if (j % 6 == 0)
-                            learning *= (1 + (j/6)*0.05);
-                    }
-                    else {
-                        if(j <= 6)   
-                            learning *= 0.95;
-                        else if (j % 6 == 0)
-                            learning *= (1 - (j/6)*0.05);
-                    }
-                }
-                prev_Error = current_error;
-
-                // --- Backward Pass ---
-                clBackward(expected_vec, current_block_idx);
-
-                /**/
-
-                int current_processing_block_idx_recompute = this->blockCount; // Or current_block_idx if more appropriate
-                size_t embedding_bytes_loc_recompute = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
-                size_t projection_matrix_bytes_recompute = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
-                size_t matheights_bytes_recompute = static_cast<size_t>(mat_heights_cl) * sizeof(float);
-
-                // std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl; // Original print
-                j++;
             }
 
-            resCount += 1;
             if(resCount > 0) {
                 size_t embedding_bytes_loc_recompute = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
                 size_t projection_matrix_bytes_recompute = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
@@ -461,6 +352,121 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 }
             }
 
+            // --- Training Loop for response token i ---
+            int j = 0; // Epoch counter
+            // current_error = 1.0f; // Error is calculated fresh each iteration
+            while (j < this->epochs) { // Changed loop condition to match CUDA (j < epochs)
+                // --- Forward Pass ---
+                // Pass the promptCount relevant for the *current* block/context state
+                int current_prompt_count_in_block = effective_context_size % CONTEXT_WIN;
+                if (current_prompt_count_in_block == 0 && effective_context_size > 0) current_prompt_count_in_block = CONTEXT_WIN;
+                clForward(current_block_idx, effective_context_size, current_prompt_count_in_block);
+                std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl;
+                
+                unsigned long long host_indexForToken = -1;
+                h_otok_buffer = this->otok;
+                if (h_otok_buffer.size() != static_cast<size_t>(d)) {
+                    throw std::runtime_error("clTrain(prompt-response): this->otok from clForward has incorrect size. Expected " + std::to_string(d) + ", got " + std::to_string(this->otok.size()));
+                }
+                // use kernelComputePrediction for output prediction
+                {
+                    cl::Buffer d_otok_buffer, d_result_index_buffer;
+                    try {
+                        size_t otok_bytes = h_otok_buffer.size() * sizeof(float);
+                        d_otok_buffer = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, h_otok_buffer.data(), &cl_err); CL_CHECK(cl_err);
+                        d_result_index_buffer = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int), nullptr, &cl_err); CL_CHECK(cl_err);
+
+                        cl::Kernel kernel = this->clcontext.kernels.at("kernelComputePrediction");
+
+                        CL_CHECK(kernel.setArg(0, d_otok_buffer));
+                        CL_CHECK(kernel.setArg(1, d_embeddings));
+                        CL_CHECK(kernel.setArg(2, d_result_index_buffer));
+                        CL_CHECK(kernel.setArg(3, static_cast<cl_int>(this->d)));
+                        CL_CHECK(kernel.setArg(4, static_cast<cl_int>(this->vocabsize)));
+
+                        cl::NDRange global(1);
+                        cl::NDRange local(1);
+                        CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local));
+
+                        int result_idx = -1;
+                        CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &result_idx));
+                        host_indexForToken = result_idx;
+                        this->indexForToken = result_idx; // Also update the class member
+                    } 
+                    catch (const std::exception& e) {
+                        std::cerr << "Error during kernelComputePrediction in clTrain: " << e.what() << std::endl;
+                        throw;
+                    }
+                }
+
+                // calculate error
+                current_error = crossEntropy(h_otok_buffer, expected_vec);
+                // Unified logging and convergence check
+                std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
+                                                  ? tokens[host_indexForToken]
+                                                  : "INVALID_INDEX";
+
+                std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, response[i]) << std::endl;
+
+                if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
+                    size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
+                    if (offset_bytes + outputBytes > tokenEmbedBytes) {
+                        throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
+                    }
+                    std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count: " << epochCount << " | Current Token Count " << currentTokenCount << std::endl;
+                    CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected_vec.data())); // Write expected_vec (target EH)
+                    if(predicted_token_str == "</s>"){
+                        // learning = learnby;
+                        totalLearning += learning;
+                        prev_Error = current_error;
+                        j++;
+                        std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
+                        break;
+                    }
+                    else {
+                        // learning = learnby;
+                        totalLearning += learning;
+                        prev_Error = current_error;
+                        j++;
+                        std::cout << "---------------------------- To next token ------------->>>>>>>>>>>>>>>" << std::endl;
+                        break;
+                    }
+                }
+                else if (j == this->epochs - 1) {
+                    if (predicted_token_str != expected_str) {
+                        std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
+                        this->epochs += 10;
+                    }
+                }
+
+                if(j > 0) {
+                    if(current_error <= prev_Error) {
+                        if(j <= 6)   
+                            learning *= 1.05;
+                        else if (j % 6 == 0)
+                            learning *= (1 + (j/6)*0.05);
+                    }
+                    else {
+                        if(j <= 6)   
+                            learning *= 0.95;
+                        else if (j % 6 == 0)
+                            learning *= (1 - (j/6)*0.05);
+                    }
+                }
+                prev_Error = current_error;
+                // --- Backward Pass ---
+                clBackward(expected_vec, current_block_idx, clip_norm);
+
+                int current_processing_block_idx_recompute = this->blockCount; // Or current_block_idx if more appropriate
+                size_t embedding_bytes_loc_recompute = static_cast<size_t>(embedding_dim_cl) * sizeof(float);
+                size_t projection_matrix_bytes_recompute = static_cast<size_t>(mat_heights_cl) * embedding_dim_cl * sizeof(float);
+                size_t matheights_bytes_recompute = static_cast<size_t>(mat_heights_cl) * sizeof(float);
+
+                // std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl; // Original print
+                j++;
+            }
+
+            resCount += 1;
             // --- Update Host State ---
             this->trainCount++;
             this->epochCount += j;
@@ -490,12 +496,6 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
         this->epochs = initial_epochs;
         throw;
     }
-    /*    catch (const std::runtime_error& e) { // Catch runtime errors from CL_CHECK
-        std::cerr << "OpenCL Runtime Error in clTrain(prompt-response): " << e.what() << std::endl;
-        this->epochs = initial_epochs;
-        throw;
-    }
-*/
 }
 
 

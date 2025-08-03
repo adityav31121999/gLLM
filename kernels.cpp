@@ -12,6 +12,8 @@
         "D:/gLLM/src/maths/src/mat/cl/operators.cl",
         "D:/gLLM/src/neural/src/mlp/cl/mlp.cl",
         "D:/gLLM/src/neural/src/attention/cl/attention.cl",
+        "D:/gLLM/src/neural/src/attention/cl/kdotq.cl",
+        "D:/gLLM/src/neural/src/attention/cl/weights.cl",
         "D:/gLLM/src/neural/src/transformer/cl/transformer.cl",
         "D:/gLLM/src/model/src/tokens/token.cl"
     };
@@ -64,6 +66,7 @@
         "kernelMseReduction",
         "kernelRpropUpdate",
         "kernelUpdateElasticNet",
+        "adam_optimizer_kernel",
         // operators.cl
         "dot_matrix_vector",
         "dot_vector_matrix_vector",
@@ -125,6 +128,7 @@
         "kernelUpdateWeights_1stHead_V_ElasticNet",
         "kernelUpdateWeights_EV_V_ElasticNet",
         "kernelUpdateWeights_1stHead_HV_ElasticNet",
+        "kernelUpdateWeights_General",
         // transformer.cl
         "kernelKdotQforSelf_train_transformer",
         "kernelKdotQforCross_train_transformer",
@@ -132,7 +136,12 @@
         "kernelKdotQBlock1Cross_Inference",
         "kernelKdotQBlockNSelf_Inference",
         "kernelKdotQBlockNCross_Inference",
-
+        "clCalculateOutputDeltaLOTA",
+        "clComputeGradientDeEmbeddings",
+        "clPropagateErrorToHidden",
+        "clComputeGradTokenEmbedForHead",
+        "clAccumulateEmbeddingGradients",
+        "clSumMatricesElementwise",
         // model
         "generate_embeddings",
         "batchedVectorInverseKernel"

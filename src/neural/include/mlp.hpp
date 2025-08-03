@@ -37,10 +37,10 @@ public:
     std::vector<std::vector<float>> activations;   // activations for each layer
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
-
+/*
     std::vector<mat> moments; // First moments for weights
     std::vector<mat> velocity; // Second moments for weights
-
+*/
     // Constructor(s) modified to accept OpenCLContext when needed
 #ifdef USE_OPENCL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
@@ -162,9 +162,9 @@ inline mlp::mlp(const mlp& other) :
     hlayers(other.hlayers),         // std::vector copy constructor
     activations(other.activations), // std::vector copy constructor
     gweights(other.gweights),       // Relies on mat's copy constructor and std::vector's copy constructor
-    params(other.params),
-    moments(other.moments),
-    velocity(other.velocity)
+    params(other.params)
+    // moments(other.moments),
+    // velocity(other.velocity)
 {}
 
 inline mlp& mlp::operator=(const mlp& other) {
@@ -191,8 +191,8 @@ inline mlp& mlp::operator=(const mlp& other) {
     activations = other.activations; // std::vector assignment
     gweights = other.gweights;       // Relies on mat's assignment operator and std::vector's assignment
     params = other.params;
-    moments = other.moments;
-    velocity = other.velocity;
+    // moments = other.moments;
+    // velocity = other.velocity;
     return *this;
 }
 
@@ -246,6 +246,13 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
     float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
     float cucomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
     float cudropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
+
+#elif USE_OPENCL
+
+// opencl implementation (kernels remain the same)
+    void clipGradientBuffer(cl::CommandQueue& queue, cl::Kernel& clip_kernel,
+        cl::Kernel& apply_kernel, cl::Buffer& gradient_buffer, float clip_norm_value,
+        size_t num_elements, size_t local_work_size_1d, OpenCLContext& clcontext);
 
 #endif
 

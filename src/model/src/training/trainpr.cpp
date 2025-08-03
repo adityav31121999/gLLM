@@ -160,7 +160,7 @@ void model::trainBlockPR(const std::string& txtFileLocation)
             TOK.splitSentence(tokensOfFile[2*i], oddSentence[i]);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
             TOK.splitSentence(tokensOfFile[2*i+1], evenSentence[i]); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
             evenSentence[i].resize(evenSentence[i].size() + 1);
-            evenSentence[i].back() = "<@#0>";
+            evenSentence[i].back() = "</s>";
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
@@ -398,7 +398,7 @@ void model::trainModelPR(const std::string& txtFileLocation)
             TOK.splitSentence(tokensOfFile[2*i], oddSentence[i]);    // WILL TAKE EVEN INDEX (odd NUMBERED SENTENCE)
             TOK.splitSentence(tokensOfFile[2*i+1], evenSentence[i]); // WILL TAKE ODD INDEX (odd NUMBERED SENTENCE)
             evenSentence[i].resize(evenSentence[i].size() + 1);
-            evenSentence[i].back() = "<@#0>";
+            evenSentence[i].back() = "</s>";
             std::vector<std::vector<float>> promptEmbeddings, responseEmbeddings;
             std::vector<std::string> responseTokens;
             // get embeddings for prompt
