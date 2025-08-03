@@ -27,10 +27,10 @@ __device__ unsigned int xorshift32_cuda(unsigned int x) {
 }
 
 // Function to convert a normalized [0,1] float to a custom range [r1, r2]
-__device__ float scale_random_cuda(unsigned int* seed_ptr, float r1, float r2) {
+__device__ float scale_random_cuda(unsigned int* seed_ptr, float r1) {
     *seed_ptr = xorshift32_cuda(*seed_ptr);
     float normalized_val = (float)(*seed_ptr) / (float)UINT_MAX;
-    return r1 + normalized_val * (r2 - r1);
+    return r1 + normalized_val * (100.0f - r1);
 }
 
 // CUDA Kernel to generate embeddings
@@ -38,7 +38,6 @@ __global__ void generate_embeddings_kernel(
     float* embeddings_out,
     int d_dim,
     float r1,
-    float r2,
     unsigned int initial_seed_offset,
     int total_elements) {
 
@@ -49,7 +48,7 @@ __global__ void generate_embeddings_kernel(
         unsigned int seed = initial_seed_offset + idx + 1; // +1 to avoid seed 0
 
         // Generate random float in [r1, r2]
-        embeddings_out[idx] = scale_random_cuda(&seed, r1, r2);
+        embeddings_out[idx] = scale_random_cuda(&seed, r1);
     }
 }
 
@@ -118,7 +117,7 @@ __global__ void batchedVectorInverseKernel(float* output, const float* input, in
 
 
 // Host-side wrapper function
-void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val, float r1, float r2) {
+void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val, float r1) {
     // Resize embedding vector to hold the results
     embedding.resize(vocSize_val, std::vector<float>(d_dim));
 
@@ -142,7 +141,6 @@ void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, c
         d_embeddings,
         d_dim,
         r1,
-        r2,
         initial_seed_offset,
         total_elements
     );

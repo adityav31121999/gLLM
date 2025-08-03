@@ -110,6 +110,41 @@ std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>
  * @param temp The temperature parameter (passed by value, as it's not modified).
  * @return Vector of softmax probabilities.
  */
+std::vector<float> softmax(const std::vector<float>& x) { // Pass temp by value
+    if (x.empty()) return {};
+
+    // Find max element for numerical stability
+    float max_val = *std::max_element(x.begin(), x.end());
+
+    std::vector<float> exps(x.size());
+    float sum = 0.0f;
+    for (size_t i = 0; i < x.size(); ++i) {
+        // Subtract max_val before exponentiating
+        exps[i] = std::exp(x[i] - max_val);
+        sum += exps[i];
+    }
+
+    // Handle case where sum is zero (e.g., all inputs were -inf after scaling)
+    if (sum == 0.0f || !std::isfinite(sum) ||  !std::isnan(sum)) {
+        // Return uniform distribution if sum is zero or non-finite
+        return std::vector<float>(x.size(), 1.0f / static_cast<float>(x.size()));
+    }
+
+    // Normalize
+    for (float& val : exps) {
+        val /= sum;
+    }
+    return exps;
+}
+
+
+/**
+ * @brief Softmax activation function for a vector. Applies the softmax function.
+ *          Numerically stable version using max_val subtraction.
+ * @param x The input vector (const reference).
+ * @param temp The temperature parameter (passed by value, as it's not modified).
+ * @return Vector of softmax probabilities.
+ */
 std::vector<float> softmax(const std::vector<float>& x, float temp) { // Pass temp by value
     if (x.empty()) return {};
 

@@ -125,8 +125,8 @@ model::model(const std::string& baseDirectory, int m_param, int x_param, int y_p
     n(n_param), d(d_param), matheight(matHeightParam), l(l_param), learning(learning_param), lambda_L1(lambda_L1), 
     lambda_L2(lambda_L2), epsilon(0.0f), total(m * n), isSelf(isSelfAttention_param), toTrain(toTrainModel_param), 
     metadata(nullptr), chat(nullptr), currentChatLogPath(""), TOK(tokeniserPath), epoch(epoch),
-    T(this->m, x_param, y_param, n_param, d_param, matHeightParam, l_param, TOK.getVocabularySize(), this->learning, 
-        lambda_L1, lambda_L2, this->isSelf, epoch, this->toTrain, baseDirectory)
+    T(this->m, x_param, y_param, n_param, d_param, m_param, l_param, TOK.getVocabularySize(),
+        this->learning, this->lambda_L1, this->lambda_L2, this->isSelf, this->toTrain, epoch, baseDirectory)
 {
     total = this->m * this->n;
     info = {}; // Zero-initialize info struct

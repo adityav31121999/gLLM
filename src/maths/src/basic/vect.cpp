@@ -716,8 +716,8 @@ float crossEntropy(std::vector<float>& a, std::vector<float>& b) {
     if (a.size() != b.size()) {
         throw std::runtime_error("crossEntropy: Vector sizes do not match.");
     }
-    std::vector<float> y_true = LOTA(a);        // normalise a
-    std::vector<float> y_pred = LOTA(b);        // normalise b
+    std::vector<float> y_true = softmax(a);        // normalise a
+    std::vector<float> y_pred = softmax(b);        // normalise b
     float loss = 0.0f;
     float epsilon = 1e-15f; // Small value to prevent log(0)
     for (size_t i = 0; i < a.size(); ++i) {

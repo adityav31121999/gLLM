@@ -116,6 +116,7 @@ void attention::cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2
         // For lambda, just setting cuda_err and returning is fine, the caller will check it.
     };
 
+/*
     // Apply Adam to attention head's core matrices
     // Check cuda_err after each call to propagate error early if needed
     apply_adam_to_matrix_pair_cuda(MQ, gMQ, m_MQ, v_MQ);
@@ -126,7 +127,7 @@ void attention::cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2
     if (cuda_err != cudaSuccess) return;
     apply_adam_to_matrix_pair_cuda(MH, gMH, m_MH, v_MH);
     if (cuda_err != cudaSuccess) return;
-
+*/
     // Apply Adam to internal MLPs (recursive call)
     hor.cuAdamUpdate(t_adam, beta1, beta2, epsilon, learning_rate);
     ver.cuAdamUpdate(t_adam, beta1, beta2, epsilon, learning_rate);

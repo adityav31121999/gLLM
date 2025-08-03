@@ -32,7 +32,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     inTraining(inTraining_param), learning(learning_rate_param), lambda_L1(lambda_L1_param),
     lambda_L2(lambda_L2_param), epsilon(0.0f), epochs(EPOCHS), error(0.0f), trainCount(0), epochCount(0), 
     promptNresponse(nullptr), embeddings(this->vocabsize, d), deEmbeddings(vocab_param, d_param * y_param),
-    tokenEmbed(m_param * n_param, d_param), epochs(epoch)
+    tokenEmbed(m_param * n_param, d_param)
 {
 #ifdef USE_CPU
     std::cout << "TRANSFORMER constructed with CPU" << std::endl;
@@ -62,7 +62,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         t_step_adam = 0;
         params = (this->m * t[0].params) + d + (this->vocabsize * d) + (this->n*this->m)*d;
         this->learning = 0.01f; // Or your initial learning rate
-        this->best_loss_for_lr_schedule = std::numeric_limits<float>::(max)();
+        this->best_loss_for_lr_schedule = (std::numeric_limits<float>::max)();
         this->lr_patience_counter = 0;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }

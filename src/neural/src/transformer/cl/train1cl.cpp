@@ -52,7 +52,6 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
 
     try {
         float prev_Error = 0.0f;
-        float learnby = learning;
         int initial_token_count = this->currentTokenCount;
         // --- Device Buffer Allocation & H->D Transfer ---
         // Calculate the total size needed for all blocks' context windows
@@ -241,35 +240,14 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
             // --- Get EH output from the relevant block ---
             std::cout << "clTrain(single): Getting output for block " << current_block_idx << " with effective context size " << effective_context_size << std::endl;
             h_otok_buffer = this->otok;
-            if (h_otok_buffer.size() != static_cast<size_t>(d)) {
-                throw std::runtime_error("clTrain(single): this->otok from clForward has incorrect size. Expected " + std::to_string(d) + ", got " + std::to_string(h_otok_buffer.size()));
-            }
-            current_error = crossEntropy(h_otok_buffer, expected); // Host-side error calculation
-            std::cout << "Training Error: " << current_error << " for token: " << expString << std::endl;
-            if (this->tokens[host_indexForToken] == expString && this->tokens[host_indexForToken] != "INVALID_INDEX") {
-                size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
-                if (offset_bytes + outputBytes > tokenEmbedBytes) {
-                    throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
-                }
-                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " 
-                          << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " 
-                          << currentTokenCount << std::endl;
-                CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected.data()));
-                if(this->tokens[host_indexForToken]  == "</s>"){
-                    std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
-                }
-                else {
-                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
-                    totalLearning += learning;
-                    break;
-                }
-            }
-            else if (j == this->epochs - 1) {
-                if (this->tokens[host_indexForToken] != expString) {
-                    std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
-                    this->epochs += 10;
-                }
-            }
+            current_error = crossEntropy(expected, otok);
+            std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
+                                                ? tokens[host_indexForToken] : "INVALID_INDEX";
+            std::cout << "Computed token is -> " << predicted_token_str
+                        << " (index: " << host_indexForToken
+                        << ") | BCE LOSS " << current_error
+                        << " | Epoch Count: " << j 
+                        << " | Learning Rate: " << this->learning << std::endl;
 
             if(current_block_idx == 1) {
                 clBackward(expected, clip_norm);
@@ -285,7 +263,6 @@ void transformer::clTrain(int& promptCount, int& currentTokenCount, int& blockCo
             prev_Error = current_error;
             j++;
         }
-        learning = learnby;
 
         this->trainCount++;
         this->epochCount += j; // Add epochs spent on this token
@@ -346,6 +323,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
     cl::Buffer d_Q_cl, d_K_cl, d_mQ_cl, d_mK_cl, d_tok_cl;  // matrices and output
     int initial_epochs_per_token_limit = this->epochs;      // Store initial limit, if you don't modify 'epochs' within loop
     int initial_token_count = this->currentTokenCount;      // Store initial count
+    float learn = this->learning;                           // keep original learning rate
 
     try {
         this->best_loss_for_lr_schedule = (std::numeric_limits<float>::max)();
@@ -461,6 +439,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
             // The epoch loop for a single target token
             // The `this->epochs` member now serves as a soft cap, but the LR scheduler can cause earlier exit
             float prev_error = 1.0f;
+            learning = learn;
 
             while (j < initial_epochs_per_token_limit) { // Use initial limit for fixed epochs per token
                 // Check if learning rate has become too small (effective early stopping)
@@ -616,24 +595,26 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                 // adjustLearningRateOnPlateau(current_error);
                 if(i > 0) {
                     if(current_error <= prev_error) {
-                        if(i <= 6)   
+                        if(j <= 6)   
                             learning *= 1.05;
-                        else if (i % 6 == 0)
-                            learning *= (1 + (i/6)*0.05);
+                        else if (j % 6 == 0)
+                            learning *= (1 + (j/6)*0.05);
                     }
                     else {
-                        if(i <= 6)   
+                        if(j <= 6)   
                             learning *= 0.95;
-                        else if (i % 6 == 0)
-                            learning *= (1 - (i/6)*0.05);
+                        else if (j % 6 == 0)
+                            learning *= (1 - (j/6)*0.05);
                     }
                 }
+
                 // expected vector for each head to start backpropagation
                 clBackward(expected_vec, current_block_idx, clip_norm);
                 // update embeddings which are in use
                 // --- Early exit if token is predicted correctly ---
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     std::cout << "Token '" << expected_str << "' predicted correctly after " << j+1 << " epochs. Moving to next token." << std::endl;
+                    this->learning = learn;
                     totalLearning += this->learning;
                     std::cout << "--------------->>>>>>>>>>>>> To Next Token >>>>>>>>>>>>>>>>-------------" << std::endl;
                     break;
@@ -644,6 +625,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
             }
 
             // --- Update Host State after current token's training loop completes ---
+            this->learning = learn;
             this->trainCount++;
             this->epochCount += j;
             this->error += current_error;

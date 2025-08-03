@@ -32,8 +32,8 @@ void mlp::cuAdamUpdate(unsigned long long t_adam_param, float beta1, float beta2
     for (size_t l = 0; l < num_layers - 1; ++l) {
         mat& current_weights = weights[l];
         mat& current_gradients = gweights[l]; // Gradients computed in backward pass
-        mat& m = moments[l]; // First moment
-        mat& v = velocity[l]; // Second moment
+        //  mat& m = moments[l]; // First moment
+        //  mat& v = velocity[l]; // Second moment
 
         int total_elements = current_weights.row * current_weights.col;
         if (total_elements == 0) { // Handle empty matrices gracefully
@@ -76,20 +76,10 @@ void mlp::cuAdamUpdate(unsigned long long t_adam_param, float beta1, float beta2
             fprintf(stderr, "CUDA malloc for moments (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
             goto cleanup_layer;
         }
-        cuda_err = cudaMemcpy(d_m, m.mapped_data, matrix_byte_size, cudaMemcpyHostToDevice);
-        if (cuda_err != cudaSuccess) {
-            fprintf(stderr, "CUDA memcpyH2D for moments (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
-            goto cleanup_layer;
-        }
 
         cuda_err = cudaMalloc(&d_v, matrix_byte_size);
         if (cuda_err != cudaSuccess) {
             fprintf(stderr, "CUDA malloc for velocity (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
-            goto cleanup_layer;
-        }
-        cuda_err = cudaMemcpy(d_v, v.mapped_data, matrix_byte_size, cudaMemcpyHostToDevice);
-        if (cuda_err != cudaSuccess) {
-            fprintf(stderr, "CUDA memcpyH2D for velocity (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
             goto cleanup_layer;
         }
 
@@ -119,16 +109,6 @@ void mlp::cuAdamUpdate(unsigned long long t_adam_param, float beta1, float beta2
         cuda_err = cudaMemcpy(current_weights.mapped_data, d_weights, matrix_byte_size, cudaMemcpyDeviceToHost);
         if (cuda_err != cudaSuccess) {
             fprintf(stderr, "CUDA memcpyD2H for weights (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
-            goto cleanup_layer;
-        }
-        cuda_err = cudaMemcpy(m.mapped_data, d_m, matrix_byte_size, cudaMemcpyDeviceToHost);
-        if (cuda_err != cudaSuccess) {
-            fprintf(stderr, "CUDA memcpyD2H for moments (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
-            goto cleanup_layer;
-        }
-        cuda_err = cudaMemcpy(v.mapped_data, d_v, matrix_byte_size, cudaMemcpyDeviceToHost);
-        if (cuda_err != cudaSuccess) {
-            fprintf(stderr, "CUDA memcpyD2H for velocity (layer %zu) failed: %s\n", l, cudaGetErrorString(cuda_err));
             goto cleanup_layer;
         }
 

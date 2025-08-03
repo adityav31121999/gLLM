@@ -76,6 +76,7 @@ std::vector<float> sigmoid(const std::vector<float>& x);
 std::vector<float> sigmoidder(const std::vector<float>& x);
 std::vector<std::vector<float>> sigmoid(const std::vector<std::vector<float>>& x);
 std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>& x);
+std::vector<float> softmax(const std::vector<float>& x);
 std::vector<float> softmax(const std::vector<float>& x, float temp);
 std::vector<float> softmaxder(const std::vector<float>& x, float temp);
 std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float temp);

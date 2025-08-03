@@ -51,7 +51,7 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
     
     #ifdef USE_CUDA
         // Call the CUDA kernel wrapper
-        cuEmbeddingFormula(this->embeddings, this->seeds, this->d, this->vocSize, r1, r2);
+        cuEmbeddingFormula(this->embeddings, this->seeds, this->d, this->vocSize, r1);
     #elif USE_OPENCL
         // Call the OpenCL kernel wrapper
         clEmbeddingFormula(this->ocl, this->embeddings, this->seeds, this->d, this->vocSize, r1);

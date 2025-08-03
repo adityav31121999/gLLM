@@ -400,13 +400,14 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 }
 
                 // calculate error
-                current_error = crossEntropy(h_otok_buffer, expected_vec);
-                // Unified logging and convergence check
+                current_error = crossEntropy(expected_vec, otok);
                 std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
-                                                  ? tokens[host_indexForToken]
-                                                  : "INVALID_INDEX";
-
-                std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, response[i]) << std::endl;
+                                                  ? tokens[host_indexForToken] : "INVALID_INDEX";
+                std::cout << "Computed token is -> " << predicted_token_str
+                          << " (index: " << host_indexForToken
+                          << ") | BCE LOSS " << current_error
+                          << " | Epoch Count: " << j 
+                          << " | Learning Rate: " << this->learning << std::endl;
 
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
@@ -417,10 +418,6 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                     CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, offset_bytes, outputBytes, expected_vec.data())); // Write expected_vec (target EH)
                     if(predicted_token_str == "</s>"){
                         // learning = learnby;
-                        totalLearning += learning;
-                        prev_Error = current_error;
-                        j++;
-                        std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
                         break;
                     }
                     else {
@@ -428,7 +425,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                         totalLearning += learning;
                         prev_Error = current_error;
                         j++;
-                        std::cout << "---------------------------- To next token ------------->>>>>>>>>>>>>>>" << std::endl;
+                        std::cout << "---------------------------- To next token ----------------------------" << std::endl;
                         break;
                     }
                 }
@@ -465,7 +462,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& prompt, std::vector<s
                 // std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << std::endl; // Original print
                 j++;
             }
-
+            totalLearning += learning;
+            std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
             resCount += 1;
             // --- Update Host State ---
             this->trainCount++;
