@@ -4,6 +4,7 @@
 ![alt text](gLLMicon.svg)
 
 - This idea is inspired by the need to train an AI Model on gaming gpu or sigle gpu without causing heavy burden on VRAM and GPU computes.
+- This library is an experimental implementation of DCA.
 
 ## INTRO
 - Library for LLMs
