@@ -52,7 +52,7 @@ void tokeniser::train(const std::string& path2trainData, int num_merges, const s
     calculateTokenStatsFromCounts(corpus_word_counts, stats_output_path);
     std::cout << "-> " << std::filesystem::path(stats_output_path).filename().string() << " contains " << count_lines(stats_output_path) << " rows." << std::endl;
     // Step B: Generate embeddings using original formula
-    generateAndSaveEmbeddings(embeddings_output_path, -10.0f, 10.0f);
+    generateAndSaveEmbeddings(embeddings_output_path, 1.618f);
     std::cout << "-> " << std::filesystem::path(stats_output_path).filename().string() << " contains " << count_lines(stats_output_path) << " rows." << std::endl;
     std::cout << "-> " << std::filesystem::path(embeddings_output_path).filename().string() << " contains " << count_lines(embeddings_output_path) << " rows." << std::endl;
 }

@@ -15,7 +15,6 @@
 #include <chrono>
 #include <filesystem>
 #include <iomanip>
-#include <set>
 #include <unordered_set> 
 
 // Create a global mutex and progress map for debugging.

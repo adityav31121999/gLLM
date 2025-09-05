@@ -38,21 +38,21 @@ void create(std::string &locationOfALLbins)
     std::ofstream block1stSpecific(locationOfALLbins + "/bin/block1stSpecific.bin", std::ios::binary);
 
     // Initialize files with correct dimensions
-    unsigned long long mat_size = static_cast<unsigned long long>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS);
-    unsigned long long mlp_size = static_cast<unsigned long long>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
-    unsigned long long cache_size = static_cast<unsigned long long>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
-    unsigned long long totalParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+    long long int mat_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS);
+    long long int mlp_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
+    long long int cache_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
+    long long int totalParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
                                + 2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
-    unsigned long long trainableParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+    long long int trainableParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
                                    + 2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
-    unsigned long long inferenceParams = (2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
+    long long int inferenceParams = (2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                    + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
-    unsigned long long block1stParams = (4*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+    long long int block1stParams = (4*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
                                + 2*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                + 3*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
 
-    std::cout << "      PARAMETERS                  COUNT           SIZE(MiBs)      SIZE(MBs)" << std::endl;
+    std::cout << "      PARAMETERS                 Total Values     SIZE(MiBs)      SIZE(MBs)" << std::endl;
     std::cout << "Trained Weight Matrix         :  " << mat_size << "\t   " << static_cast<float>(sizeof(float)*mat_size)/(1000*1000) << "\t    " << static_cast<float>(sizeof(float)*mat_size)/(1024*1024) << std::endl;
     std::cout << "Trained MLP Weight            :  " << mlp_size << "\t   " << static_cast<float>(sizeof(float)*mlp_size)/(1000*1000) << "\t    " << static_cast<float>(sizeof(float)*mlp_size)/(1024*1024) << std::endl;
     std::cout << "Compressed Weight             :  " << cache_size << "\t   " << static_cast<float>(sizeof(float)*cache_size)/(1000*1000) << "\t    " << static_cast<float>(sizeof(float)*cache_size)/(1024*1024) << std::endl;
@@ -157,17 +157,17 @@ void create(std::string &locationOfALLbins, int totalBlocks)
     std::ofstream block1stSpecific(locationOfALLbins + "/bin/block1stSpecific.bin", std::ios::binary);
 
     // Initialize files with correct dimensions
-    unsigned long long mat_size = static_cast<unsigned long long>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS);
-    unsigned long long mlp_size = static_cast<unsigned long long>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
-    unsigned long long cache_size = static_cast<unsigned long long>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
-    unsigned long long totalParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+    long long int mat_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS);
+    long long int mlp_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
+    long long int cache_size = static_cast<long long int>(NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
+    long long int totalParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
                                + 2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
-    unsigned long long trainableParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+    long long int trainableParams = (4*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
                                    + 2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP);
-    unsigned long long inferenceParams = (2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
+    long long int inferenceParams = (2*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                    + 3*NUMBER_OF_BLOCKS * NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
-    unsigned long long block1stParams = (4*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
+    long long int block1stParams = (4*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * MATHEIGHTS
                                + 2*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING * LAYERS_MLP
                                + 3*NUMBER_OF_HEADS * NUMBER_OF_PA * EMBEDDING * EMBEDDING);
 

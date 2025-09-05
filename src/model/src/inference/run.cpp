@@ -1,3 +1,4 @@
+
 // model.cpp: implementation of Model class
 #include "include/model.hpp"
 #include <iostream>
@@ -35,20 +36,20 @@ void model::runModel(const std::string& binDirectory)
             std::vector<float> pValues(EMBEDDING, 0.0f);
             for(int i = 0; i < tinput.size(); i++) {
                 // get embeddings for tokens
-                T.getEmbedding(tinput[i], pValues);
+                pValues = TOK.getEmbeddingForToken(tinput[i]);
                 setRow(T.tokenEmbed, T.currentTokenCount+i, pValues);
             }
             T.promptCount = tinput.size();
-        #ifdef USE_CUDA
-        // use cuda run function from transformer
-            T.cuRun();
-        #elif USE_OPENCL
-        // use cl run function from transformer
-            T.clRun();
-        #elif USE_CPU
-        // use cpp run function from transformer
-            T.run();
-        #endif
+            #ifdef USE_CUDA
+            // use cuda run function from transformer
+                T.cuRun();
+            #elif USE_OPENCL
+            // use cl run function from transformer
+                T.clRun();
+            #elif USE_CPU
+            // use cpp run function from transformer
+                T.run();
+            #endif
             if (this->chat != nullptr) {
                 // Check if the file pointer is valid
                 fprintf(this->chat, "\n");
@@ -59,7 +60,6 @@ void model::runModel(const std::string& binDirectory)
         std::cout << "SAVE CHAT IN FILE (1 for save): ";
         std::cin >> savechat;
         if(savechat == 1) { saveChat(); }
-        else { std::cout << "Not saving chat. " << std::endl; }
         std::cout << "NEW CHAT (1) or END (0): ";
         std::cin >> newchat;
         // continue chatting or end chat

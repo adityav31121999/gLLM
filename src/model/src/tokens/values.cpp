@@ -62,11 +62,16 @@ void tokeniser::setEmbedding(const std::string& token, std::vector<float> embedd
  * @return The embedding vector for the token. Returns an empty vector if not found.
  */
 std::vector<float> tokeniser::getEmbeddingForToken(const std::string& token) const {
-    auto it = std::find(tokens.begin(), tokens.end(), token);
-    if (it != tokens.end()) {
-        auto index = std::distance(tokens.begin(), it);
-        return embeddings[index];
+    auto it = token_to_idx.find(token);
+    if (it != token_to_idx.end()) {
+        int index = it->second;
+        // Ensure the index is valid for the embeddings vector
+        if (static_cast<size_t>(index) < embeddings.size()) {
+            std::cout << "Embedding found for token: \t\'" << token << "\' at index \t" << index << std::endl;
+            return embeddings[index];
+        }
     }
+    std::cout << "Embedding and Index not found for token: " << token << std::endl;
     return {}; // Return empty vector if not found
 }
 
@@ -80,15 +85,10 @@ std::vector<float> tokeniser::getEmbeddingForToken(const std::string& token) con
  */
 const int tokeniser::getIndexOfToken(const std::string &token) const
 {
-    auto it = std::find(tokens.begin(), tokens.end(), token);
-    if (it != tokens.end()) {
-        auto index = std::distance(tokens.begin(), it);
-        if(index < tokens.size())
-            return index;
-        else
-            return -1;
-    }
-    else {
+    auto it = token_to_idx.find(token);
+    if (it != token_to_idx.end()) {
+        return it->second;
+    } else {
         return -1;
     }
 }

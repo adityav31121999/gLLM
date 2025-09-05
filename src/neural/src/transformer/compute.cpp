@@ -1,6 +1,9 @@
-#ifdef USE_CPU
+
 // compute functions
+#include "include/block.hpp"
 #include "include/transformer.hpp"
+
+#ifdef USE_CPU
 
 /**
  * @brief compute key or query of token using token embedding and matrix for keys and queries
@@ -69,6 +72,31 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
     dot = std::inner_product(temp.begin(), temp.end(), T2.begin(), 0.0);
 }
 
+/**
+ * @brief compute the prediction for possible token embedding output
+ * @param output forward propagation from block: EH
+ * @param embeddings token embeddings
+ * @param voc size of token vocabulary
+ * @param index position of highest probability token embedding
+ * @note it is assumed in this function that the case of "all dot products being zero" will
+ *      not occur
+ */
+void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index)
+{
+    std::vector<float> pred(voc, 0.0f);     // hold predictions
+    for(int i = 0; i < voc; i++) {
+        pred[i] = std::inner_product(output.begin(), output.end(), embeddings[i].begin(), 0.0f); // dot product
+    }
+    // find the highest value in the pred vector
+    float max = pred[0];
+    index = 0;
+    for(int i = 1; i < voc; i++) {
+        if(pred[i] > max) {
+            max = pred[i];
+            index = i;
+        }
+    }
+}
 
 /**
  * @brief compute the prediction for possible token embedding output
@@ -79,23 +107,21 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void computeOutput(const std::vector<float>& output, const mat& deEmbeddings, unsigned long long& voc, int& index)
+void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index)
 {
-    if (output.size() != static_cast<size_t>(deEmbeddings.col) || voc != deEmbeddings.row) {
-        throw std::invalid_argument("computeOutput: Dimension mismatch. output size (" + std::to_string(output.size()) 
-                    + ") != deEmbeddings.col (" + std::to_string(deEmbeddings.col) + ") or voc (" + std::to_string(voc) 
-                    + ") != embeddings.row (" + std::to_string(deEmbeddings.row) + ")");
+    if (output.size() != static_cast<size_t>(embeddings.col) || voc != embeddings.row) {
+        throw std::invalid_argument("computeOutput: Dimension mismatch. output size (" + std::to_string(output.size()) + ") != embeddings.col (" + std::to_string(embeddings.col) + ") or voc (" + std::to_string(voc) + ") != embeddings.row (" + std::to_string(embeddings.row) + ")");
     }
-    if (!deEmbeddings.mapped_data) {
+    if (!embeddings.mapped_data) {
         throw std::runtime_error("computeOutput: Embeddings matrix is not mapped.");
     }
     std::vector<float> pred(voc, 0.0f);     // hold predictions
     // Calculate dot product of 'output' with each row of 'embeddings'
     for(int i = 0; i < voc; i++) {
         float row_dot = 0.0f;
-        size_t row_offset = static_cast<size_t>(i) * deEmbeddings.col;
-        for(int k = 0; k < deEmbeddings.col; ++k) {
-            row_dot += output[k] * deEmbeddings.mapped_data[row_offset + k];
+        size_t row_offset = static_cast<size_t>(i) * embeddings.col;
+        for(int k = 0; k < embeddings.col; ++k) {
+            row_dot += output[k] * embeddings.mapped_data[row_offset + k];
         }
         pred[i] = row_dot; // dot product
     }

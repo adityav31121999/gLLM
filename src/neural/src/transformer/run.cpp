@@ -177,7 +177,7 @@ void transformer::run() {
             std::cout << "\nTOKEN LIMIT REACHED AT FULL CONTEXT WHILE IN PROCESS! SORRY :(";
             break;
         }
-        // check for terminating word '@#0'
+        // check for terminating word '</s>'
         if(tokens[indexForToken] == TERMINATE) {
             break;
         }

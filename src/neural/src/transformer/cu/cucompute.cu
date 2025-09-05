@@ -1,16 +1,14 @@
-#ifdef USE_CUDA
 
 // compute kernels and functions
+#include "include/attention.hpp"    // EMBEDDING, SCALING and CONTEXT_WIN, etc.
+#include "include/block.hpp"
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <cmath>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <float.h>
-
-// Define thread block dimensions (tune these based on your GPU architecture)
-#define THREADS_PER_BLOCK_X 16      // or 32
-#define THREADS_PER_BLOCK_Y 16      // or 32
 
 // Helper macro for CUDA error checking
 #define CUDA_CHECK(call) do {       \
@@ -21,6 +19,11 @@
         throw std::runtime_error(cudaGetErrorString(err));          \
     } \
 } while (0)
+
+
+// Define thread block dimensions (tune these based on your GPU architecture)
+#define THREADS_PER_BLOCK_X 16      // or 32
+#define THREADS_PER_BLOCK_Y 16      // or 32
 
 
 /**
@@ -59,12 +62,13 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
         return;
     }
 
+
     // --- Pre-computation and Setup ---
-    const float inv_scaling = 1.0f / sqrtf(EMBEDDING);          // SCALING defined in attention.hpp
-    const int embedding_dim = EMBEDDING;                        // 'd' is transformer's embedding dimension
-    const int context_win_size = CONTEXT_WIN;                   // 'n' is context window per head from transformer params
-    const int kdotq_full_width = CONTEXT_WIN;                   // Max width/height of KdotQ matrix per head
-    const int num_heads_in_parallel = NUMBER_OF_PA;             // Number of heads in this column (layers)
+    const float inv_scaling = 1.0f / sqrtf(EMBEDDING);       // SCALING defined in attention.hpp
+    const int embedding_dim = EMBEDDING;                    // 'd' is transformer's embedding dimension
+    const int context_win_size = CONTEXT_WIN;                 // 'n' is context window per head from transformer params
+    const int kdotq_full_width = CONTEXT_WIN;  // Max width/height of KdotQ matrix per head
+    const int num_heads_in_parallel = NUMBER_OF_PA;            // Number of heads in this column (layers)
 
     // --- Data Sizes Per Head (in elements) ---
     // Ensure context_win_size and embedding_dim are positive
@@ -117,7 +121,7 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
         // Initialize KdotQ to 0 or NaN? Let's initialize to 0 for safety.
         CUDA_CHECK(cudaMemset(d_all_kdotq, 0, total_kdotq_bytes));
 
-        if (inTraining == 1) {
+        if (inTraining) {
             CUDA_CHECK(cudaMalloc(&d_all_keys, total_k_bytes));
             CUDA_CHECK(cudaMalloc(&d_all_querys, total_q_bytes));
             h_all_keys_flat.reserve(total_k_elems);
@@ -460,4 +464,3 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
     // Optional: Synchronize device if needed, but likely handled elsewhere.
     // CUDA_CHECK(cudaDeviceSynchronize());
 }
-#endif

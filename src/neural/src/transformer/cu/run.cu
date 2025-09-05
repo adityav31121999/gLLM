@@ -1,4 +1,3 @@
-#ifdef USE_CUDA
 
 #include "include/transformer.hpp"
 #include "include/mlp.hpp"
@@ -118,6 +117,7 @@ void transformer::cuRun() {
             for (int col = 0; col < y; ++col) {
                 // Pass the count of *new* prompt tokens and the total count *before* the prompt
                 int effectivePromptCount = promptCount;
+
                 cuParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
             }
             CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ calculation is done
@@ -179,6 +179,7 @@ void transformer::cuRun() {
 
             // Ensure all copy operations are completed before proceeding
             CUDA_CHECK(cudaDeviceSynchronize());
+
             blockCount += 1; // Increment block count *once*
 
             // Prepare d_tokForBlock for the *new* block (contains the m1 tokens + previous context)
@@ -220,8 +221,8 @@ void transformer::cuRun() {
 
             // --- Update State (Host & Device) ---
             if (indexForToken < 0 || indexForToken >= vocabsize) {
-                std::cerr << "\nError: Invalid token index computed: " << indexForToken << std::endl;
-                break; // Exit generation loop on error
+                    std::cerr << "\nError: Invalid token index computed: " << indexForToken << std::endl;
+                    break; // Exit generation loop on error
             }
 
             // Get the embedding for the new token on the host
@@ -233,9 +234,14 @@ void transformer::cuRun() {
                                     static_cast<size_t>(d) * sizeof(float),
                                     cudaMemcpyHostToDevice));
 
-            mTokens[currentTokenCount] = tokens[indexForToken];     // Store the token string (host)
-            std::cout << mTokens[currentTokenCount] << " " << std::flush;       // Print the token (host)
-            currentTokenCount += 1;     // Increment token count (host)
+            // Store the token string (host)
+            mTokens[currentTokenCount] = tokens[indexForToken];
+
+            // Print the token (host)
+            std::cout << mTokens[currentTokenCount] << " " << std::flush;
+
+            // Increment token count (host)
+            currentTokenCount += 1;
             rCount += 1;
 
             // --- Context Window / Block Transition Check ---
@@ -251,10 +257,12 @@ void transformer::cuRun() {
                         try {
                             float* d_src_ev_ptr = t[0].b[i][j].d_EV; // Directly access public member
                             size_t dest_offset_elements = (static_cast<size_t>(i) * y + j) * CONTEXT_WIN * d;
+
                             if (dest_offset_elements * sizeof(float) + head_ev_bytes > ev_use_bytes) {
                                 throw std::out_of_range("EVuse destination offset out of bounds during generation for head [" +
                                                             std::to_string(i) + "][" + std::to_string(j) + "].");
                             }
+
                             CUDA_CHECK(cudaMemcpy(d_EVuse + dest_offset_elements, d_src_ev_ptr, head_ev_bytes, cudaMemcpyDeviceToDevice));
                         } 
                         catch (const std::exception& e) {
@@ -316,5 +324,3 @@ void transformer::cuRun() {
     }
     std::cout << std::endl;
 }
-
-#endif

@@ -1,26 +1,14 @@
+// Helper macro for indexing flattened matrix (assuming row-major)
+#define IDX(row, col, dim) ((row) * (dim) + (col))
 
-// Helper for sign function
-inline float sign_f(float x) {
-    return (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f);
-}
+// Enable extensions for atomics and potentially double precision (which might include float atomics)
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
 
-inline void atomic_add_float(volatile __global float *addr, float val) {
-    union {
-        unsigned int u32;
-        float f32;
-    } next, expected, current;
-
-    current.f32 = *addr; // Read initial value
-
-    do {
-        expected.f32 = current.f32; // Expected value for CAS
-        next.f32 = expected.f32 + val; // Calculate new value
-        // Atomically compare expected.u32 with the value at addr.
-        // If they match, replace the value at addr with next.u32.
-        // Update current.u32 with the value that was previously at addr.
-        current.u32 = atomic_cmpxchg((volatile __global unsigned int *)addr, expected.u32, next.u32);
-    } while (current.u32 != expected.u32); // Loop if CAS failed (value changed by another thread)
-}
+// --- Static helper cl_compute_dot_product_vec is NO LONGER NEEDED by these kernels ---
+// --- It can be removed if no other kernels use it ---
 
 __kernel void vectorAddKernel_attention(__global const float* A,
     __global const float* B,
@@ -31,8 +19,6 @@ __kernel void vectorAddKernel_attention(__global const float* A,
         C[idx] = A[idx] + B[idx];
     }
 }
-
-/**------------------------------------MULTIPLICATION------------------------------------**/
 
 __kernel void kernelVecDotVec(
     __global const float* vec1,
@@ -72,6 +58,7 @@ __kernel void kernelComputeKorQ(
     }
 }
 
+
 __kernel void kernelDotvecmatvec(
     __global const float* vec1,
     __global const float* vec2,
@@ -94,11 +81,227 @@ __kernel void kernelDotvecmatvec(
     }
 }
 
+__kernel void kernelComputePrediction(
+    __global const float* EH,
+    __global const float* embeddings,
+    __global int* result_index,
+    int dim,
+    int voc)
+{
+    // Execute only on the first global work-item
+    if (get_global_id(0) == 0) {
+        if (voc <= 0 || embeddings == NULL) {
+             *result_index = -1; // Indicate error or invalid input
+             return;
+        }
+
+        float max_dot_product = -MAXFLOAT;
+        int predicted_index = 0;
+
+        for (int i = 0; i < voc; ++i) {
+            __global const float* current_embedding_row = embeddings + i * dim;
+
+            // --- Inlined dot product calculation ---
+            float current_dot_product = 0.0f;
+            for (int k = 0; k < dim; ++k) { // Use 'dim' as loop limit
+                current_dot_product += EH[k] * current_embedding_row[k]; // Use EH, current_embedding_row
+            }
+            // --- End Inlined dot product ---
+
+            if (current_dot_product > max_dot_product) {
+                max_dot_product = current_dot_product;
+                predicted_index = i;
+            }
+        }
+        *result_index = predicted_index;
+    }
+}
+
+/**------------------------------------MULTIPLICATION------------------------------------**/
 
 __kernel void kernelElementwiseMultiply(__global float* target_and_output, __global const float* factor, int size) {
     int idx = get_global_id(0);
     if (idx < size) {
         target_and_output[idx] *= factor[idx];
+    }
+}
+
+inline void atomic_add_float(volatile __global float *addr, float val) {
+    union {
+        unsigned int u32;
+        float f32;
+    } next, expected, current;
+
+    current.f32 = *addr; // Read initial value
+
+    do {
+        expected.f32 = current.f32; // Expected value for CAS
+        next.f32 = expected.f32 + val; // Calculate new value
+        // Atomically compare expected.u32 with the value at addr.
+        // If they match, replace the value at addr with next.u32.
+        // Update current.u32 with the value that was previously at addr.
+        current.u32 = atomic_cmpxchg((volatile __global unsigned int *)addr, expected.u32, next.u32);
+    } while (current.u32 != expected.u32); // Loop if CAS failed (value changed by another thread)
+}
+
+/**------------------------------------TRAINING------------------------------------**/
+
+__kernel void kernelKdotQforSelf_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys,
+                                       int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling)
+{
+    int j = get_global_id(0); // Global key index (column)
+    int i = get_global_id(1); // Global query index (row)
+
+    if (i < num_queries_eff && j < num_keys_eff && j <= i) {
+        __global const float* q_vec = d_querys + i * embedding_dim;
+        __global const float* k_vec = d_keys + j * embedding_dim;
+
+        // --- Inlined dot product calculation ---
+        float dot_product = 0.0f;
+        for (int k = 0; k < embedding_dim; ++k) { // Use embedding_dim
+            dot_product += q_vec[k] * k_vec[k];   // Use q_vec, k_vec
+        }
+        // --- End Inlined dot product ---
+
+        int kdotq_index = i * kdotq_width + j;
+        d_kdotq[kdotq_index] = dot_product * inv_scaling;
+    }
+}
+
+__kernel void kernelKdotQforCross_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys,
+                                        int num_queries_eff, int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling)
+{
+    int j = get_global_id(0); // Global key index (column)
+    int i = get_global_id(1); // Global query index (row)
+
+    if (i < num_queries_eff && j < num_keys_eff) {
+        __global const float* q_vec = d_querys + i * embedding_dim;
+        __global const float* k_vec = d_keys + j * embedding_dim;
+
+        // --- Inlined dot product calculation ---
+        float dot_product = 0.0f;
+        for (int k = 0; k < embedding_dim; ++k) { // Use embedding_dim
+            dot_product += q_vec[k] * k_vec[k];   // Use q_vec, k_vec
+        }
+        // --- End Inlined dot product ---
+
+        int kdotq_index = i * kdotq_width + j;
+        d_kdotq[kdotq_index] = dot_product * inv_scaling;
+    }
+}
+
+
+/**------------------------------------INFERENCE------------------------------------**/
+
+__kernel void kernelKdotQ_Block1_Self_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
+                                                int prompt_start_index, int prompt_len, int context_len, int kdotq_width,
+                                                int embedding_dim, float inv_scaling)
+{
+    int j = get_global_id(0);
+    int i_offset = get_global_id(1);
+    int i = prompt_start_index + i_offset;
+
+    if (i_offset < prompt_len && j < context_len && j <= i) {
+        __global const float* q_vec = d_tokenEmbed + i * embedding_dim;
+        __global const float* k_vec = d_tokenEmbed + j * embedding_dim;
+
+        // This uses the quadratic form logic, not the simple vector dot product
+        float final_dot_product = 0.0f;
+        for (int row_idx = 0; row_idx < embedding_dim; ++row_idx) {
+            float inner_sum = 0.0f;
+            __global const float* matrix_row_i = d_M + row_idx * embedding_dim;
+            for (int col_idx = 0; col_idx < embedding_dim; ++col_idx) {
+                inner_sum += q_vec[col_idx] * matrix_row_i[col_idx];
+            }
+            final_dot_product += inner_sum * k_vec[row_idx]; // Note: k_vec is used like vec2 here
+        }
+
+        int kdotq_index = i * kdotq_width + j;
+        d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
+    }
+}
+
+__kernel void kernelKdotQ_Block1_Cross_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
+                                                 int prompt_start_index, int prompt_len, int context_len, int kdotq_width,
+                                                 int embedding_dim, float inv_scaling)
+{
+    int j = get_global_id(0);
+    int i_offset = get_global_id(1);
+    int i = prompt_start_index + i_offset;
+
+    if (i_offset < prompt_len && j < context_len) {
+        __global const float* q_vec = d_tokenEmbed + i * embedding_dim;
+        __global const float* k_vec = d_tokenEmbed + j * embedding_dim;
+
+        // This uses the quadratic form logic, not the simple vector dot product
+        float final_dot_product = 0.0f;
+        for (int row_idx = 0; row_idx < embedding_dim; ++row_idx) {
+            float inner_sum = 0.0f;
+            __global const float* matrix_row_i = d_M + row_idx * embedding_dim;
+            for (int col_idx = 0; col_idx < embedding_dim; ++col_idx) {
+                inner_sum += q_vec[col_idx] * matrix_row_i[col_idx];
+            }
+            final_dot_product += inner_sum * k_vec[row_idx]; // Note: k_vec is used like vec2 here
+        }
+
+        int kdotq_index = i * kdotq_width + j;
+        d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
+    }
+}
+
+__kernel void kernelKdotQ_BlockN_Self_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
+                                                __global const float* d_M, int prompt_start_index_in_block, int prompt_len,
+                                                int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling)
+{
+    int j = get_global_id(0);
+    int i_offset = get_global_id(1);
+    int i = prompt_start_index_in_block + i_offset;
+
+    if (i_offset < prompt_len && j < context_len_in_block && j <= i) {
+        __global const float* q_vec = d_tokForBlock + i * embedding_dim;
+        __global const float* k_vec = d_EVp + j * embedding_dim; // EVp is used as the 'key' vector source
+
+        // This uses the quadratic form logic, not the simple vector dot product
+        float final_dot_product = 0.0f;
+        for (int row_idx = 0; row_idx < embedding_dim; ++row_idx) {
+            float inner_sum = 0.0f;
+            __global const float* matrix_row_i = d_M + row_idx * embedding_dim;
+            for (int col_idx = 0; col_idx < embedding_dim; ++col_idx) {
+                inner_sum += q_vec[col_idx] * matrix_row_i[col_idx];
+            }
+            final_dot_product += inner_sum * k_vec[row_idx]; // Note: k_vec (from EVp) is used like vec2 here
+        }
+
+        int kdotq_index = i * kdotq_width + j;
+        d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
+    }
+}
+
+__kernel void kernelKdotQ_BlockN_Cross_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
+                                                 __global const float* d_M, int prompt_start_index_in_block, int prompt_len,
+                                                 int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling)
+{
+    int j = get_global_id(0);
+    int i_offset = get_global_id(1);
+    int i = prompt_start_index_in_block + i_offset;
+
+    if (i_offset < prompt_len && j < context_len_in_block) {
+        __global const float* q_vec = d_tokForBlock + i * embedding_dim;
+        __global const float* k_vec = d_EVp + j * embedding_dim; // EVp is used as the 'key' vector source
+
+        // This uses the quadratic form logic, not the simple vector dot product
+        float final_dot_product = 0.0f;
+        for (int row_idx = 0; row_idx < embedding_dim; ++row_idx) {
+            float inner_sum = 0.0f;
+            __global const float* matrix_row_i = d_M + row_idx * embedding_dim;
+            for (int col_idx = 0; col_idx < embedding_dim; ++col_idx) {
+                inner_sum += q_vec[col_idx] * matrix_row_i[col_idx];
+            }
+            final_dot_product += inner_sum * k_vec[row_idx]; // Note: k_vec (from EVp) is used like vec2 here
+        }
+
+        int kdotq_index = i * kdotq_width + j;
+        d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
     }
 }
 
@@ -166,52 +369,6 @@ __kernel void accumulateWeightedVectorsKernel(__global const float* d_row_sums, 
     }
 }
 
-__kernel void kernelComputePrediction(
-    __global const float* EH,             // Input vector (d-dimensional final hidden state)
-    __global const float* embeddings,     // Full embeddings table (vocabsize x dim)
-    __global float* predictions_scores,   // OUT: Stores dot products (scores) for each vocab item (vocabsize x 1)
-    __global int* result_index,           // OUT: Stores the index of the best prediction (single int)
-    int dim,                              // Dimension of EH and embeddings
-    int voc)                              // Size of vocabulary
-{
-    // This kernel is still designed to run as a single global work-item (get_global_id(0) == 0).
-    // This is INEFFICEINT for GPUs when voc is large.
-    // For better performance, this should be split into:
-    // 1. A kernel to compute all dot products in parallel (vocabsize work-items).
-    // 2. A reduction kernel to find the max index from those dot products.
-
-    // Given your existing code, I'm providing a corrected version of *this* single-work-item kernel.
-    if (get_global_id(0) == 0) { // Only the first work-item executes this
-        if (voc <= 0 || embeddings == NULL || predictions_scores == NULL || result_index == NULL) {
-             *result_index = -1; // Indicate error or invalid input
-             return;
-        }
-
-        float max_dot_product = -MAXFLOAT;
-        int predicted_index = 0;
-
-        for (int i = 0; i < voc; ++i) { // Loop through each vocabulary embedding
-            __global const float* current_embedding_row = embeddings + i * dim;
-
-            // --- Inlined dot product calculation (EH . current_embedding_row) ---
-            float current_dot_product = 0.0f;
-            for (int k = 0; k < dim; ++k) {
-                current_dot_product += EH[k] * current_embedding_row[k];
-            }
-            // --- End Inlined dot product ---
-
-            predictions_scores[i] = current_dot_product; // Store the calculated dot product (score/logit)
-
-            if (current_dot_product > max_dot_product) {
-                max_dot_product = current_dot_product;
-                predicted_index = i;
-            }
-        }
-        *result_index = predicted_index; // Store the argmax index
-    }
-}
-
-
 /**------------------------------------BACKPROP------------------------------------**/
 
 __kernel void kernelComputeGradientsEH(__global const float* eh, __global const float* expected_h,
@@ -224,7 +381,7 @@ __kernel void kernelComputeGradientsEH(__global const float* eh, __global const 
 
         // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
         // This is numerically stable.
-        float grad = (pred - label)/(pred * (1-pred));      // both of them is not activated
+        float grad = pred - label;
         grad_eh[idx] = grad;
     }
 }
@@ -237,9 +394,10 @@ __kernel void kernelComputeGradientsEH_EV(__global const float* eh, __global con
         float pred = eh[idx];
         float label = expected_h[idx];
         // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
-        float grad = (pred - label);
+        // This is numerically stable and avoids the division by (pred * (1-pred)), which explodes when pred is near 0 or 1.
+        float grad = pred - label; // Declaration was missing
         grad_eh[idx] = grad;
-        grad_ev_scaled[idx] = grad * 0.01f;
+        grad_ev_scaled[idx] = grad * 0.1f;
     }
 }
 
@@ -262,7 +420,7 @@ __kernel void kernelComputeGradientsEV_V(__global const float* ev, __global cons
             // Clamp pred to avoid division by zero or near-zero values in the denominator
             pred = fmin(fmax(pred, 1e-7f), 1.0f - 1e-7f);
             // Binary Cross Entropy gradient w.r.t. sigmoid output
-            float grad = (pred - label);        // (pred - label)/(pred * (1.0f - pred));
+            float grad = (pred - label);// / (pred * (1.0f - pred));
             grad_ev_full[idx] = grad;
             sum_grad_embed += grad;
         }
@@ -288,11 +446,8 @@ __kernel void kernelComputeGradDhDv(__global const float* d_hor_gweights0, __glo
     }
 }
 
-__kernel void kernelComputeGradDhDv_1stHead(__global const float* d_hor_gweights0, 
-                                        __global const float* d_ver_gweights0,
-                                        __global float* grad_dh, 
-                                        __global float* grad_dv, 
-                                        int embedding_dim)
+__kernel void kernelComputeGradDhDv_1stHead(__global const float* d_hor_gweights0, __global const float* d_ver_gweights0,
+                                        __global float* grad_dh, __global float* grad_dv, int embedding_dim)
 {
     int i = get_global_id(0);
     if (i < embedding_dim) {
@@ -364,6 +519,15 @@ __kernel void kernelComputeGradHead(__global const float* k, __global const floa
     }
 }
 
+__kernel void kernelComputeGradKdotQ_LOTA(__global const float* grad_head, __global const float* lota_derivative,
+                                          __global float* grad_kdotq, float scaling_factor, int size)
+{
+    int idx = get_global_id(0);
+    if (idx < size) {
+        grad_kdotq[idx] = (fabs(scaling_factor) > 1e-9f) ? (grad_head[idx] * lota_derivative[idx] / scaling_factor) : 0.0f;
+    }
+}
+
 __kernel void kernelComputeGradK_Q(__global const float* grad_kdotq, __global const float* k, __global const float* q,
                                    __global float* grad_k, __global float* grad_q,
                                    int token_count, int mat_heights)
@@ -406,6 +570,7 @@ __kernel void kernelComputeGradMK_MQ(__global const float* grad_k, __global cons
         grad_mq[h * embedding_dim + d] = sum_mq_hd;
     }
 }
+
 
 __kernel void kernelComputeGradDv_V(__global const float* d_ver_gweights0, __global float* grad_dv, int embedding_dim)
 {
@@ -563,6 +728,118 @@ __kernel void kernelComputeGradMK_MQ_Simplified(__global const float* grad_k, __
     }
 }
 
+__kernel void kernelUpdateWeights_EH_EV(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                        __global float* eh, __global float* ev,
+                                        __global const float* grad_mh, __global const float* grad_mv,
+                                        __global const float* grad_mq, __global const float* grad_mk,
+                                        __global const float* grad_eh, __global const float* grad_ev_scaled,
+                                        float learning_rate, int update_eh, int update_ev,
+                                        int mat_heights, int embedding_dim, int context_win)
+{
+    int idx = get_global_id(0);
+    int ev_size = context_win * embedding_dim; // Define ev_size
+    int matrix_size = mat_heights * embedding_dim;
+    if (idx < matrix_size) {
+        mh_a[idx] -= learning_rate * grad_mh[idx];
+        mv_a[idx] -= learning_rate * grad_mv[idx];
+        mq_a[idx] -= learning_rate * grad_mq[idx];
+        mk_a[idx] -= learning_rate * grad_mk[idx];
+    }
+    if (update_eh != 0 && idx < embedding_dim) {
+        eh[idx] -= learning_rate * grad_eh[idx];
+    }
+    if (update_ev != 0) {
+        if (idx < ev_size) {
+            int embed_idx = idx % embedding_dim;
+            ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
+        }
+    }
+}
+
+__kernel void kernelUpdateWeights_EV_V(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
+                                       __global const float* grad_mv, __global const float* grad_mq, // grad_mv, grad_mq are mat_heights x embedding_dim
+                                       __global const float* grad_mk_correction, // grad_mk_correction is mat_heights x embedding_dim
+                                       __global const float* grad_ev_full,
+                                       float learning_rate,
+                                       int update_ev, int mat_heights, int embedding_dim, int context_win)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+    if (idx < matrix_size) {
+        mv_a[idx] -= learning_rate * grad_mv[idx];
+        mq_a[idx] -= learning_rate * grad_mq[idx];
+        mk_a[idx] -= learning_rate * grad_mk_correction[idx];
+    }
+    // update for all blocks, except first block
+    if (update_ev != 0) {
+        int ev_size = context_win * embedding_dim;
+        if (idx < ev_size) {
+            ev[idx] -= learning_rate * grad_ev_full[idx];
+        }
+    }
+}
+
+__kernel void kernelUpdateWeights_1stHead_H(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                            __global float* eh,
+                                            __global const float* grad_mh, __global const float* grad_mv,
+                                            __global const float* grad_mq, __global const float* grad_mk,
+                                            __global const float* grad_eh,
+                                            float learning_rate, int update_eh,
+                                            int mat_heights, int embedding_dim)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+    if (idx < matrix_size) {
+        if(grad_mh != NULL) mh_a[idx] -= learning_rate * grad_mh[idx];
+        if(grad_mv != NULL) mv_a[idx] -= learning_rate * grad_mv[idx];
+        if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
+        if(grad_mk != NULL) mk_a[idx] -= learning_rate * grad_mk[idx];
+    }
+    // only update EH when updateEH is true, this for all heads of blocks,except first column
+    if (update_eh != 0 && idx < embedding_dim) {
+        if(grad_eh != NULL) eh[idx] -= learning_rate * grad_eh[idx];
+    }
+}
+
+__kernel void kernelUpdateWeights_1stHead_V(__global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                            __global const float* grad_mv, __global const float* grad_mq,
+                                            __global const float* grad_mk_correction,
+                                            float learning_rate, int mat_heights, int embedding_dim)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+    if (idx < matrix_size) {
+        if(grad_mv != NULL) mv_a[idx] -= learning_rate * grad_mv[idx];
+        if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
+        if(grad_mk_correction != NULL) mk_a[idx] -= learning_rate * grad_mk_correction[idx];
+    }
+}
+
+__kernel void kernelUpdateWeights_1stHead_HV(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
+                                             __global const float* grad_mh, __global const float* grad_mv,
+                                             __global const float* grad_mq, __global const float* grad_mk,
+                                             float learning_rate, int mat_heights, int embedding_dim)
+{
+    int idx = get_global_id(0);
+    int matrix_size = mat_heights * embedding_dim;
+    if (idx < matrix_size) {
+        if(grad_mh != NULL) mh_a[idx] -= learning_rate * grad_mh[idx];
+        if(grad_mv != NULL) mv_a[idx] -= learning_rate * grad_mv[idx];
+        if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
+        if(grad_mk != NULL) mk_a[idx] -= learning_rate * grad_mk[idx];
+    }
+}
+
+__kernel void kernelUpdateSimple(__global float* weights_to_update, __global const float* gradients, float lr, unsigned int n_elements)
+{
+    int idx = get_global_id(0);
+    if (idx < n_elements) {
+        if (gradients != NULL) {
+             weights_to_update[idx] -= lr * gradients[idx];
+        }
+    }
+}
+
 __kernel void accumulateEVRowsKernelCL(__global const float* d_EV, __global float* d_output,
     int num_rows, int col_size)
 {
@@ -574,6 +851,18 @@ __kernel void accumulateEVRowsKernelCL(__global const float* d_EV, __global floa
             sum += d_EV[row_idx * col_size + col_idx];
         }
         d_output[col_idx] = sum;
+    }
+}
+
+__kernel void updateEVRowsKernelCL(__global float* d_EV_rows, __global const float* d_vector_to_add,
+    int num_rows_to_update, int num_cols)
+{
+    int row_idx = get_global_id(0); // Each work-item handles one row
+
+    if (row_idx < num_rows_to_update) {
+        for (int col_idx = 0; col_idx < num_cols; ++col_idx) {
+            d_EV_rows[row_idx * num_cols + col_idx] += d_vector_to_add[col_idx];
+        }
     }
 }
 

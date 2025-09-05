@@ -9,7 +9,7 @@
 
 // Helper function to construct full path (assuming it's defined elsewhere or here)
 inline std::string join_path(const std::string& folder, const std::string& filename) {
-#ifdef _WIN64
+#ifdef _WIN32
     const char separator = '\\';
 #else
     const char separator = '/';

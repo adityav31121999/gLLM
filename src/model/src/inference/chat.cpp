@@ -16,7 +16,7 @@ void model::takeInput() {
     // tokenise sentence into words and punctuations
     std::vector<std::vector<float>> promptEmbed;
     
-    TOK.splitSentence(userPrompt, tinput);
+    tokenize_with_numbers(userPrompt, tinput, sortIt);
     T.promptCount = tinput.size();
 
     // Write the user prompt to the chat log file

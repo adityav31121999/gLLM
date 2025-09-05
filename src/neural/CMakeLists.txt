@@ -3,6 +3,8 @@
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(neural C CXX)
 
+include_directories(include)
+
 add_library(neural STATIC
 # mlp files
     # C++
@@ -25,7 +27,6 @@ add_library(neural STATIC
     src/mlp/cu/train.cu
     # OpenCL
     src/mlp/cl/mlp.cl
-    src/mlp/cl/mlpcomputecl.cpp
     src/mlp/cl/forpropcl.cpp
     src/mlp/cl/backpropcl.cpp
     src/mlp/cl/backwardcl.cpp
@@ -34,7 +35,6 @@ add_library(neural STATIC
     src/mlp/cl/backwithElasticNetcl.cpp
     src/mlp/cl/rpropcl.cpp
     src/mlp/cl/traincl.cpp
-    src/mlp/cl/gradClipcl.cpp
 
 # attention files
     # C++
@@ -44,14 +44,12 @@ add_library(neural STATIC
     src/attention/backward1sthead.cpp
     src/attention/writeatt.cpp
     # CUDA
-    src/attention/cu/atcompute.cu
     src/attention/cu/forward.cu
     src/attention/cu/backward.cu
     src/attention/cu/backward1sthead.cu
     src/attention/cu/kernels.cu
     # OpenCL
     src/attention/cl/attention.cl
-    src/attention/cl/atcompute.cpp
     src/attention/cl/forwardcl.cpp
     src/attention/cl/backward1stheadcl.cpp
     src/attention/cl/backwardcl.cpp
@@ -67,15 +65,13 @@ add_library(neural STATIC
     src/block/cu/forward.cu
     src/block/cu/partialbackH.cu
     src/block/cu/partialbackiH.cu
-    src/block/cu/partialbackV.cu
     src/block/cu/backward.cu
     # OpenCL
     src/block/cl/forwardcl.cpp
     src/block/cl/partialbackHcl.cpp
     src/block/cl/partialbackiHcl.cpp
-    src/block/cl/partialbackVcl.cpp
+    src/block/cl/partialbackiHrcl.cpp
     src/block/cl/backwardcl.cpp
-    src/block/cl/blockAdamcl.cpp
 
 # transformer
     # C++
@@ -99,20 +95,15 @@ add_library(neural STATIC
     src/transformer/cu/test.cu
     src/transformer/cu/run.cu
     # OpenCL
-    src/transformer/cl/transformer.cl
     src/transformer/cl/clcompute.cpp
     src/transformer/cl/feedforcl.cpp
     src/transformer/cl/backwardcl.cpp
     src/transformer/cl/train1cl.cpp
     src/transformer/cl/train2cl.cpp
+    src/transformer/cl/train3cl.cpp
+    src/transformer/cl/train4cl.cpp
     src/transformer/cl/testcl.cpp
     src/transformer/cl/runcl.cpp
-)
-
-# Make the include directory available to this target and any
-# other target that links to it (like the main executable).
-target_include_directories(neural PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 # link libraries to this library

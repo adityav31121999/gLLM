@@ -69,32 +69,27 @@ public:
     int x, y;               // x layers with y heads in each layer
     int tokenCount;         // number of tokens in local context
     float error;            // error for block, mean of all Attention Heads
-    float learning;         // learning rate for block
-    float lambda_L1;        // L1 regularization strength
-    float lambda_L2;        // L2 regularization strength
     bool isSelfAttention;   // if its self (1) or cross (0) attention
     bool inTraining;        // = 1 for training, = 0 for in use
     std::string str;        // to check whether new token is "@#O" or part of conversation
     std::vector<std::vector<std::vector<std::vector<float>>>> EV;
-    std::vector<std::vector<float>> gradForTokens;
     mat tokForBlock;        // tokens for block
+    std::vector<float> gradToken; // gradient for token when backprop from block to embedding
     std::vector<std::vector<attention>> b;  // block complete attention
     FILE* blockFile = nullptr;              // bin file for block
     std::string blockFilePath;              // path to model file
     unsigned long long params;              // parameters in block
     unsigned long long blockOffset;         // offset for block in training bin file
-    
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
-        unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
-        float& learning, float lambda_L1, float lambda_L2);
+        long long int vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
+        float& learning);
 #elif USE_CUDA || USE_CPU
     block() = default;
-    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, 
-        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning,
-        float lambda_L1, float lambda_L2);
+    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, 
+        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning);
 #endif
 
     // assignment operator to copy block
@@ -102,9 +97,6 @@ public:
         x = other.x;
         y = other.y;
         error = other.error;
-        learning = other.learning;
-        lambda_L1 = other.lambda_L1;
-        lambda_L2 = other.lambda_L2;
         isSelfAttention = other.isSelfAttention;
         inTraining = other.inTraining;
         str = other.str;
@@ -144,9 +136,6 @@ public:
     void cubackward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void cubackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
-    // adam update
-    void cuParallelAdamUpdate(unsigned long long t_adam, int columnNumber, float beta1, float beta2, float epsilon, float learning_rate);
-    void cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #elif USE_OPENCL
 
@@ -158,21 +147,17 @@ public:
     void clForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
     // for single parallel
     // partial attention backward
-    void clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clpartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clpartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clpartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int& k, int& blocknumber, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
+    void clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
+    void clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
+    void clrpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
+    void clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
+    void clpartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     // parallel partialbackward(i)
-    void clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clbackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    void clbackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2, float& clip_norm);
-    // adam update
-    void clAdamUpdate(int layers_mlp, unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
+    void clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
+    void clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
+    void clrbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
+    void clbackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
+    void clbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
 
 #else
 
@@ -200,13 +185,10 @@ public:
     void backward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning);
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning);
     void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning);
-        // adam update
-    void parallelAdamUpdate(unsigned long long t_adam, int columnNumber, float beta1, float beta2, float epsilon, float learning_rate);
-    void adamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #endif
 
-    void randomValuesForBlock(int type);
+    void randomValuesForBlock(float min, float max);
     void setVerticalRetention(std::vector<std::vector<std::vector<std::vector<float>>>>& EV);
     void clearValues();
     void serialise(const std::string& locationWithFilename);

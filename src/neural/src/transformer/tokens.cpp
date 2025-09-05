@@ -1,3 +1,4 @@
+
 // tokens and their splitting for training
 #include "include/transformer.hpp"
 #include <sstream>
@@ -8,7 +9,6 @@
 #include <algorithm>
 #include <iterator>
 #include <cctype>
-#include <random>
 #include <numeric>
 #include <cstring>
 
@@ -48,28 +48,84 @@ void transformer::getEmbedding(std::string &word, std::vector<float> &embed) {
             return toLower(element_in_vocab) < target_value;
         }
     );
-
     // Check if the exact lowercase match was found
     bool found = (it != this->tokens.end() && toLower(*it) == lower_word);
-    expectedIndex = std::distance(this->tokens.begin(), it);
-    bool found_exact_match = (it != this->tokens.end() && toLower(*it) == lower_word);
-    if(found_exact_match != true) {
-        std::cerr << "[DEBUG] getEmbedding: Exact match not found in vocab: " << word << std::endl;
-    }
 
-    if (expectedIndex < this->vocabsize && expectedIndex < this->embeddings.row) {
-        // Copy the embedding row from the mapped memory
-        size_t row_offset = static_cast<size_t>(expectedIndex) * this->embeddings.col;
-        if (static_cast<size_t>(this->embeddings.col) != embed.size()) {
-            throw std::runtime_error("Internal error: Embed vector size mismatch during retrieval.");
+    if (found) {
+        int indexInTokens = std::distance(this->tokens.begin(), it);
+        if (indexInTokens < this->vocabsize && indexInTokens < this->embeddings.row) {
+            // Copy the embedding row from the mapped memory
+            size_t row_offset = static_cast<size_t>(indexInTokens) * this->embeddings.col;
+            if (static_cast<size_t>(this->embeddings.col) != embed.size()) {
+                 throw std::runtime_error("Internal error: Embed vector size mismatch during retrieval.");
+            }
+            std::memcpy(embed.data(), this->embeddings.mapped_data + row_offset, embed.size() * sizeof(float));
+            this->indexForToken = indexInTokens;     // Update the member variable
         }
-        std::memcpy(embed.data(), this->embeddings.mapped_data + row_offset, embed.size() * sizeof(float));
+        else {
+            std::cerr << "CRITICAL Error: Word '" << word << "' (lowercase: '" << lower_word << "') found in tokens at index "\
+            << indexInTokens << ", but this index is out of bounds for used embeddings (vocabsize " << this->vocabsize << \
+            ") or allocated embedding rows (mat.row " << this->embeddings.row << \
+            "). Data inconsistency!" << std::endl;
+            throw std::out_of_range("Embedding index out of range despite token match. Data corrupted?");
+        }
     }
     else {
-        std::cerr << "CRITICAL Error: Word '" << word << "' (lowercase: '" << lower_word << "') found in tokens at index "\
-        << expectedIndex << ", but this index is out of bounds for used embeddings (vocabsize " << this->vocabsize << \
-        ") or allocated embedding rows (mat.row " << this->embeddings.row << \
-        "). Data inconsistency!" << std::endl;
-        throw std::out_of_range("Embedding index out of range despite token match. Data corrupted?");
+       std::cout << "Word '" << word << "' (lowercase: '" << lower_word << "') not found in vocabulary. Currently, dynamic vocabulary expansion is disabled to prevent uncontrolled growth. Please add the token manually if needed." << std::endl;
+        /*
+        // Word not found. Add it to vocabulary and generate/add embedding.
+        // 1. Generate random values for the new embedding
+        std::vector<float> new_embed_vec(this->d); // Use a temporary vector for the new embedding
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dis(-10.0f, 10.0f);
+        std::generate(new_embed_vec.begin(), new_embed_vec.end(), [&]() { return dis(gen); });
+
+        // Determine the index where the new word will be inserted in the sorted tokens vector
+        int new_index = static_cast<int>(std::distance(this->tokens.begin(), it));
+
+        // 2. Insert the word into the tokens vector at the correct lexicographical position
+        this->tokens.insert(it, word);
+
+        // 3. Increment vocabulary size
+        int old_vocab_size = this->vocabsize;
+        this->vocabsize++;
+        int new_vocab_size = this->vocabsize; // Which is old_vocab_size + 1
+
+        // Resize the embeddings matrix to accommodate the new token
+        // This will create a new mapped file and copy existing data
+        mat new_embeddings(new_vocab_size, this->d);
+
+        // Ensure the new matrix is successfully mapped
+        if (!new_embeddings.mapped_data) {
+             throw std::runtime_error("Failed to create or map new embeddings matrix during vocabulary expansion.");
+        }
+
+        // 5. Copy data from the old embeddings matrix to the new one, inserting the new embedding
+        size_t embedding_size_bytes = static_cast<size_t>(this->d) * sizeof(float); // Size of one embedding row in bytes
+
+        // Copy rows before the insertion point
+        if (new_index > 0 && this->embeddings.mapped_data) {
+            std::memcpy(new_embeddings.mapped_data, this->embeddings.mapped_data, static_cast<size_t>(new_index) * embedding_size_bytes);
+        }
+
+        // Copy the new embedding vector into the new matrix at the insertion point
+        std::memcpy(new_embeddings.mapped_data + static_cast<size_t>(new_index) * this->d, new_embed_vec.data(), embedding_size_bytes);
+
+        // Copy rows after the insertion point
+        if (new_index < old_vocab_size && this->embeddings.mapped_data) {
+            std::memcpy(new_embeddings.mapped_data + static_cast<size_t>(new_index + 1) * this->d, this->embeddings.mapped_data + static_cast<size_t>(new_index) * this->d, static_cast<size_t>(old_vocab_size - new_index) * embedding_size_bytes);
+        }
+
+        // 6. Replace the old embeddings matrix with the new one using move assignment
+        this->embeddings = std::move(new_embeddings); // Replace old matrix with new one
+
+        // 7. Update the index for the token (which is the insertion index)
+        this->indexForToken = new_index;
+
+        // 8. Copy the newly generated embedding to the output vector 'embed'
+        embed = new_embed_vec;
+        */
+       std::cout << "Current vocabulary size: " << this->vocabsize << std::endl;
     }
 }

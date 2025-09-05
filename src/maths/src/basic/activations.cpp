@@ -110,41 +110,6 @@ std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>
  * @param temp The temperature parameter (passed by value, as it's not modified).
  * @return Vector of softmax probabilities.
  */
-std::vector<float> softmax(const std::vector<float>& x) { // Pass temp by value
-    if (x.empty()) return {};
-
-    // Find max element for numerical stability
-    float max_val = *std::max_element(x.begin(), x.end());
-
-    std::vector<float> exps(x.size());
-    float sum = 0.0f;
-    for (size_t i = 0; i < x.size(); ++i) {
-        // Subtract max_val before exponentiating
-        exps[i] = std::exp(x[i] - max_val);
-        sum += exps[i];
-    }
-
-    // Handle case where sum is zero (e.g., all inputs were -inf after scaling)
-    if (sum == 0.0f || !std::isfinite(sum) ||  !std::isnan(sum)) {
-        // Return uniform distribution if sum is zero or non-finite
-        return std::vector<float>(x.size(), 1.0f / static_cast<float>(x.size()));
-    }
-
-    // Normalize
-    for (float& val : exps) {
-        val /= sum;
-    }
-    return exps;
-}
-
-
-/**
- * @brief Softmax activation function for a vector. Applies the softmax function.
- *          Numerically stable version using max_val subtraction.
- * @param x The input vector (const reference).
- * @param temp The temperature parameter (passed by value, as it's not modified).
- * @return Vector of softmax probabilities.
- */
 std::vector<float> softmax(const std::vector<float>& x, float temp) { // Pass temp by value
     if (x.empty()) return {};
 
@@ -344,6 +309,7 @@ std::vector<std::vector<float>> ReLUder(const std::vector<std::vector<float>>& x
     return result;
 }
 
+
 //----------------Least of them all (LOTA)----------------//
 
 /**
@@ -383,6 +349,7 @@ std::vector<float> LOTA(const std::vector<float>& y) {
         std::fill(transformed_x.begin(), transformed_x.end(), uniform_prob);
     }
     // If sum is non-positive and vector is empty, it returns empty anyway
+
     return transformed_x; // Return the normalized vector
 }
 
@@ -434,7 +401,7 @@ std::vector<float> LOTAder(const std::vector<float>& y) {
 
 
 /**
- * @brief Applies the LOTA (least of them all) activation function to a 2D vector (matrix),
+ * @brief Applies the LOTA activation function to a 2D vector (matrix),
  *        considering only relevant elements defined by 't' and 'attentionType'.
  * @param y Input 2D vector (const reference).
  * @param t Dimension limit (passed by value).

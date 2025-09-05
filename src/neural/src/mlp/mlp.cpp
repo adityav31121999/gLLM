@@ -6,21 +6,21 @@
 #include <cstdint>
 #include <cstring>
 
+// --- Non-OpenCL Constructor ---
 #ifndef USE_OPENCL
 
 /**
- * @brief Constructor used when OpenCL is NOT enabled (in = out = neurons)
+ * @brief Constructor used when OpenCL is NOT enabled.
+ * (in = out = neurons)
  * @param layerSizes Vector containing the number of neurons in each layer (e.g., {input_size, hidden1_size, output_size}).
  * @param epochs number of epochs for training (Note: epochs might be better handled in training loop)
  * @param learning learning rate for the network (Note: learning rate might be better handled in training loop)
  */
-mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2)
+mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning)
     : status(false),
       layer_sizes(layerSizes),
       epochs(epochs),
-      learning_rate(learning),
-      lambda_l1(lambda_L1),
-      lambda_l2(lambda_L2)
+      learning_rate(learning)
 {
     if (layerSizes.size() < 2) {
         throw std::invalid_argument("MLP must have at least an input and an output layer (size >= 2).");
@@ -30,8 +30,8 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
             throw std::invalid_argument("MLP layer sizes must be positive.");
         }
     }
-
     num_layers = layerSizes.size();
+
     input.resize(layer_sizes[0], 0.0f);
     output.resize(layer_sizes.back(), 0.0f);
     expected.resize(layer_sizes.back(), 0.0f);
@@ -50,13 +50,9 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
 
     weights.resize(num_layers - 1);
     gweights.resize(num_layers - 1);
-    // moments.resize(num_layers - 1);
-    // velocity.resize(num_layers - 1);
     for (unsigned int i = 0; i < num_layers - 1; ++i) {
         weights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
         gweights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        // moments[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        // velocity[i] = mat(layer_sizes[i+1], layer_sizes[i]);
     }
 
     params = 0;
@@ -64,7 +60,7 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
         params += weights[i].row * weights[i].col;
     }
     params *= 2;
-    // params += (num_layers*activations[0].size()*2);
+    // params += (num_layers*activations[0].size()*2) + 3*input.size();
     // initializeAdamMoments();
     std::cout << "MLP constructed." << std::endl;
 }
@@ -72,20 +68,19 @@ mlp::mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float
 #else
 
 /**
- * @brief Constructor used when OpenCL IS enabled (in = out = neurons)
+ * @brief Constructor used when OpenCL IS enabled.
+ * (in = out = neurons)
  * @param context Reference to the shared OpenCL context object.
  * @param layerSizes Vector containing the number of neurons in each layer (input, hidden..., output).
  * @param epochs number of epochs for training (Note: epochs might be better handled in training loop)
  * @param learning learning rate for the network (Note: learning rate might be better handled in training loop)
  */
-mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2)
+mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning)
     : clContext(context),
       status(false),
       layer_sizes(layerSizes),
       epochs(epochs),
-      learning_rate(learning),
-      lambda_l1(lambda_L1),
-      lambda_l2(lambda_L2)
+      learning_rate(learning)
 {
     // Validate inputs
     if (layerSizes.size() < 2) {
@@ -116,13 +111,9 @@ mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, un
 
     weights.resize(num_layers - 1);
     gweights.resize(num_layers - 1);
-    // moments.resize(num_layers - 1);
-    // velocity.resize(num_layers - 1);
     for (unsigned int i = 0; i < num_layers - 1; ++i) {
         weights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
         gweights[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        // moments[i] = mat(layer_sizes[i+1], layer_sizes[i]);
-        // velocity[i] = mat(layer_sizes[i+1], layer_sizes[i]);
     }
 
     params = 0;
@@ -132,28 +123,11 @@ mlp::mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, un
     params *= 2;
     // params += (num_layers*activations[0].size()*2 + 3*input.size());
     // initializeAdamMoments();
-    std::cout << "MLP constructed with OpenCL." << std::endl;
+    std::cout << "MLP constructed with OpenCL -> " << params << std::endl;
 }
 
 #endif // USE_OPENCL
 
-// inititalise adam moments and velocity for mlp
-void mlp::initializeAdamMoments() {
-    // moments.clear();
-    // velocity.clear();
-    for (size_t i = 0; i < weights.size(); ++i) {
-        // Assuming weights[i] is already properly constructed/mapped
-        // moments.emplace_back(weights[i].row, weights[i].col); // Create new mat for moment
-        // velocity.emplace_back(weights[i].row, weights[i].col); // Create new mat for moment
-        // Set all elements to zero for initialization
-        /*for (int r = 0; r < moments.back().row; ++r) {
-            for (int c = 0; c < moments.back().col; ++c) {
-                // moments.back()(r, c) = 0.0f;
-                / velocity.back()(r, c) = 0.0f;
-            }
-        }*/
-    }
-}
 
 // clear all values
 void mlp::clearValues() {

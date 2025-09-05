@@ -44,8 +44,11 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
         throw std::runtime_error("Error: Vocabulary is not trained. Cannot generate embeddings.");
     }
     this->vocSize = this->tokens.size();
-    std::cout << "-> Creating a temporary, lexicographically sorted token list for saving..." << std::endl;
-    std::vector<std::string> sorted_tokens_for_saving = this->tokens;
+    // The `this->tokens` member is sorted by length for the split algorithm.
+    // We must save embeddings in a consistent, lexicographical order to match the stats file.
+    std::vector<std::string> sorted_tokens = this->tokens;
+    std::sort(sorted_tokens.begin(), sorted_tokens.end());
+
     std::string csvEmbeddingOnly = embeddingCSVpath + "/_embeddings_only.csv";
     this->embeddings.resize(this->vocSize, std::vector<float>(this->d));
     
@@ -60,9 +63,9 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
         std::mt19937 gen(rd());
         // std::uniform_real_distribution<float> dis(r1, r2);
         std::poisson_distribution<int> dis(r1);
-        this->embeddings.resize(this->vocSize);
-        // resizinig of each row and assigning embeddings
+        // The embeddings are generated for the length-sorted `this->tokens` order.
         for (int i = 0; i < this->vocSize; ++i) {
+            // `this->embeddings` will be in the same (length-sorted) order as `this->tokens`
             this->embeddings[i].resize(this->d);
             for (int j = 0; j < this->d; ++j) {
                 // random number * (-1)^(i+j) * (sin(i+1) + cos(j-1)) = 0.01
@@ -73,6 +76,15 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
     #endif
 
     std::cout << "-> Embedding generation complete." << std::endl;
+
+    // Create a map from token string to its generated embedding for easy lookup.
+    // The embeddings in `this->embeddings` correspond to the length-sorted `this->tokens`.
+    std::unordered_map<std::string, std::vector<float>> token_to_embedding_map;
+    token_to_embedding_map.reserve(this->vocSize);
+    for (size_t i = 0; i < this->vocSize; ++i) {
+        token_to_embedding_map[this->tokens[i]] = this->embeddings[i];
+    }
+
     std::cout << "-> Saving only embeddings to: " << csvEmbeddingOnly << std::endl;
     std::ofstream outFile1(csvEmbeddingOnly);
     if (!outFile1.is_open()) {
@@ -80,17 +92,17 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
         return;
     }
 
-    // Iterate over the *learned tokens* (this->tokens) to ensure consistency
-    for (size_t i = 0; i < this->vocSize; ++i) {
-        const std::string& token = this->tokens[i];
-        std::vector<float> embedding = embeddings[i];
-        for (float val : embedding) { 
-            outFile1 << "," << val;
-        } 
+    // Now, iterate over the LEXICOGRAPHICALLY sorted tokens and save their embeddings.
+    // This ensures the embeddings file has the same token order as the stats file.
+    for (const auto& token : sorted_tokens) {
+        const auto& embedding = token_to_embedding_map.at(token);
+        for (size_t j = 0; j < embedding.size(); ++j) {
+            outFile1 << embedding[j] << (j == embedding.size() - 1 ? "" : ",");
+        }
         outFile1 << "\n";
     }
     outFile1.close();
-    std::cout << "Successfully saved " << this->tokens.size() << " embeddings to " << embeddingCSVpath << std::endl;
+    std::cout << "Successfully saved " << sorted_tokens.size() << " embeddings to " << csvEmbeddingOnly << std::endl;
 }
 
 

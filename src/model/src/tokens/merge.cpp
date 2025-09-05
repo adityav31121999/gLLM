@@ -2,7 +2,6 @@
 #include <vector>
 #include <future>
 
-
 // Helper to merge two unordered_maps. This is efficient as it moves map2's contents.
 std::unordered_map<std::string, int> mergeTwoMaps(std::unordered_map<std::string, int> map1,
     std::unordered_map<std::string, int> map2) 

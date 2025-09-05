@@ -10,9 +10,11 @@
 #include "include/tokenise.hpp"
 
 
-// Helper function to read a single CSV field, handling quotes and escaped quotes
-// Modified to return the raw field as read, without trimming or quote removal.
-// This allows the caller to decide how to process the field.
+/**
+ * @brief read csv field
+ * @param ss string stream from csv
+ * @return string
+ */
 std::string readCsvField(std::stringstream& ss) {
     std::string field = ""; // Initialize field to an empty string
     char c;
@@ -34,7 +36,8 @@ std::string readCsvField(std::stringstream& ss) {
                     in_quotes = false;
                     break; // Exit the loop for this field
                 }
-            } else {
+            }
+            else {
                 field += c;
             }
         }
@@ -42,10 +45,12 @@ std::string readCsvField(std::stringstream& ss) {
         while (ss.peek() != EOF && std::isspace(static_cast<unsigned char>(ss.peek()))) {
             ss.get();
         }
-        if (ss.peek() == ',') { // Consume the comma only if it exists
+        if (ss.peek() == ',') {
+            // Consume the comma only if it exists
             ss.get(); // Consume the comma delimiter
         }
-    } else { // If the field is not quoted...
+    }
+    else { // If the field is not quoted...
         // Not a quoted field, read until comma or end of line
         std::getline(ss, field, ',');
     }
@@ -58,8 +63,6 @@ std::string readCsvField(std::stringstream& ss) {
 
     return field; // Return the field as read
 }
-
-
 
 
 // Function to read an entire CSV file into a 2D vector of floats
@@ -145,7 +148,11 @@ std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename) {
 }
 
 
-// Function to read a single column CSV into a vector of strings
+/**
+ * @brief read first column of csv
+ * @param filename csv file path
+ * @return vector of string values
+ */
 std::vector<std::string> readSingleColumnCsv(const std::string& filename) {
     std::vector<std::string> columnData;
     std::ifstream file(filename);
@@ -187,7 +194,13 @@ std::vector<std::string> readSingleColumnCsv(const std::string& filename) {
     return columnData;
 }
 
-// Function to read a specific column (0-based index) from a multi-column CSV
+
+/**
+ * @brief read a target column from csv
+ * @param [in] flename csv file path
+ * @param [in] targetColumnIndex target column position
+ * @return vector of values of column as string
+ */
 std::vector<std::string> readSpecificColumnFromCsv(const std::string& filename, int targetColumnIndex) {
     std::vector<std::string> columnData;
     std::ifstream file(filename);
@@ -275,7 +288,11 @@ std::vector<std::string> readSpecificColumnFromCsv(const std::string& filename, 
 }
 
 
-// Function to read a CSV with "word,count" format into an unordered_map<string, int>
+/**
+ * @brief read token stat file
+ * @param filename file with token and their occurence count
+ * @return unordered map of std::string and int
+ */
 std::unordered_map<std::string, int> readUnorderedMap(const std::string& filename) {
     std::unordered_map<std::string, int> corpusWordCount;
     std::ifstream file(filename);
@@ -344,8 +361,11 @@ std::unordered_map<std::string, int> readUnorderedMap(const std::string& filenam
 }
 
 
-// Your tokeniser::readFromFiles method remains largely the same,
-// as it calls the updated readUnorderedMap and readMappedEmbeddings functions.
+/**
+ * @brief read files from folder to access tokens, their stats, embeddings
+ *        and de-embeddings
+ * @param path2ClassDataFolder path to folder
+ */
 void tokeniser::readFromFiles(const std::string& path2ClassDataFolder) 
 {
     std::string token_stats_file = path2ClassDataFolder + "/_final_token_stats.csv";
@@ -354,31 +374,43 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
         throw std::runtime_error("readFromFiles: Required token statistics file missing. Ensure training created '_final_token_stats.csv' in the specified path.");
     }
     this->statOfTokens = readUnorderedMap(token_stats_file);
-    this->vocSize = count_lines(token_stats_file);
+    // Load tokens and embeddings. Assume they are in the same order from their respective files.
+    std::vector<std::string> loaded_tokens = readSpecificColumnFromCsv(token_stats_file, 0);
+    this->embeddings = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
+    this->deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
 
-    this->tokens.clear(); // Ensure it's empty before populating
-    this->tokens.resize(this->vocSize); // Pre-allocate space
-    tokens = readSpecificColumnFromCsv(token_stats_file, 0);
+    if (loaded_tokens.size() != this->embeddings.size()) {
+        std::cerr << "Warning: Mismatch between number of tokens (" << loaded_tokens.size() 
+                  << ") and embeddings (" << this->embeddings.size() << "). Data may be corrupt." << std::endl;
+    }
 
-    this->embeddings.clear(); // Clear existing embeddings
-    std::vector<std::vector<float>> embeddings1 = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
-    this->embeddings = std::move(embeddings1);
-    std::vector<std::vector<float>> deEmbeddings1 = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
-    this->deEmbeddings = std::move(deEmbeddings1);
+    // Build the fast lookup map BEFORE sorting the tokens for splitting.
+    // This map correctly links a token string to its index in the (unsorted) embeddings vector.
+    this->token_to_idx.clear();
+    this->token_to_idx.reserve(loaded_tokens.size());
+    for (size_t i = 0; i < loaded_tokens.size(); ++i) {
+        this->token_to_idx[loaded_tokens[i]] = i;
+    }
+
+    // The `tokens` member is used for the greedy `splitWord` algorithm and needs to be sorted by length.
+    this->tokens = loaded_tokens; // Make a copy for sorting.
 
     // Update vocabulary size based on loaded data
-    this->d = this->embeddings[0].size();
-    this->vocSize = this->tokens.size();
+    this->d = this->embeddings.empty() ? 0 : this->embeddings[0].size();
+    this->vocSize = this->embeddings.size();
 
     //Sort tokens by length in descending order
     std::sort(this->tokens.begin(), this->tokens.end(), 
         [](const auto& a, const auto& b) { 
-            return a.length() > b.length(); 
+            if(a.length() == b.length()) {
+                return a < b; // If lengths are equal, sort lexicographically
+            }
+            return a.length() > b.length(); // Longer strings first
         });
 
     std::cout << "readFromFiles: Tokenizer initialized successfully:" << std::endl;
     std::cout << "  - Tokens loaded: " << this->tokens.size() << std::endl;
     std::cout << "  - Vocabulary size: " << this->vocSize << std::endl;
-    std::cout << "  - Embedding dimension: " << this->d << std::endl;
-    std::cout << "  - deEmbedding dimension: " << this->deEmbeddings[0].size() << std::endl;
+    std::cout << "  - Embedding dimension: " << this->embeddings.size() << " x " << (this->embeddings.empty() ? 0 : this->embeddings[0].size()) << std::endl;
+    std::cout << "  - deEmbedding dimension: " << this->deEmbeddings.size() << " x " << (this->deEmbeddings.empty() ? 0 : this->deEmbeddings[0].size()) << std::endl;
 }

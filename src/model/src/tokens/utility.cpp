@@ -1,7 +1,7 @@
 #include "include/tokenise.hpp"
 
 // count lines or rows in file
-long long count_lines(const std::string& filename) {
+unsigned long long count_lines(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Warning: Could not open file to count lines: " << filename << std::endl;

@@ -6,8 +6,8 @@
 #include <iostream>
 #include <chrono>
 #include <stdexcept>
-#include <cmath>
-#include <limits>
+#include <cmath> // For std::abs
+#include <limits> // For numeric_limits
 
 
 /**
@@ -16,9 +16,9 @@
 void transformer::clRun()
 {
     // Set for inference
-    inTraining = 0;     // set it to 0 for inference
+    inTraining = 0;
     if (t.empty()) {
-        throw std::runtime_error("Transformer block 't' is not initialized in clRun.");
+            throw std::runtime_error("Transformer block 't' is not initialized in clRun.");
     }
     if (t[0].b.empty() || t[0].b[0].empty()) {
         throw std::runtime_error("Attention heads within the transformer block 't[0]' are not initialized in clRun.");
@@ -29,19 +29,22 @@ void transformer::clRun()
     cl::Buffer d_embeddings;      // Holds the vocabulary embeddings
     cl::Buffer d_EVuse;           // Holds the EV state from the previous block (flattened: x * y * CONTEXT_WIN * d)
     cl::Buffer d_tokForBlock;     // Holds the token embeddings for the current block's context window
+    // d_otok is managed internally by clForward/clComputeOutput
 
     // Determine sizes
     size_t full_context_bytes = static_cast<size_t>(FULL_CONTEXT) * d * sizeof(float);
     size_t vocab_bytes = static_cast<size_t>(vocabsize) * d * sizeof(float);
     size_t context_win_bytes = static_cast<size_t>(CONTEXT_WIN) * d * sizeof(float);
+    // EVuse needs space for all attention heads' EV states for a full context window
+    // Structure: [x][y][CONTEXT_WIN][d] flattened
     size_t ev_use_bytes = static_cast<size_t>(x) * y * CONTEXT_WIN * d * sizeof(float);
     size_t otok_bytes = static_cast<size_t>(d) * sizeof(float); // Size of EH output
     size_t indexBytes = sizeof(int); // Size for the result index
-
+    int previousTokenCount = currentTokenCount;
     if (currentTokenCount >= FULL_CONTEXT) {
         throw std::runtime_error("\nError: Adding prompt exceeds FULL_CONTEXT limit (" + std::to_string(FULL_CONTEXT) + "). Please restart or shorten prompt.");
     }
-    int previousTokenCount = currentTokenCount;
+
     cl_int cl_err; // For OpenCL error codes
 
     try {
@@ -79,13 +82,13 @@ void transformer::clRun()
         size_t prompt_offset_bytes = static_cast<size_t>(previousTokenCount) * d * sizeof(float);
         size_t prompt_bytes = prompt_embeddings_flat.size() * sizeof(float);
         if (prompt_offset_bytes + prompt_bytes > full_context_bytes) {
-            throw std::runtime_error("Prompt copy exceeds d_tokenEmbed bounds.");
+                throw std::runtime_error("Prompt copy exceeds d_tokenEmbed bounds.");
         }
         CL_CHECK(this->clcontext.queue.enqueueWriteBuffer(d_tokenEmbed, CL_TRUE, prompt_offset_bytes, prompt_bytes, prompt_embeddings_flat.data()));
         prompt_embeddings_flat.clear(); // Free host memory
 
         // --- Prompt Placement & Initial KdotQ ---
-        // Calculate offset within the current block's window for placing prompt
+        // Calculate offset within the current block's window
         int current_block_idx_0based = (blockCount == 0) ? 0 : blockCount - 1; // Assuming blockCount is 1-based from training
         int tokens_in_block_before_prompt = (current_block_idx_0based == 0) ? previousTokenCount : (previousTokenCount % CONTEXT_WIN);
         int space_in_current_block = CONTEXT_WIN - tokens_in_block_before_prompt;
@@ -93,18 +96,13 @@ void transformer::clRun()
         if (promptCount <= space_in_current_block) {
             // Case 1: Prompt fits entirely within the current block
             // Pre-calculate KdotQ for the prompt tokens added
-            int effectivePromptCount = promptCount; // Number of new tokens
-            /*
             for (int col = 0; col < y; ++col) {
+                int effectivePromptCount = promptCount; // Number of new tokens
                 // The 'currentTokenCount' argument to clParallelKdotQs should be the count *before* adding the prompt
                 clParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
             }
             CL_CHECK(this->clcontext.queue.finish()); // Ensure KdotQ calculation is done
-            */
-            if(promptCount == space_in_current_block) {
-                blockCount += 1;        // start response from next block
-            }
-        }
+        } 
         else {
             // Case 2: Prompt spans across the current and next block
             int m2 = space_in_current_block; // Tokens fitting in the current block
@@ -117,7 +115,6 @@ void transformer::clRun()
                     clParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
                 }
                 CL_CHECK(this->clcontext.queue.finish()); // Ensure KdotQ for m2 is done
-                blockCount += 1;            // Increment block count
             }
 
             // --- Transition to the next block ---
@@ -130,32 +127,37 @@ void transformer::clRun()
             }
 
             // Loop through each attention head in the completed block (t[0])
-            for (int i = 0; i < x; ++i) {
-                for (int j = 0; j < y; ++j) {
+            for (int i = 0; i < x; ++i) { // Iterate through layers (rows)
+                for (int j = 0; j < y; ++j) { // Iterate through parallels (columns)
                     try {
                         // Get the device buffer for the EV state of the current head (i, j)
                         cl::Buffer& src_ev_buffer = t[0].b[i][j].getDeviceEVBuffer(); // Use the newly added getter
+
                         // Calculate the destination offset in the flattened d_EVuse buffer
                         size_t dest_offset_bytes = (static_cast<size_t>(i) * y + j) * head_ev_bytes;
+
                         // Boundary check for safety
                         if (dest_offset_bytes + head_ev_bytes > ev_use_bytes) {
                             throw std::out_of_range("EVuse destination offset out of bounds for head [" +
                                                         std::to_string(i) + "][" + std::to_string(j) + "].");
                         }
+
                         // Enqueue the device-to-device buffer copy
                         CL_CHECK(this->clcontext.queue.enqueueCopyBuffer(src_ev_buffer, d_EVuse, 0, dest_offset_bytes, head_ev_bytes));
                     }
                     catch (const std::exception& e) {
                         // Catch potential errors from getDeviceEVBuffer() or other issues
                         std::cerr << "Standard Exception getting/copying EV buffer for head [" << i << "][" << j << "]: " << e.what() << std::endl;
-                        return;
+                        throw; // Re-throw standard exceptions
                     }
-                }
-            }
+                } // End loop columns (j)
+            } // End loop rows (i)
 
             // Ensure all copy operations are completed before proceeding
             CL_CHECK(this->clcontext.queue.finish());
-            blockCount += 1; // Increment block count
+
+            blockCount += 1; // Increment block count *once*
+
             // Prepare d_tokForBlock for the *new* block (contains the m1 tokens + previous context)
             // Copy the last CONTEXT_WIN tokens from d_tokenEmbed to d_tokForBlock
             int start_idx_for_new_block = currentTokenCount - CONTEXT_WIN; // Start index in d_tokenEmbed
@@ -165,7 +167,8 @@ void transformer::clRun()
             }
             CL_CHECK(this->clcontext.queue.enqueueCopyBuffer(d_tokenEmbed, d_tokForBlock, copy_offset_bytes, 0, context_win_bytes));
             CL_CHECK(this->clcontext.queue.finish()); // Ensure copy is done
-/*          
+
+
             // Pre-calculate KdotQ for the second part (m1 tokens) in the *new* block
             if (m1 > 0) {
                 // The "previous token count" for this calculation is effectively the start of the new block's relevant context
@@ -177,7 +180,6 @@ void transformer::clRun()
                 }
                 CL_CHECK(this->clcontext.queue.finish()); // Ensure KdotQ for m1 is done
             }
-*/
         }
 
         // --- Response Generation Loop (OpenCL) ---
@@ -200,39 +202,45 @@ void transformer::clRun()
                 throw std::runtime_error("EH size in t[0] is incorrect after clForward.");
             }
 
-            {
-                cl::Buffer d_output;            // Buffer for EH input to kernel
-                cl::Buffer d_result_index;      // Buffer for kernel output index
-                int result_index_val = -1;      // Host variable to hold the result
+            // --- Start: Inline Prediction Kernel Launch ---
+            { // Scope for temporary prediction buffers
+                cl::Buffer d_output;       // Buffer for EH input to kernel
+                cl::Buffer d_result_index; // Buffer for kernel output index
+                int result_index_val = -1; // Host variable to hold the result
 
                 d_output = cl::Buffer(this->clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, otok.data(), &cl_err); CL_CHECK(cl_err);
                 d_result_index = cl::Buffer(this->clcontext.context, CL_MEM_WRITE_ONLY, indexBytes, nullptr, &cl_err); CL_CHECK(cl_err);
 
-                try {
-                    // Keep try-catch for kernel name lookup
+                try { // Keep try-catch for kernel name lookup
                     // Get the kernel
                     cl::Kernel kernel = this->clcontext.kernels.at("compute_prediction"); // Use member function
 
                     // Set arguments based on the kernel signature
                     CL_CHECK(kernel.setArg(0, d_output));
-                    CL_CHECK(kernel.setArg(1, d_embeddings));       // Use existing buffer
-                    CL_CHECK(kernel.setArg(2, static_cast<cl_int>(this->d)));           // dim
-                    CL_CHECK(kernel.setArg(3, static_cast<cl_int>(this->vocabsize)));   // voc
-                    CL_CHECK(kernel.setArg(4, d_result_index));     // Output buffer for the index
+                    CL_CHECK(kernel.setArg(1, d_embeddings)); // Use existing buffer
+                    CL_CHECK(kernel.setArg(2, static_cast<cl_int>(this->d))); // dim
+                    CL_CHECK(kernel.setArg(3, static_cast<cl_int>(this->vocabsize))); // voc
+                    CL_CHECK(kernel.setArg(4, d_result_index)); // Output buffer for the index
 
                     // --- Enqueue Kernel ---
                     cl::NDRange global(1);
                     cl::NDRange local(1);
                     CL_CHECK(this->clcontext.queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local));
+
+                    // --- Read Result Back ---
                     CL_CHECK(this->clcontext.queue.enqueueReadBuffer(d_result_index, CL_TRUE, 0, indexBytes, &result_index_val));
-                    this->indexForToken = result_index_val; // Update Output Parameter
+
+                    // --- Update Output Parameter ---
+                    this->indexForToken = result_index_val; // Update class member
                 } 
                 catch (const std::out_of_range& oor) { // Catch if kernel "compute_prediction" is not found
-                    this->indexForToken = -1; // Indicate error
                     std::cerr << "Error: Kernel 'compute_prediction' not found. " << oor.what() << std::endl;
-                    return;
+                    this->indexForToken = -1; // Indicate error
+                    throw; // Re-throw
                 }
+                // Buffers d_output, d_result_index released by RAII
             }
+            // --- End: Inline Prediction Kernel Launch ---
 
             // --- Update State (Host & Device) ---
             if (indexForToken < 0 || indexForToken >= vocabsize) {
@@ -267,7 +275,9 @@ void transformer::clRun()
 
             // Print the token (host)
             std::cout << mTokens[currentTokenCount] << " " << std::flush;
-            currentTokenCount += 1;     // Increment token count (host)
+
+            // Increment token count (host)
+            currentTokenCount += 1;
             rCount += 1;
 
             // --- Context Window / Block Transition Check ---
@@ -277,7 +287,9 @@ void transformer::clRun()
                 // Placeholder logic (see prompt handling section)
                 // ... D->D copy loop using enqueueCopyBuffer ...
                 // queue.finish();
+
                 blockCount += 1; // Increment block count
+
                 // Update d_tokForBlock for the new block (copy last CONTEXT_WIN embeddings D->D)
                 int start_idx_for_new_block = currentTokenCount - CONTEXT_WIN;
                 size_t copy_offset_bytes = static_cast<size_t>(start_idx_for_new_block) * d * sizeof(float);
@@ -286,6 +298,7 @@ void transformer::clRun()
                 }
                 CL_CHECK(this->clcontext.queue.enqueueCopyBuffer(d_tokenEmbed, d_tokForBlock, copy_offset_bytes, 0, context_win_bytes));
                 CL_CHECK(this->clcontext.queue.finish()); // Ensure copy is done
+
                 // Optional: Pre-calculate KdotQ for the new block if needed.
             }
 
@@ -295,14 +308,15 @@ void transformer::clRun()
                 break;
             }
             if (tokens[indexForToken] == TERMINATE) {
-                break;
+                break; // End generation for this prompt
             }
-        }
+        } // End of response generation loop
         resCount = rCount;
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e) { // Catches std::runtime_error from CL_CHECK and other std exceptions
         std::cerr << "Error in transformer::clRun: " << e.what() << std::endl;
-        return;
+        // Cleanup is handled by RAII for cl::Buffer
+        throw; // Re-throw
     }
 }
 

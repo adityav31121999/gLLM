@@ -42,7 +42,7 @@ struct HeadForwardDeviceBuffersCL {
     cl::Buffer d_dh_accum, d_dv_accum;
     cl::Buffer d_MH_hxd, d_MV_hxd;
     cl::Buffer d_dh, d_dv, d_EH;
-    cl::Buffer d_EV_processed_data;
+    cl::Buffer d_EV_processed_data; // For the current block's EV data (first 'n' rows of head.EV or EVp)
     cl::Buffer d_ver_accumulated_ev;
     cl::Buffer d_hor_inputs, d_ver_inputs;
     cl::Buffer d_hor_output, d_ver_output;
@@ -50,7 +50,6 @@ struct HeadForwardDeviceBuffersCL {
     cl::Buffer d_mlp_bufferA_hor, d_mlp_bufferB_hor;
     cl::Buffer d_mlp_bufferA_ver, d_mlp_bufferB_ver;
     cl::Buffer d_mlp_pre_activation;
-    // cl::Buffer deEmbed;
 
     // Note: For the second overload (subsequent blocks), d_EV_processed_data will hold
     // the data from EVp_layer after transfer to the device.
@@ -109,7 +108,6 @@ void block::cl1parallelForprop(int& in_dim_param, int& tokenCount_param, int col
     cl::Buffer agg_d_mlp_bufferA_hor, agg_d_mlp_bufferB_hor;
     cl::Buffer agg_d_mlp_bufferA_ver, agg_d_mlp_bufferB_ver;
     cl::Buffer agg_d_mlp_pre_activation;
-    // cl::Buffer deEmbedBuffer;
 
     if (n_tokens > 0) { // Only allocate if there are tokens to process
         agg_d_K = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * k_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -443,25 +441,19 @@ void block::cl1parallelForprop(int& in_dim_param, int& tokenCount_param, int col
             // std::cout << "Head [" << layer_idx << "]: All MLP layers processed." << std::endl;
 
             // 7. Apply ReLU (Copied from attention::clforprop)
-            // cl::Kernel sigmoid_kernel = get_kernel_with_check(context_obj, "clSigmoid1d"); 
-            CL_CHECK(sigmoid_kernel.setArg(2, d_embedding));
-            /*
-            if(col_idx_param > 0) {
-                CL_CHECK(sigmoid_kernel.setArg(0, current_gpu_bufs.d_hor_output)); 
-                CL_CHECK(sigmoid_kernel.setArg(1, current_gpu_bufs.d_relu_hor_output)); 
-                CL_CHECK(current_queue.enqueueNDRangeKernel(sigmoid_kernel, cl::NullRange, global_add, local_add));
-            }
-            */
-            CL_CHECK(sigmoid_kernel.setArg(0, current_gpu_bufs.d_ver_output));
-            CL_CHECK(sigmoid_kernel.setArg(1, current_gpu_bufs.d_relu_ver_output)); 
-            CL_CHECK(current_queue.enqueueNDRangeKernel(sigmoid_kernel, cl::NullRange, global_add, local_add));
+            cl::Kernel relu_kernel = get_kernel_with_check(context_obj, "clReLU1d"); 
+            CL_CHECK(relu_kernel.setArg(2, d_embedding));
+            CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_hor_output)); CL_CHECK(relu_kernel.setArg(1, current_gpu_bufs.d_relu_hor_output)); 
+            CL_CHECK(current_queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add));
+            CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_ver_output)); CL_CHECK(relu_kernel.setArg(1, current_gpu_bufs.d_relu_ver_output)); 
+            CL_CHECK(current_queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add));
             // DEBUG: Sync after ReLU
             // CL_CHECK(current_queue.finish());
             // std::cout << "Head [" << layer_idx << "]: ReLU applied." << std::endl;
 
             // 8. Final Residual Update (Copied from attention::clforprop)
             CL_CHECK(add_kernel.setArg(0, current_gpu_bufs.d_EH)); 
-            CL_CHECK(add_kernel.setArg(1, current_gpu_bufs.d_hor_output)); 
+            CL_CHECK(add_kernel.setArg(1, current_gpu_bufs.d_relu_hor_output)); 
             CL_CHECK(add_kernel.setArg(2, current_gpu_bufs.d_EH)); 
             CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
             cl::Kernel update_ev_kernel = get_kernel_with_check(context_obj, "updateEVRowsKernelCL");
@@ -892,7 +884,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             // CL_CHECK(current_queue.finish()); // DEBUG: Sync after entire MLP loop
 
             // 7. Apply ReLU
-            cl::Kernel relu_kernel = get_kernel_with_check(context_obj, "clSigmoid1d");
+            cl::Kernel relu_kernel = get_kernel_with_check(context_obj, "clReLU1d");
             CL_CHECK(relu_kernel.setArg(2, d_embedding));
             CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_hor_output)); CL_CHECK(relu_kernel.setArg(1, current_gpu_bufs.d_relu_hor_output));
             CL_CHECK(current_queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add)); // global_add is for d_embedding size

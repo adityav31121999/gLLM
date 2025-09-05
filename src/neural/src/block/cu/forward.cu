@@ -1,4 +1,3 @@
-#ifdef USE_CUDA
 
 #include "include/attention.hpp"
 #include "include/block.hpp"
@@ -725,5 +724,3 @@ void block::cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>&
         }
     }
 }
-
-#endif

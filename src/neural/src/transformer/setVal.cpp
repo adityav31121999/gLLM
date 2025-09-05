@@ -1,43 +1,14 @@
 
 #include "include/transformer.hpp"
-#include <limits>
 
 /**
- * @brief Adjusts the learning rate using the ReduceLROnPlateau strategy.
- *        Should be called once per "epoch" (or per token training iteration in your loop).
- * @param current_loss The current loss value for the monitored metric.
+ * @brief update learning rate when error increases
+ * @param pErr previous iteration's error
+ * @param cErr current iteration's error
  */
-void transformer::adjustLearningRateOnPlateau(float current_loss) {
-    if (current_loss < this->best_loss_for_lr_schedule - this->LR_MIN_DELTA_CONFIG) {
-        this->best_loss_for_lr_schedule = current_loss;
-        this->lr_patience_counter = 0; // Reset patience on improvement
-        std::cout << "Loss improved to " << current_loss << ". Resetting LR patience." << std::endl;
-    }
-    else {
-        this->lr_patience_counter++;
-        std::cout << "Loss did not improve sufficiently. Patience: " << this->lr_patience_counter
-                  << "/" << this->LR_PATIENCE_CONFIG << std::endl;
-
-        if (this->lr_patience_counter >= this->LR_PATIENCE_CONFIG) {
-            // Patience exhausted, reduce learning rate if it's not at its minimum
-            if (this->learning > LEARNING_MIN) {
-                float old_learning_rate = this->learning;
-                this->learning *= this->LR_DECAY_FACTOR_CONFIG;
-                // Ensure learning rate doesn't drop below the defined minimum
-                this->learning = std::max<float>(this->learning, LEARNING_MIN);
-
-                this->lr_patience_counter = 0; // Reset patience after reducing LR
-                std::cout << "LR reduced from " << old_learning_rate << " to " << this->learning
-                          << " after plateau." << std::endl;
-            }
-            else {
-                std::cout << "Learning rate already at minimum (" << LEARNING_MIN
-                          << "). Cannot reduce further." << std::endl;
-            }
-        }
-    }
+void transformer::updateLearning(float& pErr, float& cErr) {
+    //
 }
-
 
 /**
  * @brief set all the dimension for transformer

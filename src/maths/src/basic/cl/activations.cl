@@ -1,6 +1,12 @@
-#ifndef FLT_MAX // Define if not already available from OpenCL headers or standard libs
-#define FLT_MAX 3.402823466e+38F // Max float value
-#endif
+
+// Helper macro for indexing flattened matrix (assuming row-major)
+#define IDX(row, col, dim) ((row) * (dim) + (col))
+
+// Enable extensions for atomics and potentially double precision (which might include float atomics)
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
+// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Ignored by target platform, implementing manually
 
 
 void parallel_reduce_max(__local float* buffer, uint local_size) {
@@ -392,87 +398,12 @@ __kernel void clReLUder2d(__global float* x, __global float* out, int rows, int 
     }
 }
 
-__kernel void kernelLotaFindMin(__global const float* input_vector,
-                                __global float* min_val_buffer, // Output: single element for global min
-                                __local float* local_min_buffer, // Local memory for reduction
-                                const int size) // Size of input_vector
-{
-    int global_id = get_global_id(0);
-    int local_id = get_local_id(0);
-    int local_size = get_local_size(0);
-    int group_id = get_group_id(0);
-
-    // Each work-item initializes its local share with a value from global memory
-    // Handle bounds carefully for inputs not perfectly divisible by global_size
-    float min_val_thread = (global_id < size) ? input_vector[global_id] : FLT_MAX; // FLT_MAX from <float.h>
-
-    // Accumulate min within the work-group
-    for (int i = global_id + get_global_size(0); i < size; i += get_global_size(0)) {
-        min_val_thread = fmin(min_val_thread, input_vector[i]);
-    }
-
-    local_min_buffer[local_id] = min_val_thread;
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    // Reduce within local memory
-    for (int stride = local_size / 2; stride > 0; stride >>= 1) {
-        if (local_id < stride) {
-            local_min_buffer[local_id] = fmin(local_min_buffer[local_id], local_min_buffer[local_id + stride]);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    // Write the work-group's minimum to a global buffer (partial minimums)
-    // The host will then need to find the overall min from min_val_buffer, or launch another kernel.
-    // For single global min, need to reduce `min_val_buffer` further.
-    // Simplest: only first work-group writes to index 0, assuming 1 work-group or host aggregation.
-    if (local_id == 0 && group_id == 0) { // Assuming a single work-group for the whole reduction or a final step
-        min_val_buffer[0] = local_min_buffer[0];
-    }
-}
-
-__kernel void kernelLotaComputeSum(__global const float* input_vector,
-                                   __global float* sum_buffer, // Output: single element for global sum
-                                   __local float* local_sum_buffer, // Local memory for reduction
-                                   const float abs_min_val,
-                                   const int size)
-{
-    int global_id = get_global_id(0);
-    int local_id = get_local_id(0);
-    int local_size = get_local_size(0);
-    int group_id = get_group_id(0);
-
-    float sum_thread = 0.0f;
-    for (int i = global_id; i < size; i += get_global_size(0)) {
-        sum_thread += (input_vector[i] + abs_min_val);
-    }
-
-    local_sum_buffer[local_id] = sum_thread;
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    // Reduce within local memory
-    for (int stride = local_size / 2; stride > 0; stride >>= 1) {
-        if (local_id < stride) {
-            local_sum_buffer[local_id] += local_sum_buffer[local_id + stride];
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    if (local_id == 0 && group_id == 0) { // Assuming a single work-group or final step
-        sum_buffer[0] = local_sum_buffer[0];
-    }
-}
-
-
-__kernel void clLOTA1d(__global float* y, 
-    __global float* out, 
-    int size) 
-{
+__kernel void clLOTA1d(__global float* y, __global float* out, int size) {
     int global_id = get_global_id(0);
     int local_id = get_local_id(0);
     uint local_size = get_local_size(0);
 
-    __local float local_buffer[64]; // Max possible local_size
+    __local float local_buffer[256]; // Max possible local_size
 
     // Step 1: Find min value using parallel reduction
     float my_val = (global_id < size) ? y[global_id] : MAXFLOAT; // Use identity for padded elements
@@ -504,7 +435,6 @@ __kernel void clLOTA1d(__global float* y,
         }
     }
 }
-
 
 __kernel void clLOTA2d(__global float* y, __global float* out, int rows, int cols) {
     int global_id = get_global_id(0);
@@ -734,6 +664,7 @@ __kernel void clLOTA2ddermasking(__global float* y, __global float* out, int row
     if (local_id < local_size) { // Ensure local_id is within bounds for local_buffer
         local_buffer[local_id] = my_val;
     }
+
 
     barrier(CLK_LOCAL_MEM_FENCE); // Ensure all values loaded
 

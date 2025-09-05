@@ -72,6 +72,7 @@ private:
     std::vector<float> seeds;                       // seeds for all tokens (seeds.csv)
     std::vector<std::vector<float>> embeddings;     // vector for each token of dimension d
     std::vector<std::vector<float>> deEmbeddings;   // inverse of each token of dimension d
+    std::unordered_map<std::string, int> token_to_idx;      // maps token string to index in embeddings
     std::unordered_map<std::string, int> corpusWordCount;   // NEW (or similar if it's not a member)
     std::unordered_map<std::string, int> statOfTokens;      // hold tokens and their stats (unique_tokens.csv)
 
@@ -109,6 +110,7 @@ public:
           seeds(other.seeds),
           embeddings(other.embeddings),
           deEmbeddings(other.deEmbeddings),
+          token_to_idx(other.token_to_idx),
           corpusWordCount(other.corpusWordCount),
           statOfTokens(other.statOfTokens),
           num_threads(other.num_threads),
@@ -129,6 +131,7 @@ public:
           seeds(std::move(other.seeds)),
           embeddings(std::move(other.embeddings)),
           deEmbeddings(std::move(other.deEmbeddings)),
+          token_to_idx(std::move(other.token_to_idx)),
           corpusWordCount(std::move(other.corpusWordCount)),
           statOfTokens(std::move(other.statOfTokens)),
           num_threads(other.num_threads),
@@ -153,6 +156,7 @@ public:
         seeds = other.seeds;
         embeddings = other.embeddings;
         deEmbeddings = other.deEmbeddings;
+        token_to_idx = other.token_to_idx;
         corpusWordCount = other.corpusWordCount;
         statOfTokens = other.statOfTokens;
         num_threads = other.num_threads;
@@ -179,6 +183,7 @@ public:
         seeds = std::move(other.seeds);
         embeddings = std::move(other.embeddings);
         deEmbeddings = std::move(other.deEmbeddings);
+        token_to_idx = std::move(other.token_to_idx);
         corpusWordCount = std::move(other.corpusWordCount);
         statOfTokens = std::move(other.statOfTokens);
         num_threads = other.num_threads;
@@ -213,13 +218,14 @@ public:
     int getDval() const { return d_val; }
     int getVocabularySize() const { return vocSize; }
     const std::unordered_map<std::string, int> getTokenStats() const { return statOfTokens; }
-    // const std::unordered_map<std::string, std::vector<float>>& getMappedEmbeddings() const { return mappedEmbeddings; }
     std::vector<float> getEmbeddingForToken(int index) const { return embeddings[index]; };
     std::vector<float> getEmbeddingForToken(const std::string& token) const;
     const std::vector<std::string>& getTokens() const { return tokens; }
     const int getIndexOfToken(const std::string& token) const;
     const std::vector<std::vector<float>>& getEmbeddings() const { return embeddings; }
     const std::vector<std::vector<float>>& getDeEmbeddings() const { return deEmbeddings; }
+    float getEmbedding(int i, int j) { return embeddings[i][j]; }
+    float getDeEmbedding(int i, int j) { return deEmbeddings[i][j]; }
 
     void splitWord(const std::string& word, std::vector<std::string>& subwords) const;
     void splitSentence(const std::string& sentence, std::vector<std::string>& all_subwords) const;
@@ -315,7 +321,7 @@ std::future<std::unordered_map<std::string, int>> merge_maps(std::vector<std::fu
 std::vector<float> vectorInverse(const std::vector<float>& vec);
 std::vector<std::string> pre_tokenize_word_by_corpus_freq(const std::string& word, const std::unordered_map<std::string, int>& corpus_word_counts);
 
-long long count_lines(const std::string& filename);
+unsigned long long count_lines(const std::string& filename);
 std::string trim(const std::string& str);
 std::string removeQuotes(const std::string& str);
 std::string escapeAndQuoteCsvField(const std::string& field);

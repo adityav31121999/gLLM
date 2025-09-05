@@ -707,7 +707,7 @@ float MSE(std::vector<float>& a, std::vector<float>& b) {
  * applying LOTA to both vectors.
  * The formula for Cross-Entropy is: -sum(y_true[i] * log(y_pred[i]))
  * A small epsilon is added to y_pred to prevent taking the logarithm of zero.
- * @param[in] a The true values (one hot encoding).
+ * @param[in] a The true values.
  * @param[in] b The predicted values.
  * @return The Cross-Entropy loss.
  * @throws std::runtime_error if the vector sizes do not match.
@@ -716,11 +716,11 @@ float crossEntropy(std::vector<float>& a, std::vector<float>& b) {
     if (a.size() != b.size()) {
         throw std::runtime_error("crossEntropy: Vector sizes do not match.");
     }
-    std::vector<float> y_true = softmax(a);        // normalise a
-    std::vector<float> y_pred = softmax(b);        // normalise b
+    std::vector<float> y_true = LOTA(a);
+    std::vector<float> y_pred = LOTA(b);
     float loss = 0.0f;
     float epsilon = 1e-15f; // Small value to prevent log(0)
-    for (size_t i = 0; i < a.size(); ++i) {
+    for (size_t i = 0; i < y_true.size(); ++i) {
         // Ensure y_pred[i] is not zero before taking log
         loss -= y_true[i] * std::log(std::max<float>(y_pred[i], epsilon));
     }

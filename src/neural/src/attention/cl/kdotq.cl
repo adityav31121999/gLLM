@@ -1,12 +1,3 @@
-// Helper macro for indexing flattened matrix (assuming row-major)
-#define IDX(row, col, dim) ((row) * (dim) + (col))
-
-// Enable extensions for atomics and potentially double precision (which might include float atomics)
-// #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-// #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-// #pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
-// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Not supported on target, using manual implementation
-
 /**------------------------------------TRAINING------------------------------------**/
 
 __kernel void kernelKdotQforSelf_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys,

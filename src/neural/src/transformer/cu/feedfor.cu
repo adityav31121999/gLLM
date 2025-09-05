@@ -1,5 +1,7 @@
-#ifdef USE_CUDA
 #include "include/transformer.hpp"
+#include "include/block.hpp"
+#include "include/attention.hpp"
+#include "include/mlp.hpp"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
@@ -240,5 +242,3 @@ void cuComputeOutput(float* d_output, float* d_embeddings, int voc_size, int& in
         throw;
     }
 }
-
-#endif

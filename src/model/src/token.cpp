@@ -25,6 +25,65 @@ static bool is_sub_sentence_delimiter(char c) {
 
 
 /**
+ * @brief Tokenize a string into words, separate numbers (digit by digit), and punctuations.
+ * @param str The string to tokenize.
+ * @param tokens The vector to store the tokens.
+ * @param sortIt when embedding needed (1) sort else don't
+ */
+void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens, bool& sortIt)
+{
+    tokens.clear(); // Ensure the output vector starts fresh
+    std::set<std::string> encountered_tokens; // To keep track of tokens already added
+
+    // Delimiters include common punctuation and symbols (excluding space)
+    static const std::string delimiters = ".,!?;:-~_+=/@#$&*`%^\\|\"\'(){}[]<>";
+
+    // Helper lambda to add a token to the 'tokens' vector if it's new
+    auto add_unique_token = [&](const std::string& token_val) {
+        if (!token_val.empty() && encountered_tokens.find(token_val) == encountered_tokens.end()) {
+            tokens.push_back(token_val);
+            encountered_tokens.insert(token_val);
+        }
+    };
+
+    std::string current_part;
+    
+    // Process each character in the string
+    for (char c : str) {
+        if (c == ' ') {
+            // Space separates tokens but is not included as a token
+            add_unique_token(current_part);
+            current_part.clear();
+        } 
+        else if (is_digit(c)) {
+            // Add accumulated word part if any
+            add_unique_token(current_part);
+            current_part.clear();
+            // Add digit as a separate token
+            add_unique_token(std::string(1, c));
+        } 
+        else if (delimiters.find(c) != std::string::npos) {
+            // Add accumulated word part if any
+            add_unique_token(current_part);
+            current_part.clear();
+            // Add delimiter as a separate token
+            add_unique_token(std::string(1, c));
+        } 
+        else {
+            // Accumulate character for a word/token
+            current_part.push_back(c);
+        }
+    }
+    
+    // Add any remaining part
+    add_unique_token(current_part);
+    // Sort the tokens lexicographically
+    if(sortIt == 1)
+        std::sort(tokens.begin(), tokens.end());
+}
+
+
+/**
  * @brief Split a line into sub-sentences based on delimiters (., !, ?, :) and store them in a vector.
  * @param line The line to split.
  * @param subSentences The vector to store the sub-sentences.
@@ -56,7 +115,7 @@ void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSent
             }
             if (contains_non_whitespace) {
                 if (subSentences.size() % 2 == 1) { // Even-positioned (2nd, 4th, etc.)
-                    // current_sub_sentence += "@#0";
+                    // current_sub_sentence += "</s>";
                 }
                 subSentences.push_back(current_sub_sentence);
             }
@@ -75,7 +134,7 @@ void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSent
         }
         if (tail_contains_non_whitespace) {
             if (subSentences.size() % 2 == 1) { // Even-positioned (2nd, 4th, etc.)
-                // current_sub_sentence += "@#0";
+                // current_sub_sentence += "</s>";
             }
             subSentences.push_back(current_sub_sentence);
         }
@@ -161,6 +220,174 @@ void textSplit(std::string &path2file, std::vector<std::string> &tokensOfFile, s
             evenSentence.push_back(sentence_vec);
         }
     }
+}
+
+
+/**
+ * @brief Make embedding for the model. This function reads a file, tokenizes its 
+ *      content, and initializes or updates the model's vocabulary and embeddings.
+ * @param path2file Path to the file containing tokens.
+ */
+void model::makeEmbedding(std::string &path2file)
+{
+    bool sortIt = 1;
+    const std::string special_token = "</s>";
+
+    std::ifstream file(path2file);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file: " << path2file << std::endl;
+        throw std::runtime_error("makeEmbedding: Could not open file: " + path2file);
+    }
+
+    std::string line_content;
+    std::vector<std::string> all_tokens_from_file_temp;
+    while (std::getline(file, line_content)) {
+        if(line_content.empty()) {
+            continue;
+        }
+        std::vector<std::string> line_tokens_temp;
+        tokenize_with_numbers(line_content, line_tokens_temp, sortIt);
+        all_tokens_from_file_temp.insert(all_tokens_from_file_temp.end(), line_tokens_temp.begin(), line_tokens_temp.end());
+    }
+    file.close();
+
+    if (all_tokens_from_file_temp.empty()) {
+        std::cout << "Info: No tokens found in the input file: " << path2file << std::endl;
+        return; 
+    }
+
+    // Random number generation (seeded once per program execution for consistency within a run)
+    static std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> dist_uniform(-3.0f, 3.0f);
+
+    std::set<std::string> unique_tokens_from_current_file(all_tokens_from_file_temp.begin(), all_tokens_from_file_temp.end());
+
+    if (this->T.d <= 0) {
+        throw std::runtime_error("makeEmbedding: Transformer embedding dimension (T.d) must be positive.");
+    }
+
+    if (this->T.tokens.empty()) {
+        std::cout << "Info: Initializing vocabulary from: " << path2file << std::endl;
+        
+        // Ensure the special token is included during initialization
+        unique_tokens_from_current_file.insert(special_token);
+
+        std::vector<std::string> sorted_unique_tokens(unique_tokens_from_current_file.begin(), unique_tokens_from_current_file.end());
+        std::sort(sorted_unique_tokens.begin(), sorted_unique_tokens.end());
+
+        this->T.tokens = sorted_unique_tokens;
+        this->T.vocabsize = this->T.tokens.size();
+
+        if (this->T.vocabsize == 0) {
+            std::cerr << "Warning: No unique tokens derived from file " << path2file << ", though file was not empty of tokens." << std::endl;
+            return;
+        }
+
+        this->T.embeddings = mat(this->T.vocabsize, this->T.d); // T.vocabsize and T.d are int
+
+        for (int i = 0; i < this->T.vocabsize; ++i) {
+            for (int j = 0; j < this->T.d; ++j) {
+                this->T.embeddings(i, j) = dist_uniform(rng);
+            }
+        }
+        std::cout << "Info: Initialized T.tokens with " << this->T.vocabsize << " unique tokens and T.embeddings." << std::endl;
+    }
+    else {
+        std::cout << "Info: Updating existing vocabulary using: " << path2file << std::endl;
+
+        // Store current tokens and their embeddings
+        std::vector<std::pair<std::string, std::vector<float>>> combined_token_embeddings;
+        combined_token_embeddings.reserve(this->T.vocabsize + unique_tokens_from_current_file.size());
+
+        for (int i = 0; i < this->T.vocabsize; ++i) {
+            std::vector<float> current_embedding_row(this->T.d);
+            for (int j = 0; j < this->T.d; ++j) {
+                try {
+                    current_embedding_row[j] = this->T.embeddings(i, j);
+                } 
+                catch (const std::exception& e) {
+                    std::cerr << "Error accessing T.embeddings(" << i << "," << j << ") for existing token '" << this->T.tokens[i] << "': " << e.what() << std::endl;
+                    current_embedding_row[j] = 0.0f; // Default on error
+                }
+            }
+            combined_token_embeddings.push_back({this->T.tokens[i], current_embedding_row});
+        }
+
+        // Identify genuinely new tokens to add
+        // These are tokens in unique_tokens_from_current_file but not in T.tokens yet
+        std::set<std::string> existing_vocab_set_for_check(this->T.tokens.begin(), this->T.tokens.end());
+        std::vector<std::string> new_tokens_from_file;
+        for (const auto& token_from_file : unique_tokens_from_current_file) {
+            if (existing_vocab_set_for_check.find(token_from_file) == existing_vocab_set_for_check.end()) {
+                new_tokens_from_file.push_back(token_from_file);
+            }
+        }
+
+        bool new_file_tokens_were_added = !new_tokens_from_file.empty();
+
+        if (new_file_tokens_were_added) {
+            std::cout << "Info: Found " << new_tokens_from_file.size() << " new unique tokens from file to add." << std::endl;
+            for (const auto& new_token : new_tokens_from_file) {
+                std::vector<float> random_embedding_row(this->T.d);
+                for (int j = 0; j < this->T.d; ++j) {
+                    random_embedding_row[j] = dist_uniform(rng);
+                }
+                combined_token_embeddings.push_back({new_token, random_embedding_row});
+            }
+        }
+
+        // Ensure special_token "</s>" is present in the combined list
+        bool special_token_found_in_combined = false;
+        for (const auto& pair : combined_token_embeddings) {
+            if (pair.first == special_token) {
+                special_token_found_in_combined = true;
+                break;
+            }
+        }
+
+        bool special_token_was_explicitly_added = false;
+        if (!special_token_found_in_combined) {
+            std::cout << "Info: Special token '" << special_token << "' not found. Adding it to vocabulary." << std::endl;
+            std::vector<float> random_embedding_row(this->T.d);
+            for (int j = 0; j < this->T.d; ++j) {
+                random_embedding_row[j] = dist_uniform(rng);
+            }
+            combined_token_embeddings.push_back({special_token, random_embedding_row});
+            special_token_was_explicitly_added = true;
+        }
+
+        // If no new tokens from file and special token didn't need explicit adding, vocabulary is unchanged.
+        if (!new_file_tokens_were_added && !special_token_was_explicitly_added) {
+            std::cout << "Info: No new unique tokens from " << path2file << " and special token '" << special_token << "' already exists or was part of file tokens. Vocabulary structure unchanged." << std::endl;
+            return;
+        }
+
+        // Sort the combined list by token string if changes were made
+        std::sort(combined_token_embeddings.begin(), combined_token_embeddings.end(),
+                  [](const auto& a, const auto& b) {
+                      return a.first < b.first;
+                  });
+
+        // Update T.tokens, T.vocabsize, and T.embeddings
+        this->T.tokens.clear();
+        this->T.tokens.reserve(combined_token_embeddings.size());
+        this->T.vocabsize = combined_token_embeddings.size();
+        this->T.embeddings = mat(this->T.vocabsize, this->T.d); // Re-initialize mat
+
+        for (int i = 0; i < this->T.vocabsize; ++i) {
+            this->T.tokens.push_back(combined_token_embeddings[i].first);
+            for (int j = 0; j < this->T.d; ++j) {
+                try {
+                    this->T.embeddings(i, j) = combined_token_embeddings[i].second[j];
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "Error writing combined embedding to T.embeddings(" << i << "," << j << ") for token '" << this->T.tokens[i] << "': " << e.what() << std::endl;
+                }
+            }
+        }
+        std::cout << "Info: Updated and sorted T.tokens to " << this->T.vocabsize << " unique tokens and T.embeddings." << std::endl;
+    }
+    std::cout << "Embeddings Made" << std::endl;
 }
 
 
@@ -350,41 +577,5 @@ void model::setEmbeddingFromCSV(const std::string& path2file) {
             }
         }
         std::cout << (this->T.d > 5 ? "..." : "") << std::endl;
-    }
-}
-
-
-/**
- * @brief Function to calculate and apply absolute sinusoidal positional embedding.
- * This function takes an original token embedding, calculates its sinusoidal positional 
- * encoding based on the given 'position', and adds it to create a new embedding vector.
- * @param[in] originalEmbedding original embedding for the token
- * @param[out] newEmbedding new embedding obtained after adding positional embedding
- * @param[in] position The absolute position of the token in the sequence (0-indexed)
- */
-void model::positionalEmbedding(const std::vector<float>& originalEmbedding, std::vector<float>& newEmbedding,
-    int position) 
-{
-    // The dimension of the embedding (d_model) is inferred from the size of the original embedding.
-    size_t d_model = originalEmbedding.size();
-    // Ensure newEmbedding has the correct size.
-    if (newEmbedding.size() != d_model) {
-        newEmbedding.resize(d_model);
-    }
-
-    // Iterate through each dimension of the embedding to calculate the positional encoding.
-    for (size_t i = 0; i < d_model; ++i) {
-        // The frequency term for the sine/cosine wave depends on the dimension index.
-        // The formula uses 10000^(2*k/d_model) where 'k' is floor(dimension_index / 2).
-        double div_term_exponent = static_cast<double>(i / 2) * 2.0 / d_model;
-        double div_term = std::pow(10000.0, div_term_exponent);
-
-        // Apply sine for even dimensions and cosine for odd dimensions.
-        if (i % 2 == 0) { // Even dimension indices (0, 2, 4, ...)
-            newEmbedding[i] = originalEmbedding[i] + std::sin(position / div_term);
-        }
-        else { // Odd dimension indices (1, 3, 5, ...)
-            newEmbedding[i] = originalEmbedding[i] + std::cos(position / div_term);
-        }
     }
 }

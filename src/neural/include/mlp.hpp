@@ -9,6 +9,12 @@
 #include <fstream>
 #include <map>
 
+#define EPOCHS 25                           // number of epochs for training of token
+#define LEARNING_MAX 1.0f                   // maximum learning rate allowable
+#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
+#define TERMINATE "</s>"                    // end of conversation (And Its Over)
+
+
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
  */
@@ -24,10 +30,6 @@ public:
     float lambda_l2;            // L2 regularization parameter
     unsigned int t;             // Time step for Adam (number of updates), initialized to 0
 
-    // float beta1;                // Adam hyperparameter (decay rate for first moment)
-    // float beta2;                // Adam hyperparameter (decay rate for second moment)
-    // float epsilon;              // Adam hyperparameter (small value to prevent division by zero)
-
 // member containers
     std::vector<float> input;      // input vector
     std::vector<float> output;     // output vector
@@ -37,27 +39,21 @@ public:
     std::vector<std::vector<float>> activations;   // activations for each layer
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
-/*
-    std::vector<mat> moments; // First moments for weights
-    std::vector<mat> velocity; // Second moments for weights
-*/
+
     // Constructor(s) modified to accept OpenCLContext when needed
 #ifdef USE_OPENCL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
-    mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2);
+    mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #elif USE_CUDA || USE_CPU
     mlp() = default;
     // Constructor when OpenCL is disabled
-    mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs, float learning, float lambda_L1, float lambda_L2);
+    mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator
     mlp(const mlp& other);
     mlp& operator=(const mlp& other);
-
-    mlp(const mlp&& other);
-    mlp& operator=(const mlp&& other);
 
 #ifdef USE_CUDA
 
@@ -74,7 +70,7 @@ public:
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void cuValidate(int in, int layers);
     void cuTest(int in, int layers);
-    void cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
+    void cuAdamUpdate();
 
 #elif USE_OPENCL
 
@@ -91,7 +87,7 @@ public:
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void clValidate(int in, int layers);
     void clTest(int in, int layers);
-    void clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam_param, float beta1, float beta2, float epsilon, float learning_rate); 
+    void clAdamUpdate(); 
 
 #else
 
@@ -100,14 +96,14 @@ public:
     void backprop(int layers, int in, float learning);
     void backwithL1(int layers, int in, float learning);
     void backwithL2(int layers, int in, float learning);
-    void backwithElasticNet(int in, int layers, float learning);
+    void backwithElastic(int in, int layers, float learning);
     void backprop2in(int layers, int in, float learning);
     void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void train(float& mse, int in, int layers, float learning);
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
     void validate(int in, int layers);
     void test(int in, int layers);
-    void adamUpdate(unsigned long long t_adam_param, float beta1, float beta2, float epsilon, float learning_rate);
+    void adamUpdate(); 
 
 #endif
     void initializeWeights();
@@ -131,14 +127,12 @@ public:
                                                current_byte_offset_in_shared_map,
                                                rows, cols, path_to_shared_file);
             current_byte_offset_in_shared_map += static_cast<size_t>(rows) * cols * sizeof(float);
-            // TODO: Handle gweights similarly if they are also file-backed in the shared map
         }
     }
 
-    void initializeAdamMoments();
     void clearValues();
-    void serialise(unsigned long long offset, const std::string& locationWithFilename);
-    void deserialise(unsigned long long offset, const std::string& locationWithFilename);
+    void serialise(long long int offset, const std::string& locationWithFilename);
+    void deserialise(long long int offset, const std::string& locationWithFilename);
     void serialise4train(const std::string& locationWithFileName);
     void serialise4use(const std::string& locationWithFileName);
     
@@ -163,8 +157,6 @@ inline mlp::mlp(const mlp& other) :
     activations(other.activations), // std::vector copy constructor
     gweights(other.gweights),       // Relies on mat's copy constructor and std::vector's copy constructor
     params(other.params)
-    // moments(other.moments),
-    // velocity(other.velocity)
 {}
 
 inline mlp& mlp::operator=(const mlp& other) {
@@ -191,8 +183,7 @@ inline mlp& mlp::operator=(const mlp& other) {
     activations = other.activations; // std::vector assignment
     gweights = other.gweights;       // Relies on mat's assignment operator and std::vector's assignment
     params = other.params;
-    // moments = other.moments;
-    // velocity = other.velocity;
+
     return *this;
 }
 
@@ -209,6 +200,9 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
 
 #ifdef USE_CUDA
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+
 // cuda implementation (kernels remain the same)
     __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
     __global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
@@ -217,12 +211,12 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
     __global__ void absDiffKernel(float* outputs, float* targets, float* result, int size);
     __global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size);
     __global__ void cuMSEKernel(float* expected, float* output, float* mse, int size);
-    __global__ void kernelOutputDelta(const float* output, const float* expected, float* delta, int size);
+    __global__ void kernelOutputDelta(const float* output, const float* expected, float* delta, int size); // Note: CUDA likely uses specific name like kernelOutputDeltaSigmoid
     __global__ void hiddenDeltaKernel(float* next_layer_deltas, float* weights, float* activations,
             float* deltas, int current_layer_size, int next_layer_size); // Note: CUDA likely uses specific name like kernelHiddenDeltaSigmoid
     __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
             int current_layer_size, int input_size);
-    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size);
+    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size); // Note: CUDA likely uses specific name like kernelLastLayerDeltaSigmoid
     __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float learning_rate,
             int current_layer_size, int prev_layer_size); // Note: CUDA likely uses specific name like kernelUpdateWeights
     __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float* gradients,
@@ -233,26 +227,15 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
             float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
     __global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, float* delta_weights,
             float eta_plus, float eta_minus, float delta_max, float delta_min, int size);
-    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size);
-    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size);
+    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size); // Note: CUDA likely uses specific name like kernelUpdateInputMLP
+    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size); // Note: CUDA likely uses specific name like kernelLayerForward
     __global__ void kernelUpdateElasticNet(float* deltas, float* prev_activations, float* weights, float* gweights, float learning_rate, float lambda_l1, 
                     float lambda_l2, int current_layer_size, int prev_layer_size);
-    __global__ void adam_optimizer_kernel_cuda(float* weights, const float* gradients, float* moments,
-                    float* velocity, float learning_rate, float beta1, float beta2, float epsilon,
-                    unsigned long long t_step, int num_elements);
-
     float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
     float cucomputeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
     float cudropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
-
-#elif USE_OPENCL
-
-// opencl implementation (kernels remain the same)
-    void clipGradientBuffer(cl::CommandQueue& queue, cl::Kernel& clip_kernel,
-        cl::Kernel& apply_kernel, cl::Buffer& gradient_buffer, float clip_norm_value,
-        size_t num_elements, size_t local_work_size_1d, OpenCLContext& clcontext);
 
 #endif
 

@@ -529,6 +529,7 @@ __global__ void updateEVRowsKernel(float* d_EV_rows, const float* d_vector_to_ad
     }
 }
 
+
 /**------------------------------------BACKPROP------------------------------------**/
 
 /**

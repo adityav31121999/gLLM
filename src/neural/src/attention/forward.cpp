@@ -1,4 +1,6 @@
+
 #ifdef USE_CPU
+
 #include <vector>
 #include <cmath> // For std::abs, std::min
 #include <stdexcept> // For error handling if needed
@@ -11,7 +13,7 @@
  * @param layers layers of hidden weights in mlp
  * @param tokenCount token count for each attention head (how many tokens have been generated or taken as input)
  */
-void attention::forprop(int& in, int& layers, int& tokenCount) 
+void attention::forprop(int& in, int& layers, int& tokenCount)
 {
     if (tokenCount <= 0 || tokenCount > KdotQ.row || tokenCount > KdotQ.col) {
         return;
@@ -23,8 +25,10 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
     // probability distribution
     float k_sum, l_sum;
     mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
+
     dh.assign(EMBEDDING, 0.0f);
     dv.assign(EMBEDDING, 0.0f);
+
     for(int i = 0; i < tokenCount; ++i) {
         k_sum = 0.0f;   // row sum
         l_sum = 0.0f;   // column sum
@@ -42,21 +46,22 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
             dv = dv + (l_sum * getRow(Q, i)); // Vector addition and scalar multiplication
         }
     }
+ 
     dh = dot(dh, MH);
     dv = dot(dv, MV);
-
     hor.input = EH + dh;
     for(int i = 0; i < tokenCount; ++i) {
         ver.input += getRow(EV, i);
     }
     ver.input += dv;
+
     hor.forward(in, layers);
     ver.forward(in, layers);
 
     // AND gate for the final output
-    EH = EH + sigmoid(hor.output);
+    EH = EH + ReLU(hor.output); // Assumes EH is std::vector<float>
     for(int i = 0; i < CONTEXT_WIN; ++i) {
-        EV(i) += sigmoid(ver.output);
+        EV(i) += ReLU(ver.output);
     }
 }
 
@@ -81,6 +86,7 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
     int startTokenIndexInFullContext = (blockCount -1) * n; // blockCount is 1-based for subsequent blocks
     int endTokenIndexInFullContext = std::min(tokenCount, (blockCount) * n); // Corrected end index
     int currentBlockTokenCount = endTokenIndexInFullContext - startTokenIndexInFullContext;
+
     if (currentBlockTokenCount <= 0 || KdotQ.row == 0 || KdotQ.col == 0 || currentBlockTokenCount > KdotQ.row || currentBlockTokenCount > KdotQ.col) {
         return;
     }
@@ -113,28 +119,37 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
             dv = dv + (l_sum * getRow(Q, i)); // Vector addition and scalar multiplication
         }
     }
+
     dh = dot(dh, MH);
     dv = dot(dv, MV);
 
     hor.input = EH + dh;
-    ver.input.assign(EMBEDDING, 0.0f);
+
+    // Use EVp from the previous block for ver.input
+    ver.input.assign(EMBEDDING, 0.0f); // Clear previous ver.input
+    // EVp.row should be totalTokenCount (passed as 'tokenCount' parameter to this function)
+    // EVp.col should be EMBEDDING
     if (EVp.mapped_data && EVp.row > 0 && EVp.col == EMBEDDING) {
         for(int i = 0; i < EVp.row; ++i) { // Iterate up to EVp.row (which is totalTokenCount)
             ver.input += getRow(EVp, i);
         }
-    }
-    else if (tokenCount > 0 && EVp.row != tokenCount) { 
-         throw std::runtime_error("EVp dimension mismatch in attention::forprop. Expected rows: " + 
-                                std::to_string(tokenCount) + ", got: " + std::to_string(EVp.row));
+    } else if (tokenCount > 0 && EVp.row != tokenCount) { // If EVp is not valid but we expected tokens
+        // Potentially log a warning or handle as an error if EVp is expected to be valid
+        // For now, ver.input will just be dv if EVp is not usable.
+         throw std::runtime_error("EVp dimension mismatch in attention::forprop. Expected rows: " + std::to_string(tokenCount) + ", got: " + std::to_string(EVp.row));
     }
     ver.input += dv;
+
     hor.forward(in, layers);
     ver.forward(in, layers);
 
-    EH = EH + sigmoid(hor.output);
+    // AND gate for the final output
+    EH = EH + ReLU(hor.output); // Assumes EH is std::vector<float>
+    // Update this head's EV (this->EV) for the current block's tokens
+    // this->EV should be sized for CONTEXT_WIN or at least currentBlockTokenCount
     for(int i = 0; i < CONTEXT_WIN; ++i) {
         if (i < EV.row) { // Ensure EV is large enough
-            EV(i) += sigmoid(ver.output); // Update the i-th row of *this* block's EV
+            EV(i) += ReLU(ver.output); // Update the i-th row of *this* block's EV
         }
     }
 }

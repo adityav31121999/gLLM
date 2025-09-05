@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+
 #include "include/mlp.hpp"
 #include "include/attention.hpp" // Includes constants like EMBEDDING, MATHEIGHTS, etc.
 #include "include/block.hpp"
@@ -809,5 +809,3 @@ void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layer
     cudaFree(agg_d_hor_gweights_storage); cudaFree(agg_d_ver_gweights_storage);
     cudaFree(agg_d_hor_deltas_storage); cudaFree(agg_d_ver_deltas_storage);
 }
-
-#endif

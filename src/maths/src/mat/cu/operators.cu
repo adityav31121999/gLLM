@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include "mat.hpp" // Include the mat class definition
 
-#define CUDA_CHECK_ERROR(call)                                          \
+#define CHECK_CUDA_ERROR(call)                                          \
 do {                                                                    \
     cudaError_t err = call;                                             \
     if (err != cudaSuccess) {                                           \
@@ -134,7 +134,9 @@ __global__ void dot(float* vec1, float* matrix, float* vec2, float* d_scalarOutp
  * @throws std::invalid_argument if dimensions mismatch, matrix is ragged, or dimensions are non-positive.
  * @throws std::runtime_error on CUDA errors.
  */
-mat host_dot(const std::vector<float>& h_vec, const mat& input_mat)
+mat host_dot(
+    const std::vector<float>& h_vec,
+    const mat& input_mat)
 {
     // --- Validation ---
     if (input_mat.row <= 0 || input_mat.col <= 0 || !input_mat.mapped_data) {
@@ -164,13 +166,13 @@ mat host_dot(const std::vector<float>& h_vec, const mat& input_mat)
         size_t matrix_size_bytes = static_cast<size_t>(input_mat.row) * input_mat.col * sizeof(float); // Use input_mat properties
         size_t output_vec_size_bytes = static_cast<size_t>(matrixRow) * sizeof(float);
 
-        CUDA_CHECK_ERROR(cudaMalloc(&d_vec, vec_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_vecOutput, output_vec_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_vec, vec_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_vecOutput, output_vec_size_bytes));
 
         // --- Data Transfer (Host to Device) ---
-        CUDA_CHECK_ERROR(cudaMemcpy(d_vec, h_vec.data(), vec_size_bytes, cudaMemcpyHostToDevice));
-        CUDA_CHECK_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_vec, h_vec.data(), vec_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
 
         // --- Kernel Launch Configuration ---
         int threadsPerBlock = 256; // Or another suitable block size
@@ -181,18 +183,18 @@ mat host_dot(const std::vector<float>& h_vec, const mat& input_mat)
         // --- Kernel Launch ---
         // Use the correct kernel name
         dot<<<gridDim, blockDim>>>(d_vec, d_matrix, d_vecOutput, veclength, matrixRow, matrixColumn);
-        CUDA_CHECK_ERROR(cudaGetLastError()); // Check for launch errors
+        CHECK_CUDA_ERROR(cudaGetLastError()); // Check for launch errors
 
         // --- Synchronization ---
-        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         // --- Data Transfer (Device to Host) into result_mat's mapped memory ---
-        CUDA_CHECK_ERROR(cudaMemcpy(result_mat.mapped_data, d_vecOutput, output_vec_size_bytes, cudaMemcpyDeviceToHost));
+        CHECK_CUDA_ERROR(cudaMemcpy(result_mat.mapped_data, d_vecOutput, output_vec_size_bytes, cudaMemcpyDeviceToHost));
 
         // --- GPU Resource Cleanup ---
-        CUDA_CHECK_ERROR(cudaFree(d_vec));
-        CUDA_CHECK_ERROR(cudaFree(d_matrix));
-        CUDA_CHECK_ERROR(cudaFree(d_vecOutput));
+        CHECK_CUDA_ERROR(cudaFree(d_vec));
+        CHECK_CUDA_ERROR(cudaFree(d_matrix));
+        CHECK_CUDA_ERROR(cudaFree(d_vecOutput));
 
     } catch (const std::exception& e) {
         // Ensure cleanup even if error occurs
@@ -206,6 +208,7 @@ mat host_dot(const std::vector<float>& h_vec, const mat& input_mat)
     return result_mat;
 }
 
+
 // --- Host Function for Vector-Matrix-Vector Dot Product (Accepts 2D Vector Matrix) ---
 
 /**
@@ -218,8 +221,10 @@ mat host_dot(const std::vector<float>& h_vec, const mat& input_mat)
  * @throws std::invalid_argument if dimensions mismatch, matrix not square, matrix ragged, or N is non-positive.
  * @throws std::runtime_error on CUDA errors or if N exceeds kernel limitations.
  */
-float host_dot(const std::vector<float>& h_vec1,
-    const mat& input_mat, const std::vector<float>& h_vec2)
+float host_dot(
+    const std::vector<float>& h_vec1,
+    const mat& input_mat,
+    const std::vector<float>& h_vec2)
 {
     // --- Validation ---
     if (!input_mat.ifsquare() || !input_mat.mapped_data) {
@@ -243,6 +248,7 @@ float host_dot(const std::vector<float>& h_vec1,
             h_matrix_flat[static_cast<size_t>(i) * N + j] = h_matrix_2d[i][j];
         }
     }
+
     */
     // --- GPU Resource Allocation ---
     float *d_vec1 = nullptr, *d_matrix = nullptr, *d_vec2 = nullptr, *d_scalarOutput = nullptr;
@@ -253,15 +259,15 @@ float host_dot(const std::vector<float>& h_vec1,
         size_t matrix_size_bytes = static_cast<size_t>(input_mat.row) * input_mat.col * sizeof(float); // Use input_mat properties
         size_t scalar_size_bytes = sizeof(float); // Corrected size calculation
 
-        CUDA_CHECK_ERROR(cudaMalloc(&d_vec1, vec_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_vec2, vec_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_scalarOutput, scalar_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_vec1, vec_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_vec2, vec_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_scalarOutput, scalar_size_bytes));
 
         // --- Data Transfer (Host to Device) ---
-        CUDA_CHECK_ERROR(cudaMemcpy(d_vec1, h_vec1.data(), vec_size_bytes, cudaMemcpyHostToDevice));
-        CUDA_CHECK_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
-        CUDA_CHECK_ERROR(cudaMemcpy(d_vec2, h_vec2.data(), vec_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_vec1, h_vec1.data(), vec_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_vec2, h_vec2.data(), vec_size_bytes, cudaMemcpyHostToDevice));
 
         // --- Kernel Launch Configuration (Single Block Reduction) ---
         unsigned int numThreads = 1;
@@ -269,13 +275,13 @@ float host_dot(const std::vector<float>& h_vec1,
         numThreads = std::max((unsigned int)N, numThreads);
 
         cudaDeviceProp prop;
-        CUDA_CHECK_ERROR(cudaGetDeviceProperties(&prop, 0));
+        CHECK_CUDA_ERROR(cudaGetDeviceProperties(&prop, 0));
         if (numThreads > (unsigned int)prop.maxThreadsPerBlock) {
-            numThreads = prop.maxThreadsPerBlock;
-            if (N > prop.maxThreadsPerBlock) {
-                throw std::runtime_error("Dimension N exceeds maximum threads per block supported by this kernel implementation.");
-            }
-            std::cerr << "Warning: Clamping threads to maxThreadsPerBlock (" << numThreads << ")" << std::endl;
+             numThreads = prop.maxThreadsPerBlock;
+             if (N > prop.maxThreadsPerBlock) {
+                 throw std::runtime_error("Dimension N exceeds maximum threads per block supported by this kernel implementation.");
+             }
+             std::cerr << "Warning: Clamping threads to maxThreadsPerBlock (" << numThreads << ")" << std::endl;
         }
 
         size_t sharedMemBytes = numThreads * sizeof(float);
@@ -285,17 +291,19 @@ float host_dot(const std::vector<float>& h_vec1,
         // --- Kernel Launch ---
         // Use the correct kernel name
         dot<<<gridDim, blockDim, sharedMemBytes>>>(d_vec1, d_matrix, d_vec2, d_scalarOutput, N, N, N, N);
-        CUDA_CHECK_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaGetLastError());
+
         // --- Synchronization ---
-        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
         // --- Data Transfer (Device to Host) ---
-        CUDA_CHECK_ERROR(cudaMemcpy(&h_scalarOutput, d_scalarOutput, scalar_size_bytes, cudaMemcpyDeviceToHost));
+        CHECK_CUDA_ERROR(cudaMemcpy(&h_scalarOutput, d_scalarOutput, scalar_size_bytes, cudaMemcpyDeviceToHost));
 
         // --- GPU Resource Cleanup ---
-        CUDA_CHECK_ERROR(cudaFree(d_vec1));
-        CUDA_CHECK_ERROR(cudaFree(d_matrix));
-        CUDA_CHECK_ERROR(cudaFree(d_vec2));
-        CUDA_CHECK_ERROR(cudaFree(d_scalarOutput));
+        CHECK_CUDA_ERROR(cudaFree(d_vec1));
+        CHECK_CUDA_ERROR(cudaFree(d_matrix));
+        CHECK_CUDA_ERROR(cudaFree(d_vec2));
+        CHECK_CUDA_ERROR(cudaFree(d_scalarOutput));
 
     } catch (const std::exception& e) {
         // Ensure cleanup even if error occurs

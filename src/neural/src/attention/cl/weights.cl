@@ -1,140 +1,6 @@
 
-/**
- * @brief Processes, sanitizes, and clips a gradient value, then applies it to a parameter.
- *        Used for parameters that do NOT have regularization (e.g., EH, EV, or raw Adam input gradients).
- * @param param_ptr         Pointer to the parameter value to be updated.
- * @param raw_grad_val_ptr  Pointer to the raw gradient value. Can be NULL if gradient is optional.
- * @param lr                Learning rate.
- * @param clip_val          Maximum absolute value for gradient clipping.
- */
-inline void apply_plain_grad_process_and_clip(__global float* param_ptr, const __global float* raw_grad_val_ptr, float lr, float clip_val) {
-    if (raw_grad_val_ptr == NULL) {
-        return; // No gradient provided, nothing to do
-    }
-    float raw_grad = *raw_grad_val_ptr;
-
-    // Sanitize gradient
-    if (isnan(raw_grad)) raw_grad = 0.0001f;
-    else if (isinf(raw_grad)) raw_grad = copysign(FLT_MAX, raw_grad);
-
-    // Apply element-wise clipping
-    if (fabs(raw_grad) > clip_val) raw_grad = copysign(clip_val, raw_grad);
-
-    // Apply update
-    *param_ptr -= lr * raw_grad;
-}
-
-/**
- * @brief Processes, sanitizes, and clips a gradient value with L1 regularization,
- *        then applies it to a weight.
- * @param weight_ptr        Pointer to the weight value to be updated.
- * @param current_weight_val Current value of the weight.
- * @param raw_grad_val_ptr  Pointer to the raw gradient value. Can be NULL if gradient is optional.
- * @param l1_lambda         L1 regularization parameter.
- * @param lr                Learning rate.
- * @param clip_val          Maximum absolute value for gradient clipping.
- */
-inline void apply_weight_grad_process_and_clip_l1(__global float* weight_ptr, float current_weight_val, const __global float* raw_grad_val_ptr, float l1_lambda, float lr, float clip_val) {
-    if (raw_grad_val_ptr == NULL) {
-        return;
-    }
-    float raw_grad = *raw_grad_val_ptr;
-    float l1_reg_term = l1_lambda * sign_f(current_weight_val);
-    float total_grad = raw_grad + l1_reg_term;
-
-    // Sanitize gradient
-    if (isnan(total_grad)) total_grad = 0.0001f;
-    else if (isinf(total_grad)) total_grad = copysign(1000.0f, total_grad);
-
-    // Apply element-wise clipping
-    if (fabs(total_grad) > clip_val) total_grad = copysign(clip_val, total_grad);
-
-    // Apply update
-    *weight_ptr -= lr * total_grad;
-}
-
-/**
- * @brief Processes, sanitizes, and clips a gradient value with L2 regularization,
- *        then applies it to a weight.
- * @param weight_ptr        Pointer to the weight value to be updated.
- * @param current_weight_val Current value of the weight.
- * @param raw_grad_val_ptr  Pointer to the raw gradient value. Can be NULL if gradient is optional.
- * @param l2_lambda         L2 regularization parameter.
- * @param lr                Learning rate.
- * @param clip_val          Maximum absolute value for gradient clipping.
- */
-inline void apply_weight_grad_process_and_clip_l2(__global float* weight_ptr, float current_weight_val, const __global float* raw_grad_val_ptr, float l2_lambda, float lr, float clip_val) {
-    if (raw_grad_val_ptr == NULL) {
-        return;
-    }
-    float raw_grad = *raw_grad_val_ptr;
-    float l2_reg_term = 2.0f * l2_lambda * current_weight_val;
-    float total_grad = raw_grad + l2_reg_term;
-
-    // Sanitize gradient
-    if (isnan(total_grad)) total_grad = 0.0001f;
-    else if (isinf(total_grad)) total_grad = copysign(1000.0f, total_grad);
-
-    // Apply element-wise clipping
-    if (fabs(total_grad) > clip_val) total_grad = copysign(clip_val, total_grad);
-
-    // Apply update
-    *weight_ptr -= lr * total_grad;
-}
-
-/**
- * @brief Processes, sanitizes, and clips a gradient value with Elastic Net regularization,
- *        then applies it to a weight.
- * @param weight_ptr        Pointer to the weight value to be updated.
- * @param current_weight_val Current value of the weight.
- * @param raw_grad_val_ptr  Pointer to the raw gradient value. Can be NULL if gradient is optional.
- * @param l1_lambda         L1 regularization parameter.
- * @param l2_lambda         L2 regularization parameter.
- * @param lr                Learning rate.
- * @param clip_val          Maximum absolute value for gradient clipping.
- */
-inline void apply_weight_grad_process_and_clip_elastic(__global float* weight_ptr, float current_weight_val, const __global float* raw_grad_val_ptr, float l1_lambda, float l2_lambda, float lr, float clip_val) {
-    if (raw_grad_val_ptr == NULL) {
-        return;
-    }
-    float raw_grad = *raw_grad_val_ptr;
-    float l1_reg_term = l1_lambda * sign_f(current_weight_val);
-    float l2_reg_term = 2.0f * l2_lambda * current_weight_val;
-    float total_grad = raw_grad + l1_reg_term + l2_reg_term;
-
-    // Sanitize gradient
-    if (isnan(total_grad)) total_grad = 0.0001f;
-    else if (isinf(total_grad)) total_grad = copysign(1000.0f, total_grad);
-
-    // Apply element-wise clipping
-    if (fabs(total_grad) > clip_val) total_grad = copysign(clip_val, total_grad);
-
-    // Apply update
-    *weight_ptr -= lr * total_grad;
-}
-
-// --- Kernel Implementations ---
-
-__kernel void kernelUpdateSimple(__global float* weights_to_update, __global const float* gradients, float lr, unsigned int n_elements)
-{
-    int idx = get_global_id(0);
-    if (idx < n_elements) {
-        float tgradients = gradients[idx];
-        if (isnan(tgradients)) {
-            tgradients = 0.0001f; // Replace NaN with a small, non-zero value
-        } else if (isinf(tgradients)) {
-            // Replace infinity with a large but finite value, preserving the sign.
-            tgradients = copysign(1000.0f, tgradients);
-        }
-
-        if (gradients != NULL) {
-            // gradients[idx] = tgradients;
-            weights_to_update[idx] -= lr * tgradients;
-        }
-    }
-}
-
-__kernel void updateEVRowsKernelCL(__global float* d_EV_rows, __global const float* d_vector_to_add,
+// update EV rows
+__kernel void kernelUpdateEVrows(__global float* d_EV_rows, __global const float* d_vector_to_add,
     int num_rows_to_update, int num_cols)
 {
     int row_idx = get_global_id(0); // Each work-item handles one row
@@ -152,27 +18,24 @@ __kernel void kernelUpdateWeights_EH_EV(__global float* mh_a, __global float* mv
                                         __global const float* grad_mq, __global const float* grad_mk,
                                         __global const float* grad_eh, __global const float* grad_ev_scaled,
                                         float learning_rate, int update_eh, int update_ev,
-                                        float max_grad_clip_value,
                                         int mat_heights, int embedding_dim, int context_win)
 {
     int idx = get_global_id(0);
-    int ev_size = context_win * embedding_dim;
+    int ev_size = context_win * embedding_dim; // Define ev_size
     int matrix_size = mat_heights * embedding_dim;
-
     if (idx < matrix_size) {
-        // Here, these are raw gradients (no regularization)
-        apply_plain_grad_process_and_clip(&mh_a[idx], &grad_mh[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mv_a[idx], &grad_mv[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mq_a[idx], &grad_mq[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mk_a[idx], &grad_mk[idx], learning_rate, max_grad_clip_value);
+        mh_a[idx] -= learning_rate * grad_mh[idx];
+        mv_a[idx] -= learning_rate * grad_mv[idx];
+        mq_a[idx] -= learning_rate * grad_mq[idx];
+        mk_a[idx] -= learning_rate * grad_mk[idx];
     }
     if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
+        eh[idx] -= learning_rate * grad_eh[idx];
     }
     if (update_ev != 0) {
         if (idx < ev_size) {
             int embed_idx = idx % embedding_dim;
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_scaled[embed_idx], learning_rate, max_grad_clip_value);
+            ev[idx] -= learning_rate * grad_ev_scaled[embed_idx];
         }
     }
 }
@@ -183,468 +46,78 @@ __kernel void kernelUpdateWeights_1stHead_H(__global float* mh_a, __global float
                                             __global const float* grad_mq, __global const float* grad_mk,
                                             __global const float* grad_eh,
                                             float learning_rate, int update_eh,
-                                            float max_grad_clip_value,
                                             int mat_heights, int embedding_dim)
 {
     int idx = get_global_id(0);
     int matrix_size = mat_heights * embedding_dim;
-
     if (idx < matrix_size) {
-        apply_plain_grad_process_and_clip(&mh_a[idx], &grad_mh[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mv_a[idx], &grad_mv[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mq_a[idx], &grad_mq[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mk_a[idx], &grad_mk[idx], learning_rate, max_grad_clip_value);
+        if(grad_mh != NULL) mh_a[idx] -= learning_rate * grad_mh[idx];
+        if(grad_mv != NULL) mv_a[idx] -= learning_rate * grad_mv[idx];
+        if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
+        if(grad_mk != NULL) mk_a[idx] -= learning_rate * grad_mk[idx];
     }
+    // only update EH when updateEH is true, this for all heads of blocks,except first column
     if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
+        if(grad_eh != NULL) eh[idx] -= learning_rate * grad_eh[idx];
     }
 }
 
 __kernel void kernelUpdateWeights_1stHead_V(__global float* mv_a, __global float* mq_a, __global float* mk_a,
                                             __global const float* grad_mv, __global const float* grad_mq,
                                             __global const float* grad_mk_correction,
-                                            float learning_rate,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
+                                            float learning_rate, int mat_heights, int embedding_dim)
 {
     int idx = get_global_id(0);
     int matrix_size = mat_heights * embedding_dim;
-
     if (idx < matrix_size) {
-        apply_plain_grad_process_and_clip(&mv_a[idx], &grad_mv[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mq_a[idx], &grad_mq[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mk_a[idx], &grad_mk_correction[idx], learning_rate, max_grad_clip_value);
+        if(grad_mv != NULL) mv_a[idx] -= learning_rate * grad_mv[idx];
+        if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
+        if(grad_mk_correction != NULL) mk_a[idx] -= learning_rate * grad_mk_correction[idx];
     }
 }
 
 __kernel void kernelUpdateWeights_1stHead_HV(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
                                              __global const float* grad_mh, __global const float* grad_mv,
                                              __global const float* grad_mq, __global const float* grad_mk,
-                                             float learning_rate,
-                                             float max_grad_clip_value,
-                                             int mat_heights, int embedding_dim)
+                                             float learning_rate, int mat_heights, int embedding_dim)
 {
     int idx = get_global_id(0);
     int matrix_size = mat_heights * embedding_dim;
-
     if (idx < matrix_size) {
-        apply_plain_grad_process_and_clip(&mh_a[idx], &grad_mh[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mv_a[idx], &grad_mv[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mq_a[idx], &grad_mq[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mk_a[idx], &grad_mk[idx], learning_rate, max_grad_clip_value);
+        if(grad_mh != NULL) mh_a[idx] -= learning_rate * grad_mh[idx];
+        if(grad_mv != NULL) mv_a[idx] -= learning_rate * grad_mv[idx];
+        if(grad_mq != NULL) mq_a[idx] -= learning_rate * grad_mq[idx];
+        if(grad_mk != NULL) mk_a[idx] -= learning_rate * grad_mk[idx];
     }
 }
 
 __kernel void kernelUpdateWeights_EV_V(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
-                                       __global const float* grad_mv, __global const float* grad_mq,
-                                       __global const float* grad_mk_correction,
+                                       __global const float* grad_mv, __global const float* grad_mq, // grad_mv, grad_mq are mat_heights x embedding_dim
+                                       __global const float* grad_mk_correction, // grad_mk_correction is mat_heights x embedding_dim
                                        __global const float* grad_ev_full,
                                        float learning_rate,
-                                       float max_grad_clip_value,
                                        int update_ev, int mat_heights, int embedding_dim, int context_win)
 {
     int idx = get_global_id(0);
     int matrix_size = mat_heights * embedding_dim;
-    int ev_size = context_win * embedding_dim;
-
     if (idx < matrix_size) {
-        apply_plain_grad_process_and_clip(&mv_a[idx], &grad_mv[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mq_a[idx], &grad_mq[idx], learning_rate, max_grad_clip_value);
-        apply_plain_grad_process_and_clip(&mk_a[idx], &grad_mk_correction[idx], learning_rate, max_grad_clip_value);
+        mv_a[idx] -= learning_rate * grad_mv[idx];
+        mq_a[idx] -= learning_rate * grad_mq[idx];
+        mk_a[idx] -= learning_rate * grad_mk_correction[idx];
     }
+    // update for all blocks, except first block
     if (update_ev != 0) {
+        int ev_size = context_win * embedding_dim;
         if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim; // Original logic
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_full[embed_idx], learning_rate, max_grad_clip_value);
-        }
-    }
-}
-
-// 1. L1-only variant for kernelUpdateWeights_EV_V
-__kernel void kernelUpdateWeights_EV_V_L1(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
-                                       __global const float* grad_mv, __global const float* grad_mq,
-                                       __global const float* grad_mk_correction,
-                                       __global const float* grad_ev_full,
-                                       float learning_rate,
-                                       float lambda_l1,
-                                       float max_grad_clip_value,
-                                       int update_ev, int mat_heights, int embedding_dim, int context_win)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-    int ev_size = context_win * embedding_dim;
-
-    if (idx < matrix_size) {
-        if(grad_mv != NULL) {
-            apply_weight_grad_process_and_clip_l1(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        }
-        if(grad_mq != NULL) {
-            apply_weight_grad_process_and_clip_l1(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        }
-        if(grad_mk_correction != NULL) {
-            apply_weight_grad_process_and_clip_l1(&mk_a[idx], mk_a[idx], &grad_mk_correction[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        }
-    }
-    if (update_ev != 0) {
-        if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim; // Original logic
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_full[embed_idx], learning_rate, max_grad_clip_value);
-        }
-    }
-}
-
-// 2. L1-only variant for kernelUpdateWeights_EH_EV
-__kernel void kernelUpdateWeights_EH_EV_L1(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                        __global float* eh, __global float* ev,
-                                        __global const float* grad_mh, __global const float* grad_mv,
-                                        __global const float* grad_mq, __global const float* grad_mk,
-                                        __global const float* grad_eh, __global const float* grad_ev_scaled,
-                                        float learning_rate, int update_eh, int update_ev,
-                                        float lambda_l1,
-                                        float max_grad_clip_value,
-                                        int mat_heights, int embedding_dim, int context_win)
-{
-    int idx = get_global_id(0);
-    int ev_size = context_win * embedding_dim;
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l1(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l1, learning_rate, max_grad_clip_value);
-    }
-    if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
-    }
-    if (update_ev != 0) {
-        if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim;
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_scaled[embed_idx], learning_rate, max_grad_clip_value);
-        }
-    }
-}
-
-// 3. L1-only variant for kernelUpdateWeights_1stHead_H
-__kernel void kernelUpdateWeights_1stHead_H_L1(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global float* eh,
-                                            __global const float* grad_mh, __global const float* grad_mv,
-                                            __global const float* grad_mq, __global const float* grad_mk,
-                                            __global const float* grad_eh,
-                                            float learning_rate, int update_eh,
-                                            float lambda_l1,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l1(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l1, learning_rate, max_grad_clip_value);
-    }
-    if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
-    }
-}
-
-// 4. L1-only variant for kernelUpdateWeights_1stHead_V
-__kernel void kernelUpdateWeights_1stHead_V_L1(__global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global const float* grad_mv, __global const float* grad_mq,
-                                            __global const float* grad_mk_correction,
-                                            float learning_rate,
-                                            float lambda_l1,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l1(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mk_a[idx], mk_a[idx], &grad_mk_correction[idx], lambda_l1, learning_rate, max_grad_clip_value);
-    }
-}
-
-// 5. L1-only variant for kernelUpdateWeights_1stHead_HV
-__kernel void kernelUpdateWeights_1stHead_HV_L1(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                             __global const float* grad_mh, __global const float* grad_mv,
-                                             __global const float* grad_mq, __global const float* grad_mk,
-                                             float learning_rate,
-                                             float lambda_l1,
-                                             float max_grad_clip_value,
-                                             int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l1(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l1(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l1, learning_rate, max_grad_clip_value);
-    }
-}
-
-// 1. L2-only variant for kernelUpdateWeights_EV_V
-__kernel void kernelUpdateWeights_EV_V_L2(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
-                                       __global const float* grad_mv, __global const float* grad_mq,
-                                       __global const float* grad_mk_correction,
-                                       __global const float* grad_ev_full,
-                                       float learning_rate,
-                                       float lambda_l2,
-                                       float max_grad_clip_value,
-                                       int update_ev, int mat_heights, int embedding_dim, int context_win)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-    int ev_size = context_win * embedding_dim;
-
-    if (idx < matrix_size) {
-        if(grad_mv != NULL) {
-            apply_weight_grad_process_and_clip_l2(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        }
-        if(grad_mq != NULL) {
-            apply_weight_grad_process_and_clip_l2(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        }
-        if(grad_mk_correction != NULL) {
-            apply_weight_grad_process_and_clip_l2(&mk_a[idx], mk_a[idx], &grad_mk_correction[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        }
-    }
-    if (update_ev != 0) {
-        if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim; // Original logic
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_full[embed_idx], learning_rate, max_grad_clip_value);
-        }
-    }
-}
-
-// 2. L2-only variant for kernelUpdateWeights_EH_EV
-__kernel void kernelUpdateWeights_EH_EV_L2(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                        __global float* eh, __global float* ev,
-                                        __global const float* grad_mh, __global const float* grad_mv,
-                                        __global const float* grad_mq, __global const float* grad_mk,
-                                        __global const float* grad_eh, __global const float* grad_ev_scaled,
-                                        float learning_rate, int update_eh, int update_ev,
-                                        float lambda_l2,
-                                        float max_grad_clip_value,
-                                        int mat_heights, int embedding_dim, int context_win)
-{
-    int idx = get_global_id(0);
-    int ev_size = context_win * embedding_dim;
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l2(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l2, learning_rate, max_grad_clip_value);
-    }
-    if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
-    }
-    if (update_ev != 0) {
-        if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim;
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_scaled[embed_idx], learning_rate, max_grad_clip_value);
-        }
-    }
-}
-
-// 3. L2-only variant for kernelUpdateWeights_1stHead_H
-__kernel void kernelUpdateWeights_1stHead_H_L2(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global float* eh,
-                                            __global const float* grad_mh, __global const float* grad_mv,
-                                            __global const float* grad_mq, __global const float* grad_mk,
-                                            __global const float* grad_eh,
-                                            float learning_rate, int update_eh,
-                                            float lambda_l2,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l2(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l2, learning_rate, max_grad_clip_value);
-    }
-    if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
-    }
-}
-
-// 4. L2-only variant for kernelUpdateWeights_1stHead_V
-__kernel void kernelUpdateWeights_1stHead_V_L2(__global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global const float* grad_mv, __global const float* grad_mq,
-                                            __global const float* grad_mk_correction,
-                                            float learning_rate,
-                                            float lambda_l2,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l2(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mk_a[idx], mk_a[idx], &grad_mk_correction[idx], lambda_l2, learning_rate, max_grad_clip_value);
-    }
-}
-
-// 5. L2-only variant for kernelUpdateWeights_1stHead_HV
-__kernel void kernelUpdateWeights_1stHead_HV_L2(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                             __global const float* grad_mh, __global const float* grad_mv,
-                                             __global const float* grad_mq, __global const float* grad_mk,
-                                             float learning_rate,
-                                             float lambda_l2,
-                                             float max_grad_clip_value,
-                                             int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_l2(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_l2(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l2, learning_rate, max_grad_clip_value);
-    }
-}
-
-__kernel void kernelUpdateWeights_EH_EV_ElasticNet(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                        __global float* eh, __global float* ev,
-                                        __global const float* grad_mh, __global const float* grad_mv,
-                                        __global const float* grad_mq, __global const float* grad_mk,
-                                        __global const float* grad_eh, __global const float* grad_ev_scaled,
-                                        float learning_rate, int update_eh, int update_ev,
-                                        float lambda_l1, float lambda_l2,
-                                        float max_grad_clip_value,
-                                        int mat_heights, int embedding_dim, int context_win)
-{
-    int idx = get_global_id(0);
-    int ev_size = context_win * embedding_dim;
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_elastic(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-    }
-    if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
-    }
-    if (update_ev != 0) {
-        if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim;
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_scaled[embed_idx], learning_rate, max_grad_clip_value);
-        }
-    }
-}
-
-__kernel void kernelUpdateWeights_1stHead_H_ElasticNet(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global float* eh,
-                                            __global const float* grad_mh, __global const float* grad_mv,
-                                            __global const float* grad_mq, __global const float* grad_mk,
-                                            __global const float* grad_eh,
-                                            float learning_rate, int update_eh,
-                                            float lambda_l1, float lambda_l2,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_elastic(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-    }
-    if (update_eh != 0 && idx < embedding_dim) {
-        apply_plain_grad_process_and_clip(&eh[idx], &grad_eh[idx], learning_rate, max_grad_clip_value);
-    }
-}
-
-__kernel void kernelUpdateWeights_1stHead_V_ElasticNet(__global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global const float* grad_mv, __global const float* grad_mq,
-                                            __global const float* grad_mk_correction,
-                                            float learning_rate,
-                                            float lambda_l1, float lambda_l2,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_elastic(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mk_a[idx], mk_a[idx], &grad_mk_correction[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-    }
-}
-
-__kernel void kernelUpdateWeights_EV_V_ElasticNet(__global float* mv_a, __global float* mq_a, __global float* mk_a, __global float* ev,
-                                        __global const float* grad_mv, __global const float* grad_mq,
-                                        __global const float* grad_mk_correction,
-                                        __global const float* grad_ev_full,
-                                        float learning_rate,
-                                        float lambda_l1, float lambda_l2,
-                                        float max_grad_clip_value,
-                                        int update_ev, int mat_heights, int embedding_dim, int context_win)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-    int ev_size = context_win * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_elastic(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mk_a[idx], mk_a[idx], &grad_mk_correction[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-    }
-    if (update_ev != 0) {
-        if (idx < ev_size) {
-            int embed_idx = idx % embedding_dim;
-            apply_plain_grad_process_and_clip(&ev[idx], &grad_ev_full[embed_idx], learning_rate, max_grad_clip_value);
+            ev[idx] -= learning_rate * grad_ev_full[idx];
         }
     }
 }
 
 // Provided reference, with correction for `total_gradient != NULL`
-__kernel void kernelUpdateWeights_1stHead_HV_ElasticNet(__global float* mh_a, __global float* mv_a, __global float* mq_a, __global float* mk_a,
-                                            __global const float* grad_mh, __global const float* grad_mv,
-                                            __global const float* grad_mq, __global const float* grad_mk,
-                                            float learning_rate,
-                                            float lambda_l1, float lambda_l2,
-                                            float max_grad_clip_value,
-                                            int mat_heights, int embedding_dim)
-{
-    int idx = get_global_id(0);
-    int matrix_size = mat_heights * embedding_dim;
-
-    if (idx < matrix_size) {
-        apply_weight_grad_process_and_clip_elastic(&mh_a[idx], mh_a[idx], &grad_mh[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mv_a[idx], mv_a[idx], &grad_mv[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mq_a[idx], mq_a[idx], &grad_mq[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-        apply_weight_grad_process_and_clip_elastic(&mk_a[idx], mk_a[idx], &grad_mk[idx], lambda_l1, lambda_l2, learning_rate, max_grad_clip_value);
-    }
-}
-
-// Provided reference, with correction for `total_gradient != NULL`
-__kernel void kernelUpdateWeights_General(
-    __global float* weights,
-    __global const float* gradients,
-    float learning_rate,
-    float lambda_l1,
-    float lambda_l2,
-    float max_grad_clip_value,
+__kernel void kernelUpdateWeights_General(__global float* weights,
+    __global const float* gradients, float learning_rate,
+    float lambda_l1, float lambda_l2, float max_grad_clip_value,
     int total_elements)
 {
     int idx = get_global_id(0);
@@ -654,20 +127,47 @@ __kernel void kernelUpdateWeights_General(
         float current_weight = weights[idx];
         float error_gradient = (gradients != NULL) ? gradients[idx] : 0.0f; // Handle NULL gradients
 
-        float l1_reg_term = lambda_l1 * sign_f(current_weight);
-        float l2_reg_term = lambda_l2 * current_weight;          // float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+        float l1_reg_term = lambda_l1 * sign_f(current_weight); // L1 regularization term
+        float l2_reg_term = 2.0f * lambda_l2 * current_weight;  // L2 regularization term (derivative of lambda*w^2), now consistent
 
         float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
         if (isnan(total_gradient)) {
-            total_gradient = 0.0001f;
+            total_gradient = 0.0f;
         } else if (isinf(total_gradient)) {
-            total_gradient = copysign(1000.0f, total_gradient);
+            total_gradient = copysign(FLT_MAX, total_gradient);
         }
         // Apply element-wise gradient clipping
         if (fabs(total_gradient) > max_grad_clip_value) {
-            total_gradient = copysign(max_grad_clip_value, total_gradient);
+            total_gradient = copysign(FLT_MAX, total_gradient);
         }
 
         weights[idx] -= learning_rate * total_gradient;
+    }
+}
+
+
+__kernel void kernelUpdateSimple(__global float* weights_to_update, __global const float* gradients, float lr, unsigned int n_elements)
+{
+    int idx = get_global_id(0);
+    if (idx < n_elements) {
+        if (gradients == NULL) {
+            return;
+        }
+        float tgradients = gradients[idx];
+        // NOTE: Using a hardcoded clip value. It is recommended to pass max_grad_clip_value
+        // to this kernel for consistency with other update kernels.
+        const float clip_val = 1000.0f;
+
+        if (isnan(tgradients)) {
+            tgradients = 0.0f;
+        }
+        else if (isinf(tgradients)) {
+            tgradients = copysign(clip_val, tgradients);
+        }
+
+        // Apply element-wise clipping for large gradients
+        if (fabs(tgradients) > clip_val) tgradients = copysign(clip_val, tgradients);
+
+        weights_to_update[idx] -= lr * tgradients;
     }
 }

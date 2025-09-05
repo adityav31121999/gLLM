@@ -1,9 +1,11 @@
 #ifdef USE_CPU
+
+// backward propagation for attention class
 #include "include/attention.hpp"
 
 /**
  * @brief Backward propagation for subsequent heads in each rows of blocks blocks.
- *  This is good for starting backpropagation when in subsequent blocks. For 2nd
+ *  This is good for starting backpropagation when in subsequent blocks. For 2nd 
  *  to last head of each row of non-first blocks.
  * @param in Input size (embedding dimension)
  * @param layers Number of layers in the MLPs
@@ -15,12 +17,12 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) {
         throw std::runtime_error("Invalid tokenCount or unmapped matrix in backward (H)");
     }
-
+    
     // Step 1: Compute loss gradient w.r.t. EH (for token prediction) and EV (for context)
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] = (EH[i] - expected[i]);
+        grad_EH[i] = 2.0f * (EH[i] - expected[i]); // MSE gradient for EH
         grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation)
     }
 
@@ -28,17 +30,17 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     std::vector<float> grad_hor_output(EMBEDDING, 0.0f);
     std::vector<float> grad_ver_output(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_hor_output[i] = grad_EH[i] * (sigmoidder(hor.output[i]));
-        grad_ver_output[i] = grad_EV[i] * (sigmoidder(ver.output[i]));
+        grad_hor_output[i] = grad_EH[i] * (hor.output[i] > 0 ? 1.0f : 0.0f);
+        grad_ver_output[i] = grad_EV[i] * (ver.output[i] > 0 ? 1.0f : 0.0f);
     }
 
     // Set MLP inputs for backprop
     hor.expected = grad_hor_output;
     ver.expected = grad_ver_output;
-    hor.backwithElasticNet(in, layers, learning);
-    ver.backwithElasticNet(in, layers, learning);
+    hor.backwithL2(in, layers, learning);
+    ver.backwithL2(in, layers, learning);
 
-    if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr ||
+    if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || 
         ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
         throw std::runtime_error("MLP gweights not initialized in backward (H)");
     }
@@ -58,9 +60,9 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     mat grad_MV(MATHEIGHTS, EMBEDDING);
     std::fill_n(grad_MH.mapped_data, grad_MH.row * grad_MH.col, 0.0f);
     std::fill_n(grad_MV.mapped_data, grad_MV.row * grad_MV.col, 0.0f);
-
     std::vector<float> pre_MH(MATHEIGHTS, 0.0f);
     std::vector<float> pre_MV(MATHEIGHTS, 0.0f);
+
     mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
 
     for (int i = 0; i < this->tokenCount; i++) {
@@ -93,7 +95,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
         int limit_j = this->tokenCount;
         limit_j = std::min(limit_j, grad_head.col);
         for (int j = 0; j < limit_j; j++) {
-            if (i >= K.row || j >= Q.row)
+            if (i >= K.row || j >= Q.row) 
                 continue;
             float grad_dh_sum = 0.0f;
             float grad_dv_sum = 0.0f;
@@ -161,40 +163,16 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
         }
     }
 
-    // Step 9: Update weights MH, MV, MQ, MK with Elastic Net regularization
+    // Step 9: Update weights MH, MV, MQ, MK
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
-            // MH
-            if (i < MH.row && j < MH.col) {
-                float sgn_MH = (MH(i, j) > 0 ? 1.0f : (MH(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MH = this->lambda_L1 * sgn_MH;
-                float l2_reg_term_MH = 2.0f * this->lambda_L2 * MH(i, j);
-                MH(i, j) -= learning * (grad_MH(i, j) + l1_reg_term_MH + l2_reg_term_MH);
-            }
-            // MV
-            if (i < MV.row && j < MV.col) {
-                float sgn_MV = (MV(i, j) > 0 ? 1.0f : (MV(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MV = this->lambda_L1 * sgn_MV;
-                float l2_reg_term_MV = 2.0f * this->lambda_L2 * MV(i, j);
-                MV(i, j) -= learning * (grad_MV(i, j) + l1_reg_term_MV + l2_reg_term_MV);
-            }
-            // MQ
-            if (i < MQ.row && j < MQ.col) {
-                float sgn_MQ = (MQ(i, j) > 0 ? 1.0f : (MQ(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MQ = this->lambda_L1 * sgn_MQ;
-                float l2_reg_term_MQ = 2.0f * this->lambda_L2 * MQ(i, j);
-                MQ(i, j) -= learning * (grad_MQ(i, j) + l1_reg_term_MQ + l2_reg_term_MQ);
-            }
-            // MK
-            if (i < MK.row && j < MK.col) {
-                float sgn_MK = (MK(i, j) > 0 ? 1.0f : (MK(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MK = this->lambda_L1 * sgn_MK;
-                float l2_reg_term_MK = 2.0f * this->lambda_L2 * MK(i, j);
-                MK(i, j) -= learning * (grad_MK(i, j) + l1_reg_term_MK + l2_reg_term_MK);
-            }
+            if (i < MH.row && j < MH.col) MH(i, j) -= learning * grad_MH(i, j);
+            if (i < MV.row && j < MV.col) MV(i, j) -= learning * grad_MV(i, j);
+            if (i < MQ.row && j < MQ.col) MQ(i, j) -= learning * grad_MQ(i, j);
+            if (i < MK.row && j < MK.col) MK(i, j) -= learning * grad_MK(i, j);
         }
     }
-
+    
 
     // Step 10: Update EH and EV using gradients
     if(headnumber > 1) {
@@ -203,10 +181,10 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
         }
     }
     for(int i = 0; i < CONTEXT_WIN; i++) {
-        if (i >= EV.row)
+        if (i >= EV.row) 
             break; // Check EV row bounds
         for(int j = 0; j < EMBEDDING; j++) {
-            if (j < EV.col)
+            if (j < EV.col) 
                 EV(i, j) -= learning * grad_EV[j];
         }
     }
@@ -214,21 +192,20 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
 
 
 /**
- * @brief Backward propagation for subsequent heads in the first row of blocks
+ * @brief Bac
  * @param expectedV Vertical retention vector (target context)
  * @param layers Number of layers in the MLPs
- * @param blocknumber The current block number (1-based)
  */
-void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning)
+void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning) 
 {
-    if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr ||
-        KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr ||
-        MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr)
+    if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || 
+        KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || 
+        MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) 
     {
         throw std::runtime_error("Invalid tokenCount or unmapped matrix in backward (V)");
     }
-    if (EV.row != CONTEXT_WIN || EV.col != EMBEDDING || expectedV.size() != CONTEXT_WIN ||
-        (!expectedV.empty() && expectedV[0].size() != EMBEDDING))
+    if (EV.row != CONTEXT_WIN || EV.col != EMBEDDING || expectedV.size() != CONTEXT_WIN || 
+        (!expectedV.empty() && expectedV[0].size() != EMBEDDING)) 
     {
         throw std::runtime_error("Dimension mismatch for expectedV/EV in backward (V)");
     }
@@ -240,7 +217,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     for(int j = 0; j < CONTEXT_WIN; j++) {
         if (j >= EV.row || j >= expectedV.size()) continue;
         for(int i = 0; i < EMBEDDING; i++) {
-            if (i >= EV.col || i >= expectedV[j].size())
+            if (i >= EV.col || i >= expectedV[j].size()) 
                 continue;
             grad_EV_mat(j, i) = 2.0f * (EV(j, i) - expectedV[j][i]);
             grad_EV_summed[i] += grad_EV_mat(j, i);
@@ -257,7 +234,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     ver.expected = grad_ver_input;
-    ver.backwithElasticNet(layers, EMBEDDING, learning);
+    ver.backwithL2(layers, EMBEDDING, learning); 
 
     // Ensure MLP gradients are available
     if (ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
@@ -333,11 +310,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     // Step 7: Compute gradients w.r.t. K and Q
-    mat grad_Q(this->tokenCount, MATHEIGHTS); // Q is tokenCount x EMBEDDING, so grad_Q should be tokenCount x EMBEDDING
-                                             // However, your code computes grad_Q as tokenCount x MATHEIGHTS
-                                             // based on: grad_Q = grad_KdotQ^T * K where K is tokenCount x MATHEIGHTS.
-                                             // This is a potential dimensional inconsistency with Q=Tokens x MQ.
-                                             // Assuming grad_Q correctly represents gradients w.r.t. the input to MQ.
+    mat grad_Q(this->tokenCount, MATHEIGHTS);
     std::fill_n(grad_Q.mapped_data, grad_Q.row * grad_Q.col, 0.0f);
     for (int i = 0; i < this->tokenCount; i++) {
         int limit_j = this->tokenCount;
@@ -349,31 +322,22 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
         }
     }
 
+    // Step 7.5: Removed redundant/incorrect grad_KdotQ recalculation
     // Step 8: Compute gradients w.r.t. MQ and MK (more sophisticated)
-    // NOTE: Original code declared grad_MQ as EMBEDDING x MATHEIGHTS, which conflicts with MQ being MATHEIGHTS x EMBEDDING.
-    // This has been corrected to align with MQ's declared dimensions.
-    // If the calculation for grad_MQ itself yields a transposed matrix, further adjustments might be needed.
-    mat grad_MQ(MATHEIGHTS, EMBEDDING);
+    mat grad_MQ(EMBEDDING, MATHEIGHTS);
     mat grad_MK_correction(MATHEIGHTS, EMBEDDING);
     std::fill_n(grad_MQ.mapped_data, grad_MQ.row * grad_MQ.col, 0.0f);
     std::fill_n(grad_MK_correction.mapped_data, grad_MK_correction.row * grad_MK_correction.col, 0.0f);
 
-    // Calculate grad_MQ (assuming it needs to be MATHEIGHTS x EMBEDDING)
-    // This calculation `grad_Q(i, h) * Q(i, d)` when Q is tokenCount x EMBEDDING
-    // and grad_Q is tokenCount x MATHEIGHTS, would typically produce EMBEDDING x MATHEIGHTS.
-    // This indicates a potential mismatch between the calculation and MQ's declared dimensions.
-    // Assuming the intent is to produce grad_MQ with MATHEIGHTS x EMBEDDING structure.
+    // Calculate grad_MQ first (using Q as proxy for T)
     for (int i = 0; i < this->tokenCount; i++) {
         if (i >= Q.row || i >= grad_Q.row) continue;
-        for (int h = 0; h < MATHEIGHTS; h++) { // Loop for rows of grad_MQ
-            for (int d = 0; d < EMBEDDING; d++) { // Loop for columns of grad_MQ
-                // This is a simplified calculation; a proper matrix multiplication would be needed for dMQ = T_transpose * dQ
-                // Where T is the input to MQ (likely tokens). Given current code, trying to preserve existing logic.
-                grad_MQ(h, d) += grad_Q(i, h) * Q(i, d); // Original logic's indexing, but adjusted to fill MATHEIGHTS x EMBEDDING grad_MQ
+        for (int h = 0; h < EMBEDDING; h++) {
+            for (int d = 0; d < MATHEIGHTS; d++) {
+                grad_MQ(h, d) += grad_Q(i, h) * Q(i, d);
             }
         }
     }
-
 
     // Calculate grad_MK_correction using the final grad_MQ
     for (int i = 0; i < this->tokenCount; i++) {
@@ -382,58 +346,40 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
             if (j >= Q.row) continue;
             for (int h = 0; h < MATHEIGHTS; h++) {
                 for (int d = 0; d < EMBEDDING; d++) {
-                    // This calculation needs careful review based on how MQ/MK gradients are derived mathematically.
-                    // Sticking to original code's intent but correcting dimensions.
                     grad_MK_correction(h, d) += -grad_MQ(h, d) * Q(j, h) * K(i, h);
                 }
             }
         }
     }
 
-    // Step 9: Update weights MV, MQ, MK with Elastic Net regularization
-    // Corrected loops to iterate over MATHEIGHTS x EMBEDDING dimensions for MQ, MV, MK
+    // Step 9: Update weights MH, MV, MQ, MK
     if (MV.row != grad_MV.row || MV.col != grad_MV.col ||
         MQ.row != grad_MQ.row || MQ.col != grad_MQ.col ||
-        MK.row != grad_MK_correction.row || MK.col != grad_MK_correction.col)
+        MK.row != grad_MK_correction.row || MK.col != grad_MK_correction.col) 
     {
-        throw std::runtime_error("Weight and gradient dimension mismatch in backward (V) during update.");
+        throw std::runtime_error("Weight and gradient dimension mismatch in backward (V)");
     }
-
     for (int i = 0; i < MATHEIGHTS; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
-            // MV
-            if (i < MV.row && j < MV.col) {
-                float sgn_MV = (MV(i, j) > 0 ? 1.0f : (MV(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MV = this->lambda_L1 * sgn_MV;
-                float l2_reg_term_MV = 2.0f * this->lambda_L2 * MV(i, j);
-                MV(i, j) -= learning * (grad_MV(i, j) + l1_reg_term_MV + l2_reg_term_MV);
-            }
-            // MQ
-            if (i < MQ.row && j < MQ.col) {
-                float sgn_MQ = (MQ(i, j) > 0 ? 1.0f : (MQ(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MQ = this->lambda_L1 * sgn_MQ;
-                float l2_reg_term_MQ = 2.0f * this->lambda_L2 * MQ(i, j);
-                MQ(i, j) -= learning * (grad_MQ(i, j) + l1_reg_term_MQ + l2_reg_term_MQ);
-            }
-            // MK
-            if (i < MK.row && j < MK.col) {
-                float sgn_MK = (MK(i, j) > 0 ? 1.0f : (MK(i, j) < 0 ? -1.0f : 0.0f));
-                float l1_reg_term_MK = this->lambda_L1 * sgn_MK;
-                float l2_reg_term_MK = 2.0f * this->lambda_L2 * MK(i, j);
-                MK(i, j) -= learning * (grad_MK_correction(i, j) + l1_reg_term_MK + l2_reg_term_MK);
-            }
+            if (i < MK.row && j < MK.col) MK(i, j) -= learning * grad_MK_correction(i, j);
         }
     }
 
+    for (int i = 0; i < EMBEDDING; i++) {
+        for (int j = 0; j < MATHEIGHTS; j++) {
+            if (i < MV.row && j < MV.col) MV(i, j) -= learning * grad_MV(i, j);
+            if (i < MQ.row && j < MQ.col) MQ(i, j) -= learning * grad_MQ(i, j);
+        }
+    }
 
     // Step 10: Update EV using element-wise gradients
     // this when the 2nd to last head of each row of first block
     if(blocknumber != 1) {
         for(int i = 0; i < CONTEXT_WIN; i++) {
-            if (i >= EV.row || i >= grad_EV_mat.row)
+            if (i >= EV.row || i >= grad_EV_mat.row) 
                 break;
             for(int j = 0; j < EMBEDDING; j++) {
-                if (j >= EV.col || j >= grad_EV_mat.col)
+                if (j >= EV.col || j >= grad_EV_mat.col) 
                     break;
                 EV(i, j) -= learning * grad_EV_mat(i, j);
             }

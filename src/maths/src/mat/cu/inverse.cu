@@ -8,7 +8,7 @@
 #include <iostream>
 #include "mat.hpp" // Include the mat class definition
 
-#define CUDA_CHECK_ERROR(call) do {                                         \
+#define CHECK_CUDA_ERROR(call) do {                                         \
     cudaError_t err = call;                                                 \
     if (err != cudaSuccess) {                                               \
         fprintf(stderr, "CUDA Error at %s:%d - %s\n", __FILE__, __LINE__,   \
@@ -253,11 +253,11 @@ mat host_additive_inverse(const mat& input_mat) {
     try {
         // 1. Allocate GPU Memory
         size_t matrix_size_bytes = num_elements * sizeof(float);
-        CUDA_CHECK_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_result, matrix_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_matrix, matrix_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_result, matrix_size_bytes));
 
         // 2. Copy Input Matrix from Host to Device
-        CUDA_CHECK_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_matrix, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
 
         // 3. Configure Grid and Block Dimensions for inva kernel
         //    Example: Use 16x16 blocks (256 threads)
@@ -269,17 +269,17 @@ mat host_additive_inverse(const mat& input_mat) {
         inva<<<numBlocks, threadsPerBlock>>>(d_matrix, d_result, rows, cols);
 
         // Check for kernel launch errors specifically
-        CUDA_CHECK_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaGetLastError());
 
         // 5. Synchronize to ensure kernel completion before copying back
-        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         // 6. Copy Result from Device to Host
-        CUDA_CHECK_ERROR(cudaMemcpy(result_mat.mapped_data, d_result, matrix_size_bytes, cudaMemcpyDeviceToHost));
+        CHECK_CUDA_ERROR(cudaMemcpy(result_mat.mapped_data, d_result, matrix_size_bytes, cudaMemcpyDeviceToHost));
 
         // 7. Free GPU Memory
-        CUDA_CHECK_ERROR(cudaFree(d_matrix));
-        CUDA_CHECK_ERROR(cudaFree(d_result));
+        CHECK_CUDA_ERROR(cudaFree(d_matrix));
+        CHECK_CUDA_ERROR(cudaFree(d_result));
 
     }
     catch (const std::exception& e) {
@@ -328,8 +328,8 @@ mat host_inverse_gauss_jordan(const mat& input_mat) {
 
     try {
         // 1. Allocate GPU Memory
-        CUDA_CHECK_ERROR(cudaMalloc(&d_matrix_copy, matrix_size_bytes));
-        CUDA_CHECK_ERROR(cudaMalloc(&d_inverse_result, matrix_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_matrix_copy, matrix_size_bytes));
+        CHECK_CUDA_ERROR(cudaMalloc(&d_inverse_result, matrix_size_bytes));
 
         // 2. Create Identity Matrix on Host
         std::vector<float> h_identity(num_elements, 0.0f);
@@ -338,8 +338,8 @@ mat host_inverse_gauss_jordan(const mat& input_mat) {
         }
 
         // 3. Copy Input Matrix and Identity Matrix from Host to Device
-        CUDA_CHECK_ERROR(cudaMemcpy(d_matrix_copy, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
-        CUDA_CHECK_ERROR(cudaMemcpy(d_inverse_result, h_identity.data(), matrix_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_matrix_copy, input_mat.mapped_data, matrix_size_bytes, cudaMemcpyHostToDevice));
+        CHECK_CUDA_ERROR(cudaMemcpy(d_inverse_result, h_identity.data(), matrix_size_bytes, cudaMemcpyHostToDevice));
 
         // 4. Configure Grid and Block Dimensions (Single Thread for gaussjordan)
         dim3 threadsPerBlock(1);
@@ -349,17 +349,17 @@ mat host_inverse_gauss_jordan(const mat& input_mat) {
         gaussjordan<<<numBlocks, threadsPerBlock>>>(d_matrix_copy, d_inverse_result, n);
 
         // Check for kernel launch errors specifically
-        CUDA_CHECK_ERROR(cudaGetLastError());
+        CHECK_CUDA_ERROR(cudaGetLastError());
 
         // 6. Synchronize to ensure kernel completion
-        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
         // 7. Copy Resulting Inverse from Device to Host
-        CUDA_CHECK_ERROR(cudaMemcpy(result_mat.mapped_data, d_inverse_result, matrix_size_bytes, cudaMemcpyDeviceToHost));
+        CHECK_CUDA_ERROR(cudaMemcpy(result_mat.mapped_data, d_inverse_result, matrix_size_bytes, cudaMemcpyDeviceToHost));
 
         // 8. Free GPU Memory
-        CUDA_CHECK_ERROR(cudaFree(d_matrix_copy));
-        CUDA_CHECK_ERROR(cudaFree(d_inverse_result));
+        CHECK_CUDA_ERROR(cudaFree(d_matrix_copy));
+        CHECK_CUDA_ERROR(cudaFree(d_inverse_result));
 
     }
     catch (const std::exception& e) {

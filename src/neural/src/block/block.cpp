@@ -22,8 +22,8 @@
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
-    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning, float lambda_L1, float lambda_L2) :
+block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, bool attentionType, 
+    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning) : // Changed to pass by value
     x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
     blockFilePath([&blockFilePath_param, blockCount]() {
@@ -39,35 +39,35 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
         throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
     }
-    b.resize(x, std::vector<attention>(y, attention(n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning, lambda_L1, lambda_L2)));
+    b.resize(x, std::vector<attention>(y, attention(n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning)));
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
     tokForBlock = mat(n_tokens, d_embed);
 
-    params = (x * y * (b[0][0].params + (n_tokens * d_embed))) + (d_embed * n_tokens);
+    params = (x * y * b[0][0].params);
     unsigned long long totalBlockSize = params * sizeof(float);
 
     // File handling logic
     // Declare variables before conditional compilation block
     bool open_for_read_write_existing = false;
-    unsigned long long existing_file_size = 0;
     FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
 
-    if (test_file) {
+    if (test_file) { // File exists
         #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-                existing_file_size = _ftelli64(test_file); // Assign to the outer-scoped variable
-            } else {
-                std::cout << "FILESIZE WILL REMAIN 0 (_fseeki64 failed)" << std::endl;
+                long long int existing_file_size = _ftelli64(test_file);
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
             }
         #else // Assuming POSIX-like environment (Linux, macOS)
             if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
-                existing_file_size = ftello64(test_file); // Assign to the outer-scoped variable
-            } else {
-                // Handle fseeko64 failure? Log a warning?
-                std::cout << "FILESIZE WILL REMAIN 0 (fseeko64 failed)" << std::endl;
+                long long int existing_file_size = ftello64(test_file);
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
             }
         #endif
-            fclose(test_file);
+        fclose(test_file);
     }
 
     if (open_for_read_write_existing) {
@@ -138,8 +138,8 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
-    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning, float lambda_L1, float lambda_L2) :
+block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab,
+    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
     clcontext(context), x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
         blockFilePath([&blockFilePath_param, blockCount]() {
@@ -152,12 +152,11 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
         return base + "block_" + std::to_string(blockCount) + ".bin";
     }()),
     blockOffset(0LL)
-
 {
     if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
         throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
     }
-    b.resize(x, std::vector<attention>(y, attention(context, n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning, lambda_L1, lambda_L2)));
+    b.resize(x, std::vector<attention>(y, attention(context, n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning)));
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
     tokForBlock = mat(n_tokens, d_embed);
 
@@ -171,14 +170,14 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     if (test_file) { // File exists
         #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-                unsigned long long existing_file_size = _ftelli64(test_file);
+                long long int existing_file_size = _ftelli64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }
             }
         #else // Assuming POSIX-like environment (Linux, macOS)
             if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
-                unsigned long long existing_file_size = ftello64(test_file);
+                long long int existing_file_size = ftello64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }

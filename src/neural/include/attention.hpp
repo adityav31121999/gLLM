@@ -11,7 +11,7 @@
  * head = LOTA(KdotQ) OR LOTA(ReLU(KdotQ)) OR Softmax(KdotQ)
  * dh = sum(head[i][j] * Ki.MH), dv = sum(head[i][j] * Qi.MV)
  * Input(EH + dh) -> MLP(hor) -> ReLU(output) -> mH -> EH = EH + mH
- * Input(EV + dv) -> MLP(ver) -> ReLU(output) -> mV -> EV = EV + mV
+ * Input(EV + dv) -> MLP(ver) -> ReLU(output) -> mV -> EV(i) = EV(i) + mV
  * MQ, MK, MV, MH => MATHEIGHTS x EMBEDDING
  * K, Q, EV => CONTEXT_WIN x EMBEDDING
  * KdotQ => CONTEXT_WIN x CONTEXT_WIN
@@ -23,27 +23,23 @@
 #include "mlp.hpp"
 
 // macros for models
-#define TERMINATE "@#O"                     // end of conversation (And Its Over)
-#define EMBEDDING 128                       // embedding dimension for each token
-#define SCALING std::sqrt(EMBEDDING)        // SCALING FACTOR for ATTENTION HEAD
-#define LAYERS_MLP 4                        // layers of mlp
-#define EPOCHS 200                          // number of epochs for training of token
 #define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
 #define NUMBER_OF_HEADS 12                  // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
+#define EMBEDDING 128                       // embedding dimension for each token
+#define LAYERS_MLP 4                        // layers of mlp
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head (or number of PA * embedding)
-#define PROMPT_THRESHOLD CONTEXT_WIN/2      // token limit for prompt
-#define MATHEIGHTS CONTEXT_WIN*2            // weight matrix heights
-#define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS       // maximum tokens for full context
-#define LEARNING_MAX 0.1f                   // maximum learning rate allowable
-#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
-#define P_DIM_CONCATENATED_HEADS (EMBEDDING * NUMBER_OF_PA) 
-#define MAX_GRAD_CLIP 10.0f                 // maximum gradient clupping allowed
+#define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt
+#define MATHEIGHTS 1024                     // weight matrix heights
+#define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS               // maximum tokens for full context
+#define SCALING std::sqrt(static_cast<float>(EMBEDDING))        // SCALING FACTOR for ATTENTION HEAD
+#define DEEMBEDDING EMBEDDING*NUMBER_OF_PA  // embedding dimension for each token
 
 /**
- * @brief ATTENTION CLASS for calculating attention head and head output EH.
- * This heads consists of weight matrices and mlps for model as a basic unit
- * of transformer model.
+ * @brief ATTENTION CLASS for calculating attention head and Embeddings.
+ * An array of attention head is Partial Attention (LAYER) and an array 
+ * of partial attention (BLOCK) is complete attention. Attention head in 
+ * complete attention working in parallel are referred as PARALLELs.
  */
 class attention {
 public:
@@ -56,9 +52,9 @@ public:
     mat MH;                     // horizontal retention matrix
     mlp ver;                    // vertical propagation and next block transfer
     mlp hor;                    // horizontal transfer to next head
-    mat qkCache;                // QK' cache = MQ x MK' -> inference
-    mat qvCache;                // QH' cache = MQ x MV' -> inference
-    mat khCache;                // KV' cache = MK x MH' -> inference
+    mat qkCache;                // QK' cache = MQ x MK' -> inference only
+    mat qvCache;                // QH' cache = MQ x MV' -> inference only
+    mat khCache;                // KV' cache = MK x MH' -> inference only
     mat K;                      // keys = Tokens x MK (Mapped)
     mat Q;                      // Querys = Tokens x MQ (Mapped)
     mat KdotQ;                  // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar (Mapped)
@@ -67,25 +63,23 @@ public:
     std::vector<float> dh;      // delta for EH: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
     std::vector<float> dv;      // delta for EV[i]: sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
     float learning_rate;        // learning rate for attention
-    float lambda_L1;            // L1 regularization strength
-    float lambda_L2;            // L2 regularization strength
-    unsigned long long params;  // parameters in each attention head
+    // float lambda_L1;            // L1 regularization strength
+    // float lambda_L2;            // L2 regularization strength
+    unsigned long long params;          // parameters in each attention head
     unsigned long long attOffset;       // attention offset
 
 #ifdef USE_OPENCL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
     OpenCLContext& clcontext;
-    attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning, float lambda_L1, float lambda_L2);
+    attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
 #elif USE_CUDA || USE_CPU
     // Constructors without OpenCLContext
-    attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning, float lambda_L1, float lambda_L2);
+    attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
 #endif // USE_OPENCL
 
+    // Explicitly define copy constructor and copy assignment operator
     attention(const attention& other);
     attention& operator=(const attention& other);
-    
-    attention(attention&& other) noexcept;
-    attention& operator=(attention&& other) noexcept;
 
     void serialise(int offset, const std::string& locationWithFilename);
     void deserialise(int offset, const std::string& locationWithFilename);
@@ -94,13 +88,13 @@ public:
 
     float* d_EV; // Device pointer for Vertical Retention
     float* getDeviceEVPointer();
+
     void cuforprop(int& in, int& layers, int& tokenCount);
     void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
     void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
     void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
-    void cuAdamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #elif USE_OPENCL
 
@@ -118,7 +112,7 @@ public:
     void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
     void clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber, float& learning);
     void clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber, float& learning);
-    void clAdamUpdate(OpenCLContext& clContext, unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
+
 #else
 
     // cpp functions for cpu
@@ -130,11 +124,9 @@ public:
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
     void backward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
-    void adamUpdate(unsigned long long t_adam, float beta1, float beta2, float epsilon, float learning_rate);
 
 #endif
 
-    void initializeAdamMoments();
     void setAttentionType(bool attentionType);
     void clearValues();
     void serialiseattention4train(const std::string& locationWithFileName);
@@ -144,7 +136,80 @@ public:
 };
 
 
+// Inline implementations for copy constructor and copy assignment operator
+inline attention::attention(const attention& other) :
+#ifdef USE_OPENCL
+    clcontext(other.clcontext),
+    d_EV(other.d_EV),
+#elif USE_CUDA
+    d_EV(other.d_EV),
+#endif
+    // Initialize common members
+    isSelfAttention(other.isSelfAttention),
+    inTraining(other.inTraining),
+    tokenCount(other.tokenCount),
+    MQ(other.MQ),
+    MK(other.MK),
+    MV(other.MV),
+    MH(other.MH),
+    ver(other.ver), // mlp copy constructor
+    hor(other.hor), // mlp copy constructor
+    qkCache(other.qkCache),
+    qvCache(other.qvCache),
+    khCache(other.khCache),
+    K(other.K),
+    Q(other.Q),
+    KdotQ(other.KdotQ),
+    EH(other.EH),
+    EV(other.EV),
+    dh(other.dh),
+    dv(other.dv),
+    params(other.params)
+{
+}
+
+inline attention& attention::operator=(const attention& other) {
+    if (this == &other) {
+        return *this; // Self-assignment check
+    }
+
+    #ifdef USE_OPENCL
+        clcontext = other.clcontext;
+        d_EV = other.d_EV;
+    #elif USE_CUDA
+        d_EV = other.d_EV;
+    #endif
+
+    // Assign common members
+    isSelfAttention = other.isSelfAttention;
+    inTraining = other.inTraining;
+    tokenCount = other.tokenCount;
+    MQ = other.MQ; // mat assignment
+    MK = other.MK;
+    MV = other.MV;
+    MH = other.MH;
+    ver = other.ver; // mlp assignment
+    hor = other.hor;
+    qkCache = other.qkCache;
+    qvCache = other.qvCache;
+    khCache = other.khCache;
+    K = other.K;
+    Q = other.Q;
+    KdotQ = other.KdotQ;
+    EH = other.EH; // std::vector assignment
+    EV = other.EV;
+    dh = other.dh;
+    dv = other.dv;
+    params = other.params;
+
+    return *this;
+}
+
 #ifdef USE_CUDA
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+
 // dot product and multiplication
     __global__ void compute_single_kq_vector_kernel( const float* d_token_embedding, const float* d_projection_matrix, 
                 float* d_output_kq_vector, int embedding_dim, int mat_heights);
@@ -234,78 +299,5 @@ public:
                 int context_win, int embedding_dim);
 
 #endif
-
-
-// Inline implementations for copy constructor and copy assignment operator
-inline attention::attention(const attention& other) :
-#ifdef USE_OPENCL
-    clcontext(other.clcontext),
-    d_EV(other.d_EV),
-#elif USE_CUDA
-    d_EV(other.d_EV),
-#endif
-    // Initialize common members
-    isSelfAttention(other.isSelfAttention),
-    inTraining(other.inTraining),
-    lambda_L1(other.lambda_L1),
-    lambda_L2(other.lambda_L2),
-    tokenCount(other.tokenCount),
-    MQ(other.MQ),
-    MK(other.MK),
-    MV(other.MV),
-    MH(other.MH),
-    ver(other.ver), // mlp copy constructor
-    hor(other.hor), // mlp copy constructor
-    qkCache(other.qkCache),
-    qvCache(other.qvCache),
-    khCache(other.khCache),
-    K(other.K),
-    Q(other.Q),
-    KdotQ(other.KdotQ),
-    EH(other.EH),
-    EV(other.EV),
-    dh(other.dh),
-    dv(other.dv),
-    params(other.params)
-{}
-
-inline attention& attention::operator=(const attention& other) {
-    if (this == &other) {
-        return *this; // Self-assignment check
-    }
-
-    #ifdef USE_OPENCL
-        clcontext = other.clcontext;
-        d_EV = other.d_EV;
-    #elif USE_CUDA
-        d_EV = other.d_EV;
-    #endif
-
-    // Assign common members
-    isSelfAttention = other.isSelfAttention;
-    inTraining = other.inTraining;
-    lambda_L1 = other.lambda_L1;
-    lambda_L2 = other.lambda_L2;
-    tokenCount = other.tokenCount;
-    MQ = other.MQ;
-    MK = other.MK;
-    MV = other.MV;
-    MH = other.MH;
-    ver = other.ver; // mlp assignment
-    hor = other.hor;
-    qkCache = other.qkCache;
-    qvCache = other.qvCache;
-    khCache = other.khCache;
-    K = other.K;
-    Q = other.Q;
-    KdotQ = other.KdotQ;
-    EH = other.EH; // std::vector assignment
-    EV = other.EV;
-    dh = other.dh;
-    dv = other.dv;
-    params = other.params;
-    return *this;
-}
-
 
 #endif

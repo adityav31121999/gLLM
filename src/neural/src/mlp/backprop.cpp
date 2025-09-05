@@ -90,6 +90,9 @@ void mlp::backprop(int in, int layers, float learning) {
     size_t output_layer_idx = num_layers - 1;
     size_t output_size = layer_sizes[output_layer_idx];
     for (unsigned int i = 0; i < output_size; ++i) {
+        // 'this->output' contains the final activations of the output layer
+        // and 'this->expected' contains the target values.
+        // The derivative of sigmoid (if output is sigmoid activated) is output * (1 - output)
         layer_deltas[output_layer_idx][i] = (this->output[i] - this->expected[i]) * this->activations[output_layer_idx][i] * (1.0f - this->activations[output_layer_idx][i]);
     }
 
@@ -98,9 +101,8 @@ void mlp::backprop(int in, int layers, float learning) {
         // 'l' is the index of the current hidden layer
         size_t current_layer_size = layer_sizes[l];
         size_t next_layer_size = layer_sizes[l+1];
-        // weights[l] connects layer l to l+1
-        const mat& weights_to_next_layer = weights[l];
-        const std::vector<float>& current_hidden_layer_activations = activations[l];
+        const mat& weights_to_next_layer = weights[l]; // weights[l] connects layer l to l+1
+        const std::vector<float>& current_hidden_layer_activations = activations[l]; // Activations of the current hidden layer 'l'
 
         for (unsigned int i = 0; i < current_layer_size; ++i) {
             float error_sum = 0.0;
@@ -190,7 +192,7 @@ void mlp::backwithL2(int in, int layers, float learning) {
  *        Updates weights directly.
  *        Should be used with standard SGD `train` method if regularization is desired without Adam.
  */
-void mlp::backwithElasticNet(int in, int layers, float learning) {
+void mlp::backwithElastic(int in, int layers, float learning) {
     backprop(in, layers, learning); // Calculate gradients
 
     for (unsigned int l = 0; l < num_layers - 1; ++l) {

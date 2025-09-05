@@ -57,37 +57,38 @@ public:
     mat& operator=(const mat& other);
     mat& operator=(mat&& other) noexcept;
     std::vector<float> operator=(int i);
-    mat& operator=(const std::vector<std::vector<float>>& b);
+    mat& operator=(const std::vector<std::vector<float>>& b); // Needs file creation/mapping/copy
+
     float& operator()(int i, int j);
     const float& operator()(int i, int j) const;
     std::vector<float> operator()(int i) const;
-    void addRow(const std::vector<float>&, int i);
+    void addRow(const std::vector<float>&, int i);   // add row in ith location of matrix
     std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col);
 
     mat operator+(const mat& other) const;
     mat operator-(const mat& other) const;
     mat operator*(float scalar) const;
-    mat operator*(const mat& other) const;
+    mat operator*(const mat& other) const; // Matrix multiplication
     mat operator/(float scalar) const;
-    mat operator/(const mat& other) const;
-    mat operator+(const std::vector<std::vector<float>>& b) const;
-    mat operator-(const std::vector<std::vector<float>>& b) const;
+    mat operator/(const mat& other) const; // Matrix division (A * B^-1)
+    mat operator+(const std::vector<std::vector<float>>& b) const; // Add vector
+    mat operator-(const std::vector<std::vector<float>>& b) const; // Subtract vector
 
     mat& operator+=(const mat& other);
     mat& operator-=(const mat& other);
     mat& operator*=(float scalar);
     mat& operator*=(const mat& other);
     mat& operator/=(float scalar);
-    mat& operator/=(const mat& other);
-    mat& operator+=(const std::vector<std::vector<float>>& other);
-    mat& operator-=(const std::vector<std::vector<float>>& other);
+    mat& operator/=(const mat& other); // Element-wise or matrix inverse? (Currently element-wise)
+    mat& operator+=(const std::vector<std::vector<float>>& other); // Add-assign vector
+    mat& operator-=(const std::vector<std::vector<float>>& other); // Subtract-assign vector
 
     mat gaussjordan() const;
     void mult_A_Bt(const mat& a, const mat& b);
-    mat mult(const mat& a, const mat& b);
+    mat mult(const mat& a, const mat& b); // Static or friend? Needs update.
     float trace() const;
-    void set(int i, int j, float val);
-    bool ifsquare() const;
+    void set(int i, int j, float val);  // set val to (i, j)th element
+    bool ifsquare() const;              // check if matrix is square
 
     bool ifsymmetric() const;
     bool ifidentity() const;
@@ -95,9 +96,9 @@ public:
     bool ifupper() const;
     bool iflower() const;
     bool ifskew() const;
-    mat transpose() const;
-    void transpose_inplace();
-    static mat Random(int row, int col);
+    mat transpose() const; // Return new transposed matrix
+    void transpose_inplace(); // Transpose the current matrix (only if square)
+    static mat Random(int row, int col); // Static random matrix generator
 
     // Weight initialization methods
     static mat initXavier(int row, int col, bool use_gain = false, float gain = 1.0f);
@@ -105,7 +106,6 @@ public:
 
     // File-based operations
     void serialise(unsigned long long offset, const std::string& locationWithFileName);
-    void serialise(const std::string& locationWithFileName);
     void deserialise(unsigned long long offset, const std::string& locationWithFileName);
 
     // Destructor

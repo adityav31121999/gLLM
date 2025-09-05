@@ -4,7 +4,12 @@
 #include <filesystem>
 
 /**
- * serialise the the matrix to a bin after offset number of float values
+ * FOR TRAINING:
+ * serialise all the mats and mlps and vectors in this way:
+ * MQ, MK, MV, MH
+ * hor, ver,
+ * K, Q, KdotQ
+ * EH, EV
  */
 void mat::serialise(unsigned long long offset, const std::string& locationofbinfile) {
     // Open the file for binary read and write, expecting it to exist and be pre-sized.
@@ -55,57 +60,12 @@ void mat::serialise(unsigned long long offset, const std::string& locationofbinf
 
 
 /**
- * serialise the the matrix to a bin by appending from last
- */
-void mat::serialise(const std::string& locationofbinfile) {
-    // Open the file for binary write in append mode.
-    // If the file does not exist, it will be created.
-    // If it exists, new data will be appended to the end.
-    std::fstream outFile(locationofbinfile, std::ios::binary | std::ios::app);
-    if (!outFile.is_open()) {
-        throw std::runtime_error("Failed to open file for appending (check permissions or path): " + locationofbinfile);
-    }
-
-    // Serialize matrix data
-    size_t num_elements_in_mat_a = static_cast<size_t>(row) * static_cast<size_t>(col);
-
-    if (num_elements_in_mat_a == 0) {
-        // No data to write for a 0-element matrix.
-        outFile.close();
-        // Check for errors during close, especially if buffers needed flushing
-        if (!outFile) {
-            throw std::runtime_error("Error occurred while closing file (e.g., flush error) for empty matrix: " + locationofbinfile);
-        }
-        return;
-    }
-
-    // A non-zero size implies we need a valid data pointer.
-    const float* data_ptr = is_shared_segment ? data_segment_start : mapped_data;
-    if (data_ptr == nullptr) { // Should not happen for a valid non-empty matrix
-        outFile.close();
-        throw std::runtime_error("Matrix has non-zero size but data pointer is null. File: " + locationofbinfile);
-    }
-
-    size_t bytes_to_write = num_elements_in_mat_a * sizeof(float);
-
-    // In std::ios::app mode, the output pointer is automatically positioned at the end of the file
-    // before each write operation. Therefore, no explicit seekp is needed for appending.
-    outFile.write(reinterpret_cast<const char*>(data_ptr), static_cast<std::streamsize>(bytes_to_write));
-    
-    if (!outFile) { // Check for errors after writing data
-        outFile.close();
-        throw std::runtime_error("Error writing matrix data to file: " + locationofbinfile);
-    }
-
-    outFile.close();
-    if (!outFile) { // Check for errors that might occur during close (e.g., buffer flush failure)
-        throw std::runtime_error("Error occurred while closing file (e.g., flush error): " + locationofbinfile);
-    }
-}
-
-
-/**
- * deserialise the the bin to a matrix from offset number of float values
+ * FOR TRAINING:
+ * serialise all the mats and mlps and vectors in this way:
+ * MQ, MK, MV, MH
+ * hor, ver,
+ * K, Q, KdotQ
+ * EH, EV
  */
 void mat::deserialise(unsigned long long offset, const std::string& locationofbinfile) {
     if (row == 0 || col == 0) {
@@ -153,4 +113,73 @@ void mat::deserialise(unsigned long long offset, const std::string& locationofbi
         throw std::runtime_error("Error reading matrix data from monolithic file: " + locationofbinfile);
     }
     inFile.close();
+}
+
+
+/**
+ * @brief Creates a matrix with Xavier/Glorot initialization
+ * @param row Number of rows
+ * @param col Number of columns
+ * @param use_gain Whether to use the gain parameter (default: false)
+ * @param gain Scaling factor for the initialization (default: 1.0)
+ * @return A new matrix with Xavier/Glorot initialized values
+ */
+mat mat::initXavier(int row, int col, bool use_gain, float gain) {
+    // Xavier/Glorot initialization: scale = sqrt(2.0 / (fan_in + fan_out))
+    // For linear layers, fan_in is the input dimension and fan_out is the output dimension
+    float scale = 1.0f;
+    if (row > 0 && col > 0) {
+        scale = std::sqrt(2.0f / (row + col));
+    }
+    if (use_gain) {
+        scale *= gain;
+    }
+    
+    // Create a random matrix with values in [-scale, scale]
+    mat result(row, col);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(-scale, scale);
+    
+    for (int i = 0; i < row; ++i) {
+        for (int j = 0; j < col; ++j) {
+            result(i, j) = dist(gen);
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * @brief Creates a matrix with He initialization
+ * @param row Number of rows (output dimension for linear layers)
+ * @param col Number of columns (input dimension for linear layers)
+ * @param use_gain Whether to use the gain parameter (default: false)
+ * @param gain Scaling factor for the initialization (default: 1.0)
+ * @return A new matrix with He initialized values
+ */
+mat mat::initHe(int row, int col, bool use_gain, float gain) {
+    // He initialization: scale = sqrt(2.0 / fan_in)
+    // For linear layers, fan_in is the input dimension (col)
+    float scale = 1.0f;
+    if (col > 0) {
+        scale = std::sqrt(2.0f / col);
+    }
+    if (use_gain) {
+        scale *= gain;
+    }
+    
+    // Create a random matrix with normal distribution N(0, scale^2)
+    mat result(row, col);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<float> dist(0.0f, scale);
+    
+    for (int i = 0; i < row; ++i) {
+        for (int j = 0; j < col; ++j) {
+            result(i, j) = dist(gen);
+        }
+    }
+    
+    return result;
 }

@@ -3,17 +3,17 @@
 #define MODEL_HPP 1
 
 #include "tokenise.hpp"
-#include <string>
+#include <fstream>
+#include <string_view>
 #include <sstream>
+#include <string>
 #include <vector>
 #include <maths.hpp>
 #include <neural.hpp>
 #include <chrono>
-#include <cmath>
 
 #define MECH "SHADY-ATTENTION"      // attention mechanism
 #define ARCH "DIVIDED-CONTEXT"      // model architecture
-#define M_PI 3.14159                // no-so on-point value of pi
 
 // metadata for model and data information
 typedef struct modelDataInfo {
@@ -42,7 +42,7 @@ typedef struct modelDataInfo {
     int matheight;          // height of MQ, MK and columns of MV, MH
     int totalParams;        // total parameters of transformer
     int totalContext;       // total tokenLimit -> t*count m * n
-    unsigned long long tokens;   // total tokens (words and punctutations) for training, testing and validation
+    long long int tokens;   // total tokens (words and punctutations) for training, testing and validation
     float learning;         // learning rate
     bool attentionType;     // if self attention or cross attention
 } modelDataInfo;
@@ -59,14 +59,7 @@ struct TrainingSessionData {
     int lastEpochCountState = 0;                    // Snapshot of T.epochCount at last save
     long long cumulativeTotalTrainCount = 0;        // Total train count (T.trainCount)
     long long vocabSizeSnapshot = 0;                // Snapshot of T.vocabsize
-    float lambdaL1;                                 // L1 penalty
-    float lambdaL2;                                 // L2 penalty
-    float epsilon;                                  // epsilon for adam optimiser
-    float currentLearning;                          // current line's learning rate
-    double totalLearning;                           // total learning rate from previous trainings
-    double adLearning;                              // average of total learning from last session
     float cumulativeError = 0;                      // total error throughout training
-    unsigned long long t_adam_steps = 0;            // total adam steps
     std::string lastSaveTimestamp;                  // Timestamp of last progress saved
 
     bool load(const std::string& filepath) {
@@ -84,16 +77,9 @@ struct TrainingSessionData {
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lastEpochCountState; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeTotalTrainCount; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> vocabSizeSnapshot; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lambdaL1; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> lambdaL2; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> epsilon; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> currentLearning; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> totalLearning; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> adLearning; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> cumulativeError; if(ss.fail()) return false; } else return false;
-        if (std::getline(ifs, line)) { std::istringstream ss(line); ss >> t_adam_steps; if(ss.fail()) return false; } else return false;
         if (std::getline(ifs, line)) lastSaveTimestamp = line; else return false;
-
+        
         return ifs.eof() || ifs.peek() == EOF; // Ensure all expected data was read
     }
 
@@ -112,14 +98,7 @@ struct TrainingSessionData {
         ofs << lastEpochCountState << std::endl;
         ofs << cumulativeTotalTrainCount << std::endl;
         ofs << vocabSizeSnapshot << std::endl;
-        ofs << lambdaL1 << std::endl;
-        ofs << lambdaL2 << std::endl;
-        ofs << epsilon << std::endl;
-        ofs << currentLearning << std::endl;
-        ofs << totalLearning << std::endl;
-        ofs << adLearning << std::endl;
         ofs << cumulativeError << std::endl;
-        ofs << t_adam_steps << std::endl;
         
         auto now = std::chrono::system_clock::now();
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
@@ -160,16 +139,11 @@ public:
     int d;                  // token dimension
     int l;                  // layers of mlp
     int total;              // total tokenLimit -> t*count m * n
-    int epoch;              // epoch for training single token
-    float learning;         // learning rate
-    double totalLearning;   // total learning for all updates (adaptive learning)
-    double adLearning;      // = T.totalLearning/T.trainCount (average adaptive learning)
+    float learning;         // learning rate for MLPs
     float lambda_L1;        // lambda for L1 penalty
     float lambda_L2;        // lambda for L2 penalty
-    float epsilon;          // epsilon for adam optimiser
-    bool isSelf;            // if self attention = 1 or cross attention = 0
-    bool toTrain;           // if training of model, set to 1, or inference, set to 0
-    unsigned long long t_step_adam;         // for time steps, everytime adam optimiser is used
+    bool isSelf;            // if self attention or cross attention
+    bool toTrain;           // if training of model, set to 1, or use of model, set to 0
 
 // files to hold data
     modelDataInfo info;     // model info
@@ -180,14 +154,13 @@ public:
 // paths
     std::string baseDir;            // Base directory for model files (e.g., D:/train)
     std::string currentChatLogPath; // Stores the path of the currently open chat log file
-    std::string path2token;         // path to tokeniser data
 
 // using these strings, embeddings are provided to the transformer t (for training and application)
-    std::string userPrompt;                     // user prompt
-    std::vector<std::string> tinput;            // token input
-    std::vector<std::string> expected;          // expected token output
-    std::vector<std::string> toutput;           // predicted token output
-    std::vector<std::string> chatToken;         // Input + Expected/Output + Terminator
+    std::string userPrompt;                 // user prompt
+    std::vector<std::string> tinput;        // token input
+    std::vector<std::string> expected;      // expected token output
+    std::vector<std::string> toutput;       // predicted token output
+    std::vector<std::string> chatToken;     // Input + Expected/Output + Terminator
 
 // offsets
     unsigned long long matOffset;                // matrix offset
@@ -199,6 +172,7 @@ public:
     unsigned long long totalTokens;              // total tokens used for training, testing and validation
     unsigned long long vocabsize;                // total vocabulary size
     unsigned long long totalTrainingCount;       // total training count obtained from epochs based on token training
+
     tokeniser TOK;          // tokeniser
     transformer T;          // transformer
 
@@ -206,13 +180,11 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     model(OpenCLContext& context, const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, int epoch, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
-        const std::string& tokeniserPath);
+        int l, float learning, float lambda_L1, float lambda_L2, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #elif USE_CUDA || USE_CPU
     model() = default;
-    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matheight, int l, int epoch, 
-        float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
-        const std::string& tokeniserPath);
+    model(const std::string& baseDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
+        float lambda_L1, float lambda_L2, long long int vocab, bool isSelfAttention, bool toTrainModel);
 #endif
 
     void setLearning(float learning);
@@ -224,18 +196,17 @@ public:
     void setLicense(const std::string& license);
     void setInfo(modelDataInfo& info);
     void setInfo(std::string& modelName, std::string& version, std::string& author, std::string& date, std::string& modelArch, 
-                    std::string& license, std::string& trainingData);
+            std::string& license, std::string& trainingData);
     void setEmbeddingFromCSV(const std::string& path2file);
-    void positionalEmbedding(const std::vector<float>& originalmbedding, std::vector<float>& newEmbedding, int position);
-    void setTokenAndEmbeddingForTransformer(tokeniser& tok);
+    void makeEmbedding(std::string& path2file);
 
-    // train AND test first block on promp-response and sentences
+    // train first block promp-response and sentences
     void trainBlockPR(const std::string& trainingDataFolder);
     void trainBlockSentence(const std::string& trainingDataFolder);
     void testBlockPR(const std::string& testDataFolder);
     void testBlockSentence(const std::string& testDataFolder);
 
-    // train and test model on promp-response and sentences
+    // train model promp-response and sentences
     void trainModelPR(const std::string& trainingDataFolder);
     void trainModelSentence(const std::string& trainingDataFolder);
     void testModelPR(const std::string& testDataFolder);
@@ -246,22 +217,17 @@ public:
     int getOffset(int blockCount, int paCount, int attentionCount, int matCount, int mlpCount);
 
     void serialise();               // serialise whole model
-    void fetchmat(mat& a, int blockCount, int x, int y, const std::string& trainLocation);          // cache and mat
-    void fetchmlp(mlp& network, int blockCount, int x, int y, const std::string& trainLocation);    // mlp
+    void fetchmat(mat& a, int blockCount, int x, int y, const std::string& trainLocation);        // cache and mat
+    void fetchmlp(mlp& network, int blockCount, int x, int y, const std::string& trainLocation);  // mlp
     void fetchForInference(const std::string& binDirectory);    // fetch for inference (mlp and cache)
     void fetchForTraining(const std::string& binDirectory);     // fetch for training (matrix and mlp)
 
     // chat with model
     void runModel(const std::string& binDirectory);     // run transformer for conversation
-    void takeInput();               // take required input for transformer
-    void newChat();                 // for new chat clear everything and set all to 0
-    void endChat();                 // end chat, save parameters and clear all the memory, exit transformer
-    void saveChat();                // save chat to file
-
-    // lambda = i(sin(i) + cos(pi - i))
-    static constexpr auto terminatorEmbed = [](float i, int j) -> float {
-        return static_cast<float>(j * (std::sin(i) + std::cos(M_PI - i)));
-    };
+    void takeInput();       // take required input for transformer
+    void newChat();         // for new chat clear everything and set all to 0
+    void endChat();         // end chat, save parameters and clear all the memory, exit transformer
+    void saveChat();        // save chat to file
 
     // Destructor to ensure modelFILE is closed
     ~model() {
@@ -280,11 +246,15 @@ public:
 
 unsigned long long countLinesInCSV(const std::string& filename);
 unsigned long long countLineInTXT(const std::string& filename);
+
 static bool is_sub_sentence_delimiter(char c);
 static bool is_digit(char c);
+
+void tokenize_with_numbers(const std::string& str, std::vector<std::string>& tokens, bool& sortIt);
 void splitLine2SubSentences(std::string& line, std::vector<std::string>& subSentences);
 void textSplit(std::string& path2file, std::vector<std::string>& tokensOfFile, std::vector<std::vector<std::string>>& oddSentence, 
                 std::vector<std::vector<std::string>>& evenSentence);
+
 void create(std::string &locationOfALLbins);
 void makeCSV(std::vector<std::string>& tokens, mat& tokenEmbed, const std::string& csvFilePath);
 
