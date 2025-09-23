@@ -220,14 +220,15 @@ Q[m][x][y] = --------------------------------------------------------------
 
 ## IMPORTANT NOTE:
 
-- I would like to give huge credits to AI models and AgenticIDEs that I have used to build cuda and opencl operations.
-- GROK: For Backpropagation of blocks (A big problem was that how should I reflect the change from error to mlp to the matrices like MQ, MK, MV and MH from block to block and most of the time without affecting the horizontal operations)
-- FOR CUDA AND OPENCL:
-  - GEMINI code assist
-  - CLAUDE SONNET and DEEPSEEK in TRAE, WINDSURF
-  - MISTRAL
-  - ChatGPT
-  - COPILOT
+- I would like to give huge credit to AI models and AgenticIDEs that I have used to build cuda and opencl operations.
+- GROK: For Backpropagation of blocks, a big problem for me was to how should I reflect the maths for my back propagation as an efficient c++ equivalent code, though forprop was easy, with backprop there was issue regarding how many vectors and matrices do I need to introduce in backprop code which was solved grok.
+- FOR Backprop CUDA AND OPENCL Kernels:
+  - GEMINI code assist: majority of backprop opencl kernels and error solutions
+  - For direct translation of opencl to cuda kernels and error correction:
+    - CLAUDE SONNET and DEEPSEEK in TRAE, WINDSURF
+    - MISTRAL (le chat)
+    - ChatGPT
+    - COPILOT
 
 ## Refernce
 -  Vaswani, Ashish, Shazeer, Noam, Parmar, Niki, Uszkoreit, Jakob, Jones, Llion, Gomez, Aidan N., Kaiser, Lukasz, and Polosukhin, Illia Attention is all you need. 2017. https://doi.org/10.48550/arXiv.1706.03762
