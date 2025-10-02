@@ -36,8 +36,8 @@ struct PairHash {
 struct ProgressData {
     std::mutex mtx; // This makes ProgressData non-copyable and non-movable
     std::condition_variable cv;
-    long long total_bytes = 0;
-    long long bytes_read = 0;
+    unsigned long long total_bytes = 0;
+    unsigned long long bytes_read = 0;
     size_t files_completed_count = 0;
     std::string last_file_completed;
     int merges_completed = 0;
@@ -67,8 +67,8 @@ private:
     int vocSize;    // vocabulary size (number of merges performed while BPE algorithm)
     int d_val;      // divisor (makes it look like repeatation)
 
-    std::string path2data;                          // path to dataset
     std::vector<std::string> tokens;                // all possible tokens
+    std::vector<std::string> vocab_tokens;          // lexicographically sorted tokens for lookups
     std::vector<float> seeds;                       // seeds for all tokens (seeds.csv)
     std::vector<std::vector<float>> embeddings;     // vector for each token of dimension d
     std::vector<std::vector<float>> deEmbeddings;   // inverse of each token of dimension d
@@ -78,6 +78,8 @@ private:
 
 public:
 
+    std::string path2data;                          // path to dataset
+    std::string path2token;                         // path to tokens and embeddings
     int num_threads;                        // number of threads
     int totalCorpusWordCount;               // corpus word count
     std::unique_ptr<ProgressData> bpe_progress;
@@ -107,6 +109,7 @@ public:
           d_val(other.d_val),
           path2data(other.path2data),
           tokens(other.tokens),
+          vocab_tokens(other.vocab_tokens),
           seeds(other.seeds),
           embeddings(other.embeddings),
           deEmbeddings(other.deEmbeddings),
@@ -128,6 +131,7 @@ public:
           d_val(other.d_val),
           path2data(std::move(other.path2data)),
           tokens(std::move(other.tokens)),
+          vocab_tokens(std::move(other.vocab_tokens)),
           seeds(std::move(other.seeds)),
           embeddings(std::move(other.embeddings)),
           deEmbeddings(std::move(other.deEmbeddings)),
@@ -153,6 +157,7 @@ public:
         d_val = other.d_val;
         path2data = other.path2data;
         tokens = other.tokens;
+        vocab_tokens = other.vocab_tokens;
         seeds = other.seeds;
         embeddings = other.embeddings;
         deEmbeddings = other.deEmbeddings;
@@ -180,6 +185,7 @@ public:
         d_val = other.d_val;
         path2data = std::move(other.path2data);
         tokens = std::move(other.tokens);
+        vocab_tokens = std::move(other.vocab_tokens);
         seeds = std::move(other.seeds);
         embeddings = std::move(other.embeddings);
         deEmbeddings = std::move(other.deEmbeddings);
@@ -221,6 +227,7 @@ public:
     std::vector<float> getEmbeddingForToken(int index) const { return embeddings[index]; };
     std::vector<float> getEmbeddingForToken(const std::string& token) const;
     const std::vector<std::string>& getTokens() const { return tokens; }
+    const std::vector<std::string>& getVocab() const { return vocab_tokens; }
     const int getIndexOfToken(const std::string& token) const;
     const std::vector<std::vector<float>>& getEmbeddings() const { return embeddings; }
     const std::vector<std::vector<float>>& getDeEmbeddings() const { return deEmbeddings; }
@@ -235,15 +242,20 @@ public:
     void learn_vocabulary_from_word_counts(const std::unordered_map<std::string, int>& corpus_word_counts, int num_merges, std::vector<std::string>& final_vocab);
     void saveUniqueTokensToCSV(const std::unordered_map<std::string, int>& corpus_word_counts, const std::string& outputPath);
     void calculateTokenStatsFromCounts(const std::unordered_map<std::string, int>& corpus_word_counts, const std::string& outputPath);
-    void calculateTokenStats(const std::vector<std::string>& pre_tokens, const std::string& outputPath);
-    void generateAndSaveEmbeddings(const std::string& outputPath, float r1);
+    void generateAndSaveEmbeddings(const std::string& outputPath, float r1, float r2);
+    void generateAndSavedeEmbeddings(const std::string& outputPath, float r1, float r2);
+    void saveEmbeddings(const std::string& outputPath, const std::vector<std::vector<float>>& Emebdding);
+    void saveEmbeddings(const std::string& outputPath, const float* Emebdding);
     void savedeEmbeddings(const std::string& outputPath, const std::vector<std::vector<float>>& deEmebdding);
+    void savedeEmbeddings(const std::string& outputPath, const float* deEmebdding);
 
     #ifdef USE_CUDA
-        void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d_dim, int& vocSize, float r1);
+        void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
+        void cudeEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
         void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding, const std::vector<std::vector<float>>& embedding, int& d, int& vocSize);
     #elif USE_OPENCL
-        void clEmbeddingFormula(OpenCLContext& ocl_context, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, int& vocSize_val, float r1);
+        void clEmbeddingFormula(OpenCLContext& ocl, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
+        void cldeEmbeddingFormula(OpenCLContext& ocl, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
         void clVectorInverse(OpenCLContext& ocl, std::vector<std::vector<float>>& deEmbedding, const std::vector<std::vector<float>>& embedding, int& d, int& vocSize);
     #endif
 

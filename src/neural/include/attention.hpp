@@ -12,7 +12,7 @@
  * dh = sum(head[i][j] * Ki.MH), dv = sum(head[i][j] * Qi.MV)
  * Input(EH + dh) -> MLP(hor) -> ReLU(output) -> mH -> EH = EH + mH
  * Input(EV + dv) -> MLP(ver) -> ReLU(output) -> mV -> EV(i) = EV(i) + mV
- * MQ, MK, MV, MH => MATHEIGHTS x EMBEDDING
+ * MQ, MK, MV, MH => CONTEXT_WIN x EMBEDDING
  * K, Q, EV => CONTEXT_WIN x EMBEDDING
  * KdotQ => CONTEXT_WIN x CONTEXT_WIN
  * qkCache, khCache, qvcache => EMBEDDING x EMBEDDING
@@ -24,13 +24,11 @@
 
 // macros for models
 #define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
-#define NUMBER_OF_HEADS 12                  // number of heads in each layer (partial attention)
+#define NUMBER_OF_HEADS 8                   // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
 #define EMBEDDING 128                       // embedding dimension for each token
-#define LAYERS_MLP 4                        // layers of mlp
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head (or number of PA * embedding)
-#define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for prompt
-#define MATHEIGHTS 1024                     // weight matrix heights
+#define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for sequence1
 #define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS               // maximum tokens for full context
 #define SCALING std::sqrt(static_cast<float>(EMBEDDING))        // SCALING FACTOR for ATTENTION HEAD
 #define DEEMBEDDING EMBEDDING*NUMBER_OF_PA  // embedding dimension for each token
@@ -60,8 +58,8 @@ public:
     mat KdotQ;                  // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar (Mapped)
     std::vector<float> EH;      // horizontal retention vector (Next Embedding in same block)
     mat EV;                     // vertical retention vectors (Context retention for next block)
-    std::vector<float> dh;      // delta for EH: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
-    std::vector<float> dv;      // delta for EV[i]: sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
+    std::vector<float> h;       // delta for EH: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
+    std::vector<float> v;       // delta for EV[i]: sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
     float learning_rate;        // learning rate for attention
     // float lambda_L1;            // L1 regularization strength
     // float lambda_L2;            // L2 regularization strength
@@ -72,9 +70,11 @@ public:
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
     OpenCLContext& clcontext;
     attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
+    attention(OpenCLContext& context, const std::string& inAtt, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
 #elif USE_CUDA || USE_CPU
-    // Constructors without OpenCLContext
+    attention() = default;
     attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
+    attention(const std::string& inAtt,int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
 #endif // USE_OPENCL
 
     // Explicitly define copy constructor and copy assignment operator
@@ -89,13 +89,6 @@ public:
     float* d_EV; // Device pointer for Vertical Retention
     float* getDeviceEVPointer();
 
-    void cuforprop(int& in, int& layers, int& tokenCount);
-    void cuforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void cuBackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
-    void cuBackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
-    void cuBackward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
-    void cuBackward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
-
 #elif USE_OPENCL
 
     cl::Buffer d_EV; // Device buffer for Vertical Retention
@@ -105,13 +98,6 @@ public:
         }
         return d_EV;
     } // Getter for the device buffer
-
-    void clforprop(int& in, int& layers, int& tokenCount);
-    void clforprop(std::vector<std::vector<float>> EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
-    void clbackward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
-    void clbackward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
-    void clbackward(std::vector<float>& expected, int& in, int& layers, int& headnumber, float& learning);
-    void clbackward(std::vector<std::vector<float>>& expectedV, int& layers, int& blocknumber, float& learning);
 
 #else
 
@@ -162,8 +148,8 @@ inline attention::attention(const attention& other) :
     KdotQ(other.KdotQ),
     EH(other.EH),
     EV(other.EV),
-    dh(other.dh),
-    dv(other.dv),
+    h(other.h),
+    v(other.v),
     params(other.params)
 {
 }
@@ -198,8 +184,8 @@ inline attention& attention::operator=(const attention& other) {
     KdotQ = other.KdotQ;
     EH = other.EH; // std::vector assignment
     EV = other.EV;
-    dh = other.dh;
-    dv = other.dv;
+    h = other.h;
+    v = other.v;
     params = other.params;
 
     return *this;
@@ -211,26 +197,24 @@ inline attention& attention::operator=(const attention& other) {
 #include <cuda_runtime.h>
 
 // dot product and multiplication
-    __global__ void compute_single_kq_vector_kernel( const float* d_token_embedding, const float* d_projection_matrix, 
-                float* d_output_kq_vector, int embedding_dim, int mat_heights);
-    __device__ void cuComputeKorQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height);
-    __device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc);
-    __device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
-    __device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim);
-    __global__ void computeAllDotsKernel(const float* vector, const float* matrix, float* results, int num_rows, int vector_dim);
+    __device__ int computePrediction(const float* EH, const float* embeddings, int dim, int voc);
+    __device__ int computePredictionWithScores(const float* EH, const float* embeddings, float* pred, int dim, int voc);
+    __global__ void kernelComputePrediction(const float* EH, const float* embeddings, int* result_index, int dim, int voc);
+    __global__ void kernelComputePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits, int* result_index, int dim, int voc);
+    __global__ void computeKQall(const float* tokenMatrix, const float* KQmatrix,
+                                        float* KQoutputMatrix, int tokenCount, int dim, int height);
     __global__ void kernelElementwiseMultiply(float* target_and_output, const float* factor, int size);
     // forward propagation
+    __global__ void kernelKdotQforSelf_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff, 
+                int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
+    __global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff,
+                int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
     __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_sums, float* d_col_sums, 
         int num_tokens, bool isSelfAttention);
     __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
         const float* d_K, const float* d_Q, float* d_dh_accum, float* d_dv_accum, int num_tokens, int h_dim);
     __global__ void accumulateEVRowsKernel(const float* d_EV, float* d_output, int num_rows, int col_size);
     __global__ void updateEVRowsKernel(float* d_EV_rows, const float* d_vector_to_add, int num_rows_to_update, int num_cols);
-    // training with forward propagation
-    __global__ void kernelKdotQforSelf_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff, 
-                int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
-    __global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff,
-                int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
     // backprop
     __global__ void kernelComputeGradDhDv_1stHead(const float* d_hor_gweights0, const float* d_ver_gweights0,
         float* grad_dh, float* grad_dv, int embedding_dim);
@@ -257,7 +241,6 @@ inline attention& attention::operator=(const attention& other) {
         int context_win);
     __global__ void kernelComputeGradientsEV_V(const float* ev, const float* expected_v, float* grad_ev_full, 
         float* grad_ev_summed, float* grad_ev_scaled, float learning_rate, int context_win, int embedding_dim);
-    __global__ void kernelComputeGradDv_V(const float* d_ver_gweights0, float* grad_dv, int embedding_dim);
     __global__ void kernelComputePreMV_V(const float* head, const float* q, float* pre_mv, int token_count, int mat_heights);
     __global__ void kernelComputeGradMV_V(const float* pre_mv, const float* grad_dv, float* grad_mv, int mat_heights, 
         int embedding_dim);
@@ -283,21 +266,20 @@ inline attention& attention::operator=(const attention& other) {
         const float* grad_mv, const float* grad_mq, const float* grad_mk, float learning_rate, int mat_heights, int embedding_dim);
     // inference 
     __global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M, 
-                int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);            
+                int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);            
     __global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
-                int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);
+                int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);
     __global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
-                const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width, 
+                const float* d_M, int sequence1_start_index_in_block, int sequence1_len, int context_len_in_block, int kdotq_width, 
                 int embedding_dim, float inv_scaling);
     __global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
-                const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width, 
+                const float* d_M, int sequence1_start_index_in_block, int sequence1_len, int context_len_in_block, int kdotq_width, 
                 int embedding_dim, float inv_scaling);
     __global__ void kernelComputeGradDhDv_1stHead(const float* d_hor_gweights0, const float* d_ver_gweights0,
                 float* grad_dh, float* grad_dv, int embedding_dim);
     __global__ void kernelUpdateSimple(float* weights_to_update, const float* gradients, float lr, size_t n_elements);
     __global__ void kernelUpdateEVBroadcasted(float* d_EV, const float* d_grad_EV_scaled, float learning_rate, 
                 int context_win, int embedding_dim);
-
 #endif
 
 #endif

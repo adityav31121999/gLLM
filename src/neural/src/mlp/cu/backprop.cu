@@ -32,8 +32,8 @@ void mlp::cuBackprop(int in, int layers, float learning) {
         throw std::runtime_error("MLP members not properly initialized for cuBackprop.");
     }
     // The 'layers' parameter here refers to the number of weight matrices/hidden+output layers.
-    // this->weights.size() should be equal to 'layers'.
-    // this->activations.size() should be equal to 'layers' (if activations[0] is first hidden layer's activation)
+    // weights.size() should be equal to 'layers'.
+    // activations.size() should be equal to 'layers' (if activations[0] is first hidden layer's activation)
     // or 'layers + 1' (if activations[0] is input layer's activation).
     // The original code implies activations.size() == layers.
     if (activations.size() != static_cast<size_t>(layers) || weights.size() != static_cast<size_t>(layers) || gweights.size() != static_cast<size_t>(layers)) {
@@ -89,7 +89,7 @@ void mlp::cuBackprop(int in, int layers, float learning) {
 
             // Copy weights for layer l using mat.mapped_data
             // Assuming weights[l] is an 'in x in' matrix for this function's logic.
-            const mat& current_weights_mat = this->weights[l];
+            const mat& current_weights_mat = weights[l];
             if (static_cast<unsigned int>(current_weights_mat.row) != in || static_cast<unsigned int>(current_weights_mat.col) != in) {
                 // Optional: Add a warning or error if mat dimensions don't match 'in'
             }
@@ -153,7 +153,7 @@ void mlp::cuBackprop(int in, int layers, float learning) {
         // Copy updated weights back to the host mlp object
         for (int l = 0; l < layers; ++l) {
             // Copy updated weights directly to the mat's mapped_data
-            mat& host_weights_mat = this->weights[l];
+            mat& host_weights_mat = weights[l];
             if (static_cast<unsigned int>(host_weights_mat.row) != in || static_cast<unsigned int>(host_weights_mat.col) != in) {
                 // Optional: Add a warning or error
             }
@@ -163,7 +163,7 @@ void mlp::cuBackprop(int in, int layers, float learning) {
         // Copy calculated gradients back to the host mlp object <-- ADDED SECTION
         for (int l = 0; l < layers; ++l) {
             // Copy calculated gradients directly to the gweights mat's mapped_data
-            mat& host_gweights_mat = this->gweights[l];
+            mat& host_gweights_mat = gweights[l];
             if (static_cast<unsigned int>(host_gweights_mat.row) != in || static_cast<unsigned int>(host_gweights_mat.col) != in) {
                 // Optional: Add a warning or error
             }
@@ -237,8 +237,8 @@ void mlp::cuBackprop2in(int in, int layers, float learning) {
                 // Accessing weights[layers-1] as a mat object
                 // Assuming row-major: mapped_data[row_idx * num_cols + col_idx]
                 // Here, row_idx = j, col_idx = i, num_cols = in (as per function's logic)
-                // Ensure this->weights[layers-1].col is consistent with 'in' for safety
-                error_sum += this->weights[layers-1].mapped_data[j * in + i] * output_error[j];
+                // Ensure weights[layers-1].col is consistent with 'in' for safety
+                error_sum += weights[layers-1].mapped_data[j * in + i] * output_error[j];
             }
             layer_errors[layers-1][i] = error_sum * activations[layers-1][i] * (1.0f - activations[layers-1][i]);
         }
@@ -251,8 +251,8 @@ void mlp::cuBackprop2in(int in, int layers, float learning) {
                     // Accessing weights[l+1] as a mat object
                     // Assuming row-major: mapped_data[row_idx * num_cols + col_idx]
                     // Here, row_idx = j, col_idx = i, num_cols = in
-                    // Ensure this->weights[l+1].col is consistent with 'in'
-                    error_sum += this->weights[l+1].mapped_data[j * in + i] * layer_errors[l+1][j];
+                    // Ensure weights[l+1].col is consistent with 'in'
+                    error_sum += weights[l+1].mapped_data[j * in + i] * layer_errors[l+1][j];
                 }
 
                 if (l > 0) {
@@ -269,7 +269,7 @@ void mlp::cuBackprop2in(int in, int layers, float learning) {
         std::vector<float> first_layer_deltas = layer_errors[0];
         
         // Use weights[0].mapped_data
-        const mat& first_layer_weights_mat = this->weights[0];
+        const mat& first_layer_weights_mat = weights[0];
         if (static_cast<unsigned int>(first_layer_weights_mat.row) != in || static_cast<unsigned int>(first_layer_weights_mat.col) != in) {
             // Optional: Add a warning or error
         }

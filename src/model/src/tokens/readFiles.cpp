@@ -6,7 +6,12 @@
 #include <sstream>
 #include <unordered_map>
 #include <algorithm>
-#include <cctype>
+#include <cctype>    // For std::isspace
+#include <cstdio>
+#include <string_view>
+#include <charconv>
+#include <future>
+#include <cstdlib>
 #include "include/tokenise.hpp"
 
 
@@ -66,82 +71,102 @@ std::string readCsvField(std::stringstream& ss) {
 
 
 // Function to read an entire CSV file into a 2D vector of floats
-std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename) {
-    std::vector<std::vector<float>> csvData;
-    std::ifstream file(filename);
-
+std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename) 
+{
+    // Step 1: Read the entire file into memory. This is the fastest I/O for this file size.
+    std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "readCsvTo2DVector: Error: Could not open file " << filename << std::endl;
-        return csvData;
+        return {};
     }
 
-    std::string line;
-    int lineNumber = 0;
+    file.seekg(0, std::ios::end);
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-    while (std::getline(file, line)) {
-        lineNumber++;
-        if (line.empty()) { // Check for truly empty lines before trimming
-            continue; // Skip truly empty lines
-        }
-        // Apply global trim to the entire line
-        line = trim(line);
-        if (line.empty()) {
-            continue; // Skip lines that become empty after trimming
-        }
-
-        std::vector<float> row;
-        std::stringstream ss(line);
-
-        // Loop to read fields using the robust readCsvField
-        // Check for success of readCsvField and if there are actual characters processed
-        while (ss.good()) { // Continue as long as the stream is good (not failed)
-            std::string raw_field = readCsvField(ss);
-            if (raw_field.empty() && ss.tellg() != std::streampos(0)) { // Skip if empty field and not at the start of line
-                // Check if it's the start of the line and the field is empty
-                continue;
-            }
-
-            // Apply trim and removeQuotes to the raw field string before conversion
-            std::string cleaned_field_str = removeQuotes(trim(raw_field));
-
-            float value = 0.0f;
-            // Attempt to convert the string to float
-            try {
-                // If the cleaned_field_str is empty, stof will throw invalid_argument, which is desired.
-                value = std::stof(cleaned_field_str);
-            }
-            catch (const std::invalid_argument& e) {
-                // Conversion failed (e.g., empty string, "abc" to float)
-                // This means the field was empty or non-numeric. Treat as 0.0f.
-                if (!cleaned_field_str.empty()) { // Only warn if it wasn't just an empty field
-                    std::cerr << "readCsvTo2DVector: Warning: Failed to convert field '" << cleaned_field_str
-                              << "' to float at line " << lineNumber
-                              << " in file " << filename << ". Defaulting to 0.0f." << std::endl;
-                }
-                value = 0.0f;
-            }
-            catch (const std::out_of_range& e) {
-                std::cerr << "readCsvTo2DVector: Warning: Float out of range '" << cleaned_field_str
-                          << "' at line " << lineNumber
-                          << " in file " << filename << ". Defaulting to 0.0f." << std::endl;
-                value = 0.0f;
-            }
-            row.push_back(value);
-        } // End of while(has_more_fields_on_line)
-
-        // Add row only if it's not empty (e.g., not just an empty line that resulted in no fields)
-        if (!row.empty() || line.find(',') != std::string::npos) { // Add row even if empty but it indicates fields (e.g. "a,,c")
-            csvData.push_back(row);
-        }
+    if (size == 0) {
+        std::cerr << "readCsvTo2DVector: Warning: File is empty " << filename << std::endl;
+        return {};
     }
 
+    std::string buffer(size, '\0');
+    if (!file.read(buffer.data(), size)) {
+        std::cerr << "readCsvTo2DVector: Error: Could not read file into buffer " << filename << std::endl;
+        return {};
+    }
     file.close();
+
+    // Step 2: Find all line breaks to distribute work among threads.
+    std::vector<size_t> line_starts;
+    line_starts.reserve(size / 80); // Pre-allocate assuming average line length of 80
+    line_starts.push_back(0);
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        if (buffer[i] == '\n') {
+            // Add the start of the next line, if it exists.
+            if (i + 1 < buffer.size()) {
+                line_starts.push_back(i + 1);
+            }
+        }
+    }
+
+    const size_t num_lines = line_starts.size();
+    if (num_lines == 0) return {};
+    std::vector<std::vector<float>> csvData(num_lines);
+
+    // Step 3: Parallelize the parsing of lines.
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::future<void>> futures;
+    size_t lines_per_thread = (num_lines + num_threads - 1) / num_threads;
+
+    for (unsigned int i = 0; i < num_threads; ++i) {
+        size_t start_line = i * lines_per_thread;
+        size_t end_line = std::min<size_t>(start_line + lines_per_thread, num_lines);
+
+        if (start_line >= end_line) continue;
+
+        futures.push_back(std::async(std::launch::async, [&, start_line, end_line] {
+            for (size_t j = start_line; j < end_line; ++j) {
+                size_t line_start_pos = line_starts[j];
+                size_t line_end_pos = (j + 1 < num_lines) ? line_starts[j + 1] - 1 : buffer.size();
+                std::string_view line_sv(buffer.data() + line_start_pos, line_end_pos - line_start_pos);
+
+                if (!line_sv.empty() && line_sv.back() == '\r') line_sv.remove_suffix(1);
+                if (line_sv.empty()) continue;
+
+                std::vector<float> row;
+                row.reserve(1024); // A reasonable guess for embedding dimension
+
+                size_t field_start = 0;
+                while (field_start < line_sv.size()) {
+                    size_t field_end = line_sv.find(',', field_start);
+                    if (field_end == std::string_view::npos) field_end = line_sv.size();
+
+                    std::string_view field_sv = line_sv.substr(field_start, field_end - field_start);
+                    float value = 0.0f;
+                    if (!field_sv.empty()) {
+                        std::from_chars(field_sv.data(), field_sv.data() + field_sv.size(), value);
+                    }
+                    row.push_back(value);
+                    field_start = field_end + 1;
+                }
+                csvData[j] = std::move(row);
+            }
+        }));
+    }
+
+    for (auto& f : futures) f.get();
+
+    csvData.erase(std::remove_if(csvData.begin(), csvData.end(), 
+                                 [](const std::vector<float>& row){ return row.empty(); }), 
+                  csvData.end());
+
     if (csvData.empty()) {
         std::cerr << "readCsvTo2DVector: Warning: No data found in file " << filename << std::endl;
     }
     else {
-        std::cout << "readCsvTo2DVector: Successfully read " << csvData.size()
-                  << " rows from file " << filename << std::endl;
+        std::cout << "readCsvTo2DVector: Successfully read " << csvData.size() 
+        << " rows from file " << filename 
+        << ".\nUsed " << num_threads << " threads." << std::endl;
     }
 
     return csvData;
@@ -373,34 +398,40 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
     if (!std::filesystem::exists(token_stats_file)) {
         throw std::runtime_error("readFromFiles: Required token statistics file missing. Ensure training created '_final_token_stats.csv' in the specified path.");
     }
-    this->statOfTokens = readUnorderedMap(token_stats_file);
+    statOfTokens = readUnorderedMap(token_stats_file);
     // Load tokens and embeddings. Assume they are in the same order from their respective files.
     std::vector<std::string> loaded_tokens = readSpecificColumnFromCsv(token_stats_file, 0);
-    this->embeddings = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
-    this->deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
+    vocab_tokens = loaded_tokens; // Store the lexicographically sorted tokens for lookups.
+    embeddings = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
+    deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
 
-    if (loaded_tokens.size() != this->embeddings.size()) {
+    if (loaded_tokens.size() != embeddings.size()) {
         std::cerr << "Warning: Mismatch between number of tokens (" << loaded_tokens.size() 
-                  << ") and embeddings (" << this->embeddings.size() << "). Data may be corrupt." << std::endl;
+                  << ") and embeddings (" << embeddings.size() << "). Data may be corrupt." << std::endl;
+    }
+
+    if (loaded_tokens.size() != deEmbeddings.size()) {
+        std::cerr << "Warning: Mismatch between number of tokens (" << loaded_tokens.size() 
+                  << ") and deEmbeddings (" << deEmbeddings.size() << "). Data may be corrupt." << std::endl;
     }
 
     // Build the fast lookup map BEFORE sorting the tokens for splitting.
     // This map correctly links a token string to its index in the (unsorted) embeddings vector.
-    this->token_to_idx.clear();
-    this->token_to_idx.reserve(loaded_tokens.size());
+    token_to_idx.clear();
+    token_to_idx.reserve(loaded_tokens.size());
     for (size_t i = 0; i < loaded_tokens.size(); ++i) {
-        this->token_to_idx[loaded_tokens[i]] = i;
+        token_to_idx[loaded_tokens[i]] = i;
     }
 
     // The `tokens` member is used for the greedy `splitWord` algorithm and needs to be sorted by length.
-    this->tokens = loaded_tokens; // Make a copy for sorting.
+    tokens = loaded_tokens; // Make a copy for sorting.
 
     // Update vocabulary size based on loaded data
-    this->d = this->embeddings.empty() ? 0 : this->embeddings[0].size();
-    this->vocSize = this->embeddings.size();
+    d = embeddings.empty() ? 0 : embeddings[0].size();
+    vocSize = embeddings.size();
 
     //Sort tokens by length in descending order
-    std::sort(this->tokens.begin(), this->tokens.end(), 
+    std::sort(tokens.begin(), tokens.end(), 
         [](const auto& a, const auto& b) { 
             if(a.length() == b.length()) {
                 return a < b; // If lengths are equal, sort lexicographically
@@ -409,8 +440,8 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
         });
 
     std::cout << "readFromFiles: Tokenizer initialized successfully:" << std::endl;
-    std::cout << "  - Tokens loaded: " << this->tokens.size() << std::endl;
-    std::cout << "  - Vocabulary size: " << this->vocSize << std::endl;
-    std::cout << "  - Embedding dimension: " << this->embeddings.size() << " x " << (this->embeddings.empty() ? 0 : this->embeddings[0].size()) << std::endl;
-    std::cout << "  - deEmbedding dimension: " << this->deEmbeddings.size() << " x " << (this->deEmbeddings.empty() ? 0 : this->deEmbeddings[0].size()) << std::endl;
+    std::cout << "  - Tokens loaded: " << tokens.size() << std::endl;
+    std::cout << "  - Vocabulary size: " << vocSize << std::endl;
+    std::cout << "  - embedding dimension: " << embeddings.size() << " x " << (embeddings.empty() ? 0 : embeddings[0].size()) << std::endl;
+    std::cout << "  - deEmbedding dimension: " << deEmbeddings.size() << " x " << (deEmbeddings.empty() ? 0 : deEmbeddings[0].size()) << std::endl;
 }

@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include <cuda_runtime.h>
@@ -17,6 +17,35 @@
 } while (0)
 #endif
 
+// Helper struct to manage device pointers for one head's worth of data
+struct HeadDevicePointers {
+    // Attention related
+    float *d_expected_h = nullptr, *d_EH = nullptr, *d_EV = nullptr;
+    float *d_grad_EH = nullptr, *d_grad_EV_scaled = nullptr;
+    float *d_grad_dh = nullptr, *d_grad_dv = nullptr;
+    float *d_KdotQ = nullptr, *d_head = nullptr;
+    float *d_K = nullptr, *d_Q = nullptr;
+    float *d_pre_MH = nullptr, *d_pre_MV = nullptr;
+    float *d_MH_a = nullptr, *d_MV_a = nullptr, *d_MQ_a = nullptr, *d_MK_a = nullptr;
+    float *d_grad_MH = nullptr, *d_grad_MV = nullptr;
+    float *d_grad_head = nullptr;
+    float *d_lota_deriv = nullptr;
+    float *d_grad_KdotQ = nullptr;
+    float *d_grad_K = nullptr, *d_grad_Q = nullptr;
+    float *d_grad_MQ = nullptr, *d_grad_MK = nullptr;
+
+    // MLP Internals
+    std::vector<float*> d_hor_activations;
+    std::vector<float*> d_hor_weights;
+    std::vector<float*> d_hor_gweights;
+    std::vector<float*> d_hor_deltas;
+    std::vector<float*> d_ver_activations;
+    std::vector<float*> d_ver_weights;
+    std::vector<float*> d_ver_gweights;
+    std::vector<float*> d_ver_deltas;
+
+    HeadDevicePointers() = default; // Default constructor for vector initialization
+};
 
 /**
  * @brief CUDA forward propagation on single ith column of the FIRST block.
@@ -26,13 +55,13 @@
  */
 void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
 {
-    if (i < 0 || i >= this->y) {
-        throw std::out_of_range("cu1parallelForprop (first block): column index 'i' (" + std::to_string(i) + ") is out of range [0, " + std::to_string(this->y - 1) + "].");
+    if (i < 0 || i >= y) {
+        throw std::out_of_range("cu1parallelForprop (first block): column index 'i' (" + std::to_string(i) + ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
 
-    const int num_heads_in_col = this->x;
+    const int num_heads_in_col = x;
     const int d_embedding = EMBEDDING;
-    const int h_attention = MATHEIGHTS;
+    const int h_attention = CONTEXT_WIN;
     const int n_tokens = tokenCount; // Number of tokens for current processing
 
     // Initial validation (can be done once before the loop if parameters are consistent for all heads)
@@ -41,7 +70,7 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
         throw std::runtime_error("Embedding dimension mismatch (EMBEDDING vs in) for column " + std::to_string(i) + ".");
     }
 
-    for(int layer_idx = 0; layer_idx < this->x; layer_idx++)
+    for(int layer_idx = 0; layer_idx < x; layer_idx++)
     {
         if (n_tokens <= 0) {
             // std::cerr << "Warning: cu1parallelForprop (first block) for head [" << layer_idx << "][" << i << "] called with tokenCount <= 0. Skipping." << std::endl;
@@ -55,11 +84,11 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             throw std::runtime_error("cu1parallelForprop (first block) is not for subsequent blocks, shift to next block.");
         }
 
-        if (b[layer_idx][i].K.row != CONTEXT_WIN || b[layer_idx][i].K.col != MATHEIGHTS ||
-            b[layer_idx][i].Q.row != CONTEXT_WIN || b[layer_idx][i].Q.col != MATHEIGHTS ||
+        if (b[layer_idx][i].K.row != CONTEXT_WIN || b[layer_idx][i].K.col != CONTEXT_WIN ||
+            b[layer_idx][i].Q.row != CONTEXT_WIN || b[layer_idx][i].Q.col != CONTEXT_WIN ||
             b[layer_idx][i].KdotQ.row != CONTEXT_WIN || b[layer_idx][i].KdotQ.col != CONTEXT_WIN ||
-            b[layer_idx][i].MH.row != EMBEDDING || b[layer_idx][i].MH.col != MATHEIGHTS ||
-            b[layer_idx][i].MV.row != EMBEDDING || b[layer_idx][i].MV.col != MATHEIGHTS)
+            b[layer_idx][i].MH.row != EMBEDDING || b[layer_idx][i].MH.col != CONTEXT_WIN ||
+            b[layer_idx][i].MV.row != EMBEDDING || b[layer_idx][i].MV.col != CONTEXT_WIN)
         {
             throw std::runtime_error("Attention component dimension mismatch or uninitialized member in cu1parallelForprop (first block) for head [" +
                                         std::to_string(layer_idx) + "][" + std::to_string(i) + "]. K.row=" + std::to_string(b[layer_idx][i].K.row) + ", n_tokens=" + std::to_string(n_tokens));
@@ -136,7 +165,7 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
 
         for (int layer_idx = 0; layer_idx < num_heads_in_col; ++layer_idx) 
         {
-            attention& head_cpu = this->b[layer_idx][i];
+            attention& head_cpu = b[layer_idx][i];
             HeadDevicePointers& current_head_pointers = head_gpu_data[layer_idx];
             CUDA_CHECK(cudaStreamCreateWithFlags(&streams[layer_idx], cudaStreamNonBlocking));
             cudaStream_t current_stream = streams[layer_idx];
@@ -368,17 +397,17 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
 void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount,
     int i, int& layers, int& n)
 {
-    if (i < 0 || i >= this->y) {
-        throw std::out_of_range("cu1ParallelForprop (subsequent block): column index 'i' (" + std::to_string(i) + ") is out of range [0, " + std::to_string(this->y - 1) + "].");
+    if (i < 0 || i >= y) {
+        throw std::out_of_range("cu1ParallelForprop (subsequent block): column index 'i' (" + std::to_string(i) + ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
-    if (EVp.size() != static_cast<size_t>(this->x)) {
+    if (EVp.size() != static_cast<size_t>(x)) {
         throw std::runtime_error("cu1ParallelForprop (subsequent block): EVp layer dimension mismatch for column " + std::to_string(i) +
-                                 ". Expected " + std::to_string(this->x) + " layers, got " + std::to_string(EVp.size()) + ".");
+                                 ". Expected " + std::to_string(x) + " layers, got " + std::to_string(EVp.size()) + ".");
     }
 
-    const int num_heads_in_col = this->x;
+    const int num_heads_in_col = x;
     const int d_embedding = EMBEDDING;
-    const int h_attention = MATHEIGHTS;
+    const int h_attention = CONTEXT_WIN;
     const int total_token_count_param = tokenCount; // Renaming for clarity
     const int block_idx_param = blockCount;
     // const int context_window_size_param = n;
@@ -398,11 +427,11 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
     for(int layer_idx = 0; layer_idx < layers; ++layer_idx) 
     {
-        if (b[layer_idx][i].K.row != CONTEXT_WIN || b[layer_idx][i].K.col != MATHEIGHTS ||
-            b[layer_idx][i].Q.row != CONTEXT_WIN || b[layer_idx][i].Q.col != MATHEIGHTS ||
+        if (b[layer_idx][i].K.row != CONTEXT_WIN || b[layer_idx][i].K.col != CONTEXT_WIN ||
+            b[layer_idx][i].Q.row != CONTEXT_WIN || b[layer_idx][i].Q.col != CONTEXT_WIN ||
             b[layer_idx][i].KdotQ.row != CONTEXT_WIN || b[layer_idx][i].KdotQ.col != CONTEXT_WIN ||
-            b[layer_idx][i].MH.row != EMBEDDING || b[layer_idx][i].MH.col != MATHEIGHTS ||
-            b[layer_idx][i].MV.row != EMBEDDING || b[layer_idx][i].MV.col != MATHEIGHTS ||
+            b[layer_idx][i].MH.row != EMBEDDING || b[layer_idx][i].MH.col != CONTEXT_WIN ||
+            b[layer_idx][i].MV.row != EMBEDDING || b[layer_idx][i].MV.col != CONTEXT_WIN ||
             b[layer_idx][i].EH.size() != static_cast<size_t>(in) ||
             (!b[layer_idx][i].EV.mapped_data || CONTEXT_WIN > b[layer_idx][i].EV.row || 
             b[layer_idx][i].EV.col != in) || b[layer_idx][i].hor.hlayers.empty() || b[layer_idx][i].ver.hlayers.empty() 
@@ -473,7 +502,7 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
         for (int layer_idx = 0; layer_idx < num_heads_in_col; ++layer_idx) 
         {
-            attention& head_cpu = this->b[layer_idx][i];
+            attention& head_cpu = b[layer_idx][i];
             const std::vector<std::vector<float>>& EVp_head = EVp[layer_idx]; // EVp for the current head
             HeadDevicePointers& current_head_pointers = head_gpu_data[layer_idx];
             CUDA_CHECK(cudaStreamCreateWithFlags(&streams[layer_idx], cudaStreamNonBlocking));
@@ -674,9 +703,9 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 void block::cuForprop(int& in, int& tokenCount, int& layers)
 {
     // serialise(blockFilePath);
-    for (int j = 0; j < this->y; ++j) {
+    for (int j = 0; j < y; ++j) {
         try {
-            this->cu1parallelForprop(in, tokenCount, j, layers);
+            cu1parallelForprop(in, tokenCount, j, layers);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cu1parallelForprop (first block) for column ["
@@ -700,23 +729,23 @@ void block::cuForprop(int& in, int& tokenCount, int& layers)
 void block::cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount,
     int& blockCount, int& layers, int& n)
 {
-    if (EVp.size() != static_cast<size_t>(this->x)) {
+    if (EVp.size() != static_cast<size_t>(x)) {
         throw std::runtime_error("cuForprop (subsequent block): EVp layer dimension mismatch. Expected "
-                                 + std::to_string(this->x) + " layers, got " + std::to_string(EVp.size()) + ".");
+                                 + std::to_string(x) + " layers, got " + std::to_string(EVp.size()) + ".");
     }
-    if (!EVp.empty() && EVp[0].size() != static_cast<size_t>(this->y)) {
+    if (!EVp.empty() && EVp[0].size() != static_cast<size_t>(y)) {
         throw std::runtime_error("cuForprop (subsequent block): EVp column dimension mismatch. Expected "
-                                 + std::to_string(this->y) + " columns, got " + std::to_string(EVp[0].size()) + ".");
+                                 + std::to_string(y) + " columns, got " + std::to_string(EVp[0].size()) + ".");
     }
     // serialise(blockFilePath);
-    for (int j = 0; j < this->y; ++j) {
-        std::vector<std::vector<std::vector<float>>> EVp_col_j(this->x);
-        for (int layer_idx = 0; layer_idx < this->x; ++layer_idx) {
+    for (int j = 0; j < y; ++j) {
+        std::vector<std::vector<std::vector<float>>> EVp_col_j(x);
+        for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
             EVp_col_j[layer_idx] = EVp[layer_idx][j];
         }
 
         try {
-            this->cu1ParallelForprop(EVp_col_j, in, tokenCount, blockCount, j, layers, n);
+            cu1ParallelForprop(EVp_col_j, in, tokenCount, blockCount, j, layers, n);
         }
         catch (const std::exception& e) {
             throw std::runtime_error("Exception in cu1ParallelForprop (subsequent block) for column ["
@@ -724,3 +753,5 @@ void block::cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>&
         }
     }
 }
+
+#endif

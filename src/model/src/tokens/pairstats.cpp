@@ -13,9 +13,9 @@
  * @param outputPath Path to save the statistics CSV file.
  */
 void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::string, int>& corpus_word_counts, const std::string& outputPath) {
-    this->statOfTokens.clear();
-    for (const auto& learned_bpe_token : this->tokens) {
-        this->statOfTokens[learned_bpe_token] = 0; // Initialize count to 0
+    statOfTokens.clear();
+    for (const auto& learned_bpe_token : tokens) {
+        statOfTokens[learned_bpe_token] = 0; // Initialize count to 0
     }
     auto is_word_for_bpe = [](const std::string& s) -> bool {
         return !s.empty() && std::isalpha(static_cast<unsigned char>(s[0]));
@@ -53,8 +53,8 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
 
                 if (is_word_for_bpe(pre_token)) {
                     std::vector<std::string> subwords;
-                    // Ensure this->splitWord is const-correct and thread-safe (read-only access to this->tokens)
-                    this->splitWord(pre_token, subwords);
+                    // Ensure splitWord is const-correct and thread-safe (read-only access to tokens)
+                    splitWord(pre_token, subwords);
                     for (const auto& subword : subwords) {
                         local_stats[subword] += count;
                     }
@@ -74,24 +74,24 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
         std::cout << merge_count << " ";
         auto local_map = f.get(); // Retrieve the unordered_map from the future
         for (const auto& pair : local_map) {
-            this->statOfTokens[pair.first] += pair.second;
+            statOfTokens[pair.first] += pair.second;
         }
     }
     std::cout << std::endl;
-    std::cout << "Calculation complete. Found " << this->statOfTokens.size() << " final BPE tokens." << std::endl;
+    std::cout << "Calculation complete. Found " << statOfTokens.size() << " final BPE tokens." << std::endl;
 
     // Add a sanity check here after aggregation:
-    if (this->statOfTokens.size() != this->tokens.size()) {
-        std::cerr << "CRITICAL WARNING: The number of tokens in statOfTokens (" << this->statOfTokens.size()
-                  << ") does not match the size of the learned BPE vocabulary (this->tokens.size() = "
-                  << this->tokens.size() << ") after counting!" << std::endl;
+    if (statOfTokens.size() != tokens.size()) {
+        std::cerr << "CRITICAL WARNING: The number of tokens in statOfTokens (" << statOfTokens.size()
+                  << ") does not match the size of the learned BPE vocabulary (tokens.size() = "
+                  << tokens.size() << ") after counting!" << std::endl;
 
         std::unordered_set<std::string> stat_tokens_set;
-        for (const auto& pair : this->statOfTokens) {
+        for (const auto& pair : statOfTokens) {
             stat_tokens_set.insert(pair.first);
         }
-        std::cerr << "Missing tokens from _final_token_stats.csv (present in this->tokens but not in statOfTokens):" << std::endl;
-        for (const auto& learned_token : this->tokens) {
+        std::cerr << "Missing tokens from _final_token_stats.csv (present in tokens but not in statOfTokens):" << std::endl;
+        for (const auto& learned_token : tokens) {
             if (stat_tokens_set.find(learned_token) == stat_tokens_set.end()) {
                 std::cerr << "  - '" << learned_token << "'" << std::endl;
             }
@@ -103,8 +103,8 @@ void tokeniser::calculateTokenStatsFromCounts(const std::unordered_map<std::stri
 
         // 1. Copy the unordered_map contents to a vector of pairs for sorting.
         std::vector<std::pair<std::string, int>> sorted_stats(
-            this->statOfTokens.begin(),
-            this->statOfTokens.end()
+            statOfTokens.begin(),
+            statOfTokens.end()
         );
 
         // 2. Sort the vector.

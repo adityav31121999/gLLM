@@ -1,4 +1,3 @@
-
 #include "include/attention.hpp"
 #include "include/mat.hpp"
 #include <numeric>
@@ -18,7 +17,7 @@
  */
 attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
     isSelfAttention(isSelf), inTraining(trainMode),
-    tokenCount(0), EV(n, d), KdotQ(n, n), dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
+    tokenCount(0), EV(n, d), KdotQ(n, n), h(d, 0.0f), v(d, 0.0f), EH(d, 0),
     ver(std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
     hor(std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
     // Conditionally initialize matrices based on training mode
@@ -51,7 +50,7 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
         if (qvCache.row == 0) qvCache = mat(d, d);
         params = hor.params + ver.params + (3*static_cast<size_t>(d)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d);
     }
-    std::cout << "ATTENTION constructed." << std::endl;
+    // std::cout << "ATTENTION constructed." << std::endl;
 }
 
 #else // USE_OPENCL is defined
@@ -61,16 +60,16 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
 /**
  * @brief Constructor for incomplete attention - WITH OpenCL
  * @param context Reference to the shared OpenCL context.
- * @param n number of tokens for each attention head
- * @param d dimension of each token
- * @param h height of MQ, MK and columns of MV, MH
+ * @param n context window
+ * @param d embedding dimension
+ * @param h feature dimension = n
  * @param l layers of mlp
- * @param isSelf Self (true) or Cross (false) attention
- * @param trainMode Training (true) or Inference (false)
+ * @param isSelf self attention = 1, else 0 for cross attention
+ * @param trainMode in training = 1, else 0 for inference
  */
 attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
     clcontext(context), isSelfAttention(isSelf), inTraining(trainMode),
-    tokenCount(0), EV(n, d), KdotQ(n, n), dh(d, 0.0f), dv(d, 0.0f), EH(d, 0),
+    tokenCount(0), EV(n, d), KdotQ(n, n), h(d, 0.0f), v(d, 0.0f), EH(d, 0),
     ver(context, std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
     hor(context, std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
     // Conditionally initialize matrices based on training mode
@@ -87,7 +86,7 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
     if (ev_buffer_size == 0) {
         throw std::runtime_error("Calculated EV buffer size is zero in attention constructor.");
     }
-    this->d_EV = cl::Buffer(this->clcontext.context, CL_MEM_READ_WRITE, ev_buffer_size, nullptr, &cl_err);
+    d_EV = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, ev_buffer_size, nullptr, &cl_err);
     CL_CHECK(cl_err); // Your CL_CHECK macro will handle the error
 
     if (trainMode == 1) {
@@ -107,7 +106,64 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
         if (qvCache.row == 0) qvCache = mat(d, d);
         params = hor.params + ver.params + (3*d*d) + d + (n*n) + (n*d);
     }
-    std::cout << "ATTENTION constructed with OpenCL -> " << params << std::endl;
+    // std::cout << "ATTENTION constructed with OpenCL -> " << params << std::endl;
+}
+
+/**
+ * @brief Constructor for incomplete attention - WITH OpenCL
+ * @param context Reference to the shared OpenCL context.
+ * @param inAtt attention block name
+ * @param n context window
+ * @param d embedding dimension
+ * @param h feature dimension = n
+ * @param l layers of mlp
+ * @param isSelf self attention = 1, else 0 for cross attention
+ * @param trainMode in training = 1, else 0 for inference
+ */
+attention::attention(OpenCLContext& context, const std::string& inAtt, int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
+    clcontext(context), isSelfAttention(isSelf), inTraining(trainMode), tokenCount(0),
+    hor(context, inAtt + "H", std::vector<unsigned int>(l, d), EPOCHS, learning),
+    ver(context, inAtt + "V", std::vector<unsigned int>(l, d), EPOCHS, learning),
+    h(d, 0.0f), v(d, 0.0f), EH(d, 0)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+    cl_int cl_err;
+    size_t ev_buffer_size = static_cast<size_t>(CONTEXT_WIN) * d * sizeof(float);
+    if (ev_buffer_size == 0) {
+        throw std::runtime_error("Calculated EV buffer size is zero in attention constructor.");
+    }
+    d_EV = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, ev_buffer_size, nullptr, &cl_err);
+    CL_CHECK(cl_err);
+
+    // modelName_blockName_A_i_j_ = ina
+    std::string ina;
+    ina = inAtt + "EV";         EV = mat(ina, n, d);
+    ina = inAtt + "KdotQ";      KdotQ = mat(ina, n, n);
+    if (trainMode == 1) {
+        ina = inAtt + "K";      K = mat(ina, n, h);
+        ina = inAtt + "Q";      Q = mat(ina, n, h);
+        ina = inAtt + "MQ";      MQ = mat(ina, h, d);     // h row x d col
+        ina = inAtt + "MK";      MK = mat(ina, h, d);     // h row x d col
+        ina = inAtt + "MV";      MV = mat(ina, d, h);     // d row x h col
+        ina = inAtt + "MH";      MH = mat(ina, d, h);     // d row x h col
+        params = hor.params + ver.params
+                 + (4*static_cast<size_t>(h)*d)
+                 + d
+                 + (static_cast<size_t>(n)*n)
+                 + (static_cast<size_t>(n)*d)
+                 + (2*static_cast<size_t>(n)*h);
+    }
+    else {
+        ina = inAtt + "qk";      qkCache = mat(ina, d, d);
+        ina = inAtt + "kh";      khCache = mat(ina, d, d);
+        ina = inAtt + "qv";      qvCache = mat(ina, d, d);
+        params = hor.params + ver.params
+                 + (3*d*d) + d 
+                 + (n*n) + (n*d);
+    }
+    // std::cout << "ATTENTION with filename " << inAtt << " constructed with OpenCL -> " << params << std::endl;
 }
 
 #endif // USE_OPENCL
@@ -125,8 +181,8 @@ void attention::setAttentionType(bool isSelforCross) {
 // clear all the vectors of attention class
 void attention::clearValues()
 {
-    std::fill(dh.begin(), dh.end(), 0.0f);
-    std::fill(dv.begin(), dv.end(), 0.0f);
+    std::fill(h.begin(), h.end(), 0.0f);
+    std::fill(v.begin(), v.end(), 0.0f);
 
     // Clear mat objects using memset
     if (K.mapped_data && K.mapped_size > 0) memset(K.mapped_data, 0, K.mapped_size);

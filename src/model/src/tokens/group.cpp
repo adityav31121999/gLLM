@@ -54,8 +54,8 @@ void tokeniser::groupCommonTokens(const std::unordered_map<std::string, int>& co
     if (bpe_word_counts.empty()) {
         std::cerr << "[WARNING] No words were long enough for BPE splitting. The vocabulary will consist of only initial tokens." << std::endl;
         final_vocab.assign(vocab.begin(), vocab.end());
-        this->tokens = final_vocab;
-        this->vocSize = this->tokens.size();
+        tokens = final_vocab;
+        vocSize = tokens.size();
         return; // Exit gracefully
     }
 
@@ -169,11 +169,9 @@ void tokeniser::groupCommonTokens(const std::unordered_map<std::string, int>& co
     }
 
     // 4. FINALIZE VOCABULARY
-    // final_vocab.push_back("</s>");     // add sentence terminator token "</s>"
+    // `vocab` is a std::set, so its elements are already sorted lexicographically.
+    // Assign the sorted tokens to the output parameter. The caller will handle further processing.
     final_vocab.assign(vocab.begin(), vocab.end());
-    std::sort(final_vocab.begin(), final_vocab.end(), [](const auto& a, const auto& b){ return a.length() > b.length(); });
 
-    this->tokens = final_vocab;
-    this->vocSize = this->tokens.size();
-    std::cout << "BPE training complete. Final vocabulary size: " << this->vocSize << std::endl;
+    std::cout << "BPE training complete. Final vocabulary size: " << final_vocab.size() << std::endl;
 }

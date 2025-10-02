@@ -41,18 +41,16 @@ add_library(neural STATIC
     src/attention/attention.cpp
     src/attention/forward.cpp
     src/attention/backward.cpp
-    src/attention/backward1sthead.cpp
+    src/attention/backward1H.cpp
     src/attention/writeatt.cpp
     # CUDA
-    src/attention/cu/forward.cu
-    src/attention/cu/backward.cu
-    src/attention/cu/backward1sthead.cu
-    src/attention/cu/kernels.cu
+    src/attention/cu/weights.cu
+    src/attention/cu/attention.cu
+    src/attention/cu/kdotq.cu
     # OpenCL
     src/attention/cl/attention.cl
-    src/attention/cl/forwardcl.cpp
-    src/attention/cl/backward1stheadcl.cpp
-    src/attention/cl/backwardcl.cpp
+    src/attention/cl/kdotq.cl
+    src/attention/cl/weights.cl
 
 # block
     # C++
@@ -65,9 +63,11 @@ add_library(neural STATIC
     src/block/cu/forward.cu
     src/block/cu/partialbackH.cu
     src/block/cu/partialbackiH.cu
+    src/block/cu/partialbackiHr.cu
     src/block/cu/backward.cu
     # OpenCL
     src/block/cl/forwardcl.cpp
+    src/block/cl/forwardicl.cpp
     src/block/cl/partialbackHcl.cpp
     src/block/cl/partialbackiHcl.cpp
     src/block/cl/partialbackiHrcl.cpp
@@ -82,16 +82,22 @@ add_library(neural STATIC
     src/transformer/feedfor.cpp
     src/transformer/backward.cpp
     src/transformer/train.cpp
+    src/transformer/train1.cpp
     src/transformer/test.cpp
     src/transformer/run.cpp
     src/transformer/getVal.cpp
     # CUDA
-    src/transformer/cu/kernels.cu
     src/transformer/cu/cucompute.cu
     src/transformer/cu/feedfor.cu
     src/transformer/cu/backward.cu
     src/transformer/cu/train1.cu
     src/transformer/cu/train2.cu
+    src/transformer/cu/train3.cu
+    src/transformer/cu/train4.cu
+    src/transformer/cu/train5.cu
+    src/transformer/cu/train6.cu
+    src/transformer/cu/train7.cu
+    src/transformer/cu/train8.cu
     src/transformer/cu/test.cu
     src/transformer/cu/run.cu
     # OpenCL
@@ -102,8 +108,13 @@ add_library(neural STATIC
     src/transformer/cl/train2cl.cpp
     src/transformer/cl/train3cl.cpp
     src/transformer/cl/train4cl.cpp
+    src/transformer/cl/train5cl.cpp
+    src/transformer/cl/train6cl.cpp
+    src/transformer/cl/train7cl.cpp
+    src/transformer/cl/train8cl.cpp
     src/transformer/cl/testcl.cpp
     src/transformer/cl/runcl.cpp
+    src/transformer/cl/runclbuffer.cpp
 )
 
 # link libraries to this library

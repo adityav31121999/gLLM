@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include "include/mlp.hpp"
 #include "include/attention.hpp"
 #include "include/block.hpp"
@@ -16,6 +16,10 @@
  * @param expectedH Expected horizontal embedding (common for all columns).
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
+ * @param learning Learning rate.
+ * @param lambda_l1 L1 regularization parameter.
+ * @param lambda_l2 L2 regularization parameter.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
 void block::cubackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size
@@ -26,35 +30,27 @@ void block::cubackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
     // The internal cu1ParallelBackward1stBlock handles the backward row iteration.
-    for (int j = this->y - 1; j >= 0; j--) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; j--) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column
                 cupartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
-                // for columns inbetween
+            else if(j >= 0 && j < y-1) {
+                // for columns second last to first
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 cupartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            /*else if(j == 0){
-                // for first column
-                std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
-                    exp2h[i] = b[i][1].EH;
-                }
-                cupartialbackward1stBlock(exp2h, in, layers, j);
-            }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cu1ParallelBackward1stBlock(H) for column ["
+            throw std::runtime_error("Exception in cubackward1stBlock(H) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -64,51 +60,53 @@ void block::cubackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
 /**
  * @brief CUDA backward propagation for the FIRST block, driven by multiple horizontal error vectors (EH).
  *        Applies expectedH[j] to column j. Iterates columns in reverse.
- * @param expectedH Vector of expected horizontal embeddings (one per column). Shape: [y][EMBEDDING].
+ * @param expectedH Vector of expected horizontal embeddings (one per head per column if `cupartialbackward1stBlock` takes a 2D vector for EH).
+ *                  If this `expectedH` is meant to be passed directly to `cupartialbackward1stBlock`'s `std::vector<std::vector<float>>` overload,
+ *                  then its outer dimension should be `x` (number of heads), and it represents the error for the *entire column*.
+ *                  The current context of the usage below suggests `expectedH` represents the EH for the *current column's heads*.
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
+ * @param learning Learning rate.
+ * @param lambda_l1 L1 regularization parameter.
+ * @param lambda_l2 L2 regularization parameter.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
 void block::cubackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size - should have one vector per column
-    if (expectedH.size() != static_cast<size_t>(this->y)) {
-        throw std::runtime_error("cuBackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
-                                + std::to_string(this->y) + " columns, got " + std::to_string(expectedH.size()));
+    // This overload's expectedH represents the error for ALL HEADS IN THE CURRENT COLUMN.
+    // So expectedH.size() should be x (number of heads), not y (number of columns).
+    // The calling context of this function usually provides `expectedH` as a slice for the current column.
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed validation to x
+        throw std::runtime_error("cubackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
+                                + std::to_string(x) + " heads, got " + std::to_string(expectedH.size()));
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
-        throw std::runtime_error("cuBackward1stBlock(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
+        throw std::runtime_error("cubackward1stBlock(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
                                 + std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH[0].size()));
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
-                // for last column
+            if(j == y-1) {
+                // for last column, use the provided expectedH
                 cupartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
-                // for columns inbetween
-                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+            else if(j >= 0 && j < y-1) {
+                // for columns inbetween, compute expectedH from the next column's EH
+                std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 cupartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            /*else if(j == 0){
-                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
-                    exp2h[i] = b[i][1].EH;
-                }
-                // for first column
-                cupartialbackward1stBlock(exp2h, in, layers, j);
-            }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cu1ParallelBackward1stBlock(H) for column ["
+            throw std::runtime_error("Exception in cubackward1stBlock(H_2D) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -116,63 +114,66 @@ void block::cubackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
 
 
 /**
- * @brief CUDA backward propagation for the FIRST block, driven by vertical error vectors (EV).
- *        Iterates columns in reverse.
- * @param expectedV Expected vertical embeddings for all heads. Shape: [x][y][CONTEXT_WIN][EMBEDDING].
+ * @brief CUDA backward propagation for the FIRST block, driven by multiple horizontal error vectors (EH).
+ *        Applies expectedH[j] to column j. Iterates columns in reverse.
+ * @param expectedH Vector of expected horizontal embeddings (one per head per column if `cupartialbackward1stBlock` takes a 2D vector for EH).
+ *                  If this `expectedH` is meant to be passed directly to `cupartialbackward1stBlock`'s `std::vector<std::vector<float>>` overload,
+ *                  then its outer dimension should be `x` (number of heads), and it represents the error for the *entire column*.
+ *                  The current context of the usage below suggests `expectedH` represents the EH for the *current column's heads*.
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
+ * @param learning Learning rate.
+ * @param lambda_l1 L1 regularization parameter.
+ * @param lambda_l2 L2 regularization parameter.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
-void block::cubackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
-    // Validate input dimensions
-    if (expectedV.size() != static_cast<size_t>(this->x)) {
-        throw std::runtime_error("cuBackward1stBlock(V): ExpectedV outer dimension (rows) mismatch. Expected "
-                                + std::to_string(this->x) + ", got " + std::to_string(expectedV.size()));
+void block::curbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2) {
+    // Validate input size - should have one vector per column
+    // This overload's expectedH represents the error for ALL HEADS IN THE CURRENT COLUMN.
+    // So expectedH.size() should be x (number of heads), not y (number of columns).
+    // The calling context of this function usually provides `expectedH` as a slice for the current column.
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed validation to x
+        throw std::runtime_error("cubackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
+                                + std::to_string(x) + " heads, got " + std::to_string(expectedH.size()));
     }
-    if (!expectedV.empty() && expectedV[0].size() != static_cast<size_t>(this->y)) {
-        throw std::runtime_error("cuBackward1stBlock(V): ExpectedV second dimension (columns) mismatch. Expected "
-                                + std::to_string(this->y) + ", got " + std::to_string(expectedV[0].size()));
+    if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
+        throw std::runtime_error("cubackward1stBlock(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
+                                + std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH[0].size()));
     }
-    // Deeper validation happens within cu1ParallelBackward1stBlock
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) {
-        // j is the column index (layno)
-        // Prepare the expectedV slice for the current column j
-        std::vector<std::vector<std::vector<float>>> expectedV_col_j(this->x);
-
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
-
-            if(j == y - 1) {
-                for (int i = 0; i < this->x; ++i) { // i is the row index
-                    // Ensure expectedV[i] has enough columns before accessing expectedV[i][j]
-                    if (expectedV[i].size() <= static_cast<size_t>(j)) {
-                        throw std::runtime_error("cuBackward(V): Column index " + std::to_string(j) +
-                                                " out of bounds for expectedV row " + std::to_string(i) +
-                                                " (size: " + std::to_string(expectedV[i].size()) + ")");
-                    }
-                    expectedV_col_j[i] = expectedV[i][j];
-                }
-            }
-            else if(j < y - 1 && j >= 0) {
-                for (int i = 0; i < this->x; ++i) { // i is the row index
-                    // Ensure expectedV[i] has enough columns before accessing expectedV[i][j]
-                    if (expectedV[i].size() <= static_cast<size_t>(j)) {
-                        throw std::runtime_error("cuBackward(V): Column index " + std::to_string(j) +
-                                                " out of bounds for expectedV row " + std::to_string(i) +
-                                                " (size: " + std::to_string(expectedV[i].size()) + ")");
-                    }
-                    expectedV_col_j[i] = b[i][j+1].EV.make2dVector(b[i][j+1].EV, CONTEXT_WIN, EMBEDDING);
-                }
-            }
-
             // Call the partial backward function for the current column j
-            cupartialbackward1stBlock(expectedV_col_j, in, layers, j, learning, lambda_l1, lambda_l2);
+            if(j == y-1) {
+                // for last column, use the provided expectedH
+                cupartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
+            }
+            else if(j >= 1 && j < y-1) {
+                // for columns inbetween, compute expectedH from the next column's EH
+                std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
+                for(int i = 0; i < x; i++) {
+                    exp2h[i] = b[i][j+1].EH;
+                }
+                cupartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
+            }
+            else if(j == 0) {
+                std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
+                for(int i = 0; i < x; i++) {
+                    exp2h[i] = b[i][1].EH;
+                }
+                // for first column, no previous column to get EH from, so use the provided expectedH
+                curpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
+            }
+            else {
+                throw std::runtime_error("clrbackward1stBlock(H_2D): Invalid column index j: " + std::to_string(j));
+            }
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cu1ParallelBackward1stBlock(V) for column ["
+            throw std::runtime_error("Exception in cubackward1stBlock(H_2D) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -180,50 +181,49 @@ void block::cubackward1stBlock(std::vector<std::vector<std::vector<std::vector<f
 
 
 /**
- * @brief CUDA backward propagation for the FIRST block, driven by a single horizontal error vector (EH).
+ * @brief CUDA backward propagation for a general block (not necessarily the first), driven by a single horizontal error vector (EH).
  *        Applies the same expectedH to all columns. Iterates columns in reverse.
  * @param expectedH Expected horizontal embedding (common for all columns).
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
+ * @param blockCount Current block index (1-based).
+ * @param learning Learning rate.
+ * @param lambda_l1 L1 regularization parameter.
+ * @param lambda_l2 L2 regularization parameter.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
-void block::cubackward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
+void block::cubackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size
     if (expectedH.size() != EMBEDDING) {
-        throw std::runtime_error("cuBackward1stBlock(vector<float>): ExpectedH vector size mismatch. Expected "
+        throw std::runtime_error("cubackward(vector<float>): ExpectedH vector size mismatch. Expected "
                                 + std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH.size()));
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    // The internal cu1ParallelBackward1stBlock handles the backward row iteration.
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column
                 cupartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
-                // for columns inbetween
-                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+            else if(j >= 0 && j < y-1) {
+                std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
+                // for columns inbetween
+                // Note: The previous implementation used expectedH (single vector) for all columns.
+                // If it needs to pass block EH to the next partial, this needs adjustment.
+                // Assuming cupartialbackward signature for vector<float> expectedH means it's for this single EH.
                 cupartialbackward(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            /*else if(j == 0){
-                // for first column
-                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
-                    exp2h[i] = b[i][1].EH;
-                }
-                cupartialbackward(exp2h, in, layers, j);
-            }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cu1ParallelBackward1stBlock(H) for column ["
+            throw std::runtime_error("Exception in cubackward(H) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
@@ -231,117 +231,58 @@ void block::cubackward(std::vector<float>& expectedH, int& in, int& layers, int 
 
 
 /**
- * @brief CUDA backward propagation for the FIRST block, driven by multiple horizontal error vectors (EH).
+ * @brief CUDA backward propagation for a general block (not necessarily the first), driven by multiple horizontal error vectors (EH).
  *        Applies expectedH[j] to column j. Iterates columns in reverse.
- * @param expectedH Vector of expected horizontal embeddings (one per column). Shape: [y][EMBEDDING].
+ * @param expectedH Vector of expected horizontal embeddings (one per head per column if `cupartialbackward` takes a 2D vector for EH).
+ *                  If this `expectedH` is meant to be passed directly to `cupartialbackward`'s `std::vector<std::vector<float>>` overload,
+ *                  then its outer dimension should be `x` (number of heads), and it represents the error for the *entire column*.
  * @param in Embedding dimension.
  * @param layers Number of MLP layers.
+ * @param blockCount Current block index (1-based).
+ * @param learning Learning rate.
+ * @param lambda_l1 L1 regularization parameter.
+ * @param lambda_l2 L2 regularization parameter.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
-void block::cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
+void block::cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
     // Validate input size - should have one vector per column
-    if (expectedH.size() != static_cast<size_t>(this->y)) {
-        throw std::runtime_error("cuBackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
-                                + std::to_string(this->y) + " columns, got " + std::to_string(expectedH.size()));
+    // This overload's expectedH represents the error for ALL HEADS IN THE CURRENT COLUMN.
+    // So expectedH.size() should be x (number of heads), not y (number of columns).
+    // The calling context of this function usually provides `expectedH` as a slice for the current column.
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed validation to x
+        throw std::runtime_error("cubackward(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
+                                + std::to_string(x) + " heads, got " + std::to_string(expectedH.size()));
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
-        throw std::runtime_error("cuBackward1stBlock(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
+        throw std::runtime_error("cubackward(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
                                 + std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH[0].size()));
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
-                // for last column
+            if(j == y-1) {
+                // for last column, use the provided expectedH
                 cupartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
-                // for columns inbetween
-                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+            else if(j >= 0 && j < y-1) {
+                // for columns inbetween, compute expectedH from the next column's EH
+                std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 cupartialbackward(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            /*else if(j == 0){
-                std::vector<std::vector<float>> exp2h(expectedH.size(), std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
-                    exp2h[i] = b[i][1].EH;
-                }
-                // for first column
-                cupartialbackward(exp2h, in, layers, j);
-            }*/
         }
         catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cu1ParallelBackward1stBlock(H) for column ["
+            throw std::runtime_error("Exception in cubackward(H_2D) for column ["
                                     + std::to_string(j) + "]: " + e.what());
         }
     }
 }
 
-
-/**
- * @brief CUDA backward propagation for a NON-FIRST block, driven by vertical error vectors (EV).
- *        Iterates columns in reverse.
- * @param expectedV Expected vertical embeddings for all heads. Shape: [x][y][CONTEXT_WIN][EMBEDDING].
- * @param in Embedding dimension.
- * @param layers Number of MLP layers.
- */
-void block::cubackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2) {
-    // Validate input dimensions
-    if (expectedV.size() != static_cast<size_t>(this->x)) {
-        throw std::runtime_error("cuBackward(V): ExpectedV outer dimension (rows) mismatch. Expected "
-                                + std::to_string(this->x) + ", got " + std::to_string(expectedV.size()));
-    }
-    if (!expectedV.empty() && expectedV[0].size() != static_cast<size_t>(this->y)) {
-        throw std::runtime_error("cuBackward(V): ExpectedV second dimension (columns) mismatch. Expected "
-                                + std::to_string(this->y) + ", got " + std::to_string(expectedV[0].size()));
-    }
-    // Deeper validation happens within cu1ParallelBackward
-    // deserialise(blockFilePath);
-    // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
-        // Prepare the expectedV slice for the current column j
-        std::vector<std::vector<std::vector<float>>> expectedV_col_j(this->x);
-        try {
-            for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
-            }
-
-            if(j == y - 1) {
-                for (int i = 0; i < this->x; ++i) { // i is the row index
-                    // Ensure expectedV[i] has enough columns before accessing expectedV[i][j]
-                    if (expectedV[i].size() <= static_cast<size_t>(j)) {
-                        throw std::runtime_error("cuBackward(V): Column index " + std::to_string(j) +
-                                                " out of bounds for expectedV row " + std::to_string(i) +
-                                                " (size: " + std::to_string(expectedV[i].size()) + ")");
-                    }
-                    expectedV_col_j[i] = expectedV[i][j];
-                }
-            }
-            else if(j < y - 1 && j >= 0) {
-                for (int i = 0; i < this->x; ++i) { // i is the row index
-                    // Ensure expectedV[i] has enough columns before accessing expectedV[i][j]
-                    if (expectedV[i].size() <= static_cast<size_t>(j)) {
-                        throw std::runtime_error("cuBackward(V): Column index " + std::to_string(j) +
-                                                " out of bounds for expectedV row " + std::to_string(i) +
-                                                " (size: " + std::to_string(expectedV[i].size()) + ")");
-                    }
-                    expectedV_col_j[i] = b[i][j+1].EV.make2dVector(b[i][j+1].EV, CONTEXT_WIN, EMBEDDING);
-                }
-            }
-
-            // Call the partial backward function for the current column j
-            cupartialbackward(expectedV_col_j, in, layers, j, blockCount, learning, lambda_l1, lambda_l2);
-        }
-        catch (const std::exception& e) {
-            throw std::runtime_error("Exception in cu1ParallelBackward(V) for column ["
-                                    + std::to_string(j) + "]: " + e.what());
-        }
-
-    }
-}
+#endif

@@ -34,20 +34,20 @@ void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
     // The internal cu1ParallelBackward1stBlock handles the backward row iteration.
-    for (int j = this->y - 1; j >= 0; j--) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; j--) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column
                 clpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
+            else if(j >= 0 && j < y-1) {
                 // for columns second last to first
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
@@ -80,9 +80,9 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
     // This overload's expectedH represents the error for ALL HEADS IN THE CURRENT COLUMN.
     // So expectedH.size() should be x (number of heads), not y (number of columns).
     // The calling context of this function usually provides `expectedH` as a slice for the current column.
-    if (expectedH.size() != static_cast<size_t>(this->x)) { // Changed validation to x
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed validation to x
         throw std::runtime_error("clbackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
-                                + std::to_string(this->x) + " heads, got " + std::to_string(expectedH.size()));
+                                + std::to_string(x) + " heads, got " + std::to_string(expectedH.size()));
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
         throw std::runtime_error("clbackward1stBlock(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
@@ -90,20 +90,20 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column, use the provided expectedH
                 clpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
+            else if(j >= 0 && j < y-1) {
                 // for columns inbetween, compute expectedH from the next column's EH
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
@@ -136,9 +136,9 @@ void block::clrbackward1stBlock(std::vector<std::vector<float>>& expectedH, int&
     // This overload's expectedH represents the error for ALL HEADS IN THE CURRENT COLUMN.
     // So expectedH.size() should be x (number of heads), not y (number of columns).
     // The calling context of this function usually provides `expectedH` as a slice for the current column.
-    if (expectedH.size() != static_cast<size_t>(this->x)) { // Changed validation to x
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed validation to x
         throw std::runtime_error("clbackward1stBlock(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
-                                + std::to_string(this->x) + " heads, got " + std::to_string(expectedH.size()));
+                                + std::to_string(x) + " heads, got " + std::to_string(expectedH.size()));
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
         throw std::runtime_error("clbackward1stBlock(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
@@ -146,28 +146,28 @@ void block::clrbackward1stBlock(std::vector<std::vector<float>>& expectedH, int&
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column, use the provided expectedH
                 clpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 1 && j < this->y-1) {
+            else if(j >= 1 && j < y-1) {
                 // for columns inbetween, compute expectedH from the next column's EH
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j == 0) {
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
-                    exp2h[i] = b[i][j+1].EH;
+                for(int i = 0; i < x; i++) {
+                    exp2h[i] = b[i][1].EH;
                 }
                 // for first column, no previous column to get EH from, so use the provided expectedH
                 clrpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
@@ -204,19 +204,19 @@ void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int&
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column
                 clpartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
+            else if(j >= 0 && j < y-1) {
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 // for columns inbetween
@@ -253,9 +253,9 @@ void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int&
     // This overload's expectedH represents the error for ALL HEADS IN THE CURRENT COLUMN.
     // So expectedH.size() should be x (number of heads), not y (number of columns).
     // The calling context of this function usually provides `expectedH` as a slice for the current column.
-    if (expectedH.size() != static_cast<size_t>(this->x)) { // Changed validation to x
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed validation to x
         throw std::runtime_error("clbackward(vector<vector<float>>): ExpectedH outer dimension mismatch. Expected "
-                                + std::to_string(this->x) + " heads, got " + std::to_string(expectedH.size()));
+                                + std::to_string(x) + " heads, got " + std::to_string(expectedH.size()));
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
         throw std::runtime_error("clbackward(vector<vector<float>>): ExpectedH inner dimension mismatch. Expected "
@@ -263,20 +263,20 @@ void block::clbackward(std::vector<std::vector<float>>& expectedH, int& in, int&
     }
     // serialise(blockFilePath);
     // Iterate through all columns (parallels) in REVERSE order
-    for (int j = this->y - 1; j >= 0; --j) { // j is the column index (layno)
+    for (int j = y - 1; j >= 0; --j) { // j is the column index (layno)
         try {
             for(int i = 0; i < x; i++) {
-                b[i][j].tokenCount = this->tokenCount;
+                b[i][j].tokenCount = tokenCount;
             }
             // Call the partial backward function for the current column j
-            if(j == this->y-1) {
+            if(j == y-1) {
                 // for last column, use the provided expectedH
                 clpartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < this->y-1) {
+            else if(j >= 0 && j < y-1) {
                 // for columns inbetween, compute expectedH from the next column's EH
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
-                for(int i = 0; i < this->x; i++) {
+                for(int i = 0; i < x; i++) {
                     exp2h[i] = b[i][j+1].EH;
                 }
                 clpartialbackward(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);

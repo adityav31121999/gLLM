@@ -1,4 +1,3 @@
-
 // model.cpp: implementation of Model class
 #include "include/model.hpp"
 #include <iostream>
@@ -26,20 +25,20 @@ void model::runModel(const std::string& binDirectory)
 
     while(1) {
         while(T.currentTokenCount < FULL_CONTEXT) {
-            std::cout << "Enter prompt: "; // Use 'total' member variable
+            std::cout << "Enter sequence1: ";
             takeInput();
-            if (this->chat != nullptr) {
+            if (chat != nullptr) {
                 // Check if the file pointer is valid
-                fprintf(this->chat, "Response:\n");
-                fflush(this->chat); // Ensure it's written immediately (optional but good for logging)
+                fprintf(chat, "Sequence2:\n");
+                fflush(chat); // Ensure it's written immediately (optional but good for logging)
             }
             std::vector<float> pValues(EMBEDDING, 0.0f);
             for(int i = 0; i < tinput.size(); i++) {
                 // get embeddings for tokens
                 pValues = TOK.getEmbeddingForToken(tinput[i]);
-                setRow(T.tokenEmbed, T.currentTokenCount+i, pValues);
+                setRow( T.tokenEmbed, T.currentTokenCount+i, pValues);
             }
-            T.promptCount = tinput.size();
+            T.sequence1Count = tinput.size();
             #ifdef USE_CUDA
             // use cuda run function from transformer
                 T.cuRun();
@@ -50,12 +49,13 @@ void model::runModel(const std::string& binDirectory)
             // use cpp run function from transformer
                 T.run();
             #endif
-            if (this->chat != nullptr) {
+            if (chat != nullptr) {
                 // Check if the file pointer is valid
-                fprintf(this->chat, "\n");
-                fflush(this->chat);
+                fprintf(chat, "\n");
+                fflush(chat);
             }
         }
+
         // save model
         std::cout << "SAVE CHAT IN FILE (1 for save): ";
         std::cin >> savechat;

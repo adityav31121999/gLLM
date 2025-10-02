@@ -149,6 +149,57 @@ void tokeniser::cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, c
 }
 
 /**
+ * @brief Host wrapper to generate embeddings on the GPU.
+ * @param embedding [out] 2D vector to store the results. Will be resized.
+ * @param seeds [in] 1D vector of seed values, one for each token.
+ * @param d [in] The embedding dimension.
+ * @param vocSize [in] The number of tokens/seeds (N).
+ */
+void tokeniser::cudeEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d, int& vocSize, float r1, float r2) {
+    if (vocSize == 0 || d == 0) return;
+
+    // Resize embedding vector to hold the results
+    embedding.assign(vocSize, std::vector<float>(d));
+
+    size_t total_elements = (size_t)vocSize * d;
+    if (total_elements == 0) return;
+
+    std::vector<float> flat_embeddings(total_elements);
+
+    // 2. Allocate device memory
+    float* d_embeddings;
+    CHECK_CUDA(cudaMalloc(&d_embeddings, sizeof(float) * total_elements));
+
+    // Initialize kernel
+    dim3 block_dim(256);
+    dim3 grid_dim((total_elements + block_dim.x - 1) / block_dim.x);
+
+    // Determine initial seed offset based on time
+    unsigned int initial_seed_offset = static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
+    // Launch kernel
+    embeddingFormulaBatchKernel<<<grid_dim, block_dim>>>(d_embeddings, d, r1, r2, initial_seed_offset);
+
+    // Check for kernel launch errors
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "Error: Kernel launch failed with error %s\n", cudaGetErrorString(err));
+        cudaFree(d_embeddings);
+        return;
+    }
+
+    // Read results back
+    CHECK_CUDA(cudaMemcpy(flat_embeddings.data(), d_embeddings, sizeof(float) * total_elements, cudaMemcpyDeviceToHost));
+
+    for (int i = 0; i < vocSize; ++i) {
+        for (int j = 0; j < d; ++j) {
+            embedding[i][j] = flat_embeddings[i * d + j];
+        }
+    }
+    CHECK_CUDA(cudaFree(d_embeddings));
+}
+
+/**
  * @brief Host wrapper to calculate batched vector inverses on the GPU.
  * @param deEmbedding [out] 2D vector to store the results. Will be resized.
  * @param embedding [in] 2D vector of input vectors.
@@ -204,6 +255,5 @@ void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding,
     CHECK_CUDA(cudaFree(d_input));
     CHECK_CUDA(cudaFree(d_output));
 }
-
 
 #endif

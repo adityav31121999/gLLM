@@ -12,7 +12,6 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 
-
 // Helper struct to hold per-head sub-buffers for Horizontal error backprop,
 // analogous to HeadDevicePointers in block.hpp but for cl::Buffer.
 struct HeadDeviceSubBuffersirH {
@@ -54,7 +53,8 @@ struct HeadDeviceSubBuffersirH {
 
 
 /**
- * @brief backward propagation for last column of first block (backprop starts from this)
+ * @brief backward propagation for last column of first block (backprop starts from this) and
+ *      get gradient to update embeddings
  * @param expectedH expected token embedding for each head of the column
  * @param in_dim embedding dimension and input-output vector dimension of mlp
  * @param layers number of layers of activations of mlp
@@ -71,16 +71,16 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
     if (layno_col_idx < 0 || layno_col_idx >= y) {
-        throw std::out_of_range("clpartialbackward1stBlock(H_2D): Column index 'layno_col_idx' (" + std::to_string(layno_col_idx) +
+        throw std::out_of_range("clrpartialbackward1stBlock(H_2D): Column index 'layno_col_idx' (" + std::to_string(layno_col_idx) +
             ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
     if (expectedH.size() != static_cast<size_t>(num_heads_to_process)) {
-        throw std::runtime_error("ExpectedH outer vector size mismatch in clpartialbackward1stBlock(H_2D). Expected " +
+        throw std::runtime_error("ExpectedH outer vector size mismatch in clrpartialbackward1stBlock(H_2D). Expected " +
             std::to_string(num_heads_to_process) + ", got " + std::to_string(expectedH.size()));
     }
     for(int head_check_idx = 0; head_check_idx < num_heads_to_process; ++head_check_idx) {
         if(expectedH[head_check_idx].size() != EMBEDDING) {
-            throw std::runtime_error("clpartialbackward1stBlock(H_2D): ExpectedH inner vector size mismatch for head " + std::to_string(head_check_idx) +
+            throw std::runtime_error("clrpartialbackward1stBlock(H_2D): ExpectedH inner vector size mismatch for head " + std::to_string(head_check_idx) +
                 ". Expected " + std::to_string(EMBEDDING) + ", got " + std::to_string(expectedH[head_check_idx].size()));
         }
     }
@@ -92,7 +92,7 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
     const int embedding_dim = EMBEDDING;
-    const int mat_heights = MATHEIGHTS;
+    const int mat_heights = CONTEXT_WIN;
     const int context_win = CONTEXT_WIN;
     const int token_count = tokenCount;
     const int num_total_layers_mlp = layers_mlp;
@@ -130,6 +130,7 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
 
     OpenCLContext& clcontext = this->clcontext;
 
+    cl::Buffer d_tokenEmbed;
     cl::Buffer agg_d_expected_h, agg_d_EH, agg_d_EV;
     cl::Buffer agg_d_grad_EH, agg_d_grad_EV_scaled;
     cl::Buffer agg_d_grad_dh, agg_d_grad_dv;
@@ -160,10 +161,11 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
     std::vector<HeadDeviceSubBuffersirH> head_gpu_data_cl(num_heads_to_process);
 
     try {
-        cl::Buffer d_dL_dTokenEmbed_aggregated_column_output(clcontext.context, CL_MEM_READ_WRITE, static_cast<size_t>(this->tokenCount) * embedding_dim * sizeof(float), nullptr, &cl_err); 
+        cl::Buffer d_dL_dTokenEmbed_aggregated_column_output(clcontext.context, CL_MEM_READ_WRITE, static_cast<size_t>(tokenCount) * embedding_dim * sizeof(float), nullptr, &cl_err); 
         CL_CHECK(cl_err);
-        CL_CHECK(clcontext.queue.enqueueFillBuffer(d_dL_dTokenEmbed_aggregated_column_output, 0.0f, 0, static_cast<size_t>(this->tokenCount) * embedding_dim * sizeof(float)));
+        CL_CHECK(clcontext.queue.enqueueFillBuffer(d_dL_dTokenEmbed_aggregated_column_output, 0.0f, 0, static_cast<size_t>(tokenCount) * embedding_dim * sizeof(float)));
 
+        d_tokenEmbed = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, token_embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_expected_h = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_EH = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
         agg_d_EV = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * ev_single_head_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -270,7 +272,7 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
             head_gpu_data_cl[head_idx].d_grad_MK = agg_d_grad_MK_buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
 
             // for token embedding gradients
-            region = { head_idx * token_embed_bytes, token_embed_bytes };
+            region = { head_idx * embed_bytes, embed_bytes }; // FIX: Use embed_bytes, not token_embed_bytes
             head_gpu_data_cl[head_idx].d_grad_token = agg_d_grad_tokens.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &cl_err); CL_CHECK(cl_err);
 
             // for MLPs
@@ -539,99 +541,101 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
                 CL_CHECK(current_stream.enqueueFillBuffer(device_ptrs.d_grad_MK, 0.0f, 0, proj_mat_bytes));
             }
 
-            // get gradient for token from gradients of MQ, MK, and gradients from h and v
-            cl::Kernel transpose = clcontext.kernels.at("kernelTransposeMatrix");
-            cl::Kernel matmul = clcontext.kernels.at("matrix_multiply");
-            cl::Kernel vecmatmul = clcontext.kernels.at("vector_matrix_multiply");
-            // dL/dT_Q = d_grad_Q * MQ^T
-            CL_CHECK(transpose.setArg(0, device_ptrs.d_MQ_a));
-            CL_CHECK(transpose.setArg(1, device_ptrs.d_MQt));
-            CL_CHECK(transpose.setArg(2, mat_heights));
-            CL_CHECK(transpose.setArg(3, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
-            CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_Q));
-            CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_MQt));
-            CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_Q));
-            CL_CHECK(vecmatmul.setArg(3, mat_heights));
-            CL_CHECK(vecmatmul.setArg(4, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
-            // dL/dT_K = d_grad_K * MK^T
-            CL_CHECK(transpose.setArg(0, device_ptrs.d_MK_a));
-            CL_CHECK(transpose.setArg(1, device_ptrs.d_MKt));
-            CL_CHECK(transpose.setArg(2, mat_heights));
-            CL_CHECK(transpose.setArg(3, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
-            CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_K));
-            CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_MKt));
-            CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_K));
-            CL_CHECK(vecmatmul.setArg(3, mat_heights));
-            CL_CHECK(vecmatmul.setArg(4, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
-            // dL/dT_h = d_grad_dh * (d_head * MK^T)^T * MH
-            CL_CHECK(matmul.setArg(0, device_ptrs.d_head));
-            CL_CHECK(matmul.setArg(1, device_ptrs.d_MKt));
-            CL_CHECK(matmul.setArg(2, device_ptrs.d_head_MKt));
-            CL_CHECK(matmul.setArg(3, context_win));
-            CL_CHECK(matmul.setArg(4, mat_heights));
-            CL_CHECK(matmul.setArg(5, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
-            CL_CHECK(transpose.setArg(0, device_ptrs.d_head_MKt));
-            CL_CHECK(transpose.setArg(1, device_ptrs.d_head_MKt_t));
-            CL_CHECK(transpose.setArg(2, embedding_dim));
-            CL_CHECK(transpose.setArg(3, mat_heights));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
-            CL_CHECK(matmul.setArg(0, device_ptrs.d_head_MKt_t));
-            CL_CHECK(matmul.setArg(1, device_ptrs.d_MH_a));
-            CL_CHECK(matmul.setArg(2, device_ptrs.d_hMKt_t));
-            CL_CHECK(matmul.setArg(3, embedding_dim));
-            CL_CHECK(matmul.setArg(4, context_win));
-            CL_CHECK(matmul.setArg(5, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
-            CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_dh));
-            CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_hMKt_t));
-            CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_h));
-            CL_CHECK(vecmatmul.setArg(3, embedding_dim));
-            CL_CHECK(vecmatmul.setArg(4, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
-            // dL/dT_v = d_grad_dv * (d_head * MQ^T)^T * MV
-            CL_CHECK(matmul.setArg(0, device_ptrs.d_head));
-            CL_CHECK(matmul.setArg(1, device_ptrs.d_MQt));
-            CL_CHECK(matmul.setArg(2, device_ptrs.d_head_MQt));
-            CL_CHECK(matmul.setArg(3, context_win));
-            CL_CHECK(matmul.setArg(4, mat_heights));
-            CL_CHECK(matmul.setArg(5, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
-            CL_CHECK(transpose.setArg(0, device_ptrs.d_head_MQt));
-            CL_CHECK(transpose.setArg(1, device_ptrs.d_head_MQt_t));
-            CL_CHECK(transpose.setArg(2, embedding_dim));
-            CL_CHECK(transpose.setArg(3, mat_heights));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
-            CL_CHECK(matmul.setArg(0, device_ptrs.d_head_MQt_t));
-            CL_CHECK(matmul.setArg(1, device_ptrs.d_MV_a));
-            CL_CHECK(matmul.setArg(2, device_ptrs.d_hMQt_t));
-            CL_CHECK(matmul.setArg(3, embedding_dim));
-            CL_CHECK(matmul.setArg(4, context_win));
-            CL_CHECK(matmul.setArg(5, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
-            CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_dv));
-            CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_hMQt_t));
-            CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_v));
-            CL_CHECK(vecmatmul.setArg(3, embedding_dim));
-            CL_CHECK(vecmatmul.setArg(4, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
-            // dL/dT = dL/dT_Q + dL/dT_K + dL/dT_h + dL/dT_v
-            cl::Kernel addAll = clcontext.kernels.at("vectorsAddKernel");
-            CL_CHECK(addAll.setArg(0, device_ptrs.d_grad_T_Q));
-            CL_CHECK(addAll.setArg(1, device_ptrs.d_grad_T_K));
-            CL_CHECK(addAll.setArg(2, device_ptrs.d_grad_T_h));
-            CL_CHECK(addAll.setArg(3, device_ptrs.d_grad_T_v));
-            CL_CHECK(addAll.setArg(4, device_ptrs.d_grad_token));
-            CL_CHECK(addAll.setArg(5, embedding_dim));
-            CL_CHECK(current_stream.enqueueNDRangeKernel(addAll, cl::NullRange, global_embed, local_1d));
+            if(layno_col_idx == 0) {
+                // get gradient for token from gradients of MQ, MK, and gradients from h and v
+                cl::Kernel transpose = clcontext.kernels.at("kernelTransposeMatrix");
+                cl::Kernel matmul = clcontext.kernels.at("matrix_multiply");
+                cl::Kernel vecmatmul = clcontext.kernels.at("vector_matrix_multiply");
+                // dL/dT_Q = d_grad_Q * MQ^T
+                CL_CHECK(transpose.setArg(0, device_ptrs.d_MQ_a));
+                CL_CHECK(transpose.setArg(1, device_ptrs.d_MQt));
+                CL_CHECK(transpose.setArg(2, mat_heights));
+                CL_CHECK(transpose.setArg(3, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
+                CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_Q));
+                CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_MQt));
+                CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_Q));
+                CL_CHECK(vecmatmul.setArg(3, mat_heights));
+                CL_CHECK(vecmatmul.setArg(4, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
+                // dL/dT_K = d_grad_K * MK^T
+                CL_CHECK(transpose.setArg(0, device_ptrs.d_MK_a));
+                CL_CHECK(transpose.setArg(1, device_ptrs.d_MKt));
+                CL_CHECK(transpose.setArg(2, mat_heights));
+                CL_CHECK(transpose.setArg(3, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
+                CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_K));
+                CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_MKt));
+                CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_K));
+                CL_CHECK(vecmatmul.setArg(3, mat_heights));
+                CL_CHECK(vecmatmul.setArg(4, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
+                // dL/dT_h = d_grad_dh * (d_head * MK^T)^T * MH
+                CL_CHECK(matmul.setArg(0, device_ptrs.d_head));
+                CL_CHECK(matmul.setArg(1, device_ptrs.d_MKt));
+                CL_CHECK(matmul.setArg(2, device_ptrs.d_head_MKt));
+                CL_CHECK(matmul.setArg(3, context_win));
+                CL_CHECK(matmul.setArg(4, mat_heights));
+                CL_CHECK(matmul.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
+                CL_CHECK(transpose.setArg(0, device_ptrs.d_head_MKt));
+                CL_CHECK(transpose.setArg(1, device_ptrs.d_head_MKt_t));
+                CL_CHECK(transpose.setArg(2, embedding_dim));
+                CL_CHECK(transpose.setArg(3, mat_heights));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
+                CL_CHECK(matmul.setArg(0, device_ptrs.d_head_MKt_t));
+                CL_CHECK(matmul.setArg(1, device_ptrs.d_MH_a));
+                CL_CHECK(matmul.setArg(2, device_ptrs.d_hMKt_t));
+                CL_CHECK(matmul.setArg(3, embedding_dim));
+                CL_CHECK(matmul.setArg(4, context_win));
+                CL_CHECK(matmul.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
+                CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_dh));
+                CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_hMKt_t));
+                CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_h));
+                CL_CHECK(vecmatmul.setArg(3, embedding_dim));
+                CL_CHECK(vecmatmul.setArg(4, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
+                // dL/dT_v = d_grad_dv * (d_head * MQ^T)^T * MV
+                CL_CHECK(matmul.setArg(0, device_ptrs.d_head));
+                CL_CHECK(matmul.setArg(1, device_ptrs.d_MQt));
+                CL_CHECK(matmul.setArg(2, device_ptrs.d_head_MQt));
+                CL_CHECK(matmul.setArg(3, context_win));
+                CL_CHECK(matmul.setArg(4, mat_heights));
+                CL_CHECK(matmul.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
+                CL_CHECK(transpose.setArg(0, device_ptrs.d_head_MQt));
+                CL_CHECK(transpose.setArg(1, device_ptrs.d_head_MQt_t));
+                CL_CHECK(transpose.setArg(2, embedding_dim));
+                CL_CHECK(transpose.setArg(3, mat_heights));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(transpose, cl::NullRange, global_mat_heights, local_1d));
+                CL_CHECK(matmul.setArg(0, device_ptrs.d_head_MQt_t));
+                CL_CHECK(matmul.setArg(1, device_ptrs.d_MV_a));
+                CL_CHECK(matmul.setArg(2, device_ptrs.d_hMQt_t));
+                CL_CHECK(matmul.setArg(3, embedding_dim));
+                CL_CHECK(matmul.setArg(4, context_win));
+                CL_CHECK(matmul.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(matmul, cl::NullRange, global_embed, local_1d));
+                CL_CHECK(vecmatmul.setArg(0, device_ptrs.d_grad_dv));
+                CL_CHECK(vecmatmul.setArg(1, device_ptrs.d_hMQt_t));
+                CL_CHECK(vecmatmul.setArg(2, device_ptrs.d_grad_T_v));
+                CL_CHECK(vecmatmul.setArg(3, embedding_dim));
+                CL_CHECK(vecmatmul.setArg(4, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(vecmatmul, cl::NullRange, global_embed, local_1d));
+                // dL/dT = dL/dT_Q + dL/dT_K + dL/dT_h + dL/dT_v
+                cl::Kernel addAll = clcontext.kernels.at("vectorsAddKernel");
+                CL_CHECK(addAll.setArg(0, device_ptrs.d_grad_T_Q));
+                CL_CHECK(addAll.setArg(1, device_ptrs.d_grad_T_K));
+                CL_CHECK(addAll.setArg(2, device_ptrs.d_grad_T_h));
+                CL_CHECK(addAll.setArg(3, device_ptrs.d_grad_T_v));
+                CL_CHECK(addAll.setArg(4, device_ptrs.d_grad_token));
+                CL_CHECK(addAll.setArg(5, embedding_dim));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(addAll, cl::NullRange, global_embed, local_1d));
+            }
 
             // update weights MQ, MK, MH, MV,
             cl_int cl_update_eh_flag_1sth = 0;
-            cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeights_1stHead_H");
+            cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeightsHeadElastic");
             CL_CHECK(k_update_1st_h.setArg(0, device_ptrs.d_MH_a));
             CL_CHECK(k_update_1st_h.setArg(1, device_ptrs.d_MV_a));
             CL_CHECK(k_update_1st_h.setArg(2, device_ptrs.d_MQ_a));
@@ -646,9 +650,12 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
             CL_CHECK(k_update_1st_h.setArg(11, cl_update_eh_flag_1sth));
             CL_CHECK(k_update_1st_h.setArg(12, mat_heights));
             CL_CHECK(k_update_1st_h.setArg(13, embedding_dim));
+            CL_CHECK(k_update_1st_h.setArg(14, lambda_l1));
+            CL_CHECK(k_update_1st_h.setArg(15, lambda_l2));
+            CL_CHECK(k_update_1st_h.setArg(16, MAX_GRAD_CLIP));
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_1st_h, cl::NullRange, global_proj_mat, local_1d));
 
-            for(int l=0; l<num_weight_matrices_mlp; ++l) { 
+            for(int l=0; l<num_weight_matrices_mlp; ++l) {
                 CL_CHECK(current_stream.enqueueReadBuffer(device_ptrs.d_hor_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.hor.weights[l].mapped_data)); 
                 CL_CHECK(current_stream.enqueueReadBuffer(device_ptrs.d_hor_gweights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.hor.gweights[l].mapped_data)); 
                 CL_CHECK(current_stream.enqueueReadBuffer(device_ptrs.d_ver_weights[l], CL_FALSE, 0, mlp_weights_bytes, head_obj.ver.weights[l].mapped_data)); 
@@ -663,63 +670,82 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
             CL_CHECK(current_stream.finish());
         }
 
-        cl::NDRange global_embed(calculate_global_1d(embedding_dim));
-        cl::Buffer finalgradtoken = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
-        cl::Kernel addvec = clcontext.kernels.at("vectorAddKernel");
-        CL_CHECK(addvec.setArg(0, finalgradtoken));
-        CL_CHECK(addvec.setArg(2, finalgradtoken));
-        CL_CHECK(addvec.setArg(3, embedding_dim));
-        for(int i = 0; i < num_heads_to_process; ++i) {
-            CL_CHECK(addvec.setArg(1, head_gpu_data_cl[i].d_grad_token));
-            CL_CHECK(streams_cl[i].enqueueNDRangeKernel(addvec, cl::NullRange, global_embed, local_1d));
+        if(layno_col_idx) {
+            // Accumulate token embedding gradients from all heads
+            // dL/dT = summation(dL/dT of each head)
+            cl::NDRange global_embed(calculate_global_1d(embedding_dim));
+            cl::Buffer finalgradtoken = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_to_process * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+            cl::Kernel addvec = clcontext.kernels.at("vectorAddKernel");
+            CL_CHECK(addvec.setArg(0, finalgradtoken));
+            CL_CHECK(addvec.setArg(2, finalgradtoken));
+            CL_CHECK(addvec.setArg(3, embedding_dim));
+            for(int i = 0; i < num_heads_to_process; ++i) {
+                CL_CHECK(addvec.setArg(1, head_gpu_data_cl[i].d_grad_token));
+                CL_CHECK(clcontext.queue.enqueueNDRangeKernel(addvec, cl::NullRange, global_embed, local_1d));
+            }
+            CL_CHECK(clcontext.queue.enqueueReadBuffer(finalgradtoken, CL_FALSE, 0, mlp_weights_bytes, gradToken.data())); 
+            CL_CHECK(clcontext.queue.finish());
         }
-
-        // Accumulate token embedding gradients from all heads
-        // dL/dT = summation(dL/dT of each head)
-
-        // Explicitly release all aggregate OpenCL buffers
-        agg_d_expected_h = cl::Buffer();
-        agg_d_EH = cl::Buffer();
-        agg_d_EV = cl::Buffer();
-        agg_d_grad_EH = cl::Buffer();
-        agg_d_grad_EV_scaled = cl::Buffer();
-        agg_d_grad_dh = cl::Buffer();
-        agg_d_grad_dv = cl::Buffer();
-        agg_d_KdotQ = cl::Buffer();
-        agg_d_head_storage = cl::Buffer();
-        agg_d_K = cl::Buffer();
-        agg_d_Q = cl::Buffer();
-        agg_d_pre_MH = cl::Buffer();
-        agg_d_pre_MV = cl::Buffer();
-        agg_d_MH_a = cl::Buffer();
-        agg_d_MV_a = cl::Buffer();
-        agg_d_MQ_a = cl::Buffer();
-        agg_d_MK_a = cl::Buffer();
-        agg_d_grad_MH = cl::Buffer();
-        agg_d_grad_MV = cl::Buffer();
-        agg_d_grad_head_storage_buf = cl::Buffer();
-        agg_d_lota_deriv = cl::Buffer();
-        agg_d_grad_KdotQ_buf = cl::Buffer();
-        agg_d_grad_K_buf = cl::Buffer();
-        agg_d_grad_Q_buf = cl::Buffer();
-        agg_d_grad_MQ_buf = cl::Buffer();
-        agg_d_grad_MK_buf = cl::Buffer();
-        agg_d_hor_activations_storage = cl::Buffer();
-        agg_d_ver_activations_storage = cl::Buffer();
-        agg_d_hor_weights_storage = cl::Buffer();
-        agg_d_ver_weights_storage = cl::Buffer();
-        agg_d_hor_gweights_storage = cl::Buffer();
-        agg_d_ver_gweights_storage = cl::Buffer();
-        agg_d_hor_deltas_storage = cl::Buffer();
-        agg_d_ver_deltas_storage = cl::Buffer();
 
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CL_CHECK(streams_cl[head_idx].finish());
         }
     }
     catch (const std::exception& e) {
-        std::cerr << "Standard Exception during clpartialbackward1stBlock(H_2D) for column " << layno_col_idx << ": " << e.what() << std::endl;
+        std::cerr << "Standard Exception during clrpartialbackward1stBlock(H_2D) for column " << layno_col_idx << ": " << e.what() << std::endl;
         throw;
+    }
+
+    // Explicitly release all aggregate OpenCL buffers
+    agg_d_expected_h = cl::Buffer();
+    agg_d_EH = cl::Buffer();
+    agg_d_EV = cl::Buffer();
+    agg_d_grad_EH = cl::Buffer();
+    agg_d_grad_EV_scaled = cl::Buffer();
+    agg_d_grad_dh = cl::Buffer();
+    agg_d_grad_dv = cl::Buffer();
+    agg_d_KdotQ = cl::Buffer();
+    agg_d_head_storage = cl::Buffer();
+    agg_d_K = cl::Buffer();
+    agg_d_Q = cl::Buffer();
+    agg_d_pre_MH = cl::Buffer();
+    agg_d_pre_MV = cl::Buffer();
+    agg_d_MH_a = cl::Buffer();
+    agg_d_MV_a = cl::Buffer();
+    agg_d_MQ_a = cl::Buffer();
+    agg_d_MK_a = cl::Buffer();
+    agg_d_grad_MH = cl::Buffer();
+    agg_d_grad_MV = cl::Buffer();
+    agg_d_grad_head_storage_buf = cl::Buffer();
+    agg_d_lota_deriv = cl::Buffer();
+    agg_d_grad_KdotQ_buf = cl::Buffer();
+    agg_d_grad_K_buf = cl::Buffer();
+    agg_d_grad_Q_buf = cl::Buffer();
+    agg_d_grad_MQ_buf = cl::Buffer();
+    agg_d_grad_MK_buf = cl::Buffer();
+    agg_d_hor_activations_storage = cl::Buffer();
+    agg_d_ver_activations_storage = cl::Buffer();
+    agg_d_hor_weights_storage = cl::Buffer();
+    agg_d_ver_weights_storage = cl::Buffer();
+    agg_d_hor_gweights_storage = cl::Buffer();
+    agg_d_ver_gweights_storage = cl::Buffer();
+    agg_d_hor_deltas_storage = cl::Buffer();
+    agg_d_ver_deltas_storage = cl::Buffer();
+
+    if(layno_col_idx == 0) {
+        agg_d_MQt = cl::Buffer();
+        agg_d_MKt = cl::Buffer();
+        agg_d_head_MKt = cl::Buffer();
+        agg_d_head_MQt = cl::Buffer();
+        agg_d_head_MKt_t = cl::Buffer();
+        agg_d_head_MQt_t = cl::Buffer();
+        agg_d_hMKt_t = cl::Buffer();
+        agg_d_hMQt_t = cl::Buffer();
+        agg_d_grad_T_Q = cl::Buffer();
+        agg_d_grad_T_K = cl::Buffer();
+        agg_d_grad_T_h = cl::Buffer();
+        agg_d_grad_T_v = cl::Buffer();
+        agg_d_grad_T = cl::Buffer();
     }
 }
 

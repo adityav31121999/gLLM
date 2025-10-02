@@ -32,11 +32,11 @@ void mlp::clBackward(int in, int layers, float learning) {
     // Check dimensions
     for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
         // Check if mat dimensions are consistent with 'in'
-        if (this->weights[l].row != in || this->weights[l].col != in) {
+        if (weights[l].row != in || weights[l].col != in) {
              // This indicates a mismatch between 'in' and actual mat dimensions.
              // Depending on strictness, could throw or log. For now, proceed with 'in' for buffer sizes.
              std::cerr << "Warning: MLP clBackward: Weight mat dimensions at layer " << l << " ("
-                       << this->weights[l].row << "x" << this->weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
+                       << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
     if (layers > 0) {
@@ -50,7 +50,7 @@ void mlp::clBackward(int in, int layers, float learning) {
     try {
         cl_int err; // For OpenCL error codes
         // --- Access Shared OpenCL Context ---
-        OpenCLContext& context_obj = this->clContext; // Use the member reference
+        OpenCLContext& context_obj = clContext; // Use the member reference
 
         // --- OpenCL Kernel Preparation (Retrieve from context) ---
         // Ensure these kernel names were provided during OpenCLContext initialization
@@ -131,7 +131,7 @@ void mlp::clBackward(int in, int layers, float learning) {
         // === 2. Backpropagate Deltas through Hidden Layers ===
         for (int l = layers - 1; l >= 0; --l) {
             // Use mapped_data directly for weights[l+1]
-            const mat& weights_l_plus_1_mat = this->weights[l + 1];
+            const mat& weights_l_plus_1_mat = weights[l + 1];
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights_next, CL_TRUE, 0, weights_size_bytes, weights_l_plus_1_mat.mapped_data));
             // d_activations[l] was already written above
 
@@ -157,7 +157,7 @@ void mlp::clBackward(int in, int layers, float learning) {
 
             // Get current weights W[l]
             // Use mapped_data directly for weights[l]
-            const mat& weights_l_mat = this->weights[l];
+            const mat& weights_l_mat = weights[l];
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights_l, CL_TRUE, 0, weights_size_bytes, weights_l_mat.mapped_data));
 
             // Get deltas for layer 'l'
@@ -174,7 +174,7 @@ void mlp::clBackward(int in, int layers, float learning) {
 
             // Read updated weights back to host
             // Read directly into the mapped_data of the mat object
-            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights_l, CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights_l, CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // --- Cleanup ---

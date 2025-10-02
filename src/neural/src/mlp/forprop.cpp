@@ -11,19 +11,19 @@
  * forward propagation and calculates the activations of each layer.
  */
 void mlp::forward(int in, int layers) {
-    if (this->num_layers < 2) {
-        if (this->num_layers == 1 && !this->input.empty()) {
-            this->output = this->input; // Or apply activation if input layer has one
+    if (num_layers < 2) {
+        if (num_layers == 1 && !input.empty()) {
+            output = input; // Or apply activation if input layer has one
         }
         return;
     }
 
     // Ensure input is copied to activations[0]
-    if (this->activations[0].size() != this->layer_sizes[0]) {
-        this->activations[0].resize(this->layer_sizes[0]);
+    if (activations[0].size() != layer_sizes[0]) {
+        activations[0].resize(layer_sizes[0]);
     }
-    if (this->input.size() == this->layer_sizes[0]) {
-        this->activations[0] = this->input;
+    if (input.size() == layer_sizes[0]) {
+        activations[0] = input;
     } 
     else {
         throw std::runtime_error("MLP forward: Input vector size mismatch with input layer size.");
@@ -31,30 +31,30 @@ void mlp::forward(int in, int layers) {
 
     // Iterate through weight matrices: weights[0] to weights[num_layers - 2]
     // `l_idx` is the index for the weight matrix, hlayer, and the *previous* activation layer.
-    for (unsigned int l_idx = 0; l_idx < this->num_layers - 1; ++l_idx) {
-        const mat& current_weights = this->weights[l_idx]; // Connects layer l_idx to l_idx+1
+    for (unsigned int l_idx = 0; l_idx < num_layers - 1; ++l_idx) {
+        const mat& current_weights = weights[l_idx]; // Connects layer l_idx to l_idx+1
                                                        // Dimensions: (layer_sizes[l_idx+1], layer_sizes[l_idx])
-        const std::vector<float>& prev_layer_activations = this->activations[l_idx];
-        std::vector<float>& current_hlayer_values = this->hlayers[l_idx]; // For layer l_idx+1
-        std::vector<float>& current_output_activations = this->activations[l_idx+1]; // For layer l_idx+1
+        const std::vector<float>& prev_layer_activations = activations[l_idx];
+        std::vector<float>& current_hlayer_values = hlayers[l_idx]; // For layer l_idx+1
+        std::vector<float>& current_output_activations = activations[l_idx+1]; // For layer l_idx+1
 
         if (!current_weights.mapped_data) {
             throw std::runtime_error("Weights[" + std::to_string(l_idx) + "] not mapped.");
         }
 
         // Ensure hlayers and activations for the current output layer are correctly sized
-        if (current_hlayer_values.size() != this->layer_sizes[l_idx+1]) {
-            current_hlayer_values.resize(this->layer_sizes[l_idx+1]);
+        if (current_hlayer_values.size() != layer_sizes[l_idx+1]) {
+            current_hlayer_values.resize(layer_sizes[l_idx+1]);
         }
-        if (current_output_activations.size() != this->layer_sizes[l_idx+1]) {
-            current_output_activations.resize(this->layer_sizes[l_idx+1]);
+        if (current_output_activations.size() != layer_sizes[l_idx+1]) {
+            current_output_activations.resize(layer_sizes[l_idx+1]);
         }
 
         // For each neuron 'j' in the current output layer (layer l_idx+1)
-        for (unsigned int j = 0; j < this->layer_sizes[l_idx+1]; ++j) {
+        for (unsigned int j = 0; j < layer_sizes[l_idx+1]; ++j) {
             float sum = 0.0f;
             // For each neuron 'k' in the previous layer (layer l_idx)
-            for (unsigned int k = 0; k < this->layer_sizes[l_idx]; ++k) {
+            for (unsigned int k = 0; k < layer_sizes[l_idx]; ++k) {
                 // Weight from neuron k (prev layer) to neuron j (current output layer)
                 // is weightsl_idx
                 // Access: current_weights.mapped_data[j * current_weights.col + k]
@@ -71,10 +71,10 @@ void mlp::forward(int in, int layers) {
     }
 
     // The final output is in activations[num_layers - 1]
-    if (this->output.size() != this->layer_sizes.back()) {
-        this->output.resize(this->layer_sizes.back());
+    if (output.size() != layer_sizes.back()) {
+        output.resize(layer_sizes.back());
     }
-    this->output = this->activations[this->num_layers - 1];
+    output = activations[num_layers - 1];
 }
 
 #endif

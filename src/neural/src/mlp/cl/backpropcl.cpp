@@ -31,11 +31,11 @@ void mlp::clBackprop(int in, int layers, float learning) {
     }
     // Check weight mat dimensions against 'in' (conceptual size for this function)
     for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
-        if (this->weights[l].row != in || this->weights[l].col != in) {
+        if (weights[l].row != in || weights[l].col != in) {
              // This indicates a mismatch between 'in' and actual mat dimensions.
              // Depending on strictness, could throw or log. For now, proceed with 'in'.
              std::cerr << "Warning: MLP clBackprop: Weight mat dimensions at layer " << l << " ("
-                       << this->weights[l].row << "x" << this->weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
+                       << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
      if (layers > 0) {
@@ -48,24 +48,24 @@ void mlp::clBackprop(int in, int layers, float learning) {
 
 
     // --- Initialize Host gweights (mat objects) ---
-    // The mlp constructor already sizes this->gweights. This loop zeros out their mapped_data.
+    // The mlp constructor already sizes gweights. This loop zeros out their mapped_data.
     for (int l = 0; l <= layers; ++l) {
         // Assuming gweights[l] is conceptually in x in for this function.
         // The actual mat dimensions are set by layer_sizes in constructor.
-        if (this->gweights[l].mapped_data && (this->gweights[l].row == in && this->gweights[l].col == in)) {
-            std::fill_n(this->gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
-        } else if (this->gweights[l].mapped_data) {
+        if (gweights[l].mapped_data && (gweights[l].row == in && gweights[l].col == in)) {
+            std::fill_n(gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
+        } else if (gweights[l].mapped_data) {
              std::cerr << "Warning: MLP clBackprop: gweights mat dimensions at layer " << l << " ("
-                       << this->gweights[l].row << "x" << this->gweights[l].col << ") do not match 'in' parameter (" << in << "). Zeroing based on 'in'." << std::endl;
+                       << gweights[l].row << "x" << gweights[l].col << ") do not match 'in' parameter (" << in << "). Zeroing based on 'in'." << std::endl;
             // Still zero out based on 'in * in' if mapped_data is valid, respecting function's logic.
-            std::fill_n(this->gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
+            std::fill_n(gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
         }
     }
 
     try {
         cl_int err; // For OpenCL error codes
         // --- Access Shared OpenCL Context ---
-        OpenCLContext& context_obj = this->clContext; // Use the member reference
+        OpenCLContext& context_obj = clContext; // Use the member reference
 
         // --- OpenCL Kernel Preparation (Retrieve from context) ---
         // Ensure these kernel names were provided during OpenCLContext initialization
@@ -118,7 +118,7 @@ void mlp::clBackprop(int in, int layers, float learning) {
         // Copy initial weights
         for (int l = 0; l <= layers; ++l) {
             // Use mapped_data directly
-            CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // --- NDRange Configuration ---
@@ -171,12 +171,12 @@ void mlp::clBackprop(int in, int layers, float learning) {
 
         // Copy updated weights back to the host mlp object
         for (int l = 0; l <= layers; ++l) {
-            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // Copy calculated gradients back to the host mlp object
         for (int l = 0; l <= layers; ++l) {
-            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_gweights[l], CL_TRUE, 0, weights_size_bytes, this->gweights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_gweights[l], CL_TRUE, 0, weights_size_bytes, gweights[l].mapped_data));
         }
 
         // --- Cleanup ---
@@ -218,9 +218,9 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         throw std::runtime_error("MLP clBackprop2in: Input vector size mismatch.");
     }
     for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
-        if (this->weights[l].row != in || this->weights[l].col != in) {
+        if (weights[l].row != in || weights[l].col != in) {
              std::cerr << "Warning: MLP clBackprop2in: Weight mat dimensions at layer " << l << " ("
-                       << this->weights[l].row << "x" << this->weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
+                       << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
     if (layers > 0) {
@@ -233,12 +233,12 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
 
     // --- Initialize Host gweights (mat objects) ---
     for (int l = 0; l <= layers; ++l) {
-        if (this->gweights[l].mapped_data && (this->gweights[l].row == in && this->gweights[l].col == in)) {
-            std::fill_n(this->gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
-        } else if (this->gweights[l].mapped_data) {
+        if (gweights[l].mapped_data && (gweights[l].row == in && gweights[l].col == in)) {
+            std::fill_n(gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
+        } else if (gweights[l].mapped_data) {
              std::cerr << "Warning: MLP clBackprop2in: gweights mat dimensions at layer " << l << " ("
-                       << this->gweights[l].row << "x" << this->gweights[l].col << ") do not match 'in' parameter (" << in << "). Zeroing based on 'in'." << std::endl;
-            std::fill_n(this->gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
+                       << gweights[l].row << "x" << gweights[l].col << ") do not match 'in' parameter (" << in << "). Zeroing based on 'in'." << std::endl;
+            std::fill_n(gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
         } else {
             // Potentially throw if gweights[l] is not usable
         }
@@ -247,7 +247,7 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
     try {
         cl_int err; // For OpenCL error codes
         // --- Access Shared OpenCL Context ---
-        OpenCLContext& context_obj = this->clContext; // Use the member reference
+        OpenCLContext& context_obj = clContext; // Use the member reference
 
         // --- OpenCL Kernel Preparation (Retrieve from context) ---
         // Ensure these kernel names were provided during OpenCLContext initialization
@@ -294,7 +294,7 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data()));
         }
         for (int l = 0; l <= layers; ++l) {
-            CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // --- NDRange Configuration ---
@@ -354,12 +354,12 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
 
         // Copy updated weights back
         for (int l = 0; l <= layers; ++l) {
-            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // Copy calculated gradients back
         for (int l = 0; l <= layers; ++l) {
-            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_gweights[l], CL_TRUE, 0, weights_size_bytes, this->gweights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_gweights[l], CL_TRUE, 0, weights_size_bytes, gweights[l].mapped_data));
         }
 
         // Copy updated input back

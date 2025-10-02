@@ -141,28 +141,28 @@ std::vector<float> cuforwardPropagate(const std::vector<float>& initial_inputs, 
  */
 void mlp::cuForward(int in, int layers) {
     // The 'in' and 'layers' parameters are not used by cuforwardPropagate,
-    // which relies on this->num_layers and this->layer_sizes.
+    // which relies on num_layers and layer_sizes.
     // Ensure hlayers and activations are correctly sized
-    if (activations.size() != this->num_layers) activations.resize(this->num_layers);
+    if (activations.size() != num_layers) activations.resize(num_layers);
 
-    for (unsigned int i = 0; i < this->num_layers; ++i) {
-        if (hlayers[i].size() != this->layer_sizes[i]) {
-            hlayers[i].resize(this->layer_sizes[i], 0.0f);
+    for (unsigned int i = 0; i < num_layers; ++i) {
+        if (hlayers[i].size() != layer_sizes[i]) {
+            hlayers[i].resize(layer_sizes[i], 0.0f);
         }
-        if (activations[i].size() != this->layer_sizes[i]) {
-            activations[i].resize(this->layer_sizes[i], 0.0f);
+        if (activations[i].size() != layer_sizes[i]) {
+            activations[i].resize(layer_sizes[i], 0.0f);
         }
     }
 
     // hlayers should be num_layers - 1
-    if (hlayers.size() != (this->num_layers > 0 ? this->num_layers - 1 : 0)) hlayers.resize(this->num_layers > 0 ? this->num_layers - 1 : 0);
-    for (unsigned int i = 0; i < (this->num_layers > 0 ? this->num_layers - 1 : 0); ++i) {
-        if (hlayers[i].size() != this->layer_sizes[i+1]) hlayers[i].resize(this->layer_sizes[i+1], 0.0f);
+    if (hlayers.size() != (num_layers > 0 ? num_layers - 1 : 0)) hlayers.resize(num_layers > 0 ? num_layers - 1 : 0);
+    for (unsigned int i = 0; i < (num_layers > 0 ? num_layers - 1 : 0); ++i) {
+        if (hlayers[i].size() != layer_sizes[i+1]) hlayers[i].resize(layer_sizes[i+1], 0.0f);
     }
-    this->activations[0] = this->input; // Set initial activations from the network's input member
+    activations[0] = input; // Set initial activations from the network's input member
 
     try {
-        this->output = cuforwardPropagate(this->input, *this); // Pass this->input
+        output = cuforwardPropagate(input, *this); // Pass input
     }
     catch (const std::exception& e) {
         std::cerr << "Error in CUDA forward propagation: " << e.what() << std::endl;

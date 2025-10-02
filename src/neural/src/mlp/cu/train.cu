@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/mlp.hpp"
 #include <iostream>
@@ -129,73 +130,4 @@ void mlp::cuTrain(std::vector<std::vector<float>>& inputs, float& mse, int in, i
     mse = total_mse;
 }
 
-
-/**
- * @brief Validates the MLP using CUDA. This function performs forward propagation on the 
- * GPU using validation data and calculates the MSE.
- * @param in Number of input neurons.
- * @param layers Number of layers in the MLP.
- */
-void mlp::cuValidate(int in, int layers) {
-    // Assuming validation data is available in some form
-    std::vector<float> validation_input(in, 0.0);      // Replace with actual validation input
-    std::vector<float> validation_expected(in, 0.0);  // Replace with actual expected output
-    // Set the input and expected output for validation
-    input = validation_input;
-    expected = validation_expected;
-    // Perform forward propagation
-    cuForward(in, layers);
-    // Calculate mean squared error
-    float mse = 0.0;
-
-    float* d_mse;
-    CUDA_CHECK(cudaMalloc((void**)&d_mse, sizeof(float)));
-    CUDA_CHECK(cudaMemset(d_mse, 0, sizeof(float)));
-
-    float* d_expected;
-    CUDA_CHECK(cudaMalloc((void**)&d_expected, expected.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_expected, expected.data(), expected.size() * sizeof(float), cudaMemcpyHostToDevice));
-
-    float* d_output;
-    CUDA_CHECK(cudaMalloc((void**)&d_output, output.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_output, output.data(), output.size() * sizeof(float), cudaMemcpyHostToDevice));
-
-    int size = output.size();
-    int blockSize = 256;
-    int gridSize = (size + blockSize - 1) / blockSize;
-    cuMSEKernel<<<gridSize, blockSize>>>(d_expected, d_output, d_mse, size);
-    CUDA_CHECK(cudaDeviceSynchronize());
-
-    CUDA_CHECK(cudaMemcpy(&mse, d_mse, sizeof(float), cudaMemcpyDeviceToHost));
-    mse /= output.size();
-
-    CUDA_CHECK(cudaFree(d_mse));
-    CUDA_CHECK(cudaFree(d_expected));
-    CUDA_CHECK(cudaFree(d_output));
-
-    std::cout << "Validation MSE: " << mse << std::endl;
-}
-
-
-/**
- * @brief Tests the MLP using CUDA. This function performs forward propagation on 
- * the GPU using test data and outputs the results.
- * @param in Number of input neurons.
- * @param layers Number of layers in the MLP.
- */
-void mlp::cuTest(int in, int layers) {
-    // Assuming test data is available in some form
-    std::vector<float> test_input(in, 0.0);        // Replace with actual test input
-    std::vector<float> test_expected(in, 0.0);    // Replace with actual expected output
-    // Set the input and expected output for testing
-    input = test_input;
-    expected = test_expected;
-    // Perform forward propagation
-    cuForward(in, layers);
-    // Output the results
-    std::cout << "Expected " << "<-> Output" << std::endl;
-    std::cout << "Test Results:" << std::endl;
-    for (size_t i = 0; i < output.size(); ++i) {
-        std::cout << expected[i] << " <-> " << output[i] << std::endl;
-    }
-}
+#endif

@@ -22,7 +22,7 @@ void mat::set(int i, int j, float val) {
  */
 bool mat::ifsquare() const { // Added const
     // Compare the number of rows and columns - No change needed here
-    if(this->row == this->col)
+    if(row == col)
         return true;
     return false;
 }
@@ -35,8 +35,8 @@ bool mat::ifsquare() const { // Added const
 bool mat::ifsymmetric() const { // Added const
     constexpr float tolerance = std::numeric_limits<float>::epsilon() * 100; // Tolerance for float comparison
     // Check if the matrix is square
-    if(this->ifsquare()) {
-        int n = this->row; // Use row member
+    if(ifsquare()) {
+        int n = row; // Use row member
         // Check symmetry
         for(int i = 0; i < n; i++) {
             for(int j = i+1; j < n; j++) {
@@ -60,8 +60,8 @@ bool mat::ifsymmetric() const { // Added const
 bool mat::ifidentity() const { // Added const
     constexpr float tolerance = std::numeric_limits<float>::epsilon() * 100; // Tolerance for float comparison
     // Check if the matrix is square
-    if (this->ifsquare()) {
-        int n = this->row; // Use row member
+    if (ifsquare()) {
+        int n = row; // Use row member
         // Check if the matrix is the identity matrix
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
@@ -88,8 +88,8 @@ bool mat::ifidentity() const { // Added const
 bool mat::ifdiagonal() const { // Added const
     constexpr float tolerance = std::numeric_limits<float>::epsilon() * 100; // Tolerance for float comparison
     // Check if the matrix is square
-    if (this->ifsquare()) {
-        int n = this->row; // Use row member
+    if (ifsquare()) {
+        int n = row; // Use row member
         // Check if the matrix is diagonal
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
@@ -117,10 +117,10 @@ bool mat::ifdiagonal() const { // Added const
  */
 bool mat::ifupper() const { // Added const
     constexpr float tolerance = std::numeric_limits<float>::epsilon() * 100; // Tolerance for float comparison
-    int n = this->row; // Use row member (assuming square or checking relevant part)
+    int n = row; // Use row member (assuming square or checking relevant part)
     // Check if the elements below the diagonal are 0
     for (int i = 1; i < n; i++) {
-        for (int j = 0; j < i && j < this->col; j++) { // Ensure j stays within column bounds
+        for (int j = 0; j < i && j < col; j++) { // Ensure j stays within column bounds
             if (std::abs((*this)(i, j)) > tolerance) { // Use operator() and tolerance
                 // If not, return false
                 return false;
@@ -140,9 +140,9 @@ bool mat::ifupper() const { // Added const
 bool mat::iflower() const { // Added const
     constexpr float tolerance = std::numeric_limits<float>::epsilon() * 100; // Tolerance for float comparison
     // Check if elements *above* the main diagonal are zero
-    for (int i = 0; i < this->row; i++) {
+    for (int i = 0; i < row; i++) {
         // Start j from i+1 to check only elements above the diagonal
-        for (int j = i + 1; j < this->col; j++) {
+        for (int j = i + 1; j < col; j++) {
             if (std::abs((*this)(i, j)) > tolerance) {
                 // If not, return false
                 return false;
@@ -161,10 +161,10 @@ bool mat::iflower() const { // Added const
  */
 bool mat::ifskew() const { // Added const
     constexpr float tolerance = std::numeric_limits<float>::epsilon() * 100; // Tolerance for float comparison
-    if (!this->ifsquare()) {
+    if (!ifsquare()) {
         return false; // Skew-symmetric must be square
     }
-    int n = this->row; // Use row member
+    int n = row; // Use row member
     // Iterate over the matrix elements
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {

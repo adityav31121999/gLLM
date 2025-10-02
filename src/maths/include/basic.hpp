@@ -1,4 +1,3 @@
-
 // basic.hpp: header source of basic library
 #ifndef BASIC_HPP
 #define BASIC_HPP 1
@@ -47,6 +46,7 @@ float vdotv2scal(std::vector<float> , std::vector<float>);
 float MAE(std::vector<float>&, std::vector<float>&);
 float MSE(std::vector<float>&, std::vector<float>&);
 float crossEntropy(std::vector<float>&, std::vector<float>&);
+float binaryCrossEntropy(std::vector<float>&, std::vector<float>&);
 float sum(std::vector<float>);
 float sum(std::vector<std::vector<float>>);
 float product(std::vector<float>);
@@ -72,10 +72,12 @@ std::vector<std::vector<float>> power(std::vector<std::vector<float>>, float);
 
 float sigmoid(const float& x);
 float sigmoidder(const float& x);
+float softsign(const float& x);
 std::vector<float> sigmoid(const std::vector<float>& x);
 std::vector<float> sigmoidder(const std::vector<float>& x);
 std::vector<std::vector<float>> sigmoid(const std::vector<std::vector<float>>& x);
 std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>& x);
+std::vector<float> softmax(const std::vector<float>& x);
 std::vector<float> softmax(const std::vector<float>& x, float temp);
 std::vector<float> softmaxder(const std::vector<float>& x, float temp);
 std::vector<std::vector<float>> softmax(const std::vector<std::vector<float>>& x, float temp);
@@ -84,12 +86,8 @@ float ReLU(const float& x);
 float ReLUder(const float& x);
 std::vector<float> ReLU(const std::vector<float>& x);
 std::vector<float> ReLUder(const std::vector<float>& x);
-std::vector<std::vector<float>> ReLU(const std::vector<std::vector<float>>& x, int& t);
-std::vector<std::vector<float>> ReLUder(const std::vector<std::vector<float>>& x, int& t);
 std::vector<float> LOTA(const std::vector<float>& y);
 std::vector<float> LOTAder(const std::vector<float>& y);
-std::vector<std::vector<float>> LOTA(const std::vector<std::vector<float>>& y, int& t, bool& attentionType);
-std::vector<std::vector<float>> LOTAder(const std::vector<std::vector<float>>& y, int& t, bool& attentionType);
 
 // weights.cpp
 
@@ -102,6 +100,41 @@ void Random(std::vector<std::vector<float>>);
 #ifdef USE_CUDA
 
 #include <cuda_runtime.h>
+
+/**
+ * @brief CUDA device function to compute the dot product of two vectors.
+ * @param[in] vec1 Device pointer to the first vector.
+ * @param[in] vec2 Device pointer to the second vector.
+ * @param[in] dim The dimension (number of elements) of the vectors.
+ * @return The scalar dot product of vec1 and vec2.
+ */
+__device__ inline float cuComputeDot(const float* vec1, const float* vec2, int dim) {
+    float dot_product = 0.0f;
+    for (int k = 0; k < dim; ++k) {
+        dot_product += vec1[k] * vec2[k];
+    }
+    return dot_product;
+}
+
+/**
+ * @brief CUDA device function to compute the quadratic form vec1 * matrix * vec2^T.
+ * @param[in] vec1 Device pointer to the first vector (treated as a row vector, size dim).
+ * @param[in] vec2 Device pointer to the second vector (treated as a column vector, size dim).
+ * @param[in] matrix Device pointer to the matrix (row-major, dim x dim).
+ * @param[in] dim The dimension of the vectors and the square matrix.
+ * @return The scalar result of vec1 * matrix * vec2^T.
+ */
+__device__ inline float cuComputeDotvmv(const float* vec1, const float* vec2, const float* matrix, int dim)
+{
+    float final_dot_product = 0.0f;
+    for (int i = 0; i < dim; ++i) {
+        float inner_sum = 0.0f;
+        const float* matrix_row_i = matrix + i * dim;
+        inner_sum = cuComputeDot(vec1, matrix_row_i, dim); // Re-use cuComputeDot
+        final_dot_product += inner_sum * vec2[i];
+    }
+    return final_dot_product;
+}
 
 __global__ void cuSigmoid(float x, float* result);
 __global__ void cuSigmoid(float* x, float* out, int size);
@@ -124,7 +157,6 @@ __global__ void cuLOTAder(float* y, float* out, int size);
 __global__ void cuLOTAder(float* y, float* out, int rows, int cols);
 __global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, bool attentionType);
 
-
 __global__ void operator_add(const float* a, const float* b, float* result, int size);
 __global__ void operator_sub(const float* a, const float* b, float* result, int size);
 __global__ void operator_mul(const float* a, float scalar, float* result, int size);
@@ -145,11 +177,12 @@ __global__ void sum_2d(const float* a, float* result, int rows, int cols);
 __global__ void product(const float* a, float* result, int size);
 __global__ void product_2d(const float* a, float* result, int rows, int cols);
 
-__device__ float compute_dot_product(const float* vec1, const float* vec2, int dim);
 __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
 __global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
 
-#elif USE_OPENCL
+#endif
+
+#ifdef USE_OPENCL
 
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)
@@ -435,4 +468,5 @@ public:
 };
 
 #endif
+
 #endif

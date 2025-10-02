@@ -54,16 +54,16 @@ void swap_rows_in_mapped_memory(mat& m, int r1, int r2) {
  */
 mat mat::gaussjordan() const {
     // Check if the matrix is square (assuming ifsquare() is updated)
-    if (!this->ifsquare()) {
+    if (!ifsquare()) {
         throw std::runtime_error("Gauss-Jordan inversion requires a square matrix.");
     }
     // Determinant check is implicitly handled by checking for zero pivots later.
     // Explicit det() call might be expensive and redundant here.
-    // if (std::abs(this->det()) < 1e-9) { // Assuming det() is updated
+    // if (std::abs(det()) < 1e-9) { // Assuming det() is updated
     //     throw std::runtime_error("Matrix is singular, cannot calculate inverse.");
     // }
 
-    int n = this->row;
+    int n = row;
     mat d = *this; // Create a working copy using the copy constructor (new temp file)
     mat b(n);      // Create the identity matrix (new temp file)
 

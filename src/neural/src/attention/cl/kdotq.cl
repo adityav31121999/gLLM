@@ -1,3 +1,43 @@
+
+__kernel void kernelComputeKQall(
+    __global const float* tokenMatrix,  // token matrix or EV of size local_context x embedding_dim
+    __global const float* KQmatrix,     // weight Q/K matrix of size mat_heights x embedding_dim
+    __global float* KQoutputMatrix,     // query/key matrix of size local_context x mat_heights
+    int tokenCount,                     // number of rows in tokenMatrix
+    int dim,                            // embedding dimension (must be divisible by 4)
+    int height                          // number of rows in KQmatrix
+    )
+{
+    // Global work-item ID corresponds to the row index in tokenMatrix (token_idx)
+    int token_idx = get_global_id(0);
+    // Global work-item ID corresponds to the column index in KQoutputMatrix (kq_height_idx)
+    int kq_height_idx = get_global_id(1);
+    
+    // Ensure dim is a multiple of 4 for float4 operations
+    // This check should ideally be done on the host side.
+    // If dim is not a multiple of 4, the behavior might be incorrect or lead to out-of-bounds access.
+    // For simplicity, we assume dim is a multiple of 4 here.
+    int dim_float4 = dim / 4;
+
+    // Check bounds for the current token and KQ matrix height
+    if (token_idx < tokenCount && kq_height_idx < height) {
+        // Get the current token embedding vector
+        __global const float4* current_token_embedding_f4 = (__global const float4*)(tokenMatrix + token_idx * dim);
+        // Get the current row from the KQmatrix (projection matrix)
+        __global const float4* current_kq_matrix_row_f4 = (__global const float4*)(KQmatrix + kq_height_idx * dim);
+
+        // Calculate dot product: dot(current_token_embedding, current_kq_matrix_row)
+        float dot_product = 0.0f;
+        for (int j = 0; j < dim_float4; ++j) {
+            float4 token_vec = current_token_embedding_f4[j];
+            float4 kq_vec = current_kq_matrix_row_f4[j];
+            dot_product += dot(token_vec, kq_vec);
+        }
+
+        KQoutputMatrix[token_idx * height + kq_height_idx] = dot_product;
+    }
+}
+
 /**------------------------------------TRAINING------------------------------------**/
 
 __kernel void kernelKdotQforSelf_train(__global float* d_kdotq, __global const float* d_keys, __global const float* d_querys,
@@ -48,14 +88,14 @@ __kernel void kernelKdotQforCross_train(__global float* d_kdotq, __global const 
 /**------------------------------------INFERENCE------------------------------------**/
 
 __kernel void kernelKdotQ_Block1_Self_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
-                                                int prompt_start_index, int prompt_len, int context_len, int kdotq_width,
+                                                int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width,
                                                 int embedding_dim, float inv_scaling)
 {
     int j = get_global_id(0);
     int i_offset = get_global_id(1);
-    int i = prompt_start_index + i_offset;
+    int i = sequence1_start_index + i_offset;
 
-    if (i_offset < prompt_len && j < context_len && j <= i) {
+    if (i_offset < sequence1_len && j < context_len && j <= i) {
         __global const float* q_vec = d_tokenEmbed + i * embedding_dim;
         __global const float* k_vec = d_tokenEmbed + j * embedding_dim;
 
@@ -76,14 +116,14 @@ __kernel void kernelKdotQ_Block1_Self_Inference(__global float* d_kdotq, __globa
 }
 
 __kernel void kernelKdotQ_Block1_Cross_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
-                                                 int prompt_start_index, int prompt_len, int context_len, int kdotq_width,
+                                                 int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width,
                                                  int embedding_dim, float inv_scaling)
 {
     int j = get_global_id(0);
     int i_offset = get_global_id(1);
-    int i = prompt_start_index + i_offset;
+    int i = sequence1_start_index + i_offset;
 
-    if (i_offset < prompt_len && j < context_len) {
+    if (i_offset < sequence1_len && j < context_len) {
         __global const float* q_vec = d_tokenEmbed + i * embedding_dim;
         __global const float* k_vec = d_tokenEmbed + j * embedding_dim;
 
@@ -104,14 +144,14 @@ __kernel void kernelKdotQ_Block1_Cross_Inference(__global float* d_kdotq, __glob
 }
 
 __kernel void kernelKdotQ_BlockN_Self_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
-                                                __global const float* d_M, int prompt_start_index_in_block, int prompt_len,
+                                                __global const float* d_M, int sequence1_start_index_in_block, int sequence1_len,
                                                 int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling)
 {
     int j = get_global_id(0);
     int i_offset = get_global_id(1);
-    int i = prompt_start_index_in_block + i_offset;
+    int i = sequence1_start_index_in_block + i_offset;
 
-    if (i_offset < prompt_len && j < context_len_in_block && j <= i) {
+    if (i_offset < sequence1_len && j < context_len_in_block && j <= i) {
         __global const float* q_vec = d_tokForBlock + i * embedding_dim;
         __global const float* k_vec = d_EVp + j * embedding_dim; // EVp is used as the 'key' vector source
 
@@ -132,14 +172,14 @@ __kernel void kernelKdotQ_BlockN_Self_Inference(__global float* d_kdotq, __globa
 }
 
 __kernel void kernelKdotQ_BlockN_Cross_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
-                                                 __global const float* d_M, int prompt_start_index_in_block, int prompt_len,
+                                                 __global const float* d_M, int sequence1_start_index_in_block, int sequence1_len,
                                                  int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling)
 {
     int j = get_global_id(0);
     int i_offset = get_global_id(1);
-    int i = prompt_start_index_in_block + i_offset;
+    int i = sequence1_start_index_in_block + i_offset;
 
-    if (i_offset < prompt_len && j < context_len_in_block) {
+    if (i_offset < sequence1_len && j < context_len_in_block) {
         __global const float* q_vec = d_tokForBlock + i * embedding_dim;
         __global const float* k_vec = d_EVp + j * embedding_dim; // EVp is used as the 'key' vector source
 
@@ -156,14 +196,5 @@ __kernel void kernelKdotQ_BlockN_Cross_Inference(__global float* d_kdotq, __glob
 
         int kdotq_index = i * kdotq_width + j;
         d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
-    }
-}
-
-__kernel void kernelComputeGradKdotQ_LOTA(__global const float* grad_head, __global const float* lota_derivative,
-                                          __global float* grad_kdotq, float scaling_factor, int size)
-{
-    int idx = get_global_id(0);
-    if (idx < size) {
-        grad_kdotq[idx] = (fabs(scaling_factor) > 1e-9f) ? (grad_head[idx] * lota_derivative[idx] / scaling_factor) : 0.0f;
     }
 }

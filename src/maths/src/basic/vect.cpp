@@ -1,4 +1,3 @@
-
 // vect.cpp: all vector related functions
 #include "include/basic.hpp"
 #include <stdexcept>
@@ -701,30 +700,78 @@ float MSE(std::vector<float>& a, std::vector<float>& b) {
 
 /**
  * @brief Calculates the Cross-Entropy loss between two probability distributions.
- * @details This function computes the Cross-Entropy loss, which is commonly used as a loss function
- * in classification tasks. It measures the difference between the predicted probability distribution
- * (y_pred) and the true probability distribution (y_true). The probabilities are obtained via
- * applying LOTA to both vectors.
- * The formula for Cross-Entropy is: -sum(y_true[i] * log(y_pred[i]))
+ * @details Computes the Cross-Entropy loss for classification tasks, measuring the difference
+ * between the true probability distribution (y_true, typically one-hot encoded) and the
+ * predicted probability distribution (y_pred). The formula is:
+ * L = -log(y_pred[i]) for i = expected index (after softmax)
  * A small epsilon is added to y_pred to prevent taking the logarithm of zero.
- * @param[in] a The true values.
- * @param[in] b The predicted values.
- * @return The Cross-Entropy loss.
+ * @param[in] y_true The true values (one-hot encoded).
+ * @param[in] y_pred The predicted values (logits, softmax will be applied internally).
+ * @return The Cross-Entropy Loss (positive).
+ * @throws std::runtime_error if vector sizes do not match or y_true is not a valid one-hot vector.
+ */
+float crossEntropy(std::vector<float>& y_true, std::vector<float>& y_pred) {
+    if (y_true.size() != y_pred.size()) {
+        throw std::runtime_error("crossEntropy: Vector sizes do not match: " + 
+                                 std::to_string(y_true.size()) + " vs " + 
+                                 std::to_string(y_pred.size()));
+    }
+
+    std::vector<float> y_pred_softmax = softmax(y_pred);
+    float loss = 0.0f;
+    float epsilon = 1e-15f; // Prevent log(0)
+    bool is_one_hot = false;
+    int one_hot_index = -1;
+
+    // Validate y_true is one-hot (one element is 1, others are 0)
+    for (size_t i = 0; i < y_true.size(); ++i) {
+        if (y_true[i] == 1.0f) {
+            if (is_one_hot) {
+                throw std::runtime_error("crossEntropy: y_true is not a valid one-hot vector (multiple 1s)");
+            }
+            is_one_hot = true;
+            one_hot_index = i;
+        } else if (y_true[i] != 0.0f) {
+            throw std::runtime_error("crossEntropy: y_true is not a valid one-hot vector (non-zero, non-one value)");
+        }
+    }
+    if (!is_one_hot) {
+        throw std::runtime_error("crossEntropy: y_true is not a valid one-hot vector (no 1 found)");
+    }
+
+    // Compute loss for the one-hot index
+    loss = -std::logf(y_pred_softmax[one_hot_index] + epsilon);
+    return loss;
+}
+
+/**
+ * @brief Calculates the Binary Cross-Entropy loss between two probability distributions.
+ * @details This function computes the Binary Cross-Entropy loss, which is commonly used as a loss function
+ * in binary classification tasks. It measures the difference between the predicted probability distribution
+ * (y_pred, after sigmoid) and the true probability distribution (y_true, should be in [0,1]).
+ * The formula for Binary Cross-Entropy is: 
+ *  L = -1 * sum(y_true[i] * log(y_pred[i]) + (1 - y_true[i]) * log(1 - y_pred[i])) / size()
+ * A small epsilon is used to clamp probabilities and prevent taking the logarithm of zero.
+ * @param[in] a The true values (should be in range [0, 1]).
+ * @param[in] b The predicted values (logits, sigmoid will be applied internally).
+ * @return The Binary Cross-Entropy loss
  * @throws std::runtime_error if the vector sizes do not match.
  */
-float crossEntropy(std::vector<float>& a, std::vector<float>& b) {
+float binaryCrossEntropy(std::vector<float>& a, std::vector<float>& b) {
     if (a.size() != b.size()) {
-        throw std::runtime_error("crossEntropy: Vector sizes do not match.");
+        throw std::runtime_error("binaryCrossEntropy: Vector sizes do not match: " + std::to_string(a.size()) + " vs " + std::to_string(b.size()));
     }
-    std::vector<float> y_true = LOTA(a);
-    std::vector<float> y_pred = LOTA(b);
+    std::vector<float> y_true = a;
+    std::vector<float> y_pred = sigmoid(b);
     float loss = 0.0f;
     float epsilon = 1e-15f; // Small value to prevent log(0)
     for (size_t i = 0; i < y_true.size(); ++i) {
-        // Ensure y_pred[i] is not zero before taking log
-        loss -= y_true[i] * std::log(std::max<float>(y_pred[i], epsilon));
+        // Clamp predictions to [epsilon, 1-epsilon] to avoid log(0) or log(negative)
+        float pred_clamped = std::max<float>(epsilon, std::min<float>(1.0f - epsilon, y_pred[i]));
+        float l = y_true[i] * std::logf(pred_clamped) + (1.0f - y_true[i]) * std::logf(1.0f - pred_clamped);
+        loss += l;
     }
-    return loss;
+    return -1.0f*loss/static_cast<float>(y_true.size());
 }
 
 /**
@@ -1021,4 +1068,68 @@ std::vector<std::vector<float>> hadamard(std::vector<std::vector<float>> a, std:
     }
     // Return the resulting Hadamard product matrix
     return c;
+}
+
+/**
+ * @brief Calculates the value of a periodic function similar to sin(x).
+ *
+ * This function models f(x) = -((v - u) / 2) * sin(x) + (v + u) / 2.
+ * It is designed to have a minimum value 'u' at x = PI/2 and a maximum
+ * value 'v' at x = 3*PI/2. The value at x = 0 will be the midline (u+v)/2.
+ *
+ * @param x The input value (angle in radians).
+ * @param u The desired minimum value of the function.
+ * @param v The desired maximum value of the function.
+ * @return The calculated value of the function at x.
+ */
+double periodicFunction(double x, double u, double v) {
+    // Amplitude of the function
+    double amplitude = (v - u) / 2.0;
+
+    // Vertical shift (midline) of the function
+    double midline = (u + v) / 2.0;
+
+    // The function f(x) = -A * sin(x) + D
+    return -amplitude * std::sin(x) + midline;
+}
+
+/**
+ * @brief Creates a periodic cosine function with specified bounds and an initial value.
+ *
+ * This function models f(x) = A * cos(x - C) + D, where the parameters A, C,
+ * and D are determined by the user-defined min, max, and initial values.
+ *
+ * @param x The input value (angle in radians).
+ * @param u The desired minimum value of the function.
+ * @param v The desired maximum value of the function.
+ * @param a The desired value of the function at x = 0 (i.e., f(0) = a).
+ * @return The calculated value of the function at x. Returns NaN if 'a' is out of bounds.
+ */
+double generalizedCosine(double x, double u, double v, double a) {
+    // --- Input Validation ---
+    // The value 'a' must be between the minimum (u) and maximum (v).
+    // We add a small epsilon for floating-point comparison.
+    if (a < u - 1e-9 || a > v + 1e-9) {
+        std::cerr << "Error: The value 'a' (" << a
+                  << ") must be between u (" << u
+                  << ") and v (" << v << ")." << std::endl;
+        return std::numeric_limits<double>::quiet_NaN(); // Return Not-a-Number
+    }
+
+    // Step 1: Calculate Amplitude (A) and Midline (D)
+    double amplitude = (v - u) / 2.0;
+    double midline = (u + v) / 2.0;
+
+    // Step 2: Calculate the required Phase Shift (C)
+    double cos_c_argument = (a - midline) / amplitude;
+
+    // Clamp the argument to the valid range [-1, 1] to avoid domain errors with acos
+    // due to potential floating point inaccuracies.
+    if (cos_c_argument > 1.0) cos_c_argument = 1.0;
+    if (cos_c_argument < -1.0) cos_c_argument = -1.0;
+    
+    double phase_shift_C = std::acos(cos_c_argument);
+
+    // Step 3: Calculate the final function value
+    return amplitude * std::cos(x - phase_shift_C) + midline;
 }

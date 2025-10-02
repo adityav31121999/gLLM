@@ -32,11 +32,11 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
     }
     for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
         // Check if mat dimensions are consistent with 'in'
-        if (this->weights[l].row != in || this->weights[l].col != in) {
+        if (weights[l].row != in || weights[l].col != in) {
              // This indicates a mismatch between 'in' and actual mat dimensions.
              // Depending on strictness, could throw or log. For now, proceed with 'in' for buffer sizes.
              std::cerr << "Warning: MLP clBackwithL1: Weight mat dimensions at layer " << l << " ("
-                       << this->weights[l].row << "x" << this->weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
+                       << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
      if (layers > 0) {
@@ -51,7 +51,7 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
     try {
         cl_int err; // For OpenCL error codes
         // --- Access Shared OpenCL Context ---
-        OpenCLContext& context_obj = this->clContext; // Use the member reference
+        OpenCLContext& context_obj = clContext; // Use the member reference
 
         // --- OpenCL Kernel Preparation (Retrieve from context) ---
         // Ensure these kernel names were provided during OpenCLContext initialization
@@ -96,7 +96,7 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         }
         for (int l = 0; l <= layers; ++l) {
             // Use mapped_data directly
-            const mat& weights_l_mat = this->weights[l];
+            const mat& weights_l_mat = weights[l];
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights_l_mat.mapped_data));
         }
 
@@ -145,7 +145,7 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
 
             // Read updated weights back to host for this layer
             // Read directly into the mapped_data of the mat object
-            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+            CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
     }
      catch (const std::out_of_range& oor) {

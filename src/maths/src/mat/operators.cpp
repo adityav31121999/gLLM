@@ -94,8 +94,8 @@ mat& mat::operator=(const std::vector<std::vector<float>>& b) {
     int vec_cols = (vec_rows > 0 && !b[0].empty()) ? b[0].size() : 0;
 
     // Check if the dimensions of the two matrices are the same.
-    if(this->row != vec_rows || this->col != vec_cols) {
-        throw std::runtime_error("Matrix and vector dimensions do not match for assignment.");
+    if(row != vec_rows || col != vec_cols) {
+        throw std::runtime_error("Matrix and vector dimensions do not match for assignment: " + std::to_string(row) + "x" + std::to_string(col) + " vs " + std::to_string(vec_rows) + "x" + std::to_string(vec_cols) + "." );
     }
     if (!mapped_data) {
         throw std::runtime_error("Cannot assign vector to uninitialized/unmapped matrix.");
@@ -110,7 +110,8 @@ mat& mat::operator=(const std::vector<std::vector<float>>& b) {
 
 /**
  * @brief provide values to row from vector
- * @param i 0-based index of row
+ * @param vec value vector be placed in row
+ * @param i 0-based index of row in matrix
  */
 void mat::addRow(const std::vector<float> & vec, int i)
 {
@@ -173,11 +174,11 @@ std::vector<std::vector<float>> mat::make2dVector(const mat &other, int row, int
  */
 mat mat::operator+(const mat& b) const {
     // Check if the dimensions of the two matrices are the same.
-    if(this->row != b.row || this->col != b.col) {
+    if(row != b.row || col != b.col) {
         throw std::runtime_error("Matrix dimensions do not match for addition.");
     }
     // Create a new matrix for the result (allocates temp file and maps)
-    mat c(this->row, this->col);
+    mat c(row, col);
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
             c(i, j) = (*this)(i, j) + b(i, j); // Use operator() for access
@@ -201,11 +202,11 @@ mat mat::operator+(const std::vector<std::vector<float>>& b) const {
     int vec_cols = (vec_rows > 0 && !b[0].empty()) ? b[0].size() : 0;
 
     // Check if the dimensions of the two matrices are the same.
-    if(this->row != vec_rows || this->col != vec_cols) {
+    if(row != vec_rows || col != vec_cols) {
         throw std::runtime_error("Matrix and vector dimensions do not match for addition.");
     }
     // Create a new matrix for the result
-    mat c(this->row, this->col);
+    mat c(row, col);
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
             c(i, j) = (*this)(i, j) + b[i][j];
@@ -226,11 +227,11 @@ mat mat::operator+(const std::vector<std::vector<float>>& b) const {
  */
 mat mat::operator-(const mat& b) const {
     // Check if the dimensions of the two matrices are the same.
-    if(this->row != b.row || this->col != b.col) {
+    if(row != b.row || col != b.col) {
         throw std::runtime_error("Matrix dimensions do not match for subtraction.");
     }
     // Create a new matrix for the result
-    mat c(this->row, this->col);
+    mat c(row, col);
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
             c(i, j) = (*this)(i, j) - b(i, j);
@@ -253,11 +254,11 @@ mat mat::operator-(const std::vector<std::vector<float>>& b) const {
     int vec_rows = b.empty() ? 0 : b.size();
     int vec_cols = (vec_rows > 0 && !b[0].empty()) ? b[0].size() : 0;
 
-    if(this->row != vec_rows || this->col != vec_cols) {
+    if(row != vec_rows || col != vec_cols) {
         throw std::runtime_error("Matrix and vector dimensions do not match for subtraction.");
     }
     // Create a new matrix for the result
-    mat c(this->row, this->col);
+    mat c(row, col);
     for (int i = 0; i < row; ++i) {
         for (int j = 0; j < col; ++j) {
             c(i, j) = (*this)(i, j) - b[i][j];
@@ -277,7 +278,7 @@ mat mat::operator-(const std::vector<std::vector<float>>& b) const {
  */
 mat mat::operator*(float b) const {
     // Create a new matrix with the same dimensions as the input matrix
-    mat c(this->row, this->col);
+    mat c(row, col);
     // Iterate over each element in the input matrix and multiply it by the scalar
     for(int i = 0; i < row; i++) {
         for(int j = 0; j < col; j++) {
@@ -327,20 +328,20 @@ void mat::mult_A_Bt(const mat& a, const mat& b)
  */
 mat mat::operator*(const mat& a) const {
     // Check if dimensions are compatible for multiplication
-    if (this->col != a.row) {
+    if (col != a.row) {
         throw std::runtime_error("Matrix dimensions are incompatible for multiplication.");
     }
 
     // Create the result matrix (allocates temp file and maps)
     // Initialize with zeros
-    mat c(this->row, a.col);
+    mat c(row, a.col);
     std::fill_n(c.mapped_data, static_cast<size_t>(c.row) * c.col, 0.0f);
 
     // Perform standard matrix multiplication
-    for (int i = 0; i < this->row; ++i) {
+    for (int i = 0; i < row; ++i) {
         for (int j = 0; j < a.col; ++j) {
             float sum = 0.0f;
-            for (int k = 0; k < this->col; ++k) { // this->col == a.row
+            for (int k = 0; k < col; ++k) { // col == a.row
                 sum += (*this)(i, k) * a(k, j);
             }
             c(i, j) = sum;
@@ -369,7 +370,7 @@ mat mat::operator/(const mat& other) const {
     if (!other.ifsquare()) { // Assumes ifsquare() is updated
          throw std::runtime_error("Matrix division requires the divisor matrix to be square.");
     }
-    if (this->col != other.row) { // Check compatibility for A * B^-1
+    if (col != other.row) { // Check compatibility for A * B^-1
         throw std::runtime_error("Matrix dimensions are incompatible for division (A.cols != B.rows).");
     }
     mat other_inv = other.gaussjordan(); // Calculate inverse of 'other' (B^-1)
@@ -387,7 +388,7 @@ mat mat::operator/(const mat& other) const {
  * @throws throws error if the dimensions of the two matrices are not the same.
  */
 mat& mat::operator+=(const mat& other) {
-    if (this->row != other.row || this->col != other.col) {
+    if (row != other.row || col != other.col) {
         throw std::runtime_error("Matrix dimensions do not match for addition assignment.");
     }
     for (int i = 0; i < row; i++) {
@@ -408,7 +409,7 @@ mat& mat::operator+=(const mat& other) {
  * @throws throws error if the dimensions of the two matrices are not the same.
  */
 mat& mat::operator-=(const mat& other) {
-    if (this->row != other.row || this->col != other.col) {
+    if (row != other.row || col != other.col) {
         throw std::runtime_error("Matrix dimensions do not match for subtraction assignment.");
     }
     for (int i = 0; i < row; i++) {
@@ -432,7 +433,7 @@ mat& mat::operator+=(const std::vector<std::vector<float>>& other) {
     int vec_rows = other.empty() ? 0 : other.size();
     int vec_cols = (vec_rows > 0 && !other[0].empty()) ? other[0].size() : 0;
 
-    if (this->row != vec_rows || this->col != vec_cols) {
+    if (row != vec_rows || col != vec_cols) {
         throw std::runtime_error("Matrix and vector dimensions do not match for addition assignment.");
     }
     for (int i = 0; i < row; i++) {
@@ -456,7 +457,7 @@ mat& mat::operator-=(const std::vector<std::vector<float>>& other) {
     int vec_rows = other.empty() ? 0 : other.size();
     int vec_cols = (vec_rows > 0 && !other[0].empty()) ? other[0].size() : 0;
 
-    if (this->row != vec_rows || this->col != vec_cols) {
+    if (row != vec_rows || col != vec_cols) {
         throw std::runtime_error("Matrix and vector dimensions do not match for subtraction assignment.");
     }
     for (int i = 0; i < row; i++) {
@@ -497,16 +498,16 @@ mat& mat::operator*=(const mat& other) {
     // Standard compound assignment A *= B requires A = A * B.
     // This usually requires A to be square and B to have compatible dimensions,
     // or it changes the dimensions of A, which is complex for mapped files.
-    if (this->col != other.row) {
+    if (col != other.row) {
         throw std::runtime_error("Matrix dimensions are incompatible for multiplication assignment.");
     }
     // Calculate result = (*this) * other
-    mat result(this->row, other.col); // result matrix (new temporary file)
+    mat result(row, other.col); // result matrix (new temporary file)
     std::fill_n(result.mapped_data, static_cast<size_t>(result.row) * result.col, 0.0f);
 
-    for (int i = 0; i < this->row; i++) {
+    for (int i = 0; i < row; i++) {
         for (int j = 0; j < other.col; j++) {
-            for (int k = 0; k < this->col; k++) {
+            for (int k = 0; k < col; k++) {
                 result(i, j) += (*this)(i, k) * other(k, j);
             }
         }
@@ -547,11 +548,11 @@ mat& mat::operator/=(float value) {
 mat& mat::operator/=(const mat& other) {
     // This performs element-wise division assignment in the original code.
     // A /= B usually means A = A * B^-1.
-    if (this->row != other.row || this->col != other.col) {
+    if (row != other.row || col != other.col) {
         throw std::runtime_error("Matrix dimensions do not match for element-wise division assignment.");
     }
-    for (int i = 0; i < this->row; i++) {
-        for (int j = 0; j < this->col; j++) {
+    for (int i = 0; i < row; i++) {
+        for (int j = 0; j < col; j++) {
             float divisor = other(i, j);
             if (std::abs(divisor) < 1e-9) {
                 throw std::runtime_error("Element-wise division by zero.");
@@ -570,13 +571,13 @@ mat& mat::operator/=(const mat& other) {
  * @throws throws error when the matrix is not square.
  */
 void mat::transpose_inplace() { // Renamed function
-    if(!this->ifsquare()) { // Added this->
+    if(!ifsquare()) { // Added 
         throw std::runtime_error("In-place transpose requires a square matrix!");
     }
     else {
     // Iterate over the upper triangular part of the matrix
-        for(int i = 0; i < this->row; ++i) { // Added this->
-            for(int j = i + 1; j < this->col; ++j) { // Added this-> (col == row here)
+        for(int i = 0; i < row; ++i) { // Added 
+            for(int j = i + 1; j < col; ++j) { // Added (col == row here)
                  std::swap((*this)(i, j), (*this)(j, i)); // Use operator()
             }
         }
@@ -613,7 +614,7 @@ std::vector<float> matmul(const mat& a, const std::vector<float>& b) {
  */
 float mat::trace() const {
     // Check if the matrix is square
-    if(!this->ifsquare()) { // Assumes ifsquare() is updated
+    if(!ifsquare()) { // Assumes ifsquare() is updated
         throw std::invalid_argument("Matrix is not square");
     }
     float tr = 0;  // Initialize the trace to 0

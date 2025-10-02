@@ -47,14 +47,14 @@ void mlp::cuBackwithL1(int in, int layers, float learning) {
             
             // Access weights for current layer
             // Assuming weights[l] is an 'in x in' matrix for this function's logic.
-            const mat& current_weights_mat = this->weights[l];
+            const mat& current_weights_mat = weights[l];
             // Ensure mat dimensions are consistent with 'in' if this function is to be robust.
-            // For now, we proceed assuming this->weights[l].row == in and this->weights[l].col == in.
+            // For now, we proceed assuming weights[l].row == in and weights[l].col == in.
             size_t weight_matrix_bytes = static_cast<size_t>(in) * in * sizeof(float);
 
             // Calculate deltas for current layer using the specific formula from gweights
             std::vector<float> layer_deltas(in);
-            const mat& current_gweights_mat = this->gweights[l];
+            const mat& current_gweights_mat = gweights[l];
             // Ensure gweights mat dimensions are consistent with 'in'.
             for (int i = 0; i < in; i++) {
                 // Accessing gweights[l].mapped_data[row * num_cols + col]
@@ -86,8 +86,8 @@ void mlp::cuBackwithL1(int in, int layers, float learning) {
             CUDA_CHECK(cudaGetLastError());
 
             // Copy updated weights back to host
-            // The mat object this->weights[l] will receive the updated flat data.
-            CUDA_CHECK(cudaMemcpy(this->weights[l].mapped_data, d_weights,
+            // The mat object weights[l] will receive the updated flat data.
+            CUDA_CHECK(cudaMemcpy(weights[l].mapped_data, d_weights,
                                  weight_matrix_bytes, cudaMemcpyDeviceToHost));
 
 

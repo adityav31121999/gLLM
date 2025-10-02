@@ -1,9 +1,9 @@
 #ifdef USE_CUDA
-
 // vector operations in cuda programs
 #include "include/basic.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
+
 
 /**
  * 

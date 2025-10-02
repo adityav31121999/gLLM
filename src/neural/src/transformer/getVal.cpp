@@ -36,19 +36,19 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
     if (blockCount <= 0) {
         throw std::runtime_error("getAllValues: blockCount must be greater than 0.");
     }
-    if (t.empty()) {
+    if (blocks.empty()) {
          throw std::runtime_error("getAllValues: Transformer block vector 't' is empty. Initialize it first.");
     }
-    if (t[0].b.empty() || t[0].b[0].empty()) {
-         throw std::runtime_error("getAllValues: Transformer block structure t[0].b not initialized (vector<vector<attention>> is empty).");
+    if (blocks[0].b.empty() || blocks[0].b[0].empty()) {
+         throw std::runtime_error("getAllValues: Transformer block structure blocks[0].b not initialized (vector<vector<attention>> is empty).");
     }
-    if (this->x <= 0 || this->y <= 0 || this->d <= 0 || this->h <= 0 || this->l <= 0) {
+    if (x <= 0 || y <= 0 || d <= 0 || h <= 0 || l <= 0) {
         throw std::runtime_error("getAllValues: Transformer dimensions (x, y, d, h, l) must be positive.");
     }
-    if (static_cast<size_t>(this->x) != t[0].b.size() || static_cast<size_t>(this->y) != t[0].b[0].size()) {
-        std::cerr << "Warning: getAllValues: Transformer dimensions (x,y) = (" << this->x << "," << this->y
-                  << ") do not match allocated block structure size (" << t[0].b.size() << ","
-                  << (t[0].b.empty() ? 0 : t[0].b[0].size()) // Avoid accessing b[0] if b is empty
+    if (static_cast<size_t>(x) != blocks[0].b.size() || static_cast<size_t>(y) != blocks[0].b[0].size()) {
+        std::cerr << "Warning: getAllValues: Transformer dimensions (x,y) = (" << x << "," << y
+                  << ") do not match allocated block structure size (" << blocks[0].b.size() << ","
+                  << (blocks[0].b.empty() ? 0 : blocks[0].b[0].size()) // Avoid accessing b[0] if b is empty
                   << "). Ensure consistency." << std::endl;
     }
 
@@ -67,17 +67,17 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
             }
 
             if (tm_idx < 2) {
-                current_rows = this->d;
-                current_cols = this->h;
+                current_rows = d;
+                current_cols = h;
             }
             else {
-                current_rows = this->h;
-                current_cols = this->d;
+                current_rows = h;
+                current_cols = d;
             }
 
             size_t mat_element_count = static_cast<size_t>(current_rows) * current_cols;
             size_t mat_size_bytes = mat_element_count * sizeof(float);
-            size_t mats_per_block = static_cast<size_t>(this->x) * this->y;
+            size_t mats_per_block = static_cast<size_t>(x) * y;
             size_t block_offset_bytes = static_cast<size_t>(blockCount - 1) * mats_per_block * mat_size_bytes;
 
             file.seekg(block_offset_bytes, std::ios::beg);
@@ -86,8 +86,8 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
                 throw std::runtime_error("getAllValues: Failed to seek in training matrix file: " + file_path + " to offset " + std::to_string(block_offset_bytes));
             }
 
-            for (int i = 0; i < this->x; ++i) {
-                for (int j = 0; j < this->y; ++j) {
+            for (int i = 0; i < x; ++i) {
+                for (int j = 0; j < y; ++j) {
                     mat temp_mat(current_rows, current_cols);
 
                     for (int row_idx = 0; row_idx < current_rows; ++row_idx) {
@@ -100,7 +100,7 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
                                                     ", " + std::to_string(j) + "), row " + std::to_string(row_idx) + " from " + file_path);
                         }
                     }
-                    t[0].b[i][j].*(training_members[tm_idx]) = std::move(temp_mat);
+                    blocks[0].b[i][j].*(training_members[tm_idx]) = std::move(temp_mat);
                 }
             }
             file.close();
@@ -108,18 +108,18 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
     }
 
     // --- Calculate Sizes and Offsets for regular caches (QK, QV, KH) ---
-    size_t cache_element_count = static_cast<size_t>(this->d) * this->d;
+    size_t cache_element_count = static_cast<size_t>(d) * d;
     size_t cache_size_bytes = cache_element_count * sizeof(float);
-    size_t caches_per_row_in_block = this->y;
-    size_t caches_per_block = static_cast<size_t>(this->x) * caches_per_row_in_block;
+    size_t caches_per_row_in_block = y;
+    size_t caches_per_block = static_cast<size_t>(x) * caches_per_row_in_block;
     size_t block_cache_offset_bytes = static_cast<size_t>(blockCount - 1) * caches_per_block * cache_size_bytes;
 
     // --- Calculate Sizes and Offsets for MLP weights (hor, ver) ---
-    size_t mlp_layer_element_count = static_cast<size_t>(this->d) * this->d;
-    size_t mlp_total_element_count = static_cast<size_t>(this->l) * mlp_layer_element_count;
+    size_t mlp_layer_element_count = static_cast<size_t>(d) * d;
+    size_t mlp_total_element_count = static_cast<size_t>(l) * mlp_layer_element_count;
     size_t mlp_size_bytes = mlp_total_element_count * sizeof(float);
-    size_t mlps_per_row_in_block = this->y;
-    size_t mlps_per_block = static_cast<size_t>(this->x) * mlps_per_row_in_block;
+    size_t mlps_per_row_in_block = y;
+    size_t mlps_per_block = static_cast<size_t>(x) * mlps_per_row_in_block;
     size_t block_mlp_offset_bytes = static_cast<size_t>(blockCount - 1) * mlps_per_block * mlp_size_bytes;
 
     // --- Load Regular Cache Matrices (QK, QV, KH) ---
@@ -141,14 +141,14 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
              throw std::runtime_error("getAllValues: Failed to seek in cache file: " + file_path + " to offset " + std::to_string(block_cache_offset_bytes));
         }
 
-        for (int i = 0; i < this->x; ++i) {
-            for (int j = 0; j < this->y; ++j) {
+        for (int i = 0; i < x; ++i) {
+            for (int j = 0; j < y; ++j) {
                 // Create a new mat; this will handle memory mapping.
-                mat temp_mat(this->d, this->d);
+                mat temp_mat(d, d);
 
-                for (int row_idx = 0; row_idx < this->d; ++row_idx) {
-                    file.read(reinterpret_cast<char*>(temp_mat.mapped_data + static_cast<size_t>(row_idx) * this->d),
-                              static_cast<size_t>(this->d) * sizeof(float));
+                for (int row_idx = 0; row_idx < d; ++row_idx) {
+                    file.read(reinterpret_cast<char*>(temp_mat.mapped_data + static_cast<size_t>(row_idx) * d),
+                              static_cast<size_t>(d) * sizeof(float));
                     if (!file) {
                         file.close();
                         throw std::runtime_error("getAllValues: Error reading data for cache " + std::string(cache_files[c_idx]) +
@@ -156,7 +156,7 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
                                                  ", " + std::to_string(j) + "), row " + std::to_string(row_idx) + " from " + file_path);
                     }
                 }
-                t[0].b[i][j].*(cache_members[c_idx]) = std::move(temp_mat);
+                blocks[0].b[i][j].*(cache_members[c_idx]) = std::move(temp_mat);
             }
         }
         file.close();
@@ -180,16 +180,16 @@ void transformer::getAllValues(int blockCount, std::string path2folderOfAllBins,
              throw std::runtime_error("getAllValues: Failed to seek in MLP file: " + file_path + " to offset " + std::to_string(block_mlp_offset_bytes));
         }
 
-        for (int i = 0; i < this->x; ++i) {
-            for (int j = 0; j < this->y; ++j) {
-                mlp& current_mlp = t[0].b[i][j].*(mlp_members[m_idx]);
-                current_mlp.weights.resize(this->l);
+        for (int i = 0; i < x; ++i) {
+            for (int j = 0; j < y; ++j) {
+                mlp& current_mlp = blocks[0].b[i][j].*(mlp_members[m_idx]);
+                current_mlp.weights.resize(l);
 
-                for (int layer_idx = 0; layer_idx < this->l; ++layer_idx) {
-                    mat temp_layer_mat(this->d, this->d);
-                    for (int row_idx = 0; row_idx < this->d; ++row_idx) {
-                        file.read(reinterpret_cast<char*>(temp_layer_mat.mapped_data + static_cast<size_t>(row_idx) * this->d),
-                                  static_cast<size_t>(this->d) * sizeof(float));
+                for (int layer_idx = 0; layer_idx < l; ++layer_idx) {
+                    mat temp_layer_mat(d, d);
+                    for (int row_idx = 0; row_idx < d; ++row_idx) {
+                        file.read(reinterpret_cast<char*>(temp_layer_mat.mapped_data + static_cast<size_t>(row_idx) * d),
+                                  static_cast<size_t>(d) * sizeof(float));
                         if (!file) {
                             file.close();
                             throw std::runtime_error("getAllValues: Error reading data for MLP " + std::string(mlp_files[m_idx]) +
@@ -220,19 +220,19 @@ void transformer::getcache(int blockCount, int i, int j, mat& q, std::string pat
     if (blockCount <= 0) {
         throw std::out_of_range("getcache: blockCount must be greater than 0.");
     }
-     if (i < 0 || i >= this->x || j < 0 || j >= this->y) {
+     if (i < 0 || i >= x || j < 0 || j >= y) {
          throw std::out_of_range("getcache: Index (i, j) = (" + std::to_string(i) + ", " + std::to_string(j) +
-                                ") is out of bounds for grid dimensions (x, y) = (" + std::to_string(this->x) + ", " + std::to_string(this->y) + ").");
+                                ") is out of bounds for grid dimensions (x, y) = (" + std::to_string(x) + ", " + std::to_string(y) + ").");
     }
-    if (this->d <= 0 || this->h <= 0) {
+    if (d <= 0 || h <= 0) {
         throw std::runtime_error("getcache: Transformer dimensions d and h must be positive.");
     }
 
     // --- Calculate Offset ---
-    size_t cache_element_count = static_cast<size_t>(this->d) * this->d;
+    size_t cache_element_count = static_cast<size_t>(d) * d;
     size_t cache_size_bytes = cache_element_count * sizeof(float);
-    size_t caches_per_row_in_block = this->y;
-    size_t caches_per_block = static_cast<size_t>(this->x) * caches_per_row_in_block;
+    size_t caches_per_row_in_block = y;
+    size_t caches_per_block = static_cast<size_t>(x) * caches_per_row_in_block;
 
     // Calculate the index of the target cache within the flattened sequence of all caches
     size_t target_cache_index = (static_cast<size_t>(blockCount - 1) * caches_per_block) // Caches in previous blocks
@@ -256,11 +256,11 @@ void transformer::getcache(int blockCount, int i, int j, mat& q, std::string pat
 
     // Assign a new mat object to q. This creates a new backing file.
     // The old mat in q (if any) will be destructed.
-    q = mat(this->d, this->d);
+    q = mat(d, d);
 
     // Read data directly into the mapped_data of q
-    for (int row_idx = 0; row_idx < this->d; ++row_idx) {
-        file.read(reinterpret_cast<char*>(q.mapped_data + static_cast<size_t>(row_idx) * this->d), static_cast<size_t>(this->d) * sizeof(float));
+    for (int row_idx = 0; row_idx < d; ++row_idx) {
+        file.read(reinterpret_cast<char*>(q.mapped_data + static_cast<size_t>(row_idx) * d), static_cast<size_t>(d) * sizeof(float));
         if (!file) {
             file.close();
             throw std::runtime_error("getcache: Error reading data at block " + std::to_string(blockCount) +
@@ -286,21 +286,21 @@ void transformer::getmlp(int blockCount, int i, int j, std::vector<mat>& weights
      if (blockCount <= 0) {
         throw std::out_of_range("getmlp: blockCount must be greater than 0.");
     }
-     if (i < 0 || i >= this->x || j < 0 || j >= this->y) {
+     if (i < 0 || i >= x || j < 0 || j >= y) {
          throw std::out_of_range("getmlp: Index (i, j) = (" + std::to_string(i) + ", " + std::to_string(j) +
-                                ") is out of bounds for grid dimensions (x, y) = (" + std::to_string(this->x) + ", " + std::to_string(this->y) + ").");
+                                ") is out of bounds for grid dimensions (x, y) = (" + std::to_string(x) + ", " + std::to_string(y) + ").");
     }
-    if (this->d <= 0 || this->l <= 0) {
+    if (d <= 0 || l <= 0) {
         throw std::runtime_error("getmlp: Transformer dimensions d and l must be positive.");
     }
 
     // --- Calculate Offset ---
     // MLP size: l layers, d x d weights per layer
-    size_t mlp_layer_element_count = static_cast<size_t>(this->d) * this->d;
-    size_t mlp_total_element_count = static_cast<size_t>(this->l) * mlp_layer_element_count;
+    size_t mlp_layer_element_count = static_cast<size_t>(d) * d;
+    size_t mlp_total_element_count = static_cast<size_t>(l) * mlp_layer_element_count;
     size_t mlp_size_bytes = mlp_total_element_count * sizeof(float);
-    size_t mlps_per_row_in_block = this->y;
-    size_t mlps_per_block = static_cast<size_t>(this->x) * mlps_per_row_in_block;
+    size_t mlps_per_row_in_block = y;
+    size_t mlps_per_block = static_cast<size_t>(x) * mlps_per_row_in_block;
 
     // Calculate the index of the target MLP within the flattened sequence of all MLPs
     size_t target_mlp_index = (static_cast<size_t>(blockCount - 1) * mlps_per_block) // MLPs in previous blocks
@@ -323,16 +323,16 @@ void transformer::getmlp(int blockCount, int i, int j, std::vector<mat>& weights
     }
 
     // Resize the output vector of mat objects
-    weights.resize(this->l);
+    weights.resize(l);
 
-    for (int layer_idx = 0; layer_idx < this->l; ++layer_idx) {
+    for (int layer_idx = 0; layer_idx < l; ++layer_idx) {
         // Assign a new mat object for the current layer.
-        weights[layer_idx] = mat(this->d, this->d);
+        weights[layer_idx] = mat(d, d);
 
         // Read data for this layer directly into the mapped_data of weights[layer_idx]
-        for (int row_idx = 0; row_idx < this->d; ++row_idx) {
-            file.read(reinterpret_cast<char*>(weights[layer_idx].mapped_data + static_cast<size_t>(row_idx) * this->d),
-                      static_cast<size_t>(this->d) * sizeof(float));
+        for (int row_idx = 0; row_idx < d; ++row_idx) {
+            file.read(reinterpret_cast<char*>(weights[layer_idx].mapped_data + static_cast<size_t>(row_idx) * d),
+                      static_cast<size_t>(d) * sizeof(float));
             if (!file) {
                 file.close();
                 throw std::runtime_error("getmlp: Error reading data at block " + std::to_string(blockCount) +
@@ -360,9 +360,9 @@ void transformer::getmat(int blockCount, int i, int j, mat& q, std::string path2
     if (blockCount <= 0) {
         throw std::out_of_range("getcache: blockCount must be greater than 0.");
     }
-     if (i < 0 || i >= this->x || j < 0 || j >= this->y) {
+     if (i < 0 || i >= x || j < 0 || j >= y) {
          throw std::out_of_range("getcache: Index (i, j) = (" + std::to_string(i) + ", " + std::to_string(j) +
-                                ") is out of bounds for grid dimensions (x, y) = (" + std::to_string(this->x) + ", " + std::to_string(this->y) + ").");
+                                ") is out of bounds for grid dimensions (x, y) = (" + std::to_string(x) + ", " + std::to_string(y) + ").");
     }
     if (row <= 0 || column <= 0) {
         throw std::runtime_error("getmat: Matrix dimensions 'row' and 'column' must be positive.");
@@ -372,8 +372,8 @@ void transformer::getmat(int blockCount, int i, int j, mat& q, std::string path2
     // Cache matrix size: d rows, h columns
     size_t cache_element_count = static_cast<size_t>(row) * column;
     size_t cache_size_bytes = cache_element_count * sizeof(float);
-    size_t caches_per_row_in_block = this->y;
-    size_t caches_per_block = static_cast<size_t>(this->x) * caches_per_row_in_block;
+    size_t caches_per_row_in_block = y;
+    size_t caches_per_block = static_cast<size_t>(x) * caches_per_row_in_block;
 
     // Calculate the index of the target cache within the flattened sequence of all caches
     size_t target_cache_index = (static_cast<size_t>(blockCount - 1) * caches_per_block) // Caches in previous blocks

@@ -14,7 +14,7 @@
 void attention::backward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
 {
     // Ensure tokenCount is valid and matrices are mapped
-    if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) {
+    if (tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) {
         throw std::runtime_error("Invalid tokenCount or unmapped matrix in backward (H)");
     }
     
@@ -56,31 +56,31 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     // Step 4: Compute gradients w.r.t. MH and MV
-    mat grad_MH(MATHEIGHTS, EMBEDDING);
-    mat grad_MV(MATHEIGHTS, EMBEDDING);
+    mat grad_MH(CONTEXT_WIN, EMBEDDING);
+    mat grad_MV(CONTEXT_WIN, EMBEDDING);
     std::fill_n(grad_MH.mapped_data, grad_MH.row * grad_MH.col, 0.0f);
     std::fill_n(grad_MV.mapped_data, grad_MV.row * grad_MV.col, 0.0f);
-    std::vector<float> pre_MH(MATHEIGHTS, 0.0f);
-    std::vector<float> pre_MV(MATHEIGHTS, 0.0f);
+    std::vector<float> pre_MH(CONTEXT_WIN, 0.0f);
+    std::vector<float> pre_MV(CONTEXT_WIN, 0.0f);
 
     mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
 
-    for (int i = 0; i < this->tokenCount; i++) {
+    for (int i = 0; i < tokenCount; i++) {
         float sum_head_row = 0.0f;
         float sum_head_col = 0.0f;
-        int limit_j = this->tokenCount;
+        int limit_j = tokenCount;
         limit_j = std::min({limit_j, head.row, head.col});
         for (int j = 0; j < limit_j; j++) {
             sum_head_row += head(i, j);
             sum_head_col += head(j, i);
         }
-        for (int h = 0; h < MATHEIGHTS; h++) {
+        for (int h = 0; h < CONTEXT_WIN; h++) {
             if (i < K.row) pre_MH[h] += sum_head_row * K(i, h);
             if (i < Q.row) pre_MV[h] += sum_head_col * Q(i, h);
         }
     }
 
-    for (int h = 0; h < MATHEIGHTS; h++) {
+    for (int h = 0; h < CONTEXT_WIN; h++) {
         for (int d = 0; d < EMBEDDING; d++) {
             grad_MH(h, d) = pre_MH[h] * grad_dh[d];
             grad_MV(h, d) = pre_MV[h] * grad_dv[d];
@@ -88,11 +88,11 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     // Step 5: Compute gradients w.r.t. head
-    mat grad_head(this->tokenCount, this->tokenCount);
+    mat grad_head(tokenCount, tokenCount);
     std::fill_n(grad_head.mapped_data, grad_head.row * grad_head.col, 0.0f);
 
-    for (int i = 0; i < this->tokenCount; i++) {
-        int limit_j = this->tokenCount;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = tokenCount;
         limit_j = std::min(limit_j, grad_head.col);
         for (int j = 0; j < limit_j; j++) {
             if (i >= K.row || j >= Q.row) 
@@ -100,7 +100,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
             float grad_dh_sum = 0.0f;
             float grad_dv_sum = 0.0f;
             for (int d = 0; d < EMBEDDING; d++) {
-                for (int h = 0; h < MATHEIGHTS; h++) {
+                for (int h = 0; h < CONTEXT_WIN; h++) {
                     grad_dh_sum += K(i, h) * MH(h, d) * grad_dh[d];
                     grad_dv_sum += Q(j, h) * MV(h, d) * grad_dv[d];
                 }
@@ -111,8 +111,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     // Step 6: Backprop through LOTA
-    mat grad_KdotQ(this->tokenCount, this->tokenCount);
-    mat lota_derivative = LOTAder(KdotQ, this->tokenCount, isSelfAttention);
+    mat grad_KdotQ(tokenCount, tokenCount);
+    mat lota_derivative = LOTAder(KdotQ, tokenCount, isSelfAttention);
 
     if (grad_head.row != lota_derivative.row || grad_head.col != lota_derivative.col ||
         grad_head.row != grad_KdotQ.row || grad_head.col != grad_KdotQ.col) {
@@ -120,8 +120,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     float inv_scaling = 1.0f / SCALING;
-    for (int i = 0; i < this->tokenCount; i++) {
-        int limit_j = this->tokenCount;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = tokenCount;
         limit_j = std::min(limit_j, grad_KdotQ.col);
         for (int j = 0; j < limit_j; j++) {
             grad_KdotQ(i, j) = grad_head(i, j) * lota_derivative(i, j) * inv_scaling;
@@ -131,16 +131,16 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     // Step 7: Compute gradients w.r.t. K and Q
     // grad_K = grad_KdotQ * Q^T
     // grad_Q = grad_KdotQ^T * K
-    mat grad_K(this->tokenCount, MATHEIGHTS);
-    mat grad_Q(this->tokenCount, MATHEIGHTS);
+    mat grad_K(tokenCount, CONTEXT_WIN);
+    mat grad_Q(tokenCount, CONTEXT_WIN);
     std::fill_n(grad_K.mapped_data, grad_K.row * grad_K.col, 0.0f);
     std::fill_n(grad_Q.mapped_data, grad_Q.row * grad_Q.col, 0.0f);
 
-    for (int i = 0; i < this->tokenCount; i++) {
-        int limit_j = this->tokenCount;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = tokenCount;
         limit_j = std::min({limit_j, grad_KdotQ.row, grad_KdotQ.col, K.row, Q.row});
         for (int j = 0; j < limit_j; j++) {
-            for (int h = 0; h < MATHEIGHTS; h++) {
+            for (int h = 0; h < CONTEXT_WIN; h++) {
                 grad_K(i, h) += grad_KdotQ(i, j) * K(j, h);
                 grad_Q(i, h) += grad_KdotQ(j, i) * Q(j, h);
             }
@@ -148,14 +148,14 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     // Step 8: Compute gradients w.r.t. MQ and MK
-    mat grad_MQ(MATHEIGHTS, EMBEDDING);
-    mat grad_MK(MATHEIGHTS, EMBEDDING);
+    mat grad_MQ(CONTEXT_WIN, EMBEDDING);
+    mat grad_MK(CONTEXT_WIN, EMBEDDING);
     std::fill_n(grad_MQ.mapped_data, grad_MQ.row * grad_MQ.col, 0.0f);
     std::fill_n(grad_MK.mapped_data, grad_MK.row * grad_MK.col, 0.0f);
 
-    for (int i = 0; i < this->tokenCount; i++) {
+    for (int i = 0; i < tokenCount; i++) {
         if (i >= K.row || i >= Q.row || i >= grad_K.row || i >= grad_Q.row) continue;
-        for (int h = 0; h < MATHEIGHTS; h++) {
+        for (int h = 0; h < CONTEXT_WIN; h++) {
             for (int d = 0; d < EMBEDDING; d++) {
                 grad_MK(h, d) += grad_K(i, h) * K(i, h);
                 grad_MQ(h, d) += grad_Q(i, h) * Q(i, h);
@@ -164,7 +164,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     }
 
     // Step 9: Update weights MH, MV, MQ, MK
-    for (int i = 0; i < MATHEIGHTS; i++) {
+    for (int i = 0; i < CONTEXT_WIN; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
             if (i < MH.row && j < MH.col) MH(i, j) -= learning * grad_MH(i, j);
             if (i < MV.row && j < MV.col) MV(i, j) -= learning * grad_MV(i, j);
@@ -192,13 +192,14 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
 
 
 /**
- * @brief Bac
+ * @brief Bacward propgation for non-first block heads, for vertical retention
+ * @details full transformer training
  * @param expectedV Vertical retention vector (target context)
  * @param layers Number of layers in the MLPs
  */
 void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning) 
 {
-    if (this->tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || 
+    if (tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || 
         KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || 
         MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) 
     {
@@ -250,42 +251,42 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     // Step 4: Compute gradients w.r.t. MH and MV
-    mat grad_MV(MATHEIGHTS, EMBEDDING);
+    mat grad_MV(CONTEXT_WIN, EMBEDDING);
     std::fill_n(grad_MV.mapped_data, grad_MV.row * grad_MV.col, 0.0f);
-    std::vector<float> pre_MV(MATHEIGHTS, 0.0f);
+    std::vector<float> pre_MV(CONTEXT_WIN, 0.0f);
 
-    mat head = LOTA(KdotQ, this->tokenCount, isSelfAttention);
+    mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
 
-    for (int i = 0; i < this->tokenCount; i++) {
+    for (int i = 0; i < tokenCount; i++) {
         float sum_head_col = 0.0f;
-        int limit_j = this->tokenCount;
+        int limit_j = tokenCount;
         limit_j = std::min({limit_j, head.row, head.col});
         for (int j = 0; j < limit_j; j++) {
             sum_head_col += head(j, i);
         }
-        for (int h = 0; h < MATHEIGHTS; h++) {
+        for (int h = 0; h < CONTEXT_WIN; h++) {
             if (i < Q.row) pre_MV[h] += sum_head_col * Q(i, h);
         }
     }
 
-    for (int h = 0; h < MATHEIGHTS; h++) {
+    for (int h = 0; h < CONTEXT_WIN; h++) {
         for (int d = 0; d < EMBEDDING; d++) {
             grad_MV(h, d) = pre_MV[h] * grad_dv[d];
         }
     }
 
     // Step 5: Compute gradients w.r.t. head
-    mat grad_head(this->tokenCount, this->tokenCount);
+    mat grad_head(tokenCount, tokenCount);
     std::fill_n(grad_head.mapped_data, grad_head.row * grad_head.col, 0.0f);
 
-    for (int i = 0; i < this->tokenCount; i++) {
-        int limit_j = this->tokenCount;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = tokenCount;
         limit_j = std::min(limit_j, grad_head.col);
         for (int j = 0; j < limit_j; j++) {
             if (j >= Q.row) continue;
             float grad_dv_sum = 0.0f;
             for (int d = 0; d < EMBEDDING; d++) {
-                for (int h = 0; h < MATHEIGHTS; h++) {
+                for (int h = 0; h < CONTEXT_WIN; h++) {
                     grad_dv_sum += Q(j, h) * MV(h, d) * grad_dv[d];
                 }
             }
@@ -294,15 +295,15 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     // Step 6: Backprop through LOTA
-    mat grad_KdotQ(this->tokenCount, this->tokenCount);
-    mat lota_derivative = LOTAder(KdotQ, this->tokenCount, isSelfAttention);
+    mat grad_KdotQ(tokenCount, tokenCount);
+    mat lota_derivative = LOTAder(KdotQ, tokenCount, isSelfAttention);
     if (grad_head.row != lota_derivative.row || grad_head.col != lota_derivative.col ||
         grad_head.row != grad_KdotQ.row || grad_head.col != grad_KdotQ.col) {
         throw std::runtime_error("Dimension mismatch for LOTA backprop in backward (V)");
     }
     float inv_scaling = 1.0f / SCALING;
-    for (int i = 0; i < this->tokenCount; i++) {
-        int limit_j = this->tokenCount;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = tokenCount;
         limit_j = std::min(limit_j, grad_KdotQ.col);
         for (int j = 0; j < limit_j; j++) {
             grad_KdotQ(i, j) = grad_head(i, j) * lota_derivative(i, j) * inv_scaling;
@@ -310,13 +311,13 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     // Step 7: Compute gradients w.r.t. K and Q
-    mat grad_Q(this->tokenCount, MATHEIGHTS);
+    mat grad_Q(tokenCount, CONTEXT_WIN);
     std::fill_n(grad_Q.mapped_data, grad_Q.row * grad_Q.col, 0.0f);
-    for (int i = 0; i < this->tokenCount; i++) {
-        int limit_j = this->tokenCount;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = tokenCount;
         limit_j = std::min({limit_j, grad_KdotQ.row, grad_KdotQ.col, K.row});
         for (int j = 0; j < limit_j; j++) {
-            for (int h = 0; h < MATHEIGHTS; h++) {
+            for (int h = 0; h < CONTEXT_WIN; h++) {
                 grad_Q(i, h) += grad_KdotQ(j, i) * K(j, h);
             }
         }
@@ -324,27 +325,27 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
 
     // Step 7.5: Removed redundant/incorrect grad_KdotQ recalculation
     // Step 8: Compute gradients w.r.t. MQ and MK (more sophisticated)
-    mat grad_MQ(EMBEDDING, MATHEIGHTS);
-    mat grad_MK_correction(MATHEIGHTS, EMBEDDING);
+    mat grad_MQ(EMBEDDING, CONTEXT_WIN);
+    mat grad_MK_correction(CONTEXT_WIN, EMBEDDING);
     std::fill_n(grad_MQ.mapped_data, grad_MQ.row * grad_MQ.col, 0.0f);
     std::fill_n(grad_MK_correction.mapped_data, grad_MK_correction.row * grad_MK_correction.col, 0.0f);
 
     // Calculate grad_MQ first (using Q as proxy for T)
-    for (int i = 0; i < this->tokenCount; i++) {
+    for (int i = 0; i < tokenCount; i++) {
         if (i >= Q.row || i >= grad_Q.row) continue;
         for (int h = 0; h < EMBEDDING; h++) {
-            for (int d = 0; d < MATHEIGHTS; d++) {
+            for (int d = 0; d < CONTEXT_WIN; d++) {
                 grad_MQ(h, d) += grad_Q(i, h) * Q(i, d);
             }
         }
     }
 
     // Calculate grad_MK_correction using the final grad_MQ
-    for (int i = 0; i < this->tokenCount; i++) {
+    for (int i = 0; i < tokenCount; i++) {
         if (i >= K.row) continue;
-        for (int j = 0; j < this->tokenCount; j++) {
+        for (int j = 0; j < tokenCount; j++) {
             if (j >= Q.row) continue;
-            for (int h = 0; h < MATHEIGHTS; h++) {
+            for (int h = 0; h < CONTEXT_WIN; h++) {
                 for (int d = 0; d < EMBEDDING; d++) {
                     grad_MK_correction(h, d) += -grad_MQ(h, d) * Q(j, h) * K(i, h);
                 }
@@ -359,14 +360,14 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     {
         throw std::runtime_error("Weight and gradient dimension mismatch in backward (V)");
     }
-    for (int i = 0; i < MATHEIGHTS; i++) {
+    for (int i = 0; i < CONTEXT_WIN; i++) {
         for (int j = 0; j < EMBEDDING; j++) {
             if (i < MK.row && j < MK.col) MK(i, j) -= learning * grad_MK_correction(i, j);
         }
     }
 
     for (int i = 0; i < EMBEDDING; i++) {
-        for (int j = 0; j < MATHEIGHTS; j++) {
+        for (int j = 0; j < CONTEXT_WIN; j++) {
             if (i < MV.row && j < MV.col) MV(i, j) -= learning * grad_MV(i, j);
             if (i < MQ.row && j < MQ.col) MQ(i, j) -= learning * grad_MQ(i, j);
         }

@@ -22,7 +22,7 @@
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, bool attentionType, 
+block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
     bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning) : // Changed to pass by value
     x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
@@ -49,19 +49,19 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     // File handling logic
     // Declare variables before conditional compilation block
     bool open_for_read_write_existing = false;
-    FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
+    FILE* test_file = fopen(blockFilePath.c_str(), "rb");
 
     if (test_file) { // File exists
         #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-                long long int existing_file_size = _ftelli64(test_file);
+                unsigned long long existing_file_size = _ftelli64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }
             }
         #else // Assuming POSIX-like environment (Linux, macOS)
             if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
-                long long int existing_file_size = ftello64(test_file);
+                unsigned long long existing_file_size = ftello64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }
@@ -71,51 +71,172 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     }
 
     if (open_for_read_write_existing) {
-        blockFile = fopen(this->blockFilePath.c_str(), "rb+");
+        blockFile = fopen(blockFilePath.c_str(), "rb+");
         if (!blockFile) {
-            throw std::runtime_error("Could not open existing block file for read/write: " + this->blockFilePath);
+            throw std::runtime_error("Could not open existing block file for read/write: " + blockFilePath);
         }
-        std::cout << "BLOCK " << blockCount << " opened existing file: " << this->blockFilePath << std::endl;
+        std::cout << "BLOCK " << blockCount << " opened existing file: " << blockFilePath << std::endl;
     }
     else { // File does not exist, or exists but size mismatches
-        blockFile = fopen(this->blockFilePath.c_str(), "wb+");
+        blockFile = fopen(blockFilePath.c_str(), "wb+");
         if (!blockFile) {
-            throw std::runtime_error("Could not create/truncate block file for writing: " + this->blockFilePath);
+            throw std::runtime_error("Could not create/truncate block file for writing: " + blockFilePath);
         }
 
         if (totalBlockSize > 0) {
         #if defined(_WIN64)
             if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
                 fclose(blockFile);
-                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
+                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
             }
         #else // Assuming POSIX-like environment (Linux, macOS)
             if (fseeko64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
                 fclose(blockFile);
-                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
+                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
             }
         #endif
             if (fputc(0, blockFile) == EOF) {
                 fclose(blockFile);
-                throw std::runtime_error("fputc failed to write byte for preallocation: " + this->blockFilePath);
+                throw std::runtime_error("fputc failed to write byte for preallocation: " + blockFilePath);
             }
         }
 
         if (fflush(blockFile) != 0) {
             fclose(blockFile);
-            throw std::runtime_error("fflush failed after preallocation: " + this->blockFilePath);
+            throw std::runtime_error("fflush failed after preallocation: " + blockFilePath);
         }
         
         if (test_file) { // File existed but size mismatched
-            std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << this->blockFilePath << std::endl;
+            std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << blockFilePath << std::endl;
         } 
         else { // File did not exist
-            std::cout << "BLOCK " << blockCount << " created new file: " << this->blockFilePath << std::endl;
+            std::cout << "BLOCK " << blockCount << " created new file: " << blockFilePath << std::endl;
         }
     }
 
     rewind(blockFile);
-    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs (" 
+    std::cout << "Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs (" 
+                                        << static_cast<float>(params * sizeof(float)) / (1024 * 1024) << " MBs)" << std::endl;
+}
+
+/**
+ * @brief Constructor for complete attention block - NO OpenCL
+ * @param x_layers number of partial attentions (layers) in block
+ * @param y_heads number of attention heads in each partial attention
+ * @param n_tokens number of tokens for each attention head (context window)
+ * @param d_embed dimension of each token (embedding dimension)
+ * @param h_internal height of MQ, MK matrices (internal dimension)
+ * @param l_mlp layers of mlp within each attention head
+ * @param vocab vocabulary size (unused)
+ * @param attentionType attention type of heads, true if self and false if cross
+ * @param trainMode Training (true) or Inference (false)
+ * @param blockCount The index of this block, used for unique file naming.
+ * @param blockFilePath_param The base path for the block's data file.
+ */
+block::block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
+    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning) : // Changed to pass by value
+    x(x_layers), y(y_heads), error(0.0f),
+    isSelfAttention(attentionType), inTraining(trainMode),
+    blockFilePath([&blockFilePath_param, blockCount]() {
+        std::string base = blockFilePath_param;
+        // Ensure the directory path ends with a separator
+        if (!base.empty() && base.back() != '/' && base.back() != '\\') {
+            base += '/'; // Use forward slash for consistency, Windows handles it
+        }
+        return base + "block_" + std::to_string(blockCount) + ".bin";
+    }()),
+    blockOffset(0LL)
+{
+    if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
+        throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
+    }
+
+    EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
+    tokForBlock = mat(n_tokens, d_embed);
+
+    b.resize(x);
+    for(int i = 0; i < x; i++) {
+        b[i].resize(y);
+        for(int j = 0; j < y; j++) {
+            // This is an assignment, which will invoke the attention copy-assignment operator.
+            b[i][j] = attention(blockName + "_" + std::to_string(i) + "_" + std::to_string(j), n_tokens, 
+                                d_embed, h_internal, l_mlp, attentionType, trainMode, learning);
+        }
+    }
+
+    params = (x * y * b[0][0].params);
+    unsigned long long totalBlockSize = params * sizeof(float);
+
+    // File handling logic
+    // Declare variables before conditional compilation block
+    bool open_for_read_write_existing = false;
+    FILE* test_file = fopen(blockFilePath.c_str(), "rb");
+
+    if (test_file) { // File exists
+        #if defined(_WIN64)
+            if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
+                unsigned long long existing_file_size = _ftelli64(test_file);
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
+            }
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
+                unsigned long long existing_file_size = ftello64(test_file);
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
+            }
+        #endif
+        fclose(test_file);
+    }
+
+    if (open_for_read_write_existing) {
+        blockFile = fopen(blockFilePath.c_str(), "rb+");
+        if (!blockFile) {
+            throw std::runtime_error("Could not open existing block file for read/write: " + blockFilePath);
+        }
+        std::cout << "BLOCK " << blockCount << " opened existing file: " << blockFilePath << std::endl;
+    }
+    else { // File does not exist, or exists but size mismatches
+        blockFile = fopen(blockFilePath.c_str(), "wb+");
+        if (!blockFile) {
+            throw std::runtime_error("Could not create/truncate block file for writing: " + blockFilePath);
+        }
+
+        if (totalBlockSize > 0) {
+        #if defined(_WIN64)
+            if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+                fclose(blockFile);
+                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
+            }
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+                fclose(blockFile);
+                throw std::runtime_error("_fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
+            }
+        #endif
+            if (fputc(0, blockFile) == EOF) {
+                fclose(blockFile);
+                throw std::runtime_error("fputc failed to write byte for preallocation: " + blockFilePath);
+            }
+        }
+
+        if (fflush(blockFile) != 0) {
+            fclose(blockFile);
+            throw std::runtime_error("fflush failed after preallocation: " + blockFilePath);
+        }
+        
+        if (test_file) { // File existed but size mismatched
+            std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << blockFilePath << std::endl;
+        } 
+        else { // File did not exist
+            std::cout << "BLOCK " << blockCount << " created new file: " << blockFilePath << std::endl;
+        }
+    }
+
+    rewind(blockFile);
+    std::cout << "Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs (" 
                                         << static_cast<float>(params * sizeof(float)) / (1024 * 1024) << " MBs)" << std::endl;
 }
 
@@ -138,7 +259,7 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab,
+block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
     bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
     clcontext(context), x(x_layers), y(y_heads), error(0.0f),
     isSelfAttention(attentionType), inTraining(trainMode),
@@ -165,19 +286,19 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
 
     // File handling logic
     bool open_for_read_write_existing = false;
-    FILE* test_file = fopen(this->blockFilePath.c_str(), "rb");
+    FILE* test_file = fopen(blockFilePath.c_str(), "rb");
 
     if (test_file) { // File exists
         #if defined(_WIN64)
             if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
-                long long int existing_file_size = _ftelli64(test_file);
+                unsigned long long existing_file_size = _ftelli64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }
             }
         #else // Assuming POSIX-like environment (Linux, macOS)
             if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
-                long long int existing_file_size = ftello64(test_file);
+                unsigned long long existing_file_size = ftello64(test_file);
                 if (existing_file_size == totalBlockSize) {
                     open_for_read_write_existing = true;
                 }
@@ -187,54 +308,181 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
     }
 
     if (open_for_read_write_existing) {
-        blockFile = fopen(this->blockFilePath.c_str(), "rb+");
+        blockFile = fopen(blockFilePath.c_str(), "rb+");
         if (!blockFile) {
-            throw std::runtime_error("Could not open existing block file for read/write: " + this->blockFilePath);
+            throw std::runtime_error("Could not open existing block file for read/write: " + blockFilePath);
         }
-        std::cout << "BLOCK " << blockCount << " opened existing file: " << this->blockFilePath << std::endl;
+        std::cout << "BLOCK " << blockCount << " opened existing file: " << blockFilePath << std::endl;
     }
     else { // File does not exist, or exists but size mismatches
-        blockFile = fopen(this->blockFilePath.c_str(), "wb+");
+        blockFile = fopen(blockFilePath.c_str(), "wb+");
         if (!blockFile) {
-            throw std::runtime_error("Could not create/truncate block file for writing: " + this->blockFilePath);
+            throw std::runtime_error("Could not create/truncate block file for writing: " + blockFilePath);
         }
 
         if (totalBlockSize > 0) {
         #if defined(_WIN64)
             if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
                 fclose(blockFile);
-                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
+                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
             }
         #else
             if (fseeko64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
                 fclose(blockFile);
-                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + this->blockFilePath);
+                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
             }
         #endif
 
             if (fputc(0, blockFile) == EOF) {
                 fclose(blockFile);
-                throw std::runtime_error("fputc failed to write byte for preallocation: " + this->blockFilePath);
+                throw std::runtime_error("fputc failed to write byte for preallocation: " + blockFilePath);
             }
         }
 
         if (fflush(blockFile) != 0) {
             fclose(blockFile);
-            throw std::runtime_error("fflush failed after preallocation: " + this->blockFilePath);
+            throw std::runtime_error("fflush failed after preallocation: " + blockFilePath);
         }
         
         if (test_file) { // File existed but size mismatched
-            std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << this->blockFilePath << std::endl;
+            std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << blockFilePath << std::endl;
         }
         else { // File did not exist
-            std::cout << "BLOCK " << blockCount << " created new file: " << this->blockFilePath << std::endl;
+            std::cout << "BLOCK " << blockCount << " created new file: " << blockFilePath << std::endl;
         }
     }
 
     rewind(blockFile);
-    std::cout << "BLOCK " << blockCount << " file prepared. Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs (" 
+    std::cout << "Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs (" 
                                         << static_cast<float>(params * sizeof(float)) / (1024 * 1024) << " MBs)" << std::endl;
 }
+
+
+/**
+ * @brief Constructor for complete attention block - WITH OpenCL
+ * @param context Reference to the shared OpenCL context.
+ * @param blockName name of block in transformer
+ * @param x_layers number of partial attentions (layers) in block
+ * @param y_heads number of attention heads in each partial attention
+ * @param n_tokens number of tokens for each attention head (context window)
+ * @param d_embed dimension of each token (embedding dimension)
+ * @param h_internal height of MQ, MK matrices (internal dimension)
+ * @param l_mlp layers of mlp within each attention head
+ * @param vocab vocabulary size (unused)
+ * @param attentionType attention type of heads, true if self and false if cross
+ * @param trainMode Training (true) or Inference (false)
+ * @param blockCount The index of this block, used for unique file naming.
+ * @param blockFilePath_param The base path for the block's data file.
+ */
+block::block(OpenCLContext& context, const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
+    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
+    clcontext(context), x(x_layers), y(y_heads), error(0.0f),
+    isSelfAttention(attentionType), inTraining(trainMode),
+        blockFilePath([&blockFilePath_param, blockCount]() {
+        // Correctly construct path from directory
+        std::string base = blockFilePath_param;
+        // Ensure the directory path ends with a separator
+        if (!base.empty() && base.back() != '/' && base.back() != '\\') {
+            base += '/'; // Use forward slash for consistency, Windows handles it
+        }
+        return base + "block_" + std::to_string(blockCount) + ".bin";
+    }()),
+    blockOffset(0LL)
+{
+    if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
+        throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
+    }
+    
+    EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
+    tokForBlock = mat(n_tokens, d_embed);
+
+    b.resize(x); // Correctly resize the outer vector before access.
+    for(int i = 0; i < x; i++) {
+        b[i].reserve(y); // Optional: reserve capacity for inner vector.
+        for(int j = 0; j < y; j++) {
+            // blockName_A_i_j_
+            // std::cout << "modelName_blockName_A_" << i << "_" << j << "_" << std::endl;
+            b[i].emplace_back(context, blockName + "A_" + std::to_string(i) + "_" + std::to_string(j) + "_",
+                              n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning);
+        }
+    }
+
+    params = (x * y * b[0][0].params);
+    unsigned long long totalBlockSize = params * sizeof(float);
+
+    // File handling logic
+    bool open_for_read_write_existing = false;
+    FILE* test_file = fopen(blockFilePath.c_str(), "rb");
+
+    if (test_file) { // File exists
+        #if defined(_WIN64)
+            if (_fseeki64(test_file, 0LL, SEEK_END) == 0) {
+                unsigned long long existing_file_size = _ftelli64(test_file);
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
+            }
+        #else // Assuming POSIX-like environment (Linux, macOS)
+            if (fseeko64(test_file, 0LL, SEEK_END) == 0) {
+                unsigned long long existing_file_size = ftello64(test_file);
+                if (existing_file_size == totalBlockSize) {
+                    open_for_read_write_existing = true;
+                }
+            }
+        #endif
+        fclose(test_file);
+    }
+
+    if (open_for_read_write_existing) {
+        blockFile = fopen(blockFilePath.c_str(), "rb+");
+        if (!blockFile) {
+            throw std::runtime_error("Could not open existing block file for read/write: " + blockFilePath);
+        }
+        std::cout << "BLOCK " << blockCount << " opened existing file: " << blockFilePath << std::endl;
+    }
+    else { // File does not exist, or exists but size mismatches
+        blockFile = fopen(blockFilePath.c_str(), "wb+");
+        if (!blockFile) {
+            throw std::runtime_error("Could not create/truncate block file for writing: " + blockFilePath);
+        }
+
+        if (totalBlockSize > 0) {
+        #if defined(_WIN64)
+            if (_fseeki64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+                fclose(blockFile);
+                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
+            }
+        #else
+            if (fseeko64(blockFile, totalBlockSize - 1, SEEK_SET) != 0) {
+                fclose(blockFile);
+                throw std::runtime_error("fseeko64/ _fseeki64 failed to seek in block file to preallocate: " + blockFilePath);
+            }
+        #endif
+
+            if (fputc(0, blockFile) == EOF) {
+                fclose(blockFile);
+                throw std::runtime_error("fputc failed to write byte for preallocation: " + blockFilePath);
+            }
+        }
+
+        if (fflush(blockFile) != 0) {
+            fclose(blockFile);
+            throw std::runtime_error("fflush failed after preallocation: " + blockFilePath);
+        }
+        
+        if (test_file) { // File existed but size mismatched
+            std::cout << "BLOCK " << blockCount << " truncated and recreated file due to size mismatch: " << blockFilePath << std::endl;
+        }
+        else { // File did not exist
+            std::cout << "BLOCK " << blockCount << " created new file: " << blockFilePath << std::endl;
+        }
+    }
+
+    rewind(blockFile);
+    std::cout << "Block parameters: " << params << ". Size of File: " << static_cast<float>(params * sizeof(float)) / (1000 * 1000) << " MiBs (" 
+                                        << static_cast<float>(params * sizeof(float)) / (1024 * 1024) << " MBs)" << std::endl;
+}
+
 
 #endif
 

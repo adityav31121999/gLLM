@@ -29,15 +29,18 @@ int model::getOffset(int blockCount, int paCount, int attentionCount, int matCou
 
 // calculate offset for model layout and its components
 void model::calculateAndSetLayout() {
-    matOffset = matheight * d;      // for single mat
-    cacheOffset = d * d;            // for single cache
-    mlpOffset = d * d * l;          // for single mlp
+    matOffset = matheight * d;      // for single mat values
+    cacheOffset = d * d;            // for single cache values
+    mlpOffset = d * d * l;          // for single mlp values
     // for training
     attentionOffset = (4*matOffset) + (2*mlpOffset) + d + (n*d) + (2*n*d) * (n*n);
     blockOffset = (x * y * (attentionOffset + (n * d))) + (n*d);
 }
 
-
+/**
+ * @brief make common bin with all matrices and mlp weights and caches
+ * @param path2folderOfAllBins path to bin files
+ */
 void transformer::makeCommon(std::string &path2folderOfAllBins)
 {
     // Create/truncate common.bin. The serialise methods will append to it.
@@ -48,21 +51,21 @@ void transformer::makeCommon(std::string &path2folderOfAllBins)
     }
     commonFileStream.close(); // Close it now. serialise calls will reopen in append mode.
 
-    long long int single_mlp_params_from_instance = 0;
-    if (this->x > 0 && this->y > 0) {
-        if (this->t.empty()) {
-             throw std::runtime_error("transformer::makeCommon: Transformer has no blocks (T.t is empty) when x and y are positive.");
+    unsigned long long single_mlp_params_from_instance = 0;
+    if (x > 0 && y > 0) {
+        if (blocks.empty()) {
+            throw std::runtime_error("transformer::makeCommon: Transformer has no blocks ( T.blocks is empty) when x and y are positive.");
         }
-        if (this->t[0].b.empty() || this->t[0].b[0].empty()) {
+        if (blocks[0].b.empty() || blocks[0].b[0].empty()) {
             throw std::runtime_error("transformer::makeCommon: Block 0's attention structure (b) is empty or first row is empty when x and y are positive.");
         }
         // Access parameters from the first head of the first partial attention layer of the first block
-        single_mlp_params_from_instance = t[0].b[0][0].hor.params;
+        single_mlp_params_from_instance = blocks[0].b[0][0].hor.params;
     }
     // If x or y is 0, totalparams will correctly be 0.
 
-    long long int totalparams = static_cast<long long int>(this->x) * this->y *
-                               ((4 * static_cast<long long int>(this->h) * this->d) +
+    unsigned long long totalparams = static_cast<unsigned long long>(x) * y *
+                               ((4 * static_cast<unsigned long long>(h) * d) +
                                 (2 * single_mlp_params_from_instance));
 
     std::cout << "Size of Common Bin FIle: " << std::endl;
@@ -72,28 +75,39 @@ void transformer::makeCommon(std::string &path2folderOfAllBins)
 
     // The 'conceptual_offset' is for logical tracking if needed, as serialise appends.
     // The offset parameter to mat::serialise is 0, assuming it appends.
-    if (!this->t.empty()) { // Proceed only if there's at least one block
-        for (int j = 0; j < this->x; j++) {
-            for (int k = 0; k < this->y; k++) {
-                // Ensure T.t[0].b[j][k] is valid before calling methods on it.
-                // This should be guaranteed if x and y match the dimensions of T.t[0].b
-                if (j < t[0].b.size() && k < t[0].b[j].size()) {
-                    t[0].b[j][k].MQ.serialise(0, commonBinPath);
-                    t[0].b[j][k].MK.serialise(0, commonBinPath);
-                    t[0].b[j][k].MV.serialise(0, commonBinPath);
-                    t[0].b[j][k].MH.serialise(0, commonBinPath);
-                    t[0].b[j][k].hor.serialise4train(commonBinPath);
-                    t[0].b[j][k].ver.serialise4train(commonBinPath);
-                }
-                else {
-                    throw std::out_of_range("transformer::makeCommon: Attempted to access T.t[0].b out of bounds during serialization.");
+    if (!blocks.empty()) { // Proceed only if there's at least one block
+        unsigned long long of = 0;
+        unsigned long long bo = NUMBER_OF_PA*NUMBER_OF_HEADS*(4*EMBEDDING*CONTEXT_WIN + 3*EMBEDDING*EMBEDDING + 2*EMBEDDING*EMBEDDING*(LAYERS_MLP - 1));
+        for(int i = 0; i < m; i++) {
+            of = i * bo;
+            for (int j = 0; j < x; j++) {
+                for (int k = 0; k < y; k++) {
+                    if (j < blocks[i].b.size() && k < blocks[i].b[j].size()) {
+                        blocks[i].b[j][k].MQ.serialise(of, commonBinPath); of += matOffset;
+                        blocks[i].b[j][k].MK.serialise(of, commonBinPath); of += matOffset;
+                        blocks[i].b[j][k].MV.serialise(of, commonBinPath); of += matOffset;
+                        blocks[i].b[j][k].MH.serialise(of, commonBinPath); of += matOffset;
+                        for(int l = 0; l < LAYERS_MLP-1; l++) {
+                            blocks[i].b[j][k].hor.weights[l].serialise(of, commonBinPath); of += cacheOffset;
+                        }
+                        for(int l = 0; l < LAYERS_MLP-1; l++) {
+                            blocks[i].b[j][k].ver.weights[l].serialise(of, commonBinPath); of += cacheOffset;
+                        }
+                        blocks[i].b[j][k].qkCache.serialise(of, commonBinPath); of += cacheOffset;
+                        blocks[i].b[j][k].khCache.serialise(of, commonBinPath); of += cacheOffset;
+                        blocks[i].b[j][k].qvCache.serialise(of, commonBinPath); of += cacheOffset;
+                    }
+                    else {
+                        std::cerr << "Access out of bounds for block[" << i << "].b[" << j << "][" << k << "]" << std::endl;
+                        break;
+                    }
                 }
             }
         }
         std::cout << "common.bin populated with shared weights from block 0." << std::endl;
     }
-    else if (this->x > 0 && this->y > 0) { // x and y suggest there should be data, but T.t is empty
-        std::cerr << "Warning: transformer::makeCommon: x and y are positive, but T.t is empty. common.bin will be empty." << std::endl;
+    else if (x > 0 && y > 0) { // x and y suggest there should be data, but  T.blocks is empty
+        std::cerr << "Warning: transformer::makeCommon: x and y are positive, but  T.blocks is empty. common.bin will be empty." << std::endl;
     }
 }
 
@@ -105,36 +119,33 @@ void transformer::makeCommon(std::string &path2folderOfAllBins)
 void model::serialise()
 {
     mat cache(d, d);
+    // serialise all mats, mlps and caches
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
-                std::cout << "Serialising: Block " << i+1 << " | Partial Attention " << j+1 << " | Attention Head " << k+1 << " -> MQ -> ";
-                T.t[0].b[j][k].MQ.serialise(k*j*matOffset, baseDir + "/bin/MQ.bin");
-                std::cout << "MQ -> ";
-                T.t[0].b[j][k].MK.serialise(k*j*matOffset, baseDir + "/bin/MK.bin");
-                std::cout << "MK -> ";
-                T.t[0].b[j][k].MV.serialise(k*j*matOffset, baseDir + "/bin/MV.bin");
-                std::cout << "MV -> ";
-                T.t[0].b[j][k].MH.serialise(k*j*matOffset, baseDir + "/bin/MH.bin");
-                std::cout << "MH -> ";
-                T.t[0].b[j][k].hor.serialise(k*j*mlpOffset, baseDir + "/bin/hor.bin");
-                std::cout << "hor -> ";
-                T.t[0].b[j][k].ver.serialise(k*j*mlpOffset, baseDir + "/bin/ver.bin");
-                std::cout << "ver -> ";
-                cache.mult_A_Bt(T.t[0].b[j][k].MQ,T.t[0].b[j][k].MK);
-                std::cout << "QK' -> ";
-                cache.serialise(k*j*cacheOffset, baseDir + "/bin/QK.bin");
-                cache = T.t[0].b[j][k].MK*T.t[0].b[j][k].MH;
-                std::cout << "KH -> ";
-                cache.serialise(k*j*cacheOffset, baseDir + "/bin/KH.bin");
-                cache = T.t[0].b[j][k].MQ*T.t[0].b[j][k].MV;
-                std::cout << "QV" << std::endl;
-                cache.serialise(k*j*cacheOffset, baseDir + "/bin/QV.bin");
+                std::cout << "Serialising: Block " << i+1 << " | Partial Attention " << j+1 << " | Attention Head " << k+1 << std::endl;
+                T.blocks[i].b[j][k].MQ.serialise(i*matOffset + k*j*matOffset, baseDir + "/bin/MQ.bin");
+                T.blocks[i].b[j][k].MK.serialise(i*matOffset + k*j*matOffset, baseDir + "/bin/MK.bin");
+                T.blocks[i].b[j][k].MV.serialise(i*matOffset + k*j*matOffset, baseDir + "/bin/MV.bin");
+                T.blocks[i].b[j][k].MH.serialise(i*matOffset + k*j*matOffset, baseDir + "/bin/MH.bin");
+                T.blocks[i].b[j][k].hor.serialise(i*mlpOffset + k*j*mlpOffset, baseDir + "/bin/hor.bin");
+                T.blocks[i].b[j][k].ver.serialise(i*mlpOffset + k*j*mlpOffset, baseDir + "/bin/ver.bin");
+                cache = T.blocks[i].b[j][k].MQ * T.blocks[i].b[j][k].MK;
+                cache.serialise(i*cacheOffset + k*j*cacheOffset, baseDir + "/bin/QK.bin");
+                cache =  T.blocks[i].b[j][k].MK * T.blocks[i].b[j][k].MH;
+                cache.serialise(i*cacheOffset + k*j*cacheOffset, baseDir + "/bin/KH.bin");
+                cache =  T.blocks[i].b[j][k].MQ * T.blocks[i].b[j][k].MV;
+                cache.serialise(i*cacheOffset + k*j*cacheOffset, baseDir + "/bin/QV.bin");
             }
         }
     }
+    // serialsie all blocks
     for(int i = 0; i < m; i++) {
-        T.t[i].serialise(baseDir + "/block" + std::to_string(i+1) + ".bin");
+        T.blocks[i].serialise(baseDir + "/block" + std::to_string(i+1) + ".bin");
         std::cout << "Block " << i+1 << " serialised." << std::endl;
     }
+    // make common bin
+    std::string common = baseDir + "/bin/common.bin";
+    T.makeCommon(common);
+    std::cout << "Common bin serialised." << std::endl;
 }

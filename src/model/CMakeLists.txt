@@ -31,8 +31,7 @@ add_library(model STATIC
     src/token.cpp
 
     # training, testing, inference
-    src/training/trainpr.cpp
-    src/training/trainsent.cpp
+    src/training/train.cpp
     src/training/trainbatch.cpp
     src/testing/testpr.cpp
     src/testing/testsent.cpp

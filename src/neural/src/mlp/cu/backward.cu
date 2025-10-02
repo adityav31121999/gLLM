@@ -66,9 +66,9 @@ void mlp::cuBackward(int in, int layers, float learning) {
         for (int l = layers - 2; l >= 0; l--) {
             // Assuming weights[l+1] is an 'in x in' matrix for this function's logic.
             // The mat object weights[l+1] contains the flat data.
-            const mat& current_weight_matrix = this->weights[l+1];
+            const mat& current_weight_matrix = weights[l+1];
             // Ensure mat dimensions are consistent with 'in' if this function is to be robust.
-            // For now, we proceed assuming this->weights[l+1].row == in and this->weights[l+1].col == in.
+            // For now, we proceed assuming weights[l+1].row == in and weights[l+1].col == in.
             size_t weight_matrix_bytes = static_cast<size_t>(in) * in * sizeof(float);
 
             // Allocate and copy data to device
@@ -105,7 +105,7 @@ void mlp::cuBackward(int in, int layers, float learning) {
             }
             
             // Assuming weights[l] is an 'in x in' matrix for this function's logic.
-            const mat& weights_to_update_mat = this->weights[l];
+            const mat& weights_to_update_mat = weights[l];
             // Ensure mat dimensions are consistent with 'in'.
             size_t current_weight_matrix_bytes = static_cast<size_t>(in) * in * sizeof(float);
 
@@ -124,8 +124,8 @@ void mlp::cuBackward(int in, int layers, float learning) {
             CUDA_CHECK(cudaGetLastError());
 
             // Copy updated weights back to host
-            // The mat object this->weights[l] will receive the updated flat data.
-            CUDA_CHECK(cudaMemcpy(this->weights[l].mapped_data, d_weights, current_weight_matrix_bytes, cudaMemcpyDeviceToHost));
+            // The mat object weights[l] will receive the updated flat data.
+            CUDA_CHECK(cudaMemcpy(weights[l].mapped_data, d_weights, current_weight_matrix_bytes, cudaMemcpyDeviceToHost));
 
             // Free temporary memory
             CUDA_CHECK(cudaFree(d_weights));

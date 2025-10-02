@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include "include/transformer.hpp"
 #include "include/block.hpp"
 #include "include/attention.hpp" // Include necessary headers
@@ -20,56 +20,14 @@
 } while (0)
 
 
-/**
- * @brief CUDA backward propagation from the last block (m-1) down to the first block (0).
- *        Uses a single common expected horizontal error vector for the last block.
- * @param expectedH Expected horizontal embedding for the last block's output.
- */
-void transformer::cuBackward(std::vector<float>& expectedH) {
-    if (m <= 0) {
-        std::cerr << "Warning: cuBackward called with no blocks (m=" << m << ")." << std::endl;
-        return;
-    }
-    // Start backprop from the last block (m)
-    int start_block_index = m - 1; // 0-based index
-    std::cout << "-> cuBackward" << std::endl;
-
-    try {
-        // --- Starting Block (m-1) ---
-        // Receives the external horizontal error signal 'expectedH'.
-        // If m=1, this is also the first block.
-        if (start_block_index == 0) { // Only one block (m=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].cubackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
-        } 
-        else {
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].cubackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- Intermediate Blocks (m-2 down to 1) ---
-        for (int i = start_block_index - 1; i >= 1; --i) {
-            t[i].tokenCount = CONTEXT_WIN;
-            // Block 'i' receives EV from block 'i+1'.
-            t[i].cubackward(t[i + 1].EV, i, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- First Block (0) ---
-        if (start_block_index > 0) {
-            t[0].tokenCount = CONTEXT_WIN;
-            t[0].cubackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-    }
-    catch (const std::exception& e) {
-        throw std::runtime_error("Exception during transformer::cuBackward(vector<float>): " + std::string(e.what()));
-    }
-}
+///////////////////////// static training /////////////////////////
 
 /**
- * @brief CUDA backward propagation from a specific block 'k' down to the first block (0).
+ * @brief OpenCL backward propagation from a specific block 'k' down to the first block (0).
  *        Uses a single common expected horizontal error vector for block 'k-1'.
  * @param expectedH Expected horizontal embedding for block 'k-1's output.
  * @param k The block number (1-based index) to start backpropagation from.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
 void transformer::cuBackward(std::vector<float>& expectedH, int& k) {
     if (k <= 0 || k > m) {
@@ -77,33 +35,19 @@ void transformer::cuBackward(std::vector<float>& expectedH, int& k) {
     }
 
     int start_block_index = k - 1; // 0-based index
-    std::cout << "-> cuBackward" << std::endl;
+    // std::cout << "-> cuBackward (H, start_block = " << k << ")" << std::endl;
 
     try {
         // --- Starting Block (k-1) ---
         // Receives the external horizontal error signal 'expectedH'.
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].cubackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[0].tokenCount = currentTokenCount;
+            blocks[0].cubackward1stBlock(expectedH, d, l, learning, lambda_L1, lambda_L2);
         }
-        else {
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].cubackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- Intermediate Blocks (k-2 down to 1) ---
-        // Propagate vertical error (EV) from the next block.
-        for (int i = start_block_index - 1; i >= 1; --i) {
-            t[i].tokenCount = CONTEXT_WIN;
-            // Block 'i' receives EV from block 'i+1'.
-            t[i].cubackward(t[i + 1].EV, i,  this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- First Block (0) ---
-        if (start_block_index > 0) {
-            t[0].tokenCount = CONTEXT_WIN;
-            t[0].cubackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
+        else { // Handles all k > 1
+            blocks[start_block_index].tokenCount = currentTokenCount % CONTEXT_WIN;
+            blocks[start_block_index].cubackward(expectedH, start_block_index, d, l, learning, lambda_L1, lambda_L2);
         }
     } 
     catch (const std::exception& e) {
@@ -111,107 +55,234 @@ void transformer::cuBackward(std::vector<float>& expectedH, int& k) {
     }
 }
 
-/**
- * @brief CUDA backward propagation from the last block (m-1) down to the first block (0).
- *        Uses distinct expected horizontal error vectors (one per row/parallel) for the last block.
- * @param expectedH Vector of expected horizontal embeddings for the last block's output (shape [x][EMBEDDING]).
- */
-void transformer::cuBackward(std::vector<std::vector<float>>& expectedH) {
-    if (m <= 0) {
-        std::cerr << "Warning: cuBackward called with no blocks (m=" << m << ")." << std::endl;
-        return;
-    }
-    if (expectedH.size() != static_cast<size_t>(this->y)) {
-        throw std::runtime_error("cuBackward(vector<vector<float>>): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of columns y (" + std::to_string(this->y) + ").");
-    }
-    if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
-        throw std::runtime_error("cuBackward(vector<vector<float>>): Inner dimension of expectedH (" + std::to_string(expectedH[0].size()) + ") does not match EMBEDDING (" + std::to_string(EMBEDDING) + ").");
-    }
-
-    int start_block_index = m - 1; // 0-based index
-
-    try {
-        // --- Starting Block (m-1) ---
-        // Receives the external horizontal error signal 'expectedH'.
-        // If m=1, this is also the first block.
-        if (start_block_index == 0) { // Only one block (m=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].cubackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-        else {
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].cubackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- Intermediate Blocks (m-2 down to 1) ---
-        // Propagate vertical error (EV) from the next block.
-        for (int i = start_block_index - 1; i >= 1; --i) {
-            t[i].tokenCount = CONTEXT_WIN;
-            // Block 'i' receives EV from block 'i+1'.
-            t[i].cubackward(t[i + 1].EV, i, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- First Block (0) ---
-        // Only if there's more than one block (start_block_index > 0).
-        // Receives EV from block 1. Uses the special '1stBlock' function.
-        if (start_block_index > 0) {
-            t[0].tokenCount = CONTEXT_WIN;
-            t[0].cubackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Exception during transformer::cuBackward(vector<vector<float>>): " + std::string(e.what()));
-    }
-}
 
 /**
- * @brief CUDA backward propagation from a specific block 'k' down to the first block (0).
+ * @brief OpenCL backward propagation from a specific block 'k' down to the first block (0).
  *        Uses distinct expected horizontal error vectors (one per column/parallel) for block 'k-1'.
  * @param expectedH Vector of expected horizontal embeddings for block 'k-1's output (shape [y][EMBEDDING]).
  * @param k The block number (1-based index) to start backpropagation from.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
  */
 void transformer::cuBackward(std::vector<std::vector<float>>& expectedH, int& k) {
     if (k <= 0 || k > m) {
         throw std::out_of_range("cuBackward(vector<vector<float>>, k): Block index k=" + std::to_string(k) + " is out of range [1, " + std::to_string(m) + "].");
     }
-    // Validate expectedH shape for the starting block (assuming [y][EMBEDDING])
-    if (expectedH.size() != static_cast<size_t>(this->y)) {
-         throw std::runtime_error("cuBackward(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of columns y (" + std::to_string(this->y) + ").");
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed `y` to `x`
+        throw std::runtime_error("cuBackward(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of heads x (" + std::to_string(x) + ").");
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
-         throw std::runtime_error("cuBackward(vector<vector<float>>, k): Inner dimension of expectedH (" + std::to_string(expectedH[0].size()) + ") does not match EMBEDDING (" + std::to_string(EMBEDDING) + ").");
+        throw std::runtime_error("cuBackward(vector<vector<float>>, k): Inner dimension of expectedH (" + std::to_string(expectedH[0].size()) + ") does not match EMBEDDING (" + std::to_string(EMBEDDING) + ").");
     }
 
     int start_block_index = k - 1; // 0-based index
+    // std::cout << "-> cuBackward (H_2D, start_block = " << k << ")" << std::endl;
 
     try {
         // --- Starting Block (k-1) ---
         // Receives the external horizontal error signal 'expectedH'.
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].cubackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
-        } 
+            blocks[0].tokenCount = currentTokenCount;
+            blocks[0].cubackward1stBlock(expectedH, d, l, learning, lambda_L1, lambda_L2);
+        }
         else {
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].cubackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[start_block_index].tokenCount = currentTokenCount % CONTEXT_WIN;
+            blocks[start_block_index].cubackward(expectedH, start_block_index, d, l, learning, lambda_L1, lambda_L2);
         }
-
-        // --- Intermediate Blocks (k-2 down to 1) ---
-        // Propagate vertical error (EV) from the next block.
-        for (int i = start_block_index - 1; i >= 1; --i) {
-            t[i].tokenCount = CONTEXT_WIN;
-            // Block 'i' receives EV from block 'i+1'.
-            t[i].cubackward(t[i + 1].EV, i, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-
-        // --- First Block (0) ---
-        // Only if k > 1 (i.e., start_block_index > 0).
-        // Receives EV from block 1. Uses the special '1stBlock' function.
-        if (start_block_index > 0) {
-            t[0].tokenCount = CONTEXT_WIN;
-            t[0].cubackward1stBlock(t[1].EV, this->d, this->l, learning, lambda_L1, lambda_L2);
-        }
-    } catch (const std::exception& e) {
-         throw std::runtime_error("Exception during transformer::cuBackward(vector<vector<float>>, k=" + std::to_string(k) + "): " + std::string(e.what()));
+    }
+    catch (const std::exception& e) {
+        throw std::runtime_error("Exception during transformer::cuBackward(vector<vector<float>>, k=" + std::to_string(k) + "): " + std::string(e.what()));
     }
 }
+
+///////////////////////// contextualised training /////////////////////////
+
+/**
+ * @brief OpenCL backward propagation from a specific block 'k' down to the first block (0).
+ *        Uses distinct expected horizontal error vectors (one per column/parallel) for block 'k-1'.
+ * @param expectedH Vector of expected horizontal embeddings for block 'k-1's output (shape [y][EMBEDDING]).
+ * @param k The block number (1-based index) to start backpropagation from.
+ * @param clip_norm Maximum L2 norm for gradient clipping (new parameter).
+ */
+void transformer::cuBackwardContext(std::vector<std::vector<float>>& expectedH, int& k) {
+    if (k <= 0 || k > m) {
+        throw std::out_of_range("cuBackwardContext(vector<vector<float>>, k): Block index k=" + std::to_string(k) + " is out of range [1, " + std::to_string(m) + "].");
+    }
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed `y` to `x`
+        throw std::runtime_error("cuBackwardContext(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of heads x (" + std::to_string(x) + ").");
+    }
+    if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
+        throw std::runtime_error("cuBackwardContext(vector<vector<float>>, k): Inner dimension of expectedH (" + std::to_string(expectedH[0].size()) + ") does not match EMBEDDING (" + std::to_string(EMBEDDING) + ").");
+    }
+
+    int start_block_index = k - 1; // 0-based index
+    // std::cout << "-> cuBackwardContext (H_2D, start_block = " << k << ")" << std::endl;
+
+    try {
+        // --- Starting Block (k-1) ---
+        // Receives the external horizontal error signal 'expectedH'.
+        // If k=1, this is the first block.
+        if (start_block_index == 0) { // Starting from the first block (k=1)
+            blocks[0].tokenCount = currentTokenCount;
+            blocks[0].curbackward1stBlock(expectedH, d, l, learning, lambda_L1, lambda_L2);
+        }
+        else {
+            blocks[start_block_index].tokenCount = currentTokenCount % CONTEXT_WIN;
+            blocks[start_block_index].cubackward(expectedH, start_block_index, d, l, learning, lambda_L1, lambda_L2);
+        }
+    }
+    catch (const std::exception& e) {
+        throw std::runtime_error("Exception during transformer::cuBackwardContext(vector<vector<float>>, k=" + std::to_string(k) + "): " + std::string(e.what()));
+    }
+}
+
+//////////////////// contextualised de-embedding from backprop gradient ////////////////////
+
+/**
+ * @brief CUDA implementation to update the deEmbeddings matrix and calculate gradients for the EH vector.
+ *        This function performs:
+ *        1. LOTA activation on raw logits to get probabilities.
+ *        2. Categorical Cross-Entropy backward pass for dL/du.
+ *        3. Computes gradients for deEmbeddings (dL/dW_deEmbeddings).
+ *        4. Updates deEmbeddings using Elastic Net regularization.
+ *        5. Propagates error back to the input of deEmbeddings (dL/dEH).
+ * @param deEmbeddings deEmbeddings matrix ((d*x) * vocabsize).
+ * @param otok Final hidden state (EH), concatenated, from the last layer of the block (size = d*x).
+ * @param prediction Raw logits for each token in the vocabulary (size: vocabsize).
+ * @param oneHotEncode Host-side one-hot vector of true label (size: vocabsize).
+ * @param indexForToken Index of the token for training.
+ * @param learning Learning rate.
+ * @param lambda_L1 L1 regularization parameter.
+ * @param lambda_L2 L2 regularization parameter.
+ * @param gradForEh Host-side vector to store gradients for the EH vector (dL/dEH).
+ */
+void transformer::cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> otok, std::vector<float> prediction,
+                                     std::vector<float> oneHotEncode, int indexForToken, float learning, float lambda_L1, float lambda_L2,
+                                     std::vector<float>& gradForEh)
+{
+    int vocab_size = vocabsize;
+    int p_dim = d * x;
+
+    // --- 0. Validate sizes ---
+    if (prediction.size() != vocab_size || oneHotEncode.size() != vocab_size) {
+        throw std::runtime_error("cuUpdateDeEmbeddings: Input vector size mismatch.");
+    }
+    if (otok.size() != static_cast<size_t>(p_dim)) {
+        throw std::runtime_error("cuUpdateDeEmbeddings: 'otok' size mismatch.");
+    }
+    if (gradForEh.size() != static_cast<size_t>(p_dim)) {
+        gradForEh.resize(p_dim);
+    }
+
+    // --- CUDA device pointers ---
+    float *d_deEmbed, *d_gdeEmbed, *d_prediction_raw_logits, *d_final_hidden_state_input;
+    float *d_oneHotEncode, *d_predNorm, *d_delta, *d_gradForEh_device;
+
+    size_t deEmbed_size_bytes = vocab_size * p_dim * sizeof(float);
+    size_t vocab_size_bytes = vocab_size * sizeof(float);
+    size_t p_dim_bytes = p_dim * sizeof(float);
+
+    CUDA_CHECK(cudaMalloc(&d_deEmbed, deEmbed_size_bytes));
+    CUDA_CHECK(cudaMalloc(&d_gdeEmbed, deEmbed_size_bytes));
+    CUDA_CHECK(cudaMalloc(&d_prediction_raw_logits, vocab_size_bytes));
+    CUDA_CHECK(cudaMalloc(&d_final_hidden_state_input, p_dim_bytes));
+    CUDA_CHECK(cudaMalloc(&d_oneHotEncode, vocab_size_bytes));
+    CUDA_CHECK(cudaMalloc(&d_predNorm, vocab_size_bytes));
+    CUDA_CHECK(cudaMalloc(&d_delta, vocab_size_bytes));
+    CUDA_CHECK(cudaMalloc(&d_gradForEh_device, p_dim_bytes));
+
+    // --- Copy data from host to device ---
+    CUDA_CHECK(cudaMemcpy(d_deEmbed, deEmbeddings.mapped_data, deEmbed_size_bytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_prediction_raw_logits, prediction.data(), vocab_size_bytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_final_hidden_state_input, otok.data(), p_dim_bytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_oneHotEncode, oneHotEncode.data(), vocab_size_bytes, cudaMemcpyHostToDevice));
+
+    // --- Zero out gradient buffer ---
+    CUDA_CHECK(cudaMemset(d_gdeEmbed, 0, deEmbed_size_bytes));
+
+    // --- Kernel launch parameters ---
+    int threads_per_block_1d = 256;
+    int blocks_per_grid_1d = (vocab_size + threads_per_block_1d - 1) / threads_per_block_1d;
+
+    // --- 1. LOTA activation ---
+    cuLOTA<<<blocks_per_grid_1d, threads_per_block_1d>>>((float*)d_prediction_raw_logits, d_predNorm, vocab_size);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    // --- 2. Categorical Cross-Entropy backward pass (dL/dz) ---
+    // Assuming a kernel `kernelComputeGradpred` exists.
+    // kernelComputeGradpred<<<blocks_per_grid_1d, threads_per_block_1d>>>(d_predNorm, d_oneHotEncode, d_delta, vocab_size);
+    // CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
+
+    // --- 3. Compute gradients for deEmbeddings (outer product) ---
+    // Assuming a kernel `KernelComputeGradDeEmbeddings` exists.
+    // dim3 threads_2d(8, 8);
+    // dim3 blocks_2d((p_dim / 4 + threads_2d.x - 1) / threads_2d.x, (vocab_size + threads_2d.y - 1) / threads_2d.y);
+    // KernelComputeGradDeEmbeddings<<<blocks_2d, threads_2d>>>(d_delta, d_final_hidden_state_input, d_gdeEmbed, vocab_size, p_dim / 4);
+    // CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
+
+    // --- 4. Update deEmbeddings weights ---
+    // Assuming a kernel `kernelUpdateWeightsGeneral_f4` exists.
+    // int totalElements = vocab_size * p_dim;
+    // int blocks_update = (totalElements + threads_per_block_1d - 1) / threads_per_block_1d;
+    // kernelUpdateWeightsGeneral_f4<<<blocks_update, threads_per_block_1d>>>(d_deEmbed, d_gdeEmbed, learning, lambda_L1, lambda_L2, totalElements);
+    // CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
+
+    // --- 5. Propagate error back to hidden state (dL/dEH) ---
+    // Assuming a kernel `kernelGradForAttentionOutput` exists.
+    // int blocks_propagate = (p_dim + threads_per_block_1d - 1) / threads_per_block_1d;
+    // kernelGradForAttentionOutput<<<blocks_propagate, threads_per_block_1d>>>(d_deEmbed, d_delta, d_gradForEh_device, vocab_size, p_dim);
+    // CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
+
+    // --- Transfer results back to host ---
+    CUDA_CHECK(cudaMemcpy(deEmbeddings.mapped_data, d_deEmbed, deEmbed_size_bytes, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(gradForEh.data(), d_gradForEh_device, p_dim_bytes, cudaMemcpyDeviceToHost));
+
+    // --- Free device memory ---
+    cudaFree(d_deEmbed);
+    cudaFree(d_gdeEmbed);
+    cudaFree(d_prediction_raw_logits);
+    cudaFree(d_final_hidden_state_input);
+    cudaFree(d_oneHotEncode);
+    cudaFree(d_predNorm);
+    cudaFree(d_delta);
+    cudaFree(d_gradForEh_device);
+}
+
+/**
+ * @brief CUDA implementation to update embedding using propagated gradients from training.
+ */
+void transformer::cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning,
+    float lambda_L1, float lambda_L2, int rows)
+{
+    int dim = d;
+    size_t rowBytes = static_cast<size_t>(rows) * dim * sizeof(float);
+    size_t gradBytes = gradForEh.size() * sizeof(float);
+
+    // --- Device pointers ---
+    float *d_embed, *d_gEmbed;
+
+    // --- Allocate and copy ---
+    CUDA_CHECK(cudaMalloc(&d_embed, rowBytes));
+    CUDA_CHECK(cudaMalloc(&d_gEmbed, gradBytes));
+    CUDA_CHECK(cudaMemcpy(d_embed, tokenEmbedding.mapped_data, rowBytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_gEmbed, gradForEh.data(), gradBytes, cudaMemcpyHostToDevice));
+
+    // --- Kernel launch ---
+    int threads_per_block = 256;
+    int blocks_per_grid = (dim + threads_per_block - 1) / threads_per_block;
+    // Assuming a kernel `updateEmbeddings` exists.
+    // updateEmbeddings<<<blocks_per_grid, threads_per_block>>>(d_embed, d_gEmbed, learning, lambda_L1, lambda_L2, vocabsize, dim);
+    // CUDA_CHECK(cudaGetLastError());
+    // CUDA_CHECK(cudaDeviceSynchronize());
+
+    // --- Free memory ---
+    cudaFree(d_embed);
+    cudaFree(d_gEmbed);
+}
+
+#endif

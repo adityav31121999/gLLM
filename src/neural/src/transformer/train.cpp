@@ -8,20 +8,20 @@
 
 /**
  * @brief train the transformer for next token prediction (single token training)
- * @param promptCount number of tokens in the prompt
+ * @param sequence1Count number of tokens in the sequence1
  * @param currentTokenCount number of tokens in the full context
  * @param blockCount current block in full context
  * @param expected expected token embedding
  * @param expString expected token
  */
-void transformer::train(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected,
+void transformer::train(int& sequence1Count, int& currentTokenCount, int& blockCount, std::vector<float>& expected,
     std::string& expString) 
 {
     // for first block
     if(blockCount == 1 && currentTokenCount < CONTEXT_WIN) {
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+        computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
         // train from here
-        forward(blockCount, currentTokenCount, promptCount);
+        forward(blockCount, currentTokenCount, sequence1Count);
         int i = 0;
         while (i <= epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
@@ -33,7 +33,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
                 epochs += 10;
             }
             backward(expected);
-            forward(blockCount, currentTokenCount, promptCount);
+            forward(blockCount, currentTokenCount, sequence1Count);
             i++;
         }
         trainCount++;
@@ -46,14 +46,14 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
     }
     // for next blocks
     else if(blockCount > 1 && currentTokenCount >= CONTEXT_WIN) {
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+        computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
         // train from here
-        forward(blockCount, currentTokenCount, promptCount);
+        forward(blockCount, currentTokenCount, sequence1Count);
         int i = 0;
         while (i < epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
             if(errorofv(otok, expected) < 0.01 || tokens[indexForToken] == expString) {
-                // tokenEmbed[currentTokenCount] = t[blockCount-1].EH; // This was problematic, EH is vector, tokenEmbed is mat
+                // tokenEmbed[currentTokenCount] = blocks[blockCount-1].EH; // This was problematic, EH is vector, tokenEmbed is mat
                 // If otok is the predicted embedding, and it's good, this might be where it's stored.
                 break;
             }
@@ -63,7 +63,7 @@ void transformer::train(int& promptCount, int& currentTokenCount, int& blockCoun
             }
             i++;
             backward(expected, blockCount);
-            forward(blockCount, currentTokenCount, promptCount);
+            forward(blockCount, currentTokenCount, sequence1Count);
         }
         trainCount++;
         epochCount += i;
@@ -92,7 +92,7 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
     }
     // compute KdotQ for first element
     setRow(tokenEmbed, 0, sentence[0]);
-    promptCount = 1;
+    sequence1Count = 1;
     blockCount = 1;
     // keep this in a loop and train for each token in the sentence starting from second token
     for(int token_idx_in_sentence = 1; token_idx_in_sentence < sentence.size(); token_idx_in_sentence++) {
@@ -101,22 +101,22 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
             // get keys and queries for KdotQ
             for(int j = 0; j < x; j++) {
                 for(int k = 0; k < y; k++) {
-                    std::vector<float> q_output_vec(this->h);
-                    computeKorQ(sentence[token_idx_in_sentence], t[0].b[j][k].MQ, q_output_vec);
+                    std::vector<float> q_output_vec(h);
+                    computeKorQ(sentence[token_idx_in_sentence], blocks[0].b[j][k].MQ, q_output_vec);
                     setRow(t[0].b[j][k].Q, token_idx_in_sentence, q_output_vec);
 
-                    std::vector<float> k_output_vec(this->h);
-                    computeKorQ(sentence[token_idx_in_sentence], t[0].b[j][k].MK, k_output_vec);
+                    std::vector<float> k_output_vec(h);
+                    computeKorQ(sentence[token_idx_in_sentence], blocks[0].b[j][k].MK, k_output_vec);
                     setRow(t[0].b[j][k].K, token_idx_in_sentence, k_output_vec);
 
                     setRow(t[0].b[j][k].EV, token_idx_in_sentence, sentence[token_idx_in_sentence]);
                 }
             }
             // compute KdotQ for all heads of this block
-            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+            computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
             int j_epoch = 0; // Renamed to avoid conflict with outer loop variable j
             // TRAIN FOR SENTENCE
-            forward(blockCount, currentTokenCount, promptCount);
+            forward(blockCount, currentTokenCount, sequence1Count);
             while (j_epoch <= epochs) {
                 computeOutput(otok, embeddings, vocabsize, indexForToken);
                 if((errorofv(otok, sentence[token_idx_in_sentence]) < 0.01) || tokens[indexForToken] == rString[token_idx_in_sentence]) {
@@ -127,7 +127,7 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
                     epochs += 10;
                 }
                 backward(sentence[token_idx_in_sentence]);
-                forward(blockCount, currentTokenCount, promptCount);
+                forward(blockCount, currentTokenCount, sequence1Count);
                 j_epoch++;
             }
             // update variables
@@ -153,22 +153,22 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
                 for(int k = 0; k < y; k++) {
                     // compute Key and Query for this iteration
                     std::vector<float> prev_block_ev_row = getRow(t[blockCount-2].b[j][k].EV, token_idx_in_block);
-                    std::vector<float> q_output_vec(this->h);
-                    computeKorQ(prev_block_ev_row, t[blockCount-1].b[j][k].MQ, q_output_vec);
+                    std::vector<float> q_output_vec(h);
+                    computeKorQ(prev_block_ev_row, blocks[blockCount-1].b[j][k].MQ, q_output_vec);
                     setRow(t[blockCount-1].b[j][k].Q, token_idx_in_block, q_output_vec);
 
                     std::vector<float> current_block_token_row = getRow(t[blockCount-1].tokForBlock, token_idx_in_block);
-                    std::vector<float> k_output_vec(this->h);
-                    computeKorQ(current_block_token_row, t[blockCount-1].b[j][k].MK, k_output_vec);
+                    std::vector<float> k_output_vec(h);
+                    computeKorQ(current_block_token_row, blocks[blockCount-1].b[j][k].MK, k_output_vec);
                     setRow(t[blockCount-1].b[j][k].K, token_idx_in_block, k_output_vec);
 
                     setRow(t[blockCount-1].b[j][k].EV, token_idx_in_block, sentence[token_idx_in_sentence]); // Target token for EV? Or input?
                 }
             }
             // compute the KdotQ for each head of block using EVs of previous blocks
-            computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+            computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
             // TRAIN FOE SENTENCE
-            forward(blockCount, currentTokenCount, promptCount);
+            forward(blockCount, currentTokenCount, sequence1Count);
             int j_epoch = 0; // Renamed
             while (j_epoch < epochs) {
                 computeOutput(otok, embeddings, vocabsize, indexForToken);
@@ -181,7 +181,7 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
                 }
                 j_epoch++;
                 backward(sentence[token_idx_in_sentence], blockCount);
-                forward(blockCount, currentTokenCount, promptCount);
+                forward(blockCount, currentTokenCount, sequence1Count);
             }
             // update variables
             trainCount++;
@@ -197,37 +197,37 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
 
 
 /**
- * @brief train the transformer for prompt and response (single prompt and response)
- * @param prompt prompt token embeddings
- * @param response response token embeddings
- * @param rString tokens of response
+ * @brief train the transformer for sequence1 and sequence2 (single sequence1 and sequence2)
+ * @param sequence1 sequence1 token embeddings
+ * @param sequence2 sequence2 token embeddings
+ * @param rString tokens of sequence2
  */
-void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std::vector<float>>& response, 
+void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, 
     std::vector<std::string>& rString) 
 {
-    // prompt must not be empty
-    if (prompt.empty()) {
-        throw std::runtime_error("Initial prompt cannot be empty!");
+    // sequence1 must not be empty
+    if (sequence1.empty()) {
+        throw std::runtime_error("Initial sequence1 cannot be empty!");
     }
-    // prompt size should not exceed threshold (one fourth of context window)
-    if(prompt.size() > PROMPT_THRESHOLD) {
+    // sequence1 size should not exceed threshold (one fourth of context window)
+    if(sequence1.size() > PROMPT_THRESHOLD) {
         throw std::runtime_error("Pompt size should not exceed CONTEXT_WIN!");
     }
     // Basic validation
-    if (response.empty() || response.size() != rString.size()) {
-        throw std::runtime_error("Response embeddings and response strings must be non-empty and have the same size!");
+    if (sequence2.empty() || sequence2.size() != rString.size()) {
+        throw std::runtime_error("Sequence2 embeddings and sequence2 strings must be non-empty and have the same size!");
     }
     
-    int initialTokCount = this->currentTokenCount;
-    // Keys and Queries of prompts
+    int initialTokCount = currentTokenCount;
+    // Keys and Queries of sequence1s
     if(blockCount == 1) {
         for(int i_pa = 0; i_pa < x; i_pa++) {
             for(int j_head = 0; j_head < y; j_head++) {
-                for(int k = 0; k < prompt.size(); k++) {
-                    // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
-                    t[0].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MQ);
-                    // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
-                    t[0].b[i_pa][j_head].K(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MK);
+                for(int k = 0; k < sequence1.size(); k++) {
+                    // make queries using compute KorQ: blocks[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = sequence1(i) * blocks[0].b[i][j].MQ
+                    blocks[0].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(sequence1[i_pa], blocks[0].b[i_pa][j_head].MQ);
+                    // make keys using compute KorQ: blocks[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = sequence1(i) * blocks[0].b[i][j].MK
+                    blocks[0].b[i_pa][j_head].K(initialTokCount%CONTEXT_WIN + k) = dot(sequence1[i_pa], blocks[0].b[i_pa][j_head].MK);
                 }
             }
         }
@@ -235,13 +235,13 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
     else {
         for(int i_pa = 0; i_pa < x; i_pa++) {
             for(int j_head = 0; j_head < y; j_head++) {
-                for(int k = 0; k < prompt.size(); k++) {
-                    // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
-                    t[blockCount-1].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MQ);
+                for(int k = 0; k < sequence1.size(); k++) {
+                    // make queries using compute KorQ: blocks[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = sequence1(i) * blocks[0].b[i][j].MQ
+                    blocks[blockCount-1].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(sequence1[i_pa], blocks[0].b[i_pa][j_head].MQ);
                 }
                 for(int k = 0; k < CONTEXT_WIN; k++) {
-                    // make queries using compute KorQ: t[0].b[i][j].K[i] = prompt(i) * t[blockCount-1].b[i][j].MK
-                    t[blockCount-1].b[i_pa][j_head].K(k) = dot(t[blockCount-1].b[i_pa][j_head].EV(k), t[0].b[i_pa][j_head].MQ);
+                    // make queries using compute KorQ: blocks[0].b[i][j].K[i] = sequence1(i) * blocks[blockCount-1].b[i][j].MK
+                    blocks[blockCount-1].b[i_pa][j_head].K(k) = dot(t[blockCount-1].b[i_pa][j_head].EV(k), blocks[0].b[i_pa][j_head].MQ);
                 }
             }
         }
@@ -249,49 +249,49 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
 
     int resCount = 0;
 
-    for(int i = 0; i < response.size(); i++) {
+    for(int i = 0; i < sequence2.size(); i++) {
         // compute the KdotQ for each head of block using EVs of previous blocks
-        computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
-        forward(blockCount, currentTokenCount, promptCount);
+        computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
+        forward(blockCount, currentTokenCount, sequence1Count);
 
         int j_epoch = 0;
         while (j_epoch < epochs) {
             computeOutput(otok, embeddings, vocabsize, indexForToken);
-            float current_error = MSE(otok, response[i]);
-            if(tokens[this->indexForToken] == rString[i])
+            float current_error = MSE(otok, sequence2[i]);
+            if(tokens[indexForToken] == rString[i])
             {
-                std::cout << "indexForToken: " << this->indexForToken << std::endl;
-                std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
+                std::cout << "indexForToken: " << indexForToken << std::endl;
+                std::cout << "Computed token is -> " << tokens[indexForToken] << " <- with error " << current_error << std::endl;
                 break;
             }
             else if(j_epoch == epochs - 1) {
-                std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
+                std::cout << "Computed token is -> " << tokens[indexForToken] << " <- with error " << current_error << std::endl;
                 std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
                 epochs += 10;
             }
             else {
-                std::cout << "Computed token is -> " << tokens[this->indexForToken] << " <- with error " << current_error << std::endl;
+                std::cout << "Computed token is -> " << tokens[indexForToken] << " <- with error " << current_error << std::endl;
             }
 
             j_epoch++;
-            backward(response[i], blockCount);
+            backward(sequence2[i], blockCount);
 
-            // Keys and Queries of both prompts and response
+            // Keys and Queries of both sequence1s and sequence2
             if(blockCount == 1) {
                 for(int i_pa = 0; i_pa < x; i_pa++) {
                     for(int j_head = 0; j_head < y; j_head++) {
-                        for(int k = 0; k < prompt.size(); k++) {
-                            // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
-                            t[0].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MQ);
-                            // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
-                            t[0].b[i_pa][j_head].K(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MK);
+                        for(int k = 0; k < sequence1.size(); k++) {
+                            // make queries using compute KorQ: blocks[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = sequence1(i) * blocks[0].b[i][j].MQ
+                            blocks[0].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(sequence1[i_pa], blocks[0].b[i_pa][j_head].MQ);
+                            // make keys using compute KorQ: blocks[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = sequence1(i) * blocks[0].b[i][j].MK
+                            blocks[0].b[i_pa][j_head].K(initialTokCount%CONTEXT_WIN + k) = dot(sequence1[i_pa], blocks[0].b[i_pa][j_head].MK);
                         }
                         if(resCount > 0) {
                             for(int k = 0; k < resCount; k++) {
-                                // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MQ
-                                t[0].b[m][n].Q(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[0].b[m][n].MQ);
-                                // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MK
-                                t[0].b[m][n].K(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[0].b[m][n].MK);
+                                // make queries using compute KorQ: blocks[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MQ
+                                blocks[0].b[m][n].Q(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[0].b[m][n].MQ);
+                                // make keys using compute KorQ: blocks[0].b[i][j].K[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MK
+                                blocks[0].b[m][n].K(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[0].b[m][n].MK);
                             }
                         }
                     }
@@ -300,47 +300,47 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
             else {
                 for(int i_pa = 0; i_pa < x; i_pa++) {
                     for(int j_head = 0; j_head < y; j_head++) {
-                        for(int k = 0; k < prompt.size(); k++) {
-                            // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
-                            t[blockCount-1].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(prompt[i_pa], t[0].b[i_pa][j_head].MQ);
+                        for(int k = 0; k < sequence1.size(); k++) {
+                            // make queries using compute KorQ: blocks[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = sequence1(i) * blocks[0].b[i][j].MQ
+                            blocks[blockCount-1].b[i_pa][j_head].Q(initialTokCount%CONTEXT_WIN + k) = dot(sequence1[i_pa], blocks[0].b[i_pa][j_head].MQ);
                         }
                         for(int k = 0; k < CONTEXT_WIN; k++) {
-                            // make queries using compute KorQ: t[0].b[i][j].K[i] = prompt(i) * t[blockCount-1].b[i][j].MK
-                            t[blockCount-1].b[i_pa][j_head].K(k) = dot(t[blockCount-1].b[i_pa][j_head].EV(k), t[0].b[i_pa][j_head].MQ);
+                            // make queries using compute KorQ: blocks[0].b[i][j].K[i] = sequence1(i) * blocks[blockCount-1].b[i][j].MK
+                            blocks[blockCount-1].b[i_pa][j_head].K(k) = dot(t[blockCount-1].b[i_pa][j_head].EV(k), blocks[0].b[i_pa][j_head].MQ);
                         }
                         if(resCount > 0) {
                             for(int k = 0; k < resCount; k++) {
-                                // make queries using compute KorQ: t[blockCount-1].b[i][j].Q[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MQ
-                                t[blockCount-1].b[m][n].Q(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[blockCount-1].b[m][n].MQ);
-                                // make keys using compute KorQ: t[blockCount-1].b[i][j].K[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MK
-                                t[blockCount-1].b[m][n].K(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[blockCount-1].b[m][n].MK);
+                                // make queries using compute KorQ: blocks[blockCount-1].b[i][j].Q[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MQ
+                                blocks[blockCount-1].b[m][n].Q(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[blockCount-1].b[m][n].MQ);
+                                // make keys using compute KorQ: blocks[blockCount-1].b[i][j].K[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MK
+                                blocks[blockCount-1].b[m][n].K(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[blockCount-1].b[m][n].MK);
                             }
                         }
                     }
                 }
             }
-            // forward(blockCount, currentTokenCount, promptCount);
+            // forward(blockCount, currentTokenCount, sequence1Count);
         }
         // update variables
         resCount++;
         trainCount++;
         epochCount += j_epoch;
-        error += errorofv(otok, response[i]);
+        error += errorofv(otok, sequence2[i]);
         currentTokenCount += 1;
         if(currentTokenCount % CONTEXT_WIN == 0) {
             blockCount += 1;
-            // t[blockCount-1].deserialise(t[blockCount-1].blockFilePath);
+            // blocks[blockCount-1].deserialise(t[blockCount-1].blockFilePath);
         }
-        // Keys and Queries of response
+        // Keys and Queries of sequence2
         if(resCount > 0) {
             if(blockCount == 1) {
                 for(int m = 0; m < x; m++) {
                     for(int n = 0; n < y; n++) {
                         for(int k = 0; k < resCount; k++) {
-                            // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MQ
-                            t[0].b[m][n].Q(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[0].b[m][n].MQ);
-                            // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MK
-                            t[0].b[m][n].K(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[0].b[m][n].MK);
+                            // make queries using compute KorQ: blocks[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MQ
+                            blocks[0].b[m][n].Q(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[0].b[m][n].MQ);
+                            // make keys using compute KorQ: blocks[0].b[i][j].K[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MK
+                            blocks[0].b[m][n].K(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[0].b[m][n].MK);
                         }
                     }
                 }
@@ -349,10 +349,10 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
                 for(int m = 0; m < x; m++) {
                     for(int n = 0; n < y; n++) {
                         for(int k = 0; k < resCount; k++) {
-                            // make queries using compute KorQ: t[blockCount-1].b[i][j].Q[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MQ
-                            t[blockCount-1].b[m][n].Q(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[blockCount-1].b[m][n].MQ);
-                            // make keys using compute KorQ: t[blockCount-1].b[i][j].K[currentTokenCount%CONTEXT_WIN + prompt.size() + k] = response(i) * t[0].b[i][j].MK
-                            t[blockCount-1].b[m][n].K(initialTokCount%CONTEXT_WIN + prompt.size() + k) = dot(response[k], t[blockCount-1].b[m][n].MK);
+                            // make queries using compute KorQ: blocks[blockCount-1].b[i][j].Q[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MQ
+                            blocks[blockCount-1].b[m][n].Q(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[blockCount-1].b[m][n].MQ);
+                            // make keys using compute KorQ: blocks[blockCount-1].b[i][j].K[currentTokenCount%CONTEXT_WIN + sequence1.size() + k] = sequence2(i) * blocks[0].b[i][j].MK
+                            blocks[blockCount-1].b[m][n].K(initialTokCount%CONTEXT_WIN + sequence1.size() + k) = dot(sequence2[k], blocks[blockCount-1].b[m][n].MK);
                         }
                     }
                 }
@@ -364,26 +364,26 @@ void transformer::train(std::vector<std::vector<float>>& prompt, std::vector<std
 
 /**
  * @brief train transformers for continuous chats
- * @param prompts all prompts
- * @param responses token embeddings all responses to the prompts
- * @param rString tokens of responses
+ * @param sequence1s all sequence1s
+ * @param sequence2s token embeddings all sequence2s to the sequence1s
+ * @param rString tokens of sequence2s
  */
-void transformer::train(std::vector<std::vector<std::vector<float>>>& prompts, std::vector<std::vector<std::vector<float>>>& responses, 
+void transformer::train(std::vector<std::vector<std::vector<float>>>& sequence1s, std::vector<std::vector<std::vector<float>>>& sequence2s, 
                         std::vector<std::vector<std::string>>& rString) 
 {
-    if(prompts.size() != responses.size() || responses.size() != rString.size()) {
+    if(sequence1s.size() != sequence2s.size() || sequence2s.size() != rString.size()) {
         throw std::runtime_error("Rows of all the vectors must match");
     }
     int sum = 0;
-    for(int i = 0; i < prompts.size(); i++) {
-        sum += prompts[i].size() + responses[i].size();
+    for(int i = 0; i < sequence1s.size(); i++) {
+        sum += sequence1s[i].size() + sequence2s[i].size();
     }
     if(sum > FULL_CONTEXT) {
         throw std::runtime_error("TOTAL TOKENS SHOULD NOT EXCEED THE FULL CONTEXT");
     }
     // TRAIN FOR CHAT
-    for(int i = 0; i < prompts.size(); i++) {
-        train(prompts[i], responses[i], rString[i]);
+    for(int i = 0; i < sequence1s.size(); i++) {
+        train(sequence1s[i], sequence2s[i], rString[i]);
     }
 }
 

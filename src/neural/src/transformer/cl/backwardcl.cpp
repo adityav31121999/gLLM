@@ -43,8 +43,8 @@ void transformer::clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> oto
     cl_int cl_err;
     cl::CommandQueue& queue = clcontext.queue;
     cl::Context context = clcontext.context;
-    int vocab_size = this->vocabsize;
-    int p_dim = this->d * this->x;
+    int vocab_size = vocabsize;
+    int p_dim = d * x;
 
     // --- 0. Validate sizes and prepare host vectors ---
     if (prediction.size() != vocab_size || oneHotEncode.size() != vocab_size) {
@@ -98,7 +98,7 @@ void transformer::clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> oto
     CL_CHECK(queue.finish());
 
     // --- 2. Categorical Cross-Entropy backward pass for dL/dz (`d_delta`) ---
-    cl::Kernel calculate_output_delta_lota_kernel = clcontext.kernels.at("clCalculateOutputDeltaLOTA");
+    cl::Kernel calculate_output_delta_lota_kernel = clcontext.kernels.at("kernelComputeGradpred");
     CL_CHECK(calculate_output_delta_lota_kernel.setArg(0, d_predNorm));
     CL_CHECK(calculate_output_delta_lota_kernel.setArg(1, d_oneHotEncode));
     CL_CHECK(calculate_output_delta_lota_kernel.setArg(2, d_delta));
@@ -107,29 +107,32 @@ void transformer::clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> oto
     CL_CHECK(queue.finish());
 
     // --- 3. Compute gradients for deEmbeddings (`d_gdeEmbed`) ---
-    cl::Kernel compute_gradient_de_embeddings_kernel = clcontext.kernels.at("clComputeGradientDeEmbeddings");
-    cl::NDRange global_size_grad_deEmbed_2d = calculate_global_2d(vocab_size, p_dim);
+    // This is an outer product: grad[i,j] = delta[i] * otok[j].
+    // We use a vectorized kernel that processes 4 elements at a time.
+    cl::Kernel compute_gradient_de_embeddings_kernel = clcontext.kernels.at("KernelComputeGradDeEmbeddings");
+    cl::NDRange global_size_grad_deEmbed_2d = calculate_global_2d(vocab_size, p_dim / 4);
     CL_CHECK(compute_gradient_de_embeddings_kernel.setArg(0, d_delta));
     CL_CHECK(compute_gradient_de_embeddings_kernel.setArg(1, d_final_hidden_state_input));
     CL_CHECK(compute_gradient_de_embeddings_kernel.setArg(2, d_gdeEmbed));
     CL_CHECK(compute_gradient_de_embeddings_kernel.setArg(3, vocab_size));
-    CL_CHECK(compute_gradient_de_embeddings_kernel.setArg(4, p_dim));
+    CL_CHECK(compute_gradient_de_embeddings_kernel.setArg(4, p_dim / 4)); // Pass width_div_4
     CL_CHECK(queue.enqueueNDRangeKernel(compute_gradient_de_embeddings_kernel, cl::NullRange, global_size_grad_deEmbed_2d, local_2d));
     CL_CHECK(queue.finish());
 
     // --- 4. Update deEmbeddings weights (`d_deEmbed`) ---
-    cl::Kernel update_weights_general_kernel = clcontext.kernels.at("kernelUpdateWeights_General");
+    cl::Kernel update_weights_general_kernel = clcontext.kernels.at("kernelUpdateWeightsGeneral_f4");
     CL_CHECK(update_weights_general_kernel.setArg(0, d_deEmbed));
     CL_CHECK(update_weights_general_kernel.setArg(1, d_gdeEmbed));
     CL_CHECK(update_weights_general_kernel.setArg(2, learning));
     CL_CHECK(update_weights_general_kernel.setArg(3, lambda_L1));
     CL_CHECK(update_weights_general_kernel.setArg(4, lambda_L2));
-    CL_CHECK(update_weights_general_kernel.setArg(6, vocab_size * p_dim));
+    int totalElements = vocab_size * p_dim;
+    CL_CHECK(update_weights_general_kernel.setArg(5, totalElements));
     CL_CHECK(queue.enqueueNDRangeKernel(update_weights_general_kernel, cl::NullRange, calculate_global_1d(vocab_size * p_dim), local_1d));
     CL_CHECK(queue.finish());
 
     // --- 5. Propagate error back to the input of deEmbeddings (`d_gradForEh_device`) ---
-    cl::Kernel propagate_error_to_hidden_kernel = clcontext.kernels.at("clPropagateErrorToHidden");
+    cl::Kernel propagate_error_to_hidden_kernel = clcontext.kernels.at("kernelGradForAttentionOutput");
     CL_CHECK(propagate_error_to_hidden_kernel.setArg(0, d_deEmbed));
     CL_CHECK(propagate_error_to_hidden_kernel.setArg(1, d_delta));
     CL_CHECK(propagate_error_to_hidden_kernel.setArg(2, d_gradForEh_device));
@@ -174,12 +177,12 @@ void transformer::clBackward(std::vector<float>& expectedH, int& k) {
         // Receives the external horizontal error signal 'expectedH'.
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[0].tokenCount = currentTokenCount;
+            blocks[0].clbackward1stBlock(expectedH, d, l, learning, lambda_L1, lambda_L2);
         }
         else { // Handles all k > 1
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[start_block_index].tokenCount = currentTokenCount % CONTEXT_WIN;
+            blocks[start_block_index].clbackward(expectedH, start_block_index, d, l, learning, lambda_L1, lambda_L2);
         }
     } 
     catch (const std::exception& e) {
@@ -199,8 +202,8 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
     if (k <= 0 || k > m) {
         throw std::out_of_range("clBackward(vector<vector<float>>, k): Block index k=" + std::to_string(k) + " is out of range [1, " + std::to_string(m) + "].");
     }
-    if (expectedH.size() != static_cast<size_t>(this->x)) { // Changed `this->y` to `this->x`
-        throw std::runtime_error("clBackward(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of heads x (" + std::to_string(this->x) + ").");
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed `y` to `x`
+        throw std::runtime_error("clBackward(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of heads x (" + std::to_string(x) + ").");
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
         throw std::runtime_error("clBackward(vector<vector<float>>, k): Inner dimension of expectedH (" + std::to_string(expectedH[0].size()) + ") does not match EMBEDDING (" + std::to_string(EMBEDDING) + ").");
@@ -214,12 +217,12 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
         // Receives the external horizontal error signal 'expectedH'.
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].clbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[0].tokenCount = currentTokenCount;
+            blocks[0].clbackward1stBlock(expectedH, d, l, learning, lambda_L1, lambda_L2);
         }
         else {
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[start_block_index].tokenCount = currentTokenCount % CONTEXT_WIN;
+            blocks[start_block_index].clbackward(expectedH, start_block_index, d, l, learning, lambda_L1, lambda_L2);
         }
     }
     catch (const std::exception& e) {
@@ -240,8 +243,8 @@ void transformer::clBackwardContext(std::vector<std::vector<float>>& expectedH, 
     if (k <= 0 || k > m) {
         throw std::out_of_range("clBackwardContext(vector<vector<float>>, k): Block index k=" + std::to_string(k) + " is out of range [1, " + std::to_string(m) + "].");
     }
-    if (expectedH.size() != static_cast<size_t>(this->x)) { // Changed `this->y` to `this->x`
-        throw std::runtime_error("clBackwardContext(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of heads x (" + std::to_string(this->x) + ").");
+    if (expectedH.size() != static_cast<size_t>(x)) { // Changed `y` to `x`
+        throw std::runtime_error("clBackwardContext(vector<vector<float>>, k): Outer dimension of expectedH (" + std::to_string(expectedH.size()) + ") does not match number of heads x (" + std::to_string(x) + ").");
     }
     if (!expectedH.empty() && expectedH[0].size() != EMBEDDING) {
         throw std::runtime_error("clBackwardContext(vector<vector<float>>, k): Inner dimension of expectedH (" + std::to_string(expectedH[0].size()) + ") does not match EMBEDDING (" + std::to_string(EMBEDDING) + ").");
@@ -255,12 +258,12 @@ void transformer::clBackwardContext(std::vector<std::vector<float>>& expectedH, 
         // Receives the external horizontal error signal 'expectedH'.
         // If k=1, this is the first block.
         if (start_block_index == 0) { // Starting from the first block (k=1)
-            t[0].tokenCount = this->currentTokenCount;
-            t[0].clrbackward1stBlock(expectedH, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[0].tokenCount = currentTokenCount;
+            blocks[0].clrbackward1stBlock(expectedH, d, l, learning, lambda_L1, lambda_L2);
         }
         else {
-            t[start_block_index].tokenCount = this->currentTokenCount % CONTEXT_WIN;
-            t[start_block_index].clbackward(expectedH, start_block_index, this->d, this->l, learning, lambda_L1, lambda_L2);
+            blocks[start_block_index].tokenCount = currentTokenCount % CONTEXT_WIN;
+            blocks[start_block_index].clbackward(expectedH, start_block_index, d, l, learning, lambda_L1, lambda_L2);
         }
     }
     catch (const std::exception& e) {
@@ -273,10 +276,38 @@ void transformer::clBackwardContext(std::vector<std::vector<float>>& expectedH, 
 /**
  * @brief update embedding using propagated gradients from training
  */
-void transformer::clUpdateEmbeddings(std::vector<float>& tokenEmbedding, float learning, float lambda_L1, float lambda_L2,
-            std::vector<float> &gradForEh)
+void transformer::clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning,
+    float lambda_L1, float lambda_L2, int rows)
 {
-    //
+    cl_int cl_err;
+    cl::CommandQueue& queue = clcontext.queue;
+    cl::Context context = clcontext.context;
+    int vocab_size = vocabsize;
+    int dim = d;
+    size_t rowBytes = static_cast<size_t>(rows) * d * sizeof(float);
+
+    cl::Buffer d_dembed(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, rowBytes, tokenEmbedding.mapped_data, &cl_err); CL_CHECK(cl_err);
+    cl::Buffer d_gEmbed(context, CL_MEM_READ_WRITE, dim * sizeof(float), nullptr, &cl_err); CL_CHECK(cl_err);
+
+    const size_t local_work_size_1d = 256;
+    cl::NDRange local_1d(local_work_size_1d);
+    auto calculate_global_1d = [&](size_t total_size) {
+        return cl::NDRange(((total_size + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d);
+    };
+
+    cl::Kernel update_weights_general_kernel = clcontext.kernels.at("updateEmbeddings");
+    CL_CHECK(update_weights_general_kernel.setArg(0, d_dembed));
+    CL_CHECK(update_weights_general_kernel.setArg(1, d_gEmbed));
+    CL_CHECK(update_weights_general_kernel.setArg(2, learning));
+    CL_CHECK(update_weights_general_kernel.setArg(3, lambda_L1));
+    CL_CHECK(update_weights_general_kernel.setArg(4, lambda_L2));
+    CL_CHECK(update_weights_general_kernel.setArg(5, vocab_size));
+    CL_CHECK(update_weights_general_kernel.setArg(6, d));
+    CL_CHECK(queue.enqueueNDRangeKernel(update_weights_general_kernel, cl::NullRange, calculate_global_1d(dim), local_1d));
+    CL_CHECK(queue.finish());
+
+    d_gEmbed = cl::Buffer();
+    d_dembed = cl::Buffer();
 }
 
 #endif

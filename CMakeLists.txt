@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 
 # project and version
 project(gLLM C CXX)
-set(VERSION 0.1.0.1)
+set(VERSION 0.1.3.1)
 message("Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("DCA Experimental Project for structure and logic verification")
 
@@ -30,7 +30,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
 set(USE_OPENCL OFF)
 set(USE_CUDA ON)
-# set(USE_CPU OFF)
+set(USE_CPU OFF)
 
 # set compile definitions
 if(USE_CUDA)
@@ -69,7 +69,6 @@ set(subProjects
     src/maths       # math functions
     src/neural      # neural network and mechanism
     src/model       # model files
-    # src/script      # script for CLI
 )
 
 # Include each subdirectory

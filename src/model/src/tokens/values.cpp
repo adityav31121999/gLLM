@@ -10,7 +10,7 @@
  */
 void tokeniser::setEmbeddingDimension(int d) {
     // Set the dimension for the embeddings.
-    this->d = d;
+    d = d;
 }
 
 /**
@@ -19,7 +19,7 @@ void tokeniser::setEmbeddingDimension(int d) {
  */
 void tokeniser::setDval(int d_val) {
     // Set the divisor for the embeddings.
-    this->d_val = d_val;
+    d_val = d_val;
 }
 
 /**
@@ -28,7 +28,7 @@ void tokeniser::setDval(int d_val) {
  */
 void tokeniser::setVocabularySize(int vocSize) {
     // Set the vocabulary size.
-    this->vocSize = vocSize;
+    vocSize = vocSize;
 }
 
 void tokeniser::setNumThreads()
@@ -48,7 +48,7 @@ void tokeniser::setNumThreads()
 void tokeniser::setEmbedding(const std::string& token, std::vector<float> embedding) {
     auto it = std::find(tokens.begin(), tokens.end(), token);
 
-    // set embedding for this token from this->embeddings
+    // set embedding for this token from embeddings
     if (it != tokens.end()) {
         auto index = std::distance(tokens.begin(), it);
         embeddings[index] = std::move(embedding);

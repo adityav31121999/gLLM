@@ -1,13 +1,5 @@
-
 // Helper macro for indexing flattened matrix (assuming row-major)
 #define IDX(row, col, dim) ((row) * (dim) + (col))
-
-// Enable extensions for atomics and potentially double precision (which might include float atomics)
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable // For double support
-// #pragma OPENCL EXTENSION cl_khr_float_atomics : enable // Ignored by target platform, implementing manually
-
 
 void parallel_reduce_max(__local float* buffer, uint local_size) {
     uint local_id = get_local_id(0);
@@ -331,28 +323,6 @@ __kernel void clSoftmax2dder(__global float* x, __global float* out, float temp,
     }
 }
 
-__kernel void clSoftmaxd1dder_from_s(__global float* s, __global float* out, int size)
-{
-    int i = get_global_id(0);
-    if (i < size) {
-        // Derivative: s_i * (1 - s_i)
-        float s_i = s[i];
-        out[i] = s_i * (1.0f - s_i);
-    }
-}
-
-__kernel void clSoftmaxd2dder_from_s(__global float* s, __global float* out, int rows, int cols)
-{
-    int row = get_global_id(0);
-    int col = get_global_id(1);
-
-    if (row < rows && col < cols) {
-        int idx = row * cols + col;
-        // Derivative: s_ij * (1 - s_ij)
-        float s_ij = s[idx];
-        out[idx] = s_ij * (1.0f - s_ij);
-    }
-}
 
 __kernel void clReLU(float x, __global float* result) {
     *result = fmax(0.0f, x);
@@ -473,87 +443,101 @@ __kernel void clLOTA2d(__global float* y, __global float* out, int rows, int col
     }
 }
 
+
 __kernel void clLOTA2dmasking(__global float* y, __global float* out, int rows, int cols, int limit_dim, int isSelfAttention) {
-    // isSelfAttention: 1 if self (lower triangle incl. diagonal), 0 if cross (square up to limit_dim)
-    // This kernel performs parallel reduction over the masked elements.
-    int global_id = get_global_id(0);
+    // Each work-item now processes a vector of 4 elements.
+    int global_vec_id = get_global_id(0);
     int local_id = get_local_id(0);
     uint local_size = get_local_size(0);
+    int start_idx = global_vec_id * 4;
     int total_elements_in_buffer = rows * cols;
 
-    // Ensure local_buffer is large enough for the work-group size.
-    // Host must ensure local_size <= 256 (or whatever this is set to).
-    __local float local_buffer[256];
+    __local float local_buffer[256]; // Assumes local_size <= 256
 
-    // Determine if the current element is active for calculations based on the mask
-    bool is_active_element = false;
-    float current_y_value = 0.0f; // Value of y[global_id] if active
+    // --- Phase 1: Load and mask 4 elements per work-item ---
+    float4 current_y_vec = (float4)(0.0f);
+    // Use int4 for masking with select(). 0 means false, -1 (all bits set) means true.
+    int4 is_active_vec = (int4)(0);
 
-    if (global_id < total_elements_in_buffer) {
-        int r = global_id / cols;
-        int c = global_id % cols;
-        if (r < limit_dim && c < limit_dim) { // Within the t x t subgrid
-            if (isSelfAttention == 1) { // Self-attention: lower triangle including diagonal
-                if (c <= r) is_active_element = true;
-            } else { // Cross-attention (isSelfAttention == 0): square
-                is_active_element = true;
+    // Unroll the loop to process 4 elements, checking boundaries for each.
+    for (int k = 0; k < 4; ++k) {
+        int current_idx = start_idx + k;
+        if (current_idx < total_elements_in_buffer) {
+            int r = current_idx / cols;
+            int c = current_idx % cols;
+            bool is_active_element = false;
+            if (r < limit_dim && c < limit_dim) {
+                if (isSelfAttention == 1) { // Self-attention: lower triangle
+                    if (c <= r) is_active_element = true;
+                } else { // Cross-attention: square
+                    is_active_element = true;
+                }
             }
-        }
-        if (is_active_element) {
-            current_y_value = y[global_id];
+
+            if (is_active_element) {
+                // Ugly but standard way to set a vector component by index
+                ((int*)&is_active_vec)[k] = -1; // Set this lane to "true"
+                ((float*)&current_y_vec)[k] = y[current_idx];
+            }
         }
     }
 
-    // --- Step 1: Find min_val over the masked (active) region ---
-    // Each work-item contributes its y_value if active, or MAXFLOAT otherwise.
-    local_buffer[local_id] = is_active_element ? current_y_value : MAXFLOAT;
+    // --- Phase 2: Perform three sequential work-group reductions ---
+
+    // --- Step 1: Find min_val over the masked region ---
+    float4 y_for_min = select((float4)(MAXFLOAT), current_y_vec, is_active_vec);
+    float local_min = min(min(y_for_min.s0, y_for_min.s1), min(y_for_min.s2, y_for_min.s3));
+    local_buffer[local_id] = local_min;
     barrier(CLK_LOCAL_MEM_FENCE);
-    parallel_reduce_min(local_buffer, local_size); // Reduce to find the minimum among active elements
+    parallel_reduce_min(local_buffer, local_size);
     float min_val_masked = local_buffer[0];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    // If min_val_masked is still MAXFLOAT, it means no active elements were found in this work-group's processing range.
-    // A true global min would require inter-work-group communication or a final reduction step on the host / separate kernel.
-    // For now, if it's MAXFLOAT, assume no active elements globally for this reduction pass, set to 0.
-    if (min_val_masked == MAXFLOAT) {
-        min_val_masked = 0.0f;
-    }
+    min_val_masked = (min_val_masked == MAXFLOAT) ? 0.0f : min_val_masked;
     float abs_min_val_masked = fabs(min_val_masked);
 
-    // --- Step 2: Count active elements for uniform distribution if sum is zero ---
-    local_buffer[local_id] = is_active_element ? 1.0f : 0.0f;
+    // --- Step 2: Count active elements ---
+    float4 counts = select((float4)(0.0f), (float4)(1.0f), is_active_vec);
+    float local_count = counts.s0 + counts.s1 + counts.s2 + counts.s3;
+    local_buffer[local_id] = local_count;
     barrier(CLK_LOCAL_MEM_FENCE);
     parallel_reduce_sum(local_buffer, local_size);
     float active_elements_count = local_buffer[0];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    // --- Step 3: Compute sum of (y_value + abs_min_val_masked) for active elements ---
-    // Each work-item contributes (y_value + abs_min_val_masked) if active, or 0.0f otherwise.
-    local_buffer[local_id] = is_active_element ? (current_y_value + abs_min_val_masked) : 0.0f;
+    // --- Step 3: Compute sum of shifted values ---
+    float4 shifted_y = select((float4)(0.0f), current_y_vec + abs_min_val_masked, is_active_vec);
+    float local_sum = shifted_y.s0 + shifted_y.s1 + shifted_y.s2 + shifted_y.s3;
+    local_buffer[local_id] = local_sum;
     barrier(CLK_LOCAL_MEM_FENCE);
     parallel_reduce_sum(local_buffer, local_size);
     float sum_shifted_masked = local_buffer[0];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    // --- Step 4: Apply LOTA formula to active elements ---
-    if (global_id < total_elements_in_buffer) {
-        if (is_active_element) {
-            if (sum_shifted_masked > 1e-9f) { // Use a small epsilon for float comparison
-                out[global_id] = (current_y_value + abs_min_val_masked) / sum_shifted_masked;
-            } else if (active_elements_count > 0) {
-                // Sum is zero (or very small), distribute uniformly among active elements
-                out[global_id] = 1.0f / active_elements_count;
-            } else {
-                // No active elements, or sum is zero with no active elements (should not happen if is_active_element is true)
-                out[global_id] = 0.0f; // Default to 0
+
+    // --- Phase 3: Apply LOTA formula and store 4 results ---
+    float4 out_vec = (float4)(0.0f);
+    if (sum_shifted_masked > 1e-9f) {
+        out_vec = (current_y_vec + abs_min_val_masked) / sum_shifted_masked;
+    } else if (active_elements_count > 0) {
+        out_vec = 1.0f / active_elements_count;
+    }
+
+    // Mask out the inactive elements in the final result vector
+    out_vec = select((float4)(0.0f), out_vec, is_active_vec);
+
+    // Safely store the results, handling the case where the total size is not a multiple of 4.
+    if (start_idx + 3 < total_elements_in_buffer) {
+        vstore4(out_vec, 0, out + start_idx);
+    } else {
+        for (int k = 0; k < 4; ++k) {
+            if (start_idx + k < total_elements_in_buffer) {
+                out[start_idx + k] = ((float*)&out_vec)[k];
             }
-        }
-        else {
-            // Element is outside the relevant region, set output to 0
-            out[global_id] = 0.0f;
         }
     }
 }
+
 
 __kernel void clLOTA1dder(__global float* y, __global float* out, int size) {
     int global_id = get_global_id(0);

@@ -8,17 +8,17 @@
  * @brief forward propagation for transformers
  * @param blockCount current block index
  * @param currentTokenCount current number of tokens
- * @param promptCount number of tokens in prompt
+ * @param sequence1Count number of tokens in sequence1
  */
-void transformer::forward(int& blockCount, int& currentTokenCount, int& promptCount)
+void transformer::forward(int& blockCount, int& currentTokenCount, int& sequence1Count)
 {
     if (blockCount < 0 || blockCount >= m) {
         throw std::out_of_range("transformer::forward: blockCount (" + std::to_string(blockCount) + ") is out of range [0, " + std::to_string(m - 1) + "].");
     }
-    if (t.empty() || static_cast<size_t>(blockCount) >= t.size()) {
+    if (t.empty() || static_cast<size_t>(blockCount) >= blocks.size()) {
         throw std::runtime_error("transformer::forward: Transformer blocks not initialized or blockCount exceeds allocated blocks.");
     }
-    if (blockCount < t.size() && (t[blockCount].b.empty() || t[blockCount].b[0].empty())) {
+    if (blockCount < blocks.size() && (t[blockCount].b.empty() || blocks[blockCount].b[0].empty())) {
         throw std::runtime_error("transformer::forward: Attention heads not initialized for block " + std::to_string(blockCount) + ".");
     }
 
@@ -37,26 +37,26 @@ void transformer::forward(int& blockCount, int& currentTokenCount, int& promptCo
     }
 
     // compute the KdotQ
-    computeKdotQs(promptCount, currentTokenCount, blockCount, isSelf, inTraining);
+    computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
     if(blockCount == 0) {
-        t[0].forprop(d, currentTokenCount, l, 1);
+        blocks[0].forprop(d, currentTokenCount, l, 1);
         for(int i = 0; i < d; i++) {
             for(int j = 0; j < x; j++) {
-                otok[i] += t[0].b[j][y-1].EH[i];
+                otok[i] += blocks[0].b[j][y-1].EH[i];
             }  
         }
         computeOutput(otok, tokenEmbed, vocabsize, indexForToken);
     }
     else {
-        if (blockCount > 0 && static_cast<size_t>(blockCount-1) < t.size() && (blockCount == 1 || static_cast<size_t>(blockCount-2) < t.size())) {
-            t[blockCount-1].forprop((blockCount > 1 ? t[blockCount-2].EV : EVuse), d, currentTokenCount, blockCount, l, n);
+        if (blockCount > 0 && static_cast<size_t>(blockCount-1) < blocks.size() && (blockCount == 1 || static_cast<size_t>(blockCount-2) < blocks.size())) {
+            blocks[blockCount-1].forprop((blockCount > 1 ? blocks[blockCount-2].EV : EVuse), d, currentTokenCount, blockCount, l, n);
         } 
         else if (blockCount < 0 || blockCount > m) {
             throw std::runtime_error("transformer::forward: Invalid block indices for forprop in else branch.");
         }
         for(int i = 0; i < d; i++) {
             for(int j = 0; j < x; j++) {
-                otok[i] += t[0].b[j][y-1].EH[i];
+                otok[i] += blocks[0].b[j][y-1].EH[i];
             }
         }
         computeOutput(otok, embeddings, vocabsize, indexForToken);

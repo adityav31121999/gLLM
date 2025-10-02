@@ -15,18 +15,18 @@ void transformer::backward(std::vector<float>& expected) {
     while (count < m) {
         if(count == 0) {
             // start from last block where Expected EVs are not known
-            t[m-1].backward(expected, d, l, m, learning);
+            blocks[m-1].backward(expected, d, l, m, learning);
             count++;    // = 1
         }
         else if(count >=1 || count < m-1) {
             // backward propagation when expected vectors are known
             // from 2nd last to 2nd block
-            t[m-count-1].backward(t[m-count].EV, d, l, m-count, learning);
+            blocks[m-count-1].backward(t[m-count].EV, d, l, m-count, learning);
             count++;    // = 2 to m-1
         }
         else if(count == m-1) {
             // for first block
-            t[0].backward1stBlock(t[1].EV, d, l, learning);
+            blocks[0].backward1stBlock(t[1].EV, d, l, learning);
             break;
         }
     }
@@ -44,17 +44,17 @@ void transformer::backward(std::vector<float>& expected, int& k) {
     while (count < k) {
         if(count == 0) {
             // start from last block
-            t[k-1].backward(expected, d, l, k, learning);
+            blocks[k-1].backward(expected, d, l, k, learning);
             count++;    // = 1
         }
         // backward propagation for 2nd last to 2nd block, with combined expected EH vector
         else if (count >=1 || count < k-1) {
-            t[k-count-1].backward(t[m-count].EV, d, l, k-count, learning);
+            blocks[k-count-1].backward(t[m-count].EV, d, l, k-count, learning);
             count++;    // = 2 to k-1
         }
         else if(count == k-1) {
             // for first block
-            t[0].backward1stBlock(t[1].EV, d, l, learning);
+            blocks[0].backward1stBlock(t[1].EV, d, l, learning);
         }
     }
 }
@@ -70,18 +70,18 @@ void transformer::backward(std::vector<std::vector<float>>& expected) {
     while (count < m) {
         if(count == 0) {
             // start from last block where Expected EVs are not known
-            t[m-1].backward(expected, d, l, m, learning);
+            blocks[m-1].backward(expected, d, l, m, learning);
             count++;    // = 1
         }
         // backward propagation when expected EV vectors are known
         else if(count >=1 || count < m-1) {
             // from 2nd last to 2nd block
-            t[m-count-1].backward(t[m-count].EV, d, l, m-count, learning);
+            blocks[m-count-1].backward(t[m-count].EV, d, l, m-count, learning);
             count++;    // = 2 to m-1
         }
         else if(count == m-1) {
             // for first block
-            t[0].backward1stBlock(t[1].EV, d, l, learning);
+            blocks[0].backward1stBlock(t[1].EV, d, l, learning);
             break;
         }
     }
@@ -99,17 +99,17 @@ void transformer::backward(std::vector<std::vector<float>>& expected, int& k) {
     while (count < k) {
         if(count == 0) {
             // start from last block
-            t[k-1].backward(expected, d, l, k, learning);
+            blocks[k-1].backward(expected, d, l, k, learning);
             count++;    // = 1
         }
         // backward propagation for 2nd last to 2nd block, with combined expected EH vector
         else if (count >=1 || count < k-1) {
-            t[k-count-1].backward(t[m-count].EV, d, l, k-count, learning);
+            blocks[k-count-1].backward(t[m-count].EV, d, l, k-count, learning);
             count++;    // = 2 to k-1
         }
         else if(count == k-1) {
             // for first block
-            t[0].backward1stBlock(t[1].EV, d, l, learning);
+            blocks[0].backward1stBlock(t[1].EV, d, l, learning);
         }
     }
 }

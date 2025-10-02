@@ -27,37 +27,6 @@
 #include "mlp.hpp"
 #include "attention.hpp"
 
-// Helper struct to manage device pointers for one head's worth of data
-struct HeadDevicePointers {
-    // Attention related
-    float *d_expected_h = nullptr, *d_EH = nullptr, *d_EV = nullptr;
-    float *d_grad_EH = nullptr, *d_grad_EV_scaled = nullptr;
-    float *d_grad_dh = nullptr, *d_grad_dv = nullptr;
-    float *d_KdotQ = nullptr, *d_head = nullptr;
-    float *d_K = nullptr, *d_Q = nullptr;
-    float *d_pre_MH = nullptr, *d_pre_MV = nullptr;
-    float *d_MH_a = nullptr, *d_MV_a = nullptr, *d_MQ_a = nullptr, *d_MK_a = nullptr;
-    float *d_grad_MH = nullptr, *d_grad_MV = nullptr;
-    float *d_grad_head = nullptr;
-    float *d_lota_deriv = nullptr;
-    float *d_grad_KdotQ = nullptr;
-    float *d_grad_K = nullptr, *d_grad_Q = nullptr;
-    float *d_grad_MQ = nullptr, *d_grad_MK = nullptr;
-
-    // MLP Internals
-    std::vector<float*> d_hor_activations;
-    std::vector<float*> d_hor_weights;
-    std::vector<float*> d_hor_gweights;
-    std::vector<float*> d_hor_deltas;
-    std::vector<float*> d_ver_activations;
-    std::vector<float*> d_ver_weights;
-    std::vector<float*> d_ver_gweights;
-    std::vector<float*> d_ver_deltas;
-
-    HeadDevicePointers() = default; // Default constructor for vector initialization
-};
-
-
 /**
  * @brief block for complete attention (local context), each row is called as partial attention,
  * each column is called parallel (since they are performed in parallel on GPUs),
@@ -84,11 +53,16 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
     block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
-        long long int vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
+        unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
+        float& learning);
+    block(OpenCLContext& context, const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
+        unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
         float& learning);
 #elif USE_CUDA || USE_CPU
     block() = default;
-    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, long long int vocab, 
+    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, 
+        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning);
+    block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, 
         bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning);
 #endif
 
@@ -121,32 +95,34 @@ public:
     // for complete block
     void cuForprop(int& in, int& tokenCount, int& layers);
     void cuForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
-    // for single parallel
-    // partial attention backward
-    void cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void cupartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void cupartialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, float& learning, float& lambda_l1, float& lambda_l2);
-    void cupartialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void cupartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void cupartialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, int blocknumber, float& learning, float& lambda_l1, float& lambda_l2);
+    void cuForpropev(int& in, int& tokenCount, int& layers);
+    void cuForpropev(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
+    // for single parallel, partial attention backward
+    void cupartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
+    void cupartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
+    void curpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
+    void cupartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
+    void cupartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     // parallel partialbackward(i)
     void cubackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
     void cubackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
-    void cubackward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
-    void cubackward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
-    void cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
-    void cubackward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning, float& lambda_l1, float& lambda_l2);
+    void curbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
+    void cubackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
+    void cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
 
 #elif USE_OPENCL
 
     // for single parallel
     void cl1parallelForprop(int& in, int& tokenCount, int i, int& layers);
     void cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
+    void cl1parallelForpropev(int& in, int& tokenCount, int i, int& layers);
+    void cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
     // for complete block
     void clForprop(int& in, int& tokenCount, int& layers);
     void clForprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
-    // for single parallel
-    // partial attention backward
+    void clForpropev(int& in, int& tokenCount, int& layers);
+    void clForpropev(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
+    // for single parallel, partial attention backward
     void clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
     void clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     void clrpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
@@ -174,17 +150,15 @@ public:
     // partial attention backward
     void partialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
-    void partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, float& learning);
+    void rpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
-    void partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& layers, int k, int blocknumber, float& learning);
     // parallel partialbackward(i)
     void backward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning);
     void backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning);
-    void backward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning);
+    void rbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning);
     void backward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning);
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning);
-    void backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning);
 
 #endif
 

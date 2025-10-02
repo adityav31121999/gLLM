@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 
 #include "include/transformer.hpp"
 #include "include/block.hpp"
@@ -23,162 +24,6 @@ do {                                                                         \
     }                                                                        \
 } while (0)
 
-
-/**
- * @brief (CUDA) Train the transformer for next token prediction (single token training)
- * @param promptCount number of tokens in the prompt
- * @param currentTokenCount number of tokens in the full context
- * @param blockCount current block in full context
- * @param expected expected token embedding (on host)
- * @param expString expected token string (on host)
- */
-void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCount, std::vector<float>& expected,
-    std::string& expString)
-{
-    // all token embeddings of prompt and response will be stored here
-    float* d_tokenEmbed;    CUDA_CHECK(cudaMalloc(&d_tokenEmbed, m * CONTEXT_WIN * d * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_tokenEmbed, tokenEmbed.mapped_data, m * CONTEXT_WIN * d * sizeof(float), cudaMemcpyHostToDevice));
-    // all embeddings will be stored here
-    float* d_embeddings;    CUDA_CHECK(cudaMalloc(&d_embeddings, vocabsize * d * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_embeddings, embeddings.mapped_data, vocabsize * d * sizeof(float), cudaMemcpyHostToDevice));
-    // expected and output vector
-    float* d_expected;      CUDA_CHECK(cudaMalloc(&d_expected, expected.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_expected, expected.data(), expected.size() * sizeof(float), cudaMemcpyHostToDevice));
-    float* d_otok_buffer;   CUDA_CHECK(cudaMalloc(&d_otok_buffer, d * sizeof(float)));
-
-    float prev_Error = 0.0f;        // previous iterations error
-
-    // Training logic for the first block
-    if(blockCount == 1 && currentTokenCount <= CONTEXT_WIN) {
-        // scaled dot product for all heads
-        cuParallelKdotQs(promptCount, currentTokenCount, blockCount, d, isSelf, inTraining);
-        // forward pass for all columns
-        cuForward(blockCount, currentTokenCount, promptCount);
-        int i = 0;                      // epoch counter
-        float current_error = 1.0f;     // Initialize error high
-        int host_indexForToken = -1;    // index obtained from training for response
-        while (i <= epochs) 
-        {
-            float* d_block0_EH_ptr = nullptr; // Hypothetical function to get device pointer
-            CUDA_CHECK(cudaMalloc(&d_block0_EH_ptr, d * sizeof(float))); // This will hold the output from cuForward
-            CUDA_CHECK(cudaMemcpy(d_block0_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy transformer's otok (output of cuForward)
-
-            // Compute output token embedding and find best token index on GPU
-            cuComputeOutput(d_block0_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
-            std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back to host for error check
-            current_error = crossEntropy(h_otok_buffer, expected);
-
-            if(i > 0) {
-                if(current_error <= prev_Error) {
-                    if(i <= 6)   
-                        learning *= 1.05;
-                    else if (i % 6 == 0)
-                        learning *= (1 + (i/6)*0.05);
-                }
-                else {
-                    if(i <= 6)   
-                        learning *= 0.95;
-                    else if (i % 6 == 0)
-                        learning *= (1 - (i/6)*0.05);
-                }
-            }
-
-            if(host_indexForToken >= 0 && host_indexForToken < tokens.size() && tokens[host_indexForToken] == expString) {
-                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, d_block0_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToDevice));
-                break;
-            }
-
-            // Increase epochs if error is persistent
-            if(current_error > 0.01 && i == epochs) {
-                epochs += 10;
-            }
-
-            cuBackward(expected);
-            cuForward(blockCount, currentTokenCount, promptCount);
-            i++;
-        }
-        // Update host counters
-        trainCount++;
-        epochCount += i;
-        error += current_error; // Add final error
-        totalLearning += learning;
-        currentTokenCount += 1;
-        if(currentTokenCount == CONTEXT_WIN) {
-            blockCount += 1;
-        }
-    }
-    // Training logic for subsequent blocks
-    else if(blockCount > 1 && currentTokenCount >= CONTEXT_WIN) 
-    {
-        cuParallelKdotQs(promptCount, currentTokenCount, blockCount, d, isSelf, inTraining);
-        cuForward(blockCount, currentTokenCount, promptCount); // Operates on device data
-
-        int i = 0;                      // epoch counter
-        float current_error = 1.0f;     // Initialize error high
-        int host_indexForToken = -1;    // index obtained from training for response
-
-        while (i < epochs) 
-        {
-            prev_Error = current_error;
-            float* d_current_block_EH_ptr; // Pointer to the current block's EH on device
-            CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, d * sizeof(float)));
-            CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy transformer's otok
-            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
-
-            std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
-            current_error = crossEntropy(h_otok_buffer, expected);
-
-            if(i > 0) {
-                if(current_error <= prev_Error) {
-                    if(i <= 6)   
-                        learning *= 1.05;
-                    else if (i % 6 == 0)
-                        learning *= (1 + (i/6)*0.05);
-                }
-                else {
-                    if(i <= 6)   
-                        learning *= 0.95;
-                    else if (i % 6 == 0)
-                        learning *= (1 - (i/6)*0.05);
-                }
-            }
-
-            if(current_error < 0.01 || (host_indexForToken >= 0 && host_indexForToken 
-                < tokens.size() && tokens[host_indexForToken] == expString)) 
-            {
-                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + currentTokenCount * d, d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToDevice));
-                break; // Exit training loop
-            }
-
-            // Increase epochs if error is persistent
-            if(current_error > 0.01 && i == epochs -1)
-            {
-                epochs += 10;
-            }
-
-            cuBackward(expected, blockCount);
-            cuForward(blockCount, currentTokenCount, promptCount);
-            i++;
-        }
-        // Update host counters
-        trainCount++;
-        epochCount += i;
-        error += current_error;
-        totalLearning += learning;
-        currentTokenCount += 1;
-        if(currentTokenCount % CONTEXT_WIN == 0) {
-            blockCount += 1;
-        }
-    }
-
-    // Free temporary device memory
-    CUDA_CHECK(cudaFree(d_expected));
-    CUDA_CHECK(cudaFree(d_otok_buffer));
-}
-
-
 /**
  * @brief (CUDA) Train the transformer on sentences or paragraphs
  * @param sentence token embedding of sentence (on host)
@@ -186,172 +31,248 @@ void transformer::cuTrain(int& promptCount, int& currentTokenCount, int& blockCo
  */
 void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString)
 {
-    // Basic validation
-    if(sentence.size() > FULL_CONTEXT) {
-        throw std::runtime_error("Sentence size should not exceed FULL_CONTEXT");
+    // --- Basic validation ---
+    if(sentence.size() + currentTokenCount > FULL_CONTEXT) {
+        throw std::runtime_error("cuTrain(sentence): Previous tokens and sentence will exceed the FULL CONTEXT '-'");
     }
-    if(sentence.empty() || sentence.size() != rString.size()) {
-        throw std::runtime_error("Sentence embeddings and sentence strings must be non-empty and have the same size.");
+    if (sentence.size() > FULL_CONTEXT) {
+        throw std::runtime_error("cuTrain(sentence): Sentence size (" + std::to_string(sentence.size()) + ") exceeds FULL_CONTEXT (" + std::to_string(FULL_CONTEXT) + ").");
+    }
+    if (sentence.empty() || sentence.size() != rString.size()) {
+        std::cout << "sentence.size(): " << sentence.size() << ", rString.size(): " << rString.size() << std::endl;
+        throw std::runtime_error("cuTrain(sentence): Sentence embeddings/strings mismatch or empty.");
+    }
+    if (!sentence.empty() && sentence[0].size() != static_cast<size_t>(d)) {
+        throw std::runtime_error("cuTrain(sentence): Sentence embedding dimension mismatch. Expected " + std::to_string(d) + ", got " + std::to_string(sentence[0].size()));
     }
 
-    // Allocate temporary device buffers
-    float* d_expected_token;
-    CUDA_CHECK(cudaMalloc(&d_expected_token, d * sizeof(float)));
-    float* d_otok_buffer; // Buffer for EH output
-    CUDA_CHECK(cudaMalloc(&d_otok_buffer, d * sizeof(float)));
-    int* d_indexForToken_ptr;
-    CUDA_CHECK(cudaMalloc(&d_indexForToken_ptr, sizeof(int)));
-    float* d_tokenEmbed; // Device context buffer
-    CUDA_CHECK(cudaMalloc(&d_tokenEmbed, m * CONTEXT_WIN * d * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_tokenEmbed, tokenEmbed.mapped_data, m * CONTEXT_WIN * d * sizeof(float), cudaMemcpyHostToDevice));
-    float* d_embeddings; // Device embedding table
-    CUDA_CHECK(cudaMalloc(&d_embeddings, vocabsize * d * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_embeddings, embeddings.mapped_data, vocabsize * d * sizeof(float), cudaMemcpyHostToDevice)); // Should be embeddings.mapped_data
+    // --- Variable Initialization ---
+    float initial_learning_rate = learning; // Store initial learning rate
+    float current_error = 0.0f;
+    float prev_error = 0.0f;
+    int initial_epochs = epochs;
+    int initial_token_count = currentTokenCount; // Store initial count
+    bool blockShifted = false;
+    int effective_context_size = 0;
+    int start = 0;
 
+    // --- Device Buffer Allocation & H->D Transfer ---
     size_t totalTokenEmbedFloats = static_cast<size_t>(m) * CONTEXT_WIN * d;
     size_t tokenEmbedBytes = totalTokenEmbedFloats * sizeof(float);
+    size_t embeddingsBytes = static_cast<size_t>(vocabsize) * d * sizeof(float);
     size_t singleTokenBytes = static_cast<size_t>(d) * sizeof(float);
-    size_t outputBytes = singleTokenBytes; // Size of h_otok_buffer
+    size_t projection_matrix_bytes = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float);
+    size_t KQmatbytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t embedding_bytes_loc = static_cast<size_t>(EMBEDDING) * CONTEXT_WIN * sizeof(float);
 
-    float* dQ; float* dK; float* mQ; float* mK; float* tok;
-    // int threadsPerBlock = 256;
-    CUDA_CHECK(cudaMalloc(&dQ, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
-    CUDA_CHECK(cudaMalloc(&dK, static_cast<size_t>(EMBEDDING) * sizeof(float))); // Buffer for one token embedding
-    CUDA_CHECK(cudaMalloc(&mQ, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MQ is MATHEIGHTS x EMBEDDING
-    CUDA_CHECK(cudaMalloc(&mK, static_cast<size_t>(MATHEIGHTS) * EMBEDDING * sizeof(float))); // MK is MATHEIGHTS x EMBEDDING
-    CUDA_CHECK(cudaMalloc(&tok, static_cast<size_t>(MATHEIGHTS) * sizeof(float))); // Output of matrix-vector product (MATHEIGHTS elements)
+    float *d_embeddings, *d_tokenEmbed, *d_expected_token;
+    float *d_Q, *d_K, *d_mQ, *d_mK, *d_tok;
+    int* d_result_index;
 
-    // start taking attention score for first token and then perform trainin
-    // otherwise starting from zero means trying to perform training without attention score
-    this->blockCount = 1, this->promptCount = 1;
+    CUDA_CHECK(cudaMalloc(&d_embeddings, embeddingsBytes));
+    CUDA_CHECK(cudaMemcpy(d_embeddings, embeddings.mapped_data, embeddingsBytes, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&d_tokenEmbed, tokenEmbedBytes));
+    CUDA_CHECK(cudaMalloc(&d_expected_token, singleTokenBytes));
+    CUDA_CHECK(cudaMalloc(&d_Q, KQmatbytes));
+    CUDA_CHECK(cudaMalloc(&d_K, KQmatbytes));
+    CUDA_CHECK(cudaMalloc(&d_mQ, projection_matrix_bytes));
+    CUDA_CHECK(cudaMalloc(&d_mK, projection_matrix_bytes));
+    CUDA_CHECK(cudaMalloc(&d_tok, embedding_bytes_loc));
+    CUDA_CHECK(cudaMalloc(&d_result_index, sizeof(int)));
 
-    // Train for each subsequent token in the sentence, starting from the second token
-    // first token is used to set kdotq
-    for(int i = 1; i < sentence.size(); ++i) {
-        // Copy the expected token embedding to device
-        CUDA_CHECK(cudaMemcpy(d_expected_token, sentence[i].data(), d * sizeof(float), cudaMemcpyHostToDevice));
-        int effective_context_size = currentTokenCount; // Size of context *before* adding token i
+    otok.clear(); otok.resize(d, 0.0f);
 
-        cuParallelKdotQs(promptCount, effective_context_size, blockCount, d, isSelf, inTraining);
-        cuForward(blockCount, effective_context_size, promptCount);
+    // --- Context Initialization ---
+    std::vector<float> flat_host_tokenEmbed;
+    if (currentTokenCount == 0) {
+        blockCount = 1;
+        tokenEmbed.addRow(sentence[0], 0);
+        effective_context_size = 1;
+        currentTokenCount += 1;
+        start = 1;
+    } else if (currentTokenCount > 0 && currentTokenCount < CONTEXT_WIN) {
+        blockCount = 1;
+        effective_context_size = currentTokenCount;
+        flat_host_tokenEmbed.assign(tokenEmbed.mapped_data, tokenEmbed.mapped_data + static_cast<size_t>(currentTokenCount) * d);
+        start = 0;
+    } else {
+        effective_context_size = currentTokenCount % CONTEXT_WIN;
+        if (effective_context_size == 0 && currentTokenCount > 0) { // exactly at a boundary
+            effective_context_size = CONTEXT_WIN;
+            blockCount = currentTokenCount / CONTEXT_WIN;
+        } else {
+            blockCount = (currentTokenCount / CONTEXT_WIN) + 1;
+        }
+        flat_host_tokenEmbed.assign(tokenEmbed.mapped_data, tokenEmbed.mapped_data + static_cast<size_t>(currentTokenCount) * d);
+        start = 0;
+    }
 
-        int j = 0;
-        float current_error = 1.0f;
-        int host_indexForToken = -1;
+    if (!flat_host_tokenEmbed.empty()) {
+        CUDA_CHECK(cudaMemcpy(d_tokenEmbed, flat_host_tokenEmbed.data(), flat_host_tokenEmbed.size() * sizeof(float), cudaMemcpyHostToDevice));
+    }
+
+    sequence1Count = 1;
+    std::cout << "Prediction | Index | Entropy LOSS | del | e^Loss | EPOCHS | Learning Rate" << std::endl;
+
+    // --- Train for each subsequent token in the sentence ---
+    for (size_t i = start; i < sentence.size(); ++i) {
+        if (currentTokenCount >= FULL_CONTEXT) {
+            std::cerr << "Warning: cuTrain(sentence) reached FULL_CONTEXT limit ("
+                      << currentTokenCount << "). Stopping training early at sentence index " << i << "." << std::endl;
+            break;
+        }
+
+        // Target token for this iteration
+        std::vector<float>& expected_vec = sentence[i];
         std::string& expected_str = rString[i];
+        CUDA_CHECK(cudaMemcpy(d_expected_token, expected_vec.data(), singleTokenBytes, cudaMemcpyHostToDevice));
 
-        while (j < epochs) 
-        {
-            float* d_current_block_EH_ptr; // Pointer to current block's EH on device
-            CUDA_CHECK(cudaMalloc(&d_current_block_EH_ptr, d * sizeof(float))); // EH is size d
-            CUDA_CHECK(cudaMemcpy(d_current_block_EH_ptr, this->otok.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Copy transformer's otok
+        int current_block_idx = blockCount;
+        if (current_block_idx <= 0 || current_block_idx > m) {
+            throw std::out_of_range("cuTrain(sentence): Calculated current_block_idx (" + std::to_string(current_block_idx) + ") is out of range [1, " + std::to_string(m) + "].");
+        }
 
-            cuComputeOutput(d_current_block_EH_ptr, d_embeddings, vocabsize, this->indexForToken, d);
-            std::vector<float> h_otok_buffer(d);
-            CUDA_CHECK(cudaMemcpy(h_otok_buffer.data(), d_current_block_EH_ptr, d * sizeof(float), cudaMemcpyDeviceToHost)); // Copy result back for error check
+        // --- Training Loop for token i ---
+        int j = 0;
 
-            current_error = errorofv(h_otok_buffer, sentence[i]); // Compare against target sentence[i]
-            std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<long long int>(tokens.size()))
+        std::cout << "Training token " << i+1 << "/" << sentence.size() << ": '" << expected_str << "'" << " at " << indexVec[i] << std::endl;
+        std::cout << "current block: " << current_block_idx << " | current token count: " << currentTokenCount << " | eff. context size: " << effective_context_size <<std::endl;
+        size_t currentBytes = static_cast<size_t>(EMBEDDING) * effective_context_size * sizeof(float);
+        CUDA_CHECK(cudaMemcpy(d_tok, tokenEmbed.mapped_data, currentBytes, cudaMemcpyHostToDevice));
+
+        while (j < epochs) {
+            current_error = 0.0f;
+
+            // --- K/Q Calculation ---
+            dim3 threadsPerBlock(16, 16);
+            dim3 numBlocks((CONTEXT_WIN + 15) / 16, (effective_context_size + 15) / 16);
+
+            if (current_block_idx == 1) {
+                for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
+                    for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
+                        auto& qMat = blocks[0].b[layer_idx][parallel_idx].MQ;
+                        auto& kMat = blocks[0].b[layer_idx][parallel_idx].MK;
+
+                        CUDA_CHECK(cudaMemcpy(d_mQ, qMat.mapped_data, projection_matrix_bytes, cudaMemcpyHostToDevice));
+                        computeKQall<<<numBlocks, threadsPerBlock>>>(d_tok, d_mQ, d_Q, effective_context_size, EMBEDDING, CONTEXT_WIN);
+                        CUDA_CHECK(cudaMemcpy(blocks[0].b[layer_idx][parallel_idx].Q.mapped_data, d_Q, KQmatbytes, cudaMemcpyDeviceToHost));
+
+                        CUDA_CHECK(cudaMemcpy(d_mK, kMat.mapped_data, projection_matrix_bytes, cudaMemcpyHostToDevice));
+                        computeKQall<<<numBlocks, threadsPerBlock>>>(d_tok, d_mK, d_K, effective_context_size, EMBEDDING, CONTEXT_WIN);
+                        CUDA_CHECK(cudaMemcpy(blocks[0].b[layer_idx][parallel_idx].K.mapped_data, d_K, KQmatbytes, cudaMemcpyDeviceToHost));
+                    }
+                }
+            } else {
+                // Logic for subsequent blocks (requires passing previous block's EV)
+                // This part is complex and needs careful implementation of EV passing.
+                // For now, we focus on the single-block case which is the most common for this function.
+                throw std::runtime_error("cuTrain for block > 1 not fully implemented in this refactor.");
+            }
+            CUDA_CHECK(cudaDeviceSynchronize());
+
+            // --- Forward Pass ---
+            cuForward(current_block_idx, effective_context_size, sequence1Count);
+
+            // --- Get EH output ---
+            if (y > 0) {
+                for (int j_layer = 0; j_layer < x; ++j_layer) {
+                    for (int k = 0; k < d; ++k) {
+                        otok[k] += blocks[blockCount-1].b[j_layer][y - 1].EH[k];
+                    }
+                }
+            } else {
+                std::cerr << "Warning: cuForward called with y = 0 columns. Cannot accumulate EH." << std::endl;
+            }
+
+            // --- Prediction ---
+            float* d_otok_buffer;
+            CUDA_CHECK(cudaMalloc(&d_otok_buffer, singleTokenBytes));
+            CUDA_CHECK(cudaMemcpy(d_otok_buffer, otok.data(), singleTokenBytes, cudaMemcpyHostToDevice));
+            
+            // Launch the prediction kernel with a single thread to find the best token index
+            kernelComputePrediction<<<1, 1>>>(d_otok_buffer, d_embeddings, d_result_index, d, vocabsize);
+            CUDA_CHECK(cudaGetLastError()); // Check for kernel launch errors
+
+            // Copy the resulting index from the device back to the host
+            int host_indexForToken = -1;
+            CUDA_CHECK(cudaMemcpy(&host_indexForToken, d_result_index, sizeof(int), cudaMemcpyDeviceToHost));
+            indexForToken = host_indexForToken;
+
+            CUDA_CHECK(cudaFree(d_otok_buffer));
+
+            // --- Error Calculation & Logging ---
+            std::vector<float> expv = sigmoid(expected_vec);
+            current_error = binaryCrossEntropy(expv, otok);
+            std::string predicted_token_str = (host_indexForToken >= 0 && host_indexForToken < static_cast<unsigned long long>(tokens.size()))
                                                   ? tokens[host_indexForToken] : "INVALID_INDEX";
-            std::cout << "Computed token is -> " << predicted_token_str << " (index: " << host_indexForToken << ") | with BCE error " << current_error << " | MAE Error " << MAE(h_otok_buffer, sentence[i]) << std::endl;
+            std::cout << predicted_token_str << "\t: " << indexForToken << " | "
+                      << current_error << " | " << current_error - prev_error << " | "
+                      << std::exp(current_error) << " | " << j+1 << " | " << learning << std::endl;
 
             if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
-                size_t offset_bytes = static_cast<size_t>(effective_context_size) * d * sizeof(float);
-                if (offset_bytes + outputBytes > tokenEmbedBytes) {
-                    throw std::out_of_range("clTrain(prompt-response): Offset exceeds buffer bounds when writing converged response token.");
-                }
-                std::cout << "indexForToken: " << this->indexForToken << " | host_indexForToken: " << host_indexForToken << " | Epoch Count for this token: " << j << " | Current Token Count " << currentTokenCount << std::endl;
-                CUDA_CHECK(cudaMemcpy(d_tokenEmbed + effective_context_size * d, expected_str.data(), d * sizeof(float), cudaMemcpyHostToDevice)); // Write expected_vec (target EH)
-                if(predicted_token_str == "</s>"){
-                    std::cout << "--------------->>>>>>>>>>>>> To next LINE >>>>>>>>>>>>>>>>-------------" << std::endl;
-                }
-                else {
-                    std::cout << "--------------------- To next token ------------->>>>>>>>>>>>>>>>>" << std::endl;
-                    totalLearning += learning;
-                    break;
-                }
-            }
-            else if (j == this->epochs - 1) {
-                if (predicted_token_str != expected_str) {
-                    std::cout << "Increasing Epoch Count by 10 '-'" << std::endl;
-                    this->epochs += 10;
-                }
-            }
-
-            if(current_error < 0.01 || (host_indexForToken >= 0 && 
-                host_indexForToken < tokens.size() && tokens[host_indexForToken] == rString[i])) 
-            {
-                
+                std::cout << "Token '" << expected_str << "' predicted correctly after " 
+                          << j+1 << " epochs. Moving to next token." << std::endl;
+                learning *= (current_error < prev_error) ? 0.95 : 1.05;
+                if(predicted_token_str != "</s>")
+                    std::cout << "              -------------- To Next Token --------------              " << std::endl;
                 break;
             }
-
-            if(current_error > 0.01 && j == epochs - 1) {
-                epochs += 10;
+            if(j == epochs - 1) {
+                std::cout << "Reached maximum epochs (" << epochs << ") for current token without correct prediction." << std::endl;
+                std::cout << "Increasing Epochs by 15." << std::endl;
+                epochs += 15;
             }
 
-            cuBackward(sentence[i], blockCount);
-            // first block
-            if(blockCount == 1 && (effective_context_size < CONTEXT_WIN)) 
-            {
-                for(int i_pa = 0; i_pa < x; i_pa++) {
-                    for(int j_head = 0; j_head < y; j_head++) {
-                        CUDA_CHECK(cudaMemcpy(mQ, t[0].b[i_pa][j_head].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
-                        CUDA_CHECK(cudaMemcpy(mK, t[0].b[i_pa][j_head].MK.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
-                        for(int k = 0; k < i; k++) {
-                            // copy H -> D
-                            CUDA_CHECK(cudaMemcpy(dQ, sentence[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
-                            CUDA_CHECK(cudaMemcpy(dK, sentence[k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
-                            // make queries using compute KorQ: t[0].b[i][j].Q[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MQ
-                            compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS);
-                            // copy D -> H
-                            CUDA_CHECK(cudaMemcpy(t[0].b[i_pa][j_head].Q.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
-                            // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
-                            compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
-                            // copy D -> H
-                            CUDA_CHECK(cudaMemcpy(t[0].b[i_pa][j_head].K.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
-                        }
-                    }
-                }
+            // --- Learning Rate & Backward Pass ---
+            if(current_error < prev_error) {
+                if(j <= 6) learning *= 1.2;
+                else if (j % 5 == 0) learning *= (1.025 + (j/6)*0.25);
+            } else {
+                if(j <= 6) learning *= 0.9;
+                else if (j % 5 == 0) learning *= (1.0f - (j/6)*0.02);
             }
-            else if(blockCount > 1 && effective_context_size >= CONTEXT_WIN)
-            {
-                for(int i_pa = 0; i_pa < x; i_pa++) {
-                    for(int j_head = 0; j_head < y; j_head++) {
-                        CUDA_CHECK(cudaMemcpy(mQ, t[blockCount-1].b[i_pa][j_head].MQ.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
-                        CUDA_CHECK(cudaMemcpy(mK, t[blockCount-1].b[i_pa][j_head].MK.mapped_data, static_cast<size_t>(MATHEIGHTS * EMBEDDING) * sizeof(float), cudaMemcpyHostToDevice));
-                        for(int k = 0; k < i; k++) {
-                            // copy H -> D
-                            CUDA_CHECK(cudaMemcpy(dK, sentence[(blockCount-1)*CONTEXT_WIN + k].data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
-                            // make keys using compute KorQ: t[0].b[i][j].K[currentTokenCount%CONTEXT_WIN] = prompt(i) * t[0].b[i][j].MK
-                            compute_single_kq_vector_kernel<<<1, 1>>>(tok, mK, dK, EMBEDDING, MATHEIGHTS);
-                            // copy D -> H
-                            CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[i_pa][j_head].K.mapped_data + (currentTokenCount%CONTEXT_WIN + k)*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
-                        }
-                        for(int k = 0; k < CONTEXT_WIN; k++) {
-                            // copy H -> D
-                            CUDA_CHECK(cudaMemcpy(dQ, t[blockCount-1].b[i_pa][j_head].EV(k).data(), EMBEDDING * sizeof(float), cudaMemcpyHostToDevice));
-                            compute_single_kq_vector_kernel<<<1, 1>>>(tok, mQ, dQ, EMBEDDING, MATHEIGHTS); // tok is output, mQ matrix, dQ input
-                            // copy D -> H
-                            CUDA_CHECK(cudaMemcpy(t[blockCount-1].b[i_pa][j_head].Q.mapped_data + k*MATHEIGHTS, tok, MATHEIGHTS * sizeof(float), cudaMemcpyDeviceToHost));
-                        }
-                    }
-                }
-            }
-            cuForward(blockCount, effective_context_size, promptCount);
+
+            cuBackward(expected_vec, current_block_idx);
+            totalLearning += learning;
+            prev_error = current_error;
+            totalBCELoss += current_error;
+            totalBCEPerplexity += std::exp(current_error);
             j++;
         }
-        // Update host counters
+
+        // --- Update Host State ---
         trainCount++;
         epochCount += j;
-        error += current_error;
-        currentTokenCount += 1;
-        if(currentTokenCount % CONTEXT_WIN == 0) {
+        totalLearning += learning;
+        prev_error = current_error;
+        totalBCELoss += current_error;
+        totalBCEPerplexity += std::exp(current_error);
+
+        if (tokenEmbed.mapped_data && static_cast<size_t>(currentTokenCount) < tokenEmbed.row && tokenEmbed.col == static_cast<size_t>(d)) {
+            tokenEmbed.addRow(expected_vec, currentTokenCount);
+        }
+
+        currentTokenCount++;
+        effective_context_size++;
+        if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
             blockCount += 1;
-            promptCount = 0;
+            blockShifted = true;
+            std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
+        } else {
+            blockShifted = false;
         }
     }
 
     // --- Free temporary device memory ---
-    CUDA_CHECK(cudaFree(d_expected_token)); // Free the buffer for the expected token
-    CUDA_CHECK(cudaFree(d_otok_buffer));    // Free the temporary output buffer
+    CUDA_CHECK(cudaFree(d_embeddings));
+    CUDA_CHECK(cudaFree(d_tokenEmbed));
+    CUDA_CHECK(cudaFree(d_expected_token));
+    CUDA_CHECK(cudaFree(d_Q));
+    CUDA_CHECK(cudaFree(d_K));
+    CUDA_CHECK(cudaFree(d_mQ));
+    CUDA_CHECK(cudaFree(d_mK));
+    CUDA_CHECK(cudaFree(d_tok));
+    CUDA_CHECK(cudaFree(d_result_index));
 }
+
+#endif  // USE_CUDA

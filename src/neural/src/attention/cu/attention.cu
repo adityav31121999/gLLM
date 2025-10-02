@@ -31,88 +31,20 @@ __global__ void kernelElementwiseMultiply(float* target_and_output, const float*
     }
 }
 
-
 /**
- * @brief CUDA kernel to compute a single Key or Query vector using the cuComputeKorQ device function.
- * @param d_token_embedding Device pointer to the token embedding vector (size EMBEDDING).
- * @param d_projection_matrix Device pointer to the MQ or MK matrix (row-major, MATHEIGHTS x EMBEDDING).
- * @param d_output_kq_vector Device pointer to store the resulting K or Q vector (size MATHEIGHTS).
- * @param embedding_dim The dimension of the token embedding (EMBEDDING).
- * @param mat_heights The height of the projection matrix (MATHEIGHTS), also the size of the output vector.
+ * @brief CUDA kernel wrapper to launch the computePredictionWithScores device function.
+ *        This kernel is intended to be launched with a single thread.
+ * @param[in] EH Device pointer to the input vector (size dim).
+ * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
+ * @param[out] predictionLogits Device pointer to store the dot products for all tokens (size voc).
+ * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
+ * @param[in] dim The embedding dimension.
+ * @param[in] voc The vocabulary size.
  */
-__global__ void compute_single_kq_vector_kernel(
-    const float* d_token_embedding, 
-    const float* d_projection_matrix, 
-    float* d_output_kq_vector,      
-    int embedding_dim,
-    int mat_heights)
+__global__ void kernelComputePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits, int* result_index, int dim, int voc)
 {
-    // This kernel is designed to compute one K or Q vector.
-    // It calls the cuComputeKorQ device function.
-    cuComputeKorQ(d_token_embedding, d_projection_matrix, d_output_kq_vector, embedding_dim, mat_heights);
-}
-
-
-/**
- * @brief CUDA device function to compute a key or query vector by multiplying a token embedding with a matrix.
- *        KorQ = tokenEmbed * matrix^T (effectively, as matrix is row-major)
- * @param[in] tokenEmbed Device pointer to the token embedding vector (size dim).
- * @param[in] matrix Device pointer to the key or query matrix (row-major, height x dim).
- * @param[out] KorQ Device pointer to the resulting Key or Query vector (size height). Must be zero-initialized before calling.
- * @param[in] dim The embedding dimension (columns of matrix, size of tokenEmbed).
- * @param[in] height The number of rows in the key/query matrix (size of KorQ).
- */
-__device__ void cuComputeKorQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height) {
-    // This computes KorQ[i] = dot(tokenEmbed, matrix_row_i)
-    for (int i = 0; i < height; ++i) {
-        const float* matrix_row_i = matrix + i * dim;
-        float dot_product = 0.0f; // Accumulate dot product locally
-        for (int j = 0; j < dim; ++j) {
-            dot_product += tokenEmbed[j] * matrix_row_i[j];
-        }
-        KorQ[i] = dot_product; // Assign the computed dot product
-    }
-}
-
-/**
- * @brief CUDA device function to compute the dot product of two vectors.
- * @param[in] vec1 Device pointer to the first vector.
- * @param[in] vec2 Device pointer to the second vector.
- * @param[in] dim The dimension (number of elements) of the vectors.
- * @return The scalar dot product of vec1 and vec2.
- */
-__device__ float compute_dot_product(const float* vec1, const float* vec2, int dim) {
-    float dot_product = 0.0f;
-    for (int k = 0; k < dim; ++k) {
-        dot_product += vec1[k] * vec2[k];
-    }
-    return dot_product;
-}
-
-
-/**
- * @brief CUDA device function to compute the quadratic form vec1 * matrix * vec2^T.
- * @param[in] vec1 Device pointer to the first vector (treated as a row vector, size dim).
- * @param[in] vec2 Device pointer to the second vector (treated as a column vector, size dim).
- * @param[in] matrix Device pointer to the matrix (row-major, dim x dim).
- * @param[in] dim The dimension of the vectors and the square matrix.
- * @return The scalar result of vec1 * matrix * vec2^T.
- */
-__device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim)
-{
-    float final_dot_product = 0.0f;
-    // This computes (vec1 * matrix) * vec2^T
-    for (int i = 0; i < dim; ++i) { // Iterate over rows of matrix (and elements of vec2)
-        float inner_sum = 0.0f; // Represents element i of (vec1 * matrix)
-        const float* matrix_row_i = matrix + i * dim;
-        // Compute dot product of vec1 with i-th row of matrix
-        for (int j = 0; j < dim; ++j) {
-            inner_sum += vec1[j] * matrix_row_i[j];
-        }
-        // Multiply the result by the corresponding element of vec2 and accumulate
-        final_dot_product += inner_sum * vec2[i];
-    }
-    return final_dot_product;
+    // This kernel is launched with a single thread, which calls the device function.
+    *result_index = computePredictionWithScores(EH, embeddings, predictionLogits, dim, voc);
 }
 
 /**
@@ -123,10 +55,9 @@ __device__ float compute_dot_product(const float* vec1, const float* vec2, const
  * @param[in] dim The embedding dimension (size of EH and columns of embeddings).
  * @param[in] voc The vocabulary size (number of rows in embeddings).
  * @return The index of the token embedding with the highest dot product. Returns -1 if voc <= 0 or embeddings is null.
- * @note Assumes that the case of "all dot products being exactly equal" is handled implicitly by returning the first max index found.
- * @note Assumes FLT_MAX is available (usually via <cfloat> or CUDA includes).
  */
-__device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc) {
+__device__ int computePrediction(const float* EH, const float* embeddings, int dim, int voc) 
+{
     if (voc <= 0 || embeddings == nullptr) {
         return -1; // Handle invalid input
     }
@@ -135,7 +66,7 @@ __device__ int compute_prediction(const float* EH, const float* embeddings, int 
 
     for (int i = 0; i < voc; ++i) {
         const float* current_embedding_row = embeddings + i * dim;
-        float current_dot_product = compute_dot_product(EH, current_embedding_row, dim);
+        float current_dot_product = cuComputeDot(EH, current_embedding_row, dim);
 
         if (current_dot_product > max_dot_product) {
             max_dot_product = current_dot_product;
@@ -145,219 +76,52 @@ __device__ int compute_prediction(const float* EH, const float* embeddings, int 
     return predicted_index;
 }
 
-/**------------------------------------TRAINING------------------------------------**/
-
 /**
- * @brief CUDA kernel for calculating the scaled KdotQ matrix for self-attention during training.
- *        Computes KdotQ[i][j] = dot(Q[i], K[j]) / SCALING for j <= i (causal masking).
- * @param[out] d_kdotq         Device pointer to the output KdotQ matrix (row-major, size num_queries_eff x kdotq_width).
- * @param[in]  d_keys          Device pointer to the Key vectors (K matrix, row-major, size num_keys_eff x embedding_dim).
- * @param[in]  d_querys        Device pointer to the Query vectors (Q matrix, row-major, size num_queries_eff x embedding_dim).
- * @param[in]  num_queries_eff The number of query rows (i) to compute.
- * @param[in]  num_keys_eff    The number of key columns (j) available.
- * @param[in]  kdotq_width     The total width (number of columns) of the d_kdotq buffer, used for indexing.
- * @param[in]  embedding_dim   The dimension of each key and query vector.
- * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
+ * @brief CUDA kernel wrapper to launch the computePrediction device function.
+ *        This kernel is intended to be launched with a single thread.
+ * @param[in] EH Device pointer to the horizontal retention vector (size dim).
+ * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
+ * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
+ * @param[in] dim The embedding dimension.
+ * @param[in] voc The vocabulary size.
  */
-__global__ void kernelKdotQforSelf_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff,
-    int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling)
-{
-    int j = blockIdx.x * blockDim.x + threadIdx.x; // Global key index (column)
-    int i = blockIdx.y * blockDim.y + threadIdx.y; // Global query index (row)
-
-    // Check boundaries and apply causal mask (j <= i)
-    if (i < num_queries_eff && j < num_keys_eff && j <= i) {
-        const float* q_vec = d_querys + i * embedding_dim;
-        const float* k_vec = d_keys + j * embedding_dim;
-
-        float dot_product = compute_dot_product(q_vec, k_vec, embedding_dim);
-
-        int kdotq_index = i * kdotq_width + j;
-        d_kdotq[kdotq_index] = dot_product * inv_scaling;
-    }
-    // Implicitly, elements where j > i remain uninitialized or zero if buffer was zeroed.
+__global__ void kernelComputePrediction(const float* EH, const float* embeddings, int* result_index, int dim, int voc) {
+    // This kernel is launched with a single thread, which calls the device function.
+    *result_index = computePrediction(EH, embeddings, dim, voc);
 }
 
-
 /**
- * @brief CUDA kernel for calculating the scaled KdotQ matrix for cross-attention during training.
- *        Computes KdotQ[i][j] = dot(Q[i], K[j]) / SCALING for all i, j.
- * @param[out] d_kdotq         Device pointer to the output KdotQ matrix (row-major, size num_queries_eff x kdotq_width).
- * @param[in]  d_keys          Device pointer to the Key vectors (K matrix, row-major, size num_keys_eff x embedding_dim).
- * @param[in]  d_querys        Device pointer to the Query vectors (Q matrix, row-major, size num_queries_eff x embedding_dim).
- * @param[in]  num_queries_eff The number of query rows (i) to compute.
- * @param[in]  num_keys_eff    The number of key columns (j) to compute.
- * @param[in]  kdotq_width     The total width (number of columns) of the d_kdotq buffer, used for indexing.
- * @param[in]  embedding_dim   The dimension of each key and query vector.
- * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
+ * @brief CUDA device function to compute the predicted token index by finding the highest dot product
+ *        between a vector (EH) and rows of an embedding matrix.
+ * @param[in] EH Device pointer to the horizontal retention vector (size dim).
+ * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
+ * @param[out] predictionLogits Device pointer to store the dot products for all tokens (size voc).
+ * @param[in] dim The embedding dimension (size of EH and columns of embeddings).
+ * @param[in] voc The vocabulary size (number of rows in embeddings).
+ * @return The index of the token embedding with the highest dot product. Returns -1 if voc <= 0 or embeddings is null.
+ * @note Assumes that the case of "all dot products being exactly equal" is handled implicitly by returning the first max index found.
+ * @note Assumes FLT_MAX is available (usually via <cfloat> or CUDA includes).
  */
-__global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff,
-    int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling)
+__device__ int computePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits,
+         int dim, int voc) 
 {
-    int j = blockIdx.x * blockDim.x + threadIdx.x; // Global key index (column)
-    int i = blockIdx.y * blockDim.y + threadIdx.y; // Global query index (row)
-
-    // Check boundaries (no causal mask for cross-attention)
-    if (i < num_queries_eff && j < num_keys_eff) {
-        const float* q_vec = d_querys + i * embedding_dim;
-        const float* k_vec = d_keys + j * embedding_dim;
-
-        float dot_product = compute_dot_product(q_vec, k_vec, embedding_dim);
-
-        int kdotq_index = i * kdotq_width + j;
-        d_kdotq[kdotq_index] = dot_product * inv_scaling;
+    if (voc <= 0 || embeddings == nullptr) {
+        return -1; // Handle invalid input
     }
-}
+    float max_dot_product = -FLT_MAX; // Initialize with the smallest possible float value
+    int predicted_index = 0; // Default to the first token
 
-/**------------------------------------INFERENCE------------------------------------**/
+    for (int i = 0; i < voc; ++i) {
+        const float* current_embedding_row = embeddings + i * dim;
+        float current_dot_product = cuComputeDot(EH, current_embedding_row, dim);
+        predictionLogits[i] = current_dot_product;
 
-/**
- * @brief CUDA kernel for Block 1 SELF-ATTENTION KdotQ calculation during inference.
- *        Computes KdotQ[i][j] = (tokenEmbed[i] * M * tokenEmbed[j]^T) / SCALING for j <= i,
- *        where 'i' corresponds to new prompt tokens and 'j' spans the full context.
- * @param[out] d_kdotq         Device pointer to the output KdotQ matrix (row-major, potentially sparse).
- * @param[in]  d_tokenEmbed    Device pointer to token embeddings for the *entire* context (row-major, context_len x embedding_dim).
- * @param[in]  d_M             Device pointer to the precomputed QK' matrix M (row-major, embedding_dim x embedding_dim).
- * @param[in]  prompt_start_index Index of the first token of the new prompt within d_tokenEmbed.
- * @param[in]  prompt_len      Number of tokens in the new prompt.
- * @param[in]  context_len     Total number of tokens currently in the context (prompt_start_index + prompt_len).
- * @param[in]  kdotq_width     The total width (number of columns) of the d_kdotq buffer (usually context_len).
- * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
- * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
- */
-__global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
-    int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling)
-{
-    int j = blockIdx.x * blockDim.x + threadIdx.x;        // Global key index (column) spanning full context
-    int i_offset = blockIdx.y * blockDim.y + threadIdx.y; // Query index offset relative to the start of the prompt
-    int i = prompt_start_index + i_offset;                // Global query index (row) within the prompt range
-
-    // Check boundaries and apply causal mask (j <= i)
-    // Only compute rows 'i' corresponding to the new prompt.
-    if (i_offset < prompt_len && j < context_len && j <= i) {
-        const float* q_vec = d_tokenEmbed + i * embedding_dim; // Query vector from prompt
-        const float* k_vec = d_tokenEmbed + j * embedding_dim; // Key vector from full context
-
-        // Compute quadratic form: q_vec * M * k_vec^T
-        float dot_product = compute_dot_product(q_vec, k_vec, d_M, embedding_dim);
-
-        int kdotq_index = i * kdotq_width + j;
-        d_kdotq[kdotq_index] = dot_product * inv_scaling;
+        if (current_dot_product > max_dot_product) {
+            max_dot_product = current_dot_product;
+            predicted_index = i;
+        }
     }
-}
-
-
-/**
- * @brief CUDA kernel for Block 1 CROSS-ATTENTION KdotQ calculation during inference.
- *        Computes KdotQ[i][j] = (tokenEmbed[i] * M * tokenEmbed[j]^T) / SCALING for all j,
- *        where 'i' corresponds to new prompt tokens and 'j' spans the full context.
- * @param[out] d_kdotq         Device pointer to the output KdotQ matrix (row-major, potentially sparse).
- * @param[in]  d_tokenEmbed    Device pointer to token embeddings for the *entire* context (row-major, context_len x embedding_dim).
- * @param[in]  d_M             Device pointer to the precomputed QK' matrix M (row-major, embedding_dim x embedding_dim).
- * @param[in]  prompt_start_index Index of the first token of the new prompt within d_tokenEmbed.
- * @param[in]  prompt_len      Number of tokens in the new prompt.
- * @param[in]  context_len     Total number of tokens currently in the context (prompt_start_index + prompt_len).
- * @param[in]  kdotq_width     The total width (number of columns) of the d_kdotq buffer (usually context_len).
- * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
- * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
- */
-__global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
-    int prompt_start_index, int prompt_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling)
-{
-    int j = blockIdx.x * blockDim.x + threadIdx.x;        // Global key index (column) spanning full context
-    int i_offset = blockIdx.y * blockDim.y + threadIdx.y; // Query index offset relative to the start of the prompt
-    int i = prompt_start_index + i_offset;                // Global query index (row) within the prompt range
-
-    // Check boundaries (no causal mask for cross-attention)
-    // Only compute rows 'i' corresponding to the new prompt.
-    if (i_offset < prompt_len && j < context_len) {
-        const float* q_vec = d_tokenEmbed + i * embedding_dim; // Query vector from prompt
-        const float* k_vec = d_tokenEmbed + j * embedding_dim; // Key vector from full context
-
-        // Compute quadratic form: q_vec * M * k_vec^T
-        float dot_product = compute_dot_product(q_vec, k_vec, d_M, embedding_dim);
-
-        int kdotq_index = i * kdotq_width + j;
-        d_kdotq[kdotq_index] = dot_product * inv_scaling;
-    }
-}
-
-
-/**
- * @brief CUDA kernel for Block N (N > 1) SELF-ATTENTION KdotQ calculation during inference.
- *        Computes KdotQ[i][j] = (tokForBlock[i] * M * EVp[j]^T) / SCALING for j <= i,
- *        where 'i' corresponds to new prompt tokens within the block's window,
- *        and 'j' spans the relevant context (from previous block's EV) within the block's window.
- * @param[out] d_kdotq         Device pointer to the output KdotQ matrix for this block's window (row-major).
- * @param[in]  d_tokForBlock   Device pointer to token embeddings relevant to this block's window (row-major, context_len_in_block x embedding_dim).
- * @param[in]  d_EVp           Device pointer to the previous block's output vectors (EV') relevant to this block's window (row-major, context_len_in_block x embedding_dim).
- * @param[in]  d_M             Device pointer to the precomputed QK' matrix M (row-major, embedding_dim x embedding_dim).
- * @param[in]  prompt_start_index_in_block Index of the first prompt token *within this block's window*.
- * @param[in]  prompt_len      Number of tokens in the new prompt.
- * @param[in]  context_len_in_block Total number of relevant tokens in this block's window.
- * @param[in]  kdotq_width     The total width (number of columns) of the d_kdotq buffer (usually context_len_in_block).
- * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
- * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
- */
-__global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
-    const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width,
-    int embedding_dim, float inv_scaling)
-{
-    int j = blockIdx.x * blockDim.x + threadIdx.x;        // Key index (column) within the block's window
-    int i_offset = blockIdx.y * blockDim.y + threadIdx.y; // Query index offset relative to the start of the prompt
-    int i = prompt_start_index_in_block + i_offset;       // Query index (row) within the block's window
-
-    // Check boundaries and apply causal mask (j <= i) within the block window
-    // Only compute rows 'i' corresponding to the new prompt within this block.
-    if (i_offset < prompt_len && j < context_len_in_block && j <= i) {
-        const float* q_vec = d_tokForBlock + i * embedding_dim; // Query vector from block's tokens
-        const float* k_vec = d_EVp + j * embedding_dim;         // Key vector from previous block's EV
-
-        // Compute quadratic form: q_vec * M * k_vec^T
-        float dot_product = compute_dot_product(q_vec, k_vec, d_M, embedding_dim);
-
-        int kdotq_index = i * kdotq_width + j;
-        d_kdotq[kdotq_index] = dot_product * inv_scaling;
-    }
-}
-
-
-/**
- * @brief CUDA kernel for Block N (N > 1) CROSS-ATTENTION KdotQ calculation during inference.
- *        Computes KdotQ[i][j] = (tokForBlock[i] * M * EVp[j]^T) / SCALING for all j,
- *        where 'i' corresponds to new prompt tokens within the block's window,
- *        and 'j' spans the relevant context (from previous block's EV) within the block's window.
- * @param[out] d_kdotq         Device pointer to the output KdotQ matrix for this block's window (row-major).
- * @param[in]  d_tokForBlock   Device pointer to token embeddings relevant to this block's window (row-major, context_len_in_block x embedding_dim).
- * @param[in]  d_EVp           Device pointer to the previous block's output vectors (EV') relevant to this block's window (row-major, context_len_in_block x embedding_dim).
- * @param[in]  d_M             Device pointer to the precomputed QK' matrix M (row-major, embedding_dim x embedding_dim).
- * @param[in]  prompt_start_index_in_block Index of the first prompt token *within this block's window*.
- * @param[in]  prompt_len      Number of tokens in the new prompt.
- * @param[in]  context_len_in_block Total number of relevant tokens in this block's window.
- * @param[in]  kdotq_width     The total width (number of columns) of the d_kdotq buffer (usually context_len_in_block).
- * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
- * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
- */
-__global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
-    const float* d_M, int prompt_start_index_in_block, int prompt_len, int context_len_in_block, int kdotq_width,
-    int embedding_dim, float inv_scaling)
-{
-    int j = blockIdx.x * blockDim.x + threadIdx.x;        // Key index (column) within the block's window
-    int i_offset = blockIdx.y * blockDim.y + threadIdx.y; // Query index offset relative to the start of the prompt
-    int i = prompt_start_index_in_block + i_offset;       // Query index (row) within the block's window
-
-    // Check boundaries (no causal mask for cross-attention)
-    // Only compute rows 'i' corresponding to the new prompt within this block.
-    if (i_offset < prompt_len && j < context_len_in_block) {
-        const float* q_vec = d_tokForBlock + i * embedding_dim; // Query vector from block's tokens
-        const float* k_vec = d_EVp + j * embedding_dim;         // Key vector from previous block's EV
-
-        // Compute quadratic form: q_vec * M * k_vec^T
-        float dot_product = compute_dot_product(q_vec, k_vec, d_M, embedding_dim);
-
-        int kdotq_index = i * kdotq_width + j;
-        d_kdotq[kdotq_index] = dot_product * inv_scaling;
-    }
+    return predicted_index;
 }
 
 /**
@@ -381,32 +145,21 @@ __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_su
         float row_sum_k = 0.0f;
         float col_sum_l = 0.0f;
 
-        // Determine the upper limit for summation based on attention type
-        // For self-attention, sum up to (but not including) the current token index 'i' for causal masking?
-        // The C++ comment says limit = isSelfAttention ? i : num_tokens. Let's assume it means sum up to j=i-1.
-        // Re-reading C++ comment: limit = isSelfAttention ? i : num_tokens. This means sum up to j=i-1 for self-attention.
-        // Let's implement the comment's logic: sum up to j = limit-1.
         int limit = isSelfAttention ? i + 1 : num_tokens; // If self-attention, limit is i+1 (sum j=0 to i)
         if (limit > num_tokens) limit = num_tokens; // Ensure limit doesn't exceed bounds
 
         // Calculate row sum (k) for token i: sum head[i][j] for j < limit
         for (int j = 0; j < limit; ++j) {
-             // Apply self-attention mask: only sum if j <= i
-             if (!isSelfAttention || j <= i) {
-                row_sum_k += d_head[i * num_tokens + j];
-             }
+            // Apply self-attention mask: only sum if j <= i
+            if (!isSelfAttention || j <= i) {
+            row_sum_k += d_head[i * num_tokens + j];
+            }
         }
 
         // Calculate column sum (l) for token i: sum head[j][i] for j < limit
         for (int j = 0; j < limit; ++j) {
-             // Apply self-attention mask: only sum if i <= j (for head[j][i], this means j >= i)
-             // Wait, the C++ comment implies the same limit 'j < limit' for both sums. Let's stick to that.
-             // This means col_sum_l[i] = sum_{j=0}^{limit-1} head[j][i]
-             // If self-attention, limit = i+1, so col_sum_l[i] = sum_{j=0}^{i} head[j][i]
-             // This seems consistent with typical attention backprop needs.
-             col_sum_l += d_head[j * num_tokens + i];
+            col_sum_l += d_head[j * num_tokens + i];
         }
-
 
         d_row_sums[i] = row_sum_k;
         d_col_sums[i] = col_sum_l;
@@ -427,7 +180,7 @@ __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_su
  * @param[in,out] d_dh_accum Device pointer to the accumulated dh vector (size h_dim). MUST be zero-initialized before kernel launch.
  * @param[in,out] d_dv_accum Device pointer to the accumulated dv vector (size h_dim). MUST be zero-initialized before kernel launch.
  * @param[in] num_tokens The number of tokens (rows in K/Q, size of sum vectors).
- * @param[in] h_dim The dimension of the Key/Query vectors (e.g., MATHEIGHTS).
+ * @param[in] h_dim The dimension of the Key/Query vectors (e.g., CONTEXT_WIN).
  */
 __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
                                                 const float* d_K, const float* d_Q, float* d_dh_accum,
@@ -471,7 +224,7 @@ __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const f
  * @param[in,out] d_dh_accum Device pointer to the accumulated dh vector (size h_dim). MUST be zero-initialized before kernel launch.
  * @param[in,out] d_dv_accum Device pointer to the accumulated dv vectors (size n_dim*h_dim). MUST be zero-initialized before kernel launch.
  * @param[in] num_tokens The number of tokens (rows in K/Q, size of sum vectors).
- * @param[in] h_dim The dimension of the Key/Query vectors (e.g., MATHEIGHTS).
+ * @param[in] h_dim The dimension of the Key/Query vectors (e.g., CONTEXT_WIN).
  */
 __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
                                                 const float* d_K, const float* d_Q, float* d_dh_accum,
@@ -528,7 +281,6 @@ __global__ void updateEVRowsKernel(float* d_EV_rows, const float* d_vector_to_ad
         }
     }
 }
-
 
 /**------------------------------------BACKPROP------------------------------------**/
 
@@ -973,24 +725,6 @@ __global__ void kernelComputeGradientsEV_V(const float* ev, const float* expecte
 
 
 /**
- * @brief CUDA kernel for Step 3 of `cuBackward(expectedV)`: Compute gradient w.r.t. ver MLP input (dv).
- *        Extracts the gradient from the first column (input neuron 0) of the vertical MLP's first layer gradient weights.
- *        grad_dv[i] = ver_gweights[0][i][0]
- * @param[in] d_ver_gweights0 Device pointer to the vertical MLP's first layer gradient weights (row-major, embedding_dim x embedding_dim).
- * @param[out] grad_dv Device pointer to store the computed gradient w.r.t. vertical input (size embedding_dim).
- * @param[in] embedding_dim The dimension of the embedding and MLP layers.
- */
-__global__ void kernelComputeGradDv_V(const float* d_ver_gweights0, float* grad_dv, int embedding_dim) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x; // Corresponds to the output neuron index 'i' of the first layer
-
-    if (i < embedding_dim) {
-        // Calculate flat index for gweights[0][i][0] assuming row-major [output_neuron][input_neuron]
-        int gweight_idx = i * embedding_dim + 0;
-        grad_dv[i] = d_ver_gweights0[gweight_idx];
-    }
-}
-
-/**
  * @brief CUDA kernel for Step 4 of `cuBackward(expectedV)`: Compute intermediate value pre_MV only.
  *        pre_mv[h] = sum_i ( sum_j(head[j][i]) * Q[i][h] )
  * @param[in] head Device pointer to the attention head matrix (row-major, token_count x token_count).
@@ -1321,130 +1055,6 @@ __global__ void kernelComputeGradMK_MQ_Simplified(const float* grad_k, const flo
         grad_mq[h * embedding_dim + d] = sum_mq_hd;
     }
 }
-
-
-/**
- * @brief CUDA kernel for Step 9/10 of `cuBackward1stHead(expected)`: Update attention weights (MH, MV, MQ, MK) and conditionally EH.
- *        Applies gradients using gradient descent. EH update is controlled by a flag.
- * @param[in,out] mh_a Device pointer to the MH matrix. Updated in place.
- * @param[in,out] mv_a Device pointer to the MV matrix. Updated in place.
- * @param[in,out] mq_a Device pointer to the MQ matrix. Updated in place.
- * @param[in,out] mk_a Device pointer to the MK matrix. Updated in place.
- * @param[in,out] eh Device pointer to the EH vector. Updated in place if update_eh is true.
- * @param[in] grad_mh Device pointer to the gradient w.r.t. MH. Can be null.
- * @param[in] grad_mv Device pointer to the gradient w.r.t. MV. Can be null.
- * @param[in] grad_mq Device pointer to the gradient w.r.t. MQ. Can be null.
- * @param[in] grad_mk Device pointer to the gradient w.r.t. MK. Can be null.
- * @param[in] grad_eh Device pointer to the gradient w.r.t. EH. Can be null.
- * @param[in] learning_rate The learning rate.
- * @param[in] update_eh Boolean flag; if true, the EH vector is updated.
- * @param[in] mat_heights The height dimension of the attention matrices.
- * @param[in] embedding_dim The embedding dimension.
- */
-__global__ void kernelUpdateWeights_1stHead_H(float* mh_a, float* mv_a, float* mq_a, float* mk_a,
-    float* eh,
-    const float* grad_mh, const float* grad_mv,
-    const float* grad_mq, const float* grad_mk,
-    const float* grad_eh,
-    float learning_rate, bool update_eh,
-    int mat_heights, int embedding_dim)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Global index for parallelization
-
-    // Update MH, MV, MQ, MK matrices (Size: mat_heights * embedding_dim)
-    int matrix_size = mat_heights * embedding_dim;
-    if (idx < matrix_size) {
-        // Check if gradient pointers are valid before applying update
-        if(grad_mh != nullptr)
-            mh_a[idx] -= learning_rate * grad_mh[idx];
-        if(grad_mv != nullptr)
-            mv_a[idx] -= learning_rate * grad_mv[idx];
-        if(grad_mq != nullptr)
-            mq_a[idx] -= learning_rate * grad_mq[idx];
-        if(grad_mk != nullptr)
-            mk_a[idx] -= learning_rate * grad_mk[idx];
-    }
-
-    // Update EH vector (Size: embedding_dim) - Conditionally
-    // Ensure this update only happens if idx is within the embedding_dim range and flag is set.
-    if (update_eh && idx < embedding_dim) {
-        if(grad_eh != nullptr) // Check if gradient pointer is valid
-            eh[idx] -= learning_rate * grad_eh[idx];
-    }
-}
-
-
-/**
- * @brief CUDA kernel for Step 9/10 of `cuBackward1stHead(expectedV)`: Update attention weights (MV, MQ, MK).
- *        Applies gradients using gradient descent. MK is updated using the correction term. No EH/EV update.
- * @param[in,out] mv_a Device pointer to the MV matrix. Updated in place.
- * @param[in,out] mq_a Device pointer to the MQ matrix. Updated in place.
- * @param[in,out] mk_a Device pointer to the MK matrix. Updated in place using correction.
- * @param[in] grad_mv Device pointer to the gradient w.r.t. MV. Can be null.
- * @param[in] grad_mq Device pointer to the gradient w.r.t. MQ. Can be null.
- * @param[in] grad_mk_correction Device pointer to the correction term for the MK gradient. Can be null.
- * @param[in] learning_rate The learning rate.
- * @param[in] mat_heights The height dimension of the attention matrices.
- * @param[in] embedding_dim The embedding dimension.
- */
-__global__ void kernelUpdateWeights_1stHead_V(float* mv_a, float* mq_a, float* mk_a,
-    const float* grad_mv, const float* grad_mq, const float* grad_mk_correction,
-    float learning_rate, int mat_heights, int embedding_dim)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Global index for parallelization
-
-    // Update MV, MQ, MK matrices (Size: mat_heights * embedding_dim)
-    int matrix_size = mat_heights * embedding_dim;
-    if (idx < matrix_size) {
-        // Check if gradient pointers are valid before applying update
-        if(grad_mv != nullptr)
-            mv_a[idx] -= learning_rate * grad_mv[idx];
-        if(grad_mq != nullptr)
-            mq_a[idx] -= learning_rate * grad_mq[idx];
-        if(grad_mk_correction != nullptr)
-            mk_a[idx] -= learning_rate * grad_mk_correction[idx]; // Use correction for MK
-    }
-    // No EH or EV update in this kernel
-}
-
-
-/**
- * @brief CUDA kernel for Step 9/10 of `cuBackward1stHead(expectedH, expectedV)`: Update attention weights (MH, MV, MQ, MK).
- *        Applies gradients using gradient descent. No EH/EV update.
- * @param[in,out] mh_a Device pointer to the MH matrix. Updated in place.
- * @param[in,out] mv_a Device pointer to the MV matrix. Updated in place.
- * @param[in,out] mq_a Device pointer to the MQ matrix. Updated in place.
- * @param[in,out] mk_a Device pointer to the MK matrix. Updated in place.
- * @param[in] grad_mh Device pointer to the gradient w.r.t. MH. Can be null.
- * @param[in] grad_mv Device pointer to the gradient w.r.t. MV. Can be null.
- * @param[in] grad_mq Device pointer to the gradient w.r.t. MQ. Can be null.
- * @param[in] grad_mk Device pointer to the gradient w.r.t. MK. Can be null.
- * @param[in] learning_rate The learning rate.
- * @param[in] mat_heights The height dimension of the attention matrices.
- * @param[in] embedding_dim The embedding dimension.
- */
-__global__ void kernelUpdateWeights_1stHead_HV(float* mh_a, float* mv_a, float* mq_a, float* mk_a,
-    const float* grad_mh, const float* grad_mv, const float* grad_mq, const float* grad_mk,
-    float learning_rate, int mat_heights, int embedding_dim)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Global index for parallelization
-
-    // Update MH, MV, MQ, MK matrices (Size: mat_heights * embedding_dim)
-    int matrix_size = mat_heights * embedding_dim;
-    if (idx < matrix_size) {
-        // Check if gradient pointers are valid before applying update
-        if(grad_mh != nullptr)
-            mh_a[idx] -= learning_rate * grad_mh[idx];
-        if(grad_mv != nullptr)
-            mv_a[idx] -= learning_rate * grad_mv[idx];
-        if(grad_mq != nullptr)
-            mq_a[idx] -= learning_rate * grad_mq[idx];
-        if(grad_mk != nullptr)
-            mk_a[idx] -= learning_rate * grad_mk[idx];
-    }
-    // No EH or EV update in this kernel
-}
-
 
 /**
  * @brief Simple CUDA kernel to update weights using gradient descent.

@@ -1,9 +1,7 @@
-
+#ifdef USE_CPU
 // compute functions
 #include "include/block.hpp"
 #include "include/transformer.hpp"
-
-#ifdef USE_CPU
 
 /**
  * @brief compute key or query of token using token embedding and matrix for keys and queries
@@ -81,7 +79,7 @@ void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std:
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, long long int& voc, int& index)
+void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, unsigned long long& voc, int& index)
 {
     std::vector<float> pred(voc, 0.0f);     // hold predictions
     for(int i = 0; i < voc; i++) {
@@ -107,7 +105,7 @@ void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& 
  * @note it is assumed in this function that the case of "all dot products being zero" will
  *      not occur
  */
-void computeOutput(const std::vector<float>& output, const mat& embeddings, long long int& voc, int& index)
+void computeOutput(const std::vector<float>& output, const mat& embeddings, unsigned long long& voc, int& index)
 {
     if (output.size() != static_cast<size_t>(embeddings.col) || voc != embeddings.row) {
         throw std::invalid_argument("computeOutput: Dimension mismatch. output size (" + std::to_string(output.size()) + ") != embeddings.col (" + std::to_string(embeddings.col) + ") or voc (" + std::to_string(voc) + ") != embeddings.row (" + std::to_string(embeddings.row) + ")");
@@ -144,26 +142,26 @@ void computeOutput(const std::vector<float>& output, const mat& embeddings, long
  * @param[in] K Keys
  * @param[in] Q Queries
  * @param[in] currentTokenCount number of tokens in full context
- * @param[in] promptCount tokens in prompt
+ * @param[in] sequence1Count tokens in sequence1
  * @param[in] attentionType attention type, 1 for self, 0 for cross
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
-    int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType)
+    int& currentTokenCount, int& sequence1Count, int& blockCount, bool& attentionType)
 {
     // for first block
     if(blockCount == 1) {
-        // first prompt
+        // first sequence1
         if(currentTokenCount == 0) {
-            for(int i = 0; i < promptCount; i++) {
-                for(int j = 0; j < (attentionType ? i : promptCount); j++) {
+            for(int i = 0; i < sequence1Count; i++) {
+                for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
                     KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
                 }
             }
-            currentTokenCount += promptCount;
+            currentTokenCount += sequence1Count;
         }
-        // new prompt within first block
+        // new sequence1 within first block
         else if (currentTokenCount > 0){
-            for(int i = 0; i < promptCount; i++) {
+            for(int i = 0; i < sequence1Count; i++) {
                 KdotQ[i][i] = std::inner_product(Q[i].begin(), Q[i].end(), K[i].begin(), 0.0f) / SCALING;
                 for(int j = 0; j < currentTokenCount; j++) {
                     KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
@@ -180,19 +178,19 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
     }
     // for 2nd to last block
     else {
-        if(currentTokenCount%CONTEXT_WIN == 0 && promptCount > 0) {
-            for(int i = 0; i < promptCount; i++) {
-                for(int j = 0; j < (attentionType ? i : promptCount); j++) {
+        if(currentTokenCount%CONTEXT_WIN == 0 && sequence1Count > 0) {
+            for(int i = 0; i < sequence1Count; i++) {
+                for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
                     KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
                 }
             }
-            currentTokenCount += promptCount;
+            currentTokenCount += sequence1Count;
         }
         else {
-            // when prompt in nth block
-            if(currentTokenCount%CONTEXT_WIN != 0 && promptCount > 0) {
+            // when sequence1 in nth block
+            if(currentTokenCount%CONTEXT_WIN != 0 && sequence1Count > 0) {
                 int c = currentTokenCount - (blockCount - 1)*CONTEXT_WIN;
-                for(int i = 0; i < promptCount; i++) {
+                for(int i = 0; i < sequence1Count; i++) {
                     KdotQ[i][i] = std::inner_product(Q[i].begin(), Q[i].end(), K[i].begin(), 0.0f) / SCALING;
                     for(int j = 0; j < currentTokenCount; j++) {
                         KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
@@ -204,7 +202,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
                     }
                     c += 1;
                 }
-                currentTokenCount += promptCount;
+                currentTokenCount += sequence1Count;
             }
         }
     }
@@ -218,33 +216,33 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
  * @param[in] tokenEmbed tokens
  * @param[in] M QK' cache
  * @param[in] currentTokenCount number of tokens in full context
- * @param[in] promptCount tokens in prompt 
+ * @param[in] sequence1Count tokens in sequence1 
  * @param[in] attentionType attention type, 1 for self, 0 for cross
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount,
-    int& promptCount, bool& attentionType)
+    int& sequence1Count, bool& attentionType)
 {
-    // first single word prompt like 'hi', 'hello', 'hey', etc.
-    if (currentTokenCount == 0 && promptCount == 1) {
+    // first single word sequence1 like 'hi', 'hello', 'hey', etc.
+    if (currentTokenCount == 0 && sequence1Count == 1) {
         computeDot(tokenEmbed[0], M, tokenEmbed[0], KdotQ[0][0]);
         KdotQ[0][0] = KdotQ[0][0] / SCALING;
         currentTokenCount += 1;
         return;
     }
-    // long prompts like 'Hi, Obi'Wan Kenobi here.', etc.
-    else if (currentTokenCount == 0 && promptCount > 1) {
-        for(int i = 0; i < promptCount; i++) {
-            for(int j = 0; j < (attentionType ? i : promptCount); j++) {
+    // long sequence1s like 'Hi, Obi'Wan Kenobi here.', etc.
+    else if (currentTokenCount == 0 && sequence1Count > 1) {
+        for(int i = 0; i < sequence1Count; i++) {
+            for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
                 computeDot(tokenEmbed[i], M, tokenEmbed[j], KdotQ[i][j]);
                 KdotQ[i][j] = KdotQ[i][j] / SCALING;
             }
         }
-        currentTokenCount += promptCount;
+        currentTokenCount += sequence1Count;
         return;
     }
-    // for next prompt
-    else if(currentTokenCount > 0 && promptCount > 1) {
-        for(int i = 0; i < promptCount; i++) {
+    // for next sequence1
+    else if(currentTokenCount > 0 && sequence1Count > 1) {
+        for(int i = 0; i < sequence1Count; i++) {
             // diagonal elements
             computeDot(tokenEmbed[i], M, tokenEmbed[i], KdotQ[i][i]);
             // rows and columns (when cross attention)
@@ -275,36 +273,36 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
  * @param[in] EVp vertical retention vectors of previous block's head of same location
  * @param[in] M QK' cache
  * @param[in] currentTokenCount number of tokens in full context
- * @param[in] promptCount tokens in prompt 
+ * @param[in] sequence1Count tokens in sequence1 
  * @param[in] blockCount current block in the transformer
  * @param[in] attentionType attention type, 1 for self, 0 for cross
  */
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokForBlock, std::vector<std::vector<float>>& EVp,
-    mat& M, int& currentTokenCount, int& promptCount, int& blockCount, bool& attentionType)
+    mat& M, int& currentTokenCount, int& sequence1Count, int& blockCount, bool& attentionType)
 {
     // tokens in local context
     int c = currentTokenCount - (blockCount - 1)*CONTEXT_WIN;
-    // first single word prompt like 'hi', 'hello', 'hey', etc.
-    if (c == 0 && promptCount == 1) {
+    // first single word sequence1 like 'hi', 'hello', 'hey', etc.
+    if (c == 0 && sequence1Count == 1) {
         computeDot(tokForBlock[0], M, EVp[0], KdotQ[0][0]);
         KdotQ[0][0] = KdotQ[0][0] / SCALING;
         currentTokenCount += 1;
         return;
     }
-    // long prompts like 'Hi, Obi'Wan Kenobi here.', etc.
-    else if (c == 0 && promptCount > 1) {
-        for(int i = 0; i < promptCount; i++) {
-            for(int j = 0; j < (attentionType ? i : promptCount); j++) {
+    // long sequence1s like 'Hi, Obi'Wan Kenobi here.', etc.
+    else if (c == 0 && sequence1Count > 1) {
+        for(int i = 0; i < sequence1Count; i++) {
+            for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
                 computeDot(tokForBlock[i], M, EVp[j], KdotQ[i][j]);
                 KdotQ[i][j] = KdotQ[i][j] / SCALING;
             }
         }
-        currentTokenCount += promptCount;
+        currentTokenCount += sequence1Count;
         return;
     }
-    // for next prompt
-    else if(c > 0 && promptCount > 1) {
-        for(int i = 0; i < promptCount; i++) {
+    // for next sequence1
+    else if(c > 0 && sequence1Count > 1) {
+        for(int i = 0; i < sequence1Count; i++) {
             // diagonal elements
             computeDot(tokForBlock[i], M, EVp[i], KdotQ[i][i]);
             // rows and columns (when cross attention)
@@ -329,36 +327,36 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
 
 /**
  * @brief compute parallel KdotQs of column of a block
- * @param promptCount number of tokens in prompt
+ * @param sequence1Count number of tokens in sequence1
  * @param currentTokenCount number of tokens in full context
  * @param blockCount current position of block in full context
  * @param column current column in local context or block
  * @param isSelf attention type (self or cross)
  * @param inTraining training or inference
  */
-void transformer::parallelKdotQs(int &promptCount, int &currentTokenCount, int &blockCount, int &column, bool &isSelf, bool &inTraining)
+void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, int &blockCount, int &column, bool &isSelf, bool &inTraining)
 {
     // first block
     if(blockCount == 1) {
         if(inTraining == 1) {
             // in training
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> KdotQ = t[0].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                std::vector<std::vector<float>> K = t[0].b[i][column].K.make2dVector(t[0].b[i][column].K, CONTEXT_WIN, EMBEDDING);
-                std::vector<std::vector<float>> Q = t[0].b[i][column].Q.make2dVector(t[0].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> KdotQ = blocks[0].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> K = blocks[0].b[i][column].K.make2dVector(t[0].b[i][column].K, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> Q = blocks[0].b[i][column].Q.make2dVector(t[0].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
                 // compute KdotQ of (i, j) head of first block
-                computeKdotQ(KdotQ, K, Q, currentTokenCount, promptCount, blockCount, isSelf);
-                t[0].b[i][column].KdotQ = KdotQ;
+                computeKdotQ(KdotQ, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
+                blocks[0].b[i][column].KdotQ = KdotQ;
             }
         }
         else {
             // for inference
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> KdotQ = t[0].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> KdotQ = blocks[0].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
                 std::vector<std::vector<float>> TokenEmbed = tokenEmbed.make2dVector(tokenEmbed, CONTEXT_WIN, EMBEDDING);
                 // compute KdotQ of (i, j) head of first block
-                computeKdotQ(KdotQ, TokenEmbed, t[0].b[i][column].qkCache, currentTokenCount, promptCount, isSelf);
-                t[0].b[i][column].KdotQ = KdotQ;
+                computeKdotQ(KdotQ, TokenEmbed, blocks[0].b[i][column].qkCache, currentTokenCount, sequence1Count, isSelf);
+                blocks[0].b[i][column].KdotQ = KdotQ;
             }
         }
     }
@@ -367,21 +365,21 @@ void transformer::parallelKdotQs(int &promptCount, int &currentTokenCount, int &
         if(inTraining == 1) {
             // in training
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> KdotQ = t[blockCount-1].b[i][column].KdotQ.make2dVector(t[blockCount-1].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                std::vector<std::vector<float>> K = t[blockCount-1].b[i][column].K.make2dVector(t[blockCount-1].b[i][column].K, CONTEXT_WIN, EMBEDDING);
-                std::vector<std::vector<float>> Q = t[blockCount-1].b[i][column].Q.make2dVector(t[blockCount-1].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
-                computeKdotQ(KdotQ, K, Q, currentTokenCount, promptCount, blockCount, isSelf);
-                t[0].b[i][column].KdotQ = KdotQ;
+                std::vector<std::vector<float>> KdotQ = blocks[blockCount-1].b[i][column].KdotQ.make2dVector(t[blockCount-1].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> K = blocks[blockCount-1].b[i][column].K.make2dVector(t[blockCount-1].b[i][column].K, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> Q = blocks[blockCount-1].b[i][column].Q.make2dVector(t[blockCount-1].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
+                computeKdotQ(KdotQ, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
+                blocks[0].b[i][column].KdotQ = KdotQ;
             }
         }
         else {
             // for inference
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> kdotq = t[blockCount-1].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                std::vector<std::vector<float>> tokforblock = t[blockCount-1].tokForBlock.make2dVector(t[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
-                std::vector<std::vector<float>> ev = t[blockCount-1].b[i][column].EV.make2dVector(t[0].b[i][column].EV, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> kdotq = blocks[blockCount-1].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> tokforblock = blocks[blockCount-1].tokForBlock.make2dVector(t[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> ev = blocks[blockCount-1].b[i][column].EV.make2dVector(t[0].b[i][column].EV, CONTEXT_WIN, EMBEDDING);
                 // compute KdotQ of (i, j) head of first block
-                computeKdotQ(kdotq, tokforblock, ev, t[blockCount-1].b[i][column].qkCache, currentTokenCount, promptCount, blockCount, isSelf);
+                computeKdotQ(kdotq, tokforblock, ev, blocks[blockCount-1].b[i][column].qkCache, currentTokenCount, sequence1Count, blockCount, isSelf);
             }
         }
     }
@@ -390,12 +388,12 @@ void transformer::parallelKdotQs(int &promptCount, int &currentTokenCount, int &
 
 /**
  * @brief compute KdotQ of each head in the block
- * @param promptCount number of tokens in the prompt
+ * @param sequence1Count number of tokens in the sequence1
  * @param blockCount current block in transformer
  * @param isSelf attention type (= 1 for self, = 0 for cross)
  * @param inTraining 1 for training and 0 for inference
  */
-void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &blockCount, bool &isSelf, bool &inTraining)
+void transformer::computeKdotQs(int &sequence1Count, int &currentTokenCount, int &blockCount, bool &isSelf, bool &inTraining)
 {
     // for first block
     if(blockCount == 1) {
@@ -403,12 +401,12 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
             // in training
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> KdotQ = t[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                    std::vector<std::vector<float>> K = t[0].b[i][j].K.make2dVector(t[0].b[i][j].K, CONTEXT_WIN, EMBEDDING);
-                    std::vector<std::vector<float>> Q = t[0].b[i][j].Q.make2dVector(t[0].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
+                    std::vector<std::vector<float>> KdotQ = blocks[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> K = blocks[0].b[i][j].K.make2dVector(t[0].b[i][j].K, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> Q = blocks[0].b[i][j].Q.make2dVector(t[0].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
                     // compute KdotQ of (i, j) head of first block
-                    computeKdotQ(KdotQ, K, Q, currentTokenCount, promptCount, blockCount, isSelf);
-                    t[0].b[i][j].KdotQ = KdotQ;
+                    computeKdotQ(KdotQ, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
+                    blocks[0].b[i][j].KdotQ = KdotQ;
                 }
             }
         }
@@ -416,11 +414,11 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
             // in use
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> KdotQ = t[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> KdotQ = blocks[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
                     std::vector<std::vector<float>> ctokenEmbed = tokenEmbed.make2dVector(tokenEmbed, CONTEXT_WIN, EMBEDDING);
                     // compute KdotQ of (i, j) head of first block
-                    computeKdotQ(KdotQ, ctokenEmbed, t[0].b[i][j].qkCache, currentTokenCount,
-                                    promptCount, isSelf);
+                    computeKdotQ(KdotQ, ctokenEmbed, blocks[0].b[i][j].qkCache, currentTokenCount,
+                                    sequence1Count, isSelf);
                 }
             }
         }
@@ -431,12 +429,12 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
             // in training
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> kdotq = t[blockCount-1].b[i][j].KdotQ.make2dVector(t[blockCount-1].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                    std::vector<std::vector<float>> K = t[blockCount-1].b[i][j].K.make2dVector(t[blockCount-1].b[i][j].K, CONTEXT_WIN, EMBEDDING);
-                    std::vector<std::vector<float>> Q = t[blockCount-1].b[i][j].Q.make2dVector(t[blockCount-1].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
+                    std::vector<std::vector<float>> kdotq = blocks[blockCount-1].b[i][j].KdotQ.make2dVector(t[blockCount-1].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> K = blocks[blockCount-1].b[i][j].K.make2dVector(t[blockCount-1].b[i][j].K, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> Q = blocks[blockCount-1].b[i][j].Q.make2dVector(t[blockCount-1].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
                     // compute KdotQ of (i, j) head of first block
-                    computeKdotQ(kdotq, K, Q, currentTokenCount, promptCount, blockCount, isSelf);
-                    t[blockCount-1].b[i][j].KdotQ = kdotq;
+                    computeKdotQ(kdotq, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
+                    blocks[blockCount-1].b[i][j].KdotQ = kdotq;
                 }
             }
         }
@@ -444,12 +442,12 @@ void transformer::computeKdotQs(int &promptCount, int &currentTokenCount, int &b
             // in use
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> kdotq = t[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                    std::vector<std::vector<float>> tokForBlock = t[blockCount-1].tokForBlock.make2dVector(t[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
-                    std::vector<std::vector<float>> EV = t[0].b[i][j].EV.make2dVector(t[0].b[i][j].EV, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> kdotq = blocks[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> tokForBlock = blocks[blockCount-1].tokForBlock.make2dVector(t[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> EV = blocks[0].b[i][j].EV.make2dVector(t[0].b[i][j].EV, CONTEXT_WIN, EMBEDDING);
                     // compute KdotQ of (i, j) head of first block
-                    computeKdotQ(kdotq, tokForBlock, EV, t[blockCount-1].b[i][j].qkCache, currentTokenCount, promptCount, blockCount, isSelf);
-                    t[blockCount-1].b[i][j].KdotQ = kdotq;
+                    computeKdotQ(kdotq, tokForBlock, EV, blocks[blockCount-1].b[i][j].qkCache, currentTokenCount, sequence1Count, blockCount, isSelf);
+                    blocks[blockCount-1].b[i][j].KdotQ = kdotq;
                 }
             }
         }

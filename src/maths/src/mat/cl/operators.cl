@@ -1,4 +1,4 @@
-__kernel void matrix_transpose(
+__kernel void kernelTransposeMatrix(
     __global const float *A,
     __global float *y,
     const int M,
@@ -15,10 +15,11 @@ __kernel void matrix_transpose(
     }
 }
 
-__kernel void matrix_multiply(
-    __global const float *A,
-    __global const float *B,
-    __global float *C,
+
+__kernel void matrix_multiply( // C = A * B, using float4 for A and B
+    __global const float *A_f,
+    __global const float *B_f,
+    __global float *C_f,
     const int M,
     const int N,
     const int K)
@@ -31,18 +32,32 @@ __kernel void matrix_multiply(
     if (row < M && col < N) {
         float sum = 0.0f;
         // Compute dot product for C[row][col]
-        for (int k = 0; k < K; k++) {
-            sum += A[row * K + k] * B[k * N + col];
+        // A is M x K, B is K x N
+        // C[row][col] = sum(A[row][k] * B[k][col]) for k from 0 to K-1
+
+        // Use float4 for faster access if K is a multiple of 4
+        __global const float4* A_f4 = (__global const float4*)A_f;
+        __global const float4* B_f4 = (__global const float4*)B_f;
+
+        for (int k_f4 = 0; k_f4 < K / 4; k_f4++) {
+            float4 a_vec = A_f4[row * (K / 4) + k_f4];
+            float4 b_vec = (float4)(B_f[k_f4 * 4 * N + col], B_f[(k_f4 * 4 + 1) * N + col], B_f[(k_f4 * 4 + 2) * N + col], B_f[(k_f4 * 4 + 3) * N + col]);
+            sum += dot(a_vec, b_vec);
+        }
+        // Handle remaining elements if K is not a multiple of 4
+        for (int k = (K / 4) * 4; k < K; k++) {
+            sum += A_f[row * K + k] * B_f[k * N + col];
         }
         // Store result in C
-        C[row * N + col] = sum;
+        C_f[row * N + col] = sum;
     }
 }
 
-__kernel void vector_matrix_multiply(
-    __global const float *A,
-    __global const float *x,
-    __global float *y,
+
+__kernel void vector_matrix_multiply( // y = A * x, using float4 for A and x
+    __global const float *A_f,
+    __global const float *x_f,
+    __global float *y_f,
     const int M,
     const int N)
 {
@@ -53,11 +68,22 @@ __kernel void vector_matrix_multiply(
     if (row < M) {
         float sum = 0.0f;
         // Compute dot product for y[row]
-        for (int col = 0; col < N; col++) {
-            sum += A[row * N + col] * x[col];
+        // A is M x N, x is N x 1
+        // y[row] = sum(A[row][col] * x[col]) for col from 0 to N-1
+
+        // Use float4 for faster access if N is a multiple of 4
+        __global const float4* A_f4 = (__global const float4*)A_f;
+        __global const float4* x_f4 = (__global const float4*)x_f;
+
+        for (int col_f4 = 0; col_f4 < N / 4; col_f4++) {
+            sum += dot(A_f4[row * (N / 4) + col_f4], x_f4[col_f4]);
+        }
+        // Handle remaining elements if N is not a multiple of 4
+        for (int col = (N / 4) * 4; col < N; col++) {
+            sum += A_f[row * N + col] * x_f[col];
         }
         // Store result in y
-        y[row] = sum;
+        y_f[row] = sum;
     }
 }
 

@@ -32,7 +32,7 @@ void mlp::backward(int in_param, int layers_param, float learning) {
     for (unsigned int i = 0; i < layer_sizes[output_layer_idx]; ++i) {
         // Assuming output[i] is the activated value from the output layer
         // and sigmoidder(activated_value) computes activated_value * (1 - activated_value)
-        layer_deltas[output_layer_idx][i] = (this->output[i] - this->expected[i]) * sigmoidder(this->activations[output_layer_idx][i]);
+        layer_deltas[output_layer_idx][i] = (output[i] - expected[i]) * sigmoidder(activations[output_layer_idx][i]);
     }
 
     // Calculate deltas for hidden layers (from right to left)
@@ -90,10 +90,10 @@ void mlp::backprop(int in, int layers, float learning) {
     size_t output_layer_idx = num_layers - 1;
     size_t output_size = layer_sizes[output_layer_idx];
     for (unsigned int i = 0; i < output_size; ++i) {
-        // 'this->output' contains the final activations of the output layer
-        // and 'this->expected' contains the target values.
+        // 'output' contains the final activations of the output layer
+        // and 'expected' contains the target values.
         // The derivative of sigmoid (if output is sigmoid activated) is output * (1 - output)
-        layer_deltas[output_layer_idx][i] = (this->output[i] - this->expected[i]) * this->activations[output_layer_idx][i] * (1.0f - this->activations[output_layer_idx][i]);
+        layer_deltas[output_layer_idx][i] = (output[i] - expected[i]) * activations[output_layer_idx][i] * (1.0f - activations[output_layer_idx][i]);
     }
 
     // --- Calculate deltas for hidden layers (from right to left) ---

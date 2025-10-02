@@ -145,8 +145,8 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
 
     // AND gate for the final output
     EH = EH + ReLU(hor.output); // Assumes EH is std::vector<float>
-    // Update this head's EV (this->EV) for the current block's tokens
-    // this->EV should be sized for CONTEXT_WIN or at least currentBlockTokenCount
+    // Update this head's EV (EV) for the current block's tokens
+    // EV should be sized for CONTEXT_WIN or at least currentBlockTokenCount
     for(int i = 0; i < CONTEXT_WIN; ++i) {
         if (i < EV.row) { // Ensure EV is large enough
             EV(i) += ReLU(ver.output); // Update the i-th row of *this* block's EV

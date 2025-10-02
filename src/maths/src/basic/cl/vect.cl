@@ -1,10 +1,10 @@
 
 // Forward declarations to prevent implicit declaration warnings/errors
-inline float compute_dot_product(__global const float* vec1, __global const float* vec2, int dim);
-inline float compute_dot_product_mat(__global const float* vec1, __global const float* vec2, __global const float* matrix, int dim);
+inline float computeDot(__global const float* vec1, __global const float* vec2, int dim);
+inline float computeDot_mat(__global const float* vec1, __global const float* vec2, __global const float* matrix, int dim);
 int compute_prediction(__global const float* EH, __global const float* embeddings, int dim, int voc);
 
-inline float compute_dot_product(__global const float* vec1, __global const float* vec2, int dim) 
+inline float computeDot(__global const float* vec1, __global const float* vec2, int dim) 
 {
     float dot_product = 0.0f;
     for (int k = 0; k < dim; ++k) {
@@ -13,7 +13,7 @@ inline float compute_dot_product(__global const float* vec1, __global const floa
     return dot_product;
 }
 
-inline float compute_dot_product_mat(__global const float* vec1, __global const float* vec2, __global const float* matrix,
+inline float computeDot_mat(__global const float* vec1, __global const float* vec2, __global const float* matrix,
     int dim)
 {
     float final_dot_product = 0.0f;
@@ -47,7 +47,7 @@ int compute_prediction(__global const float* EH, __global const float* embedding
         // pointer to ith token embedding row
         __global const float* current_embedding_row = embeddings + i * dim;
         // Use the correctly named inline function
-        float current_dot_product = compute_dot_product(EH, current_embedding_row, dim);
+        float current_dot_product = computeDot(EH, current_embedding_row, dim);
         // update index if new maximum dot product is available
         if (current_dot_product > max_dot_product) {
             max_dot_product = current_dot_product;

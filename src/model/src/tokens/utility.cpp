@@ -7,7 +7,7 @@ unsigned long long count_lines(const std::string& filename) {
         std::cerr << "Warning: Could not open file to count lines: " << filename << std::endl;
         return -1;
     }
-    long long count = 0;
+    unsigned long long count = 0;
     std::string line;
     while (std::getline(file, line)) {
         count++;

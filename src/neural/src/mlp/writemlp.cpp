@@ -11,7 +11,7 @@
  * K, Q, KdotQ
  * EH, EV
  */
-void mlp::serialise(long long int offset, const std::string& locationofbinfile) {
+void mlp::serialise(unsigned long long offset, const std::string& locationofbinfile) {
     std::fstream outFile(locationofbinfile, std::ios::binary | std::ios::in | std::ios::out);
     if (!outFile.is_open()) {
         throw std::runtime_error("Failed to open file for writing MLP (it may not exist or permissions are wrong): " + locationofbinfile);
@@ -93,7 +93,7 @@ void mlp::serialise(long long int offset, const std::string& locationofbinfile) 
  * K, Q, KdotQ
  * EH, EV
  */
-void mlp::deserialise(long long int offset, const std::string& locationofbinfile) {
+void mlp::deserialise(unsigned long long offset, const std::string& locationofbinfile) {
     if (weights.empty()) {
         return;
     }

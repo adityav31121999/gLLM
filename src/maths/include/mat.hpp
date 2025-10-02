@@ -44,6 +44,7 @@ public:
     mat() = default;
     mat(int x, int y);
     mat(int x);
+    mat(const std::string& filename, int r, int c);
     mat(const std::string& filename, int r, int c, bool create_new);
     mat(const std::vector<std::vector<float>>& b);
     mat(mat&& b) noexcept;

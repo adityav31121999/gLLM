@@ -1,4 +1,3 @@
-
 #include "include/model.hpp"
 #include <neural.hpp>
 #include <fstream>
@@ -9,21 +8,21 @@
 #include <limits>
 #include <stdexcept>
 
-// take prompt as input
+// take sequence1 as input
 void model::takeInput() {
     bool sortIt = 0;
-    std::getline(std::cin, userPrompt);
+    std::getline(std::cin, userSequence1);
     // tokenise sentence into words and punctuations
-    std::vector<std::vector<float>> promptEmbed;
+    std::vector<std::vector<float>> sequence1Embed;
     
-    tokenize_with_numbers(userPrompt, tinput, sortIt);
-    T.promptCount = tinput.size();
+    tokenize_with_numbers(userSequence1, tinput, sortIt);
+    T.sequence1Count = tinput.size();
 
-    // Write the user prompt to the chat log file
-    if (this->chat != nullptr) {
+    // Write the user sequence1 to the chat log file
+    if (chat != nullptr) {
         // Check if the file pointer is valid
-        fprintf(this->chat, "Prompt: %s\n", userPrompt.c_str());
-        fflush(this->chat); // Ensure it's written immediately (optional but good for logging)
+        fprintf(chat, "Sequence1: %s\n", userSequence1.c_str());
+        fflush(chat);
     }
     else {
         // Optionally handle the case where the file isn't open
@@ -36,45 +35,45 @@ void model::takeInput() {
 void model::newChat() {
     for(int i = 0; i < x; i++) {
         for(int j = 0; j < y; j++) {
-            this->T.t[0].b[i][j].clearValues();
+            T.blocks[0].b[i][j].clearValues();
         }
     }
-    this->T.t[0].clearValues();
+    T.blocks[0].clearValues();
 
     // Define the standard path for the active chat log
     const std::string activeChatPath = "./active_chat.txt";
 
     // Close any existing chat file first
-    if (this->chat != nullptr) {
-        fclose(this->chat);
-        this->chat = nullptr;
+    if (chat != nullptr) {
+        fclose(chat);
+        chat = nullptr;
         // Don't clear currentChatLogPath here, as we might be overwriting the same file
     }
 
     // Set the current path
-    this->currentChatLogPath = activeChatPath;
+    currentChatLogPath = activeChatPath;
 
     // Open the new chat log file at the standard path, overwriting if it exists
 #if defined(_WIN64)
-    errno_t err = fopen_s(&this->chat, this->currentChatLogPath.c_str(), "w"); // "w" truncates/creates
-    if (err != 0 || this->chat == nullptr) {
+    errno_t err = fopen_s(&chat, currentChatLogPath.c_str(), "w"); // "w" truncates/creates
+    if (err != 0 || chat == nullptr) {
         // Consider logging the error code 'err' for Windows
-        throw std::runtime_error("Failed to open new chat log file: " + this->currentChatLogPath + " (Error: " + std::to_string(err) + ")");
+        throw std::runtime_error("Failed to open new chat log file: " + currentChatLogPath + " (Error: " + std::to_string(err) + ")");
     }
 #else // POSIX systems (Linux, macOS, etc.)
-    this->chat = fopen(this->currentChatLogPath.c_str(), "w"); // "w" truncates/creates
-    if (this->chat == nullptr) {
+    chat = fopen(currentChatLogPath.c_str(), "w"); // "w" truncates/creates
+    if (chat == nullptr) {
         // On POSIX, errno is set by fopen on failure.
         // #include <cstring> for strerror
         // #include <cerrno> for errno
-        throw std::runtime_error("Failed to open new chat log file: " + this->currentChatLogPath + " (Error: " + strerror(errno) + ")");
+        throw std::runtime_error("Failed to open new chat log file: " + currentChatLogPath + " (Error: " + strerror(errno) + ")");
     }
 #endif
     else {
-        fprintf(this->chat, "--- New Chat Session Started ---\n");
-        fflush(this->chat);
+        fprintf(chat, "--- New Chat Session Started ---\n");
+        fflush(chat);
     }
-    this->T.clearValues();
+    T.clearValues();
 }
 
 
@@ -83,12 +82,12 @@ void model::endChat() {
     for(int k = 0; k < m; k++) {
         for(int i = 0; i < x; i++) {
             for(int j = 0; j < y; j++) {
-                this->T.t[k].b[i][j].clearValues();
+                T.blocks[k].b[i][j].clearValues();
             }
         }
-        this->T.t[k].clearValues();
+        T.blocks[k].clearValues();
     }
-    this->T.clearValues();
+    T.clearValues();
 }
 
 
@@ -103,7 +102,7 @@ void model::saveChat() {
     std::cin >> location;
     std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n'); // Consume trailing newline
 
-    if (this->chat == nullptr || this->currentChatLogPath.empty()) {
+    if (chat == nullptr || currentChatLogPath.empty()) {
         std::cerr << "Error: No active chat log to save." << std::endl;
         return;
     }
@@ -118,19 +117,19 @@ void model::saveChat() {
     std::filesystem::path destinationPath = destDir / destFile;
 
     // 1. Close the current chat file to flush buffers
-    fclose(this->chat);
-    this->chat = nullptr; // Set handle to null after closing
+    fclose(chat);
+    chat = nullptr; // Set handle to null after closing
 
     // 2. Rename/Move the chat log file
     try {
         std::filesystem::create_directories(destDir); // Ensure destination directory exists
-        std::filesystem::rename(this->currentChatLogPath, destinationPath);
+        std::filesystem::rename(currentChatLogPath, destinationPath);
         std::cout << "Chat saved successfully to: " << destinationPath.string() << std::endl;
-        this->currentChatLogPath.clear(); // Clear the path as the file has been moved
+        currentChatLogPath.clear(); // Clear the path as the file has been moved
     }
     catch (const std::filesystem::filesystem_error& e) {
         std::cerr << "Error saving chat: Failed to move file from '"
-                  << this->currentChatLogPath << "' to '" << destinationPath.string()
+                  << currentChatLogPath << "' to '" << destinationPath.string()
                   << "'. Reason: " << e.what() << std::endl;
     }
 }

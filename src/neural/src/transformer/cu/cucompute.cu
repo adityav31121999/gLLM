@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 // compute kernels and functions
 #include "include/attention.hpp"    // EMBEDDING, SCALING and CONTEXT_WIN, etc.
 #include "include/block.hpp"
@@ -31,14 +31,14 @@
  * kernels. This optimized version allocates large buffers on the GPU once, copies data 
  * in batches, launches kernels using offsets into these buffers, copies results back, 
  * and then frees. Mirrors the logic of the C++ parallelKdotQs function.
- * @param promptCount number of new tokens in the prompt being processed in this step.
+ * @param sequence1Count number of new tokens in the sequence1 being processed in this step.
  * @param currentTokenCount total number of tokens processed *before* this step across all blocks.
  * @param blockCount 1-based index of the current block being processed.
  * @param column 0-based index of the parallel (column in the block's attention grid) to compute.
  * @param isSelf true for self-attention, false for cross-attention.
  * @param inTraining true if in training mode, false if in inference mode.
  */
-void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int& blockCount, int& column, bool& isSelf,
+void transformer::cuParallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf,
     bool& inTraining) 
 {
     // --- Basic Sanity Checks ---
@@ -52,13 +52,13 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
     }
 
     // initiate a block that reference the current block operations
-    block& current_block = (inTraining == 1) ? t[blockCount - 1] : t[0]; // 0-based index for vector t
+    block& current_block = (inTraining == 1) ? blocks[blockCount - 1] : blocks[0]; // 0-based index for vector t
     if (x <= 0) {
         fprintf(stderr, "Warning in cuParallelKdotQs: Invalid number of parallels (layers) x = %d. No heads to process.\n", x);
         return; // No heads to process
     }
-    if (promptCount < 0) {
-        fprintf(stderr, "Warning in cuParallelKdotQs: promptCount is negative (%d). Setting to 0.\n", promptCount);
+    if (sequence1Count < 0) {
+        fprintf(stderr, "Warning in cuParallelKdotQs: sequence1Count is negative (%d). Setting to 0.\n", sequence1Count);
         return;
     }
 
@@ -76,7 +76,7 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
         fprintf(stderr, "Error: Invalid dimensions (context_win_size=%d, embedding_dim=%d)\n", context_win_size, embedding_dim);
         return;
     }
-    const size_t k_q_ev_head_elems = static_cast<size_t>(context_win_size) * MATHEIGHTS;        // n * h
+    const size_t k_q_ev_head_elems = static_cast<size_t>(context_win_size) * CONTEXT_WIN;        // n * h
     const size_t kdotq_head_elems = static_cast<size_t>(context_win_size) * context_win_size;   // n * n
     const size_t qkcache_head_elems = static_cast<size_t>(embedding_dim) * embedding_dim;       // d * d
 
@@ -134,10 +134,10 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
 
             if (blockCount == 1) {
                 // Need global tokenEmbed
-                if (!this->tokenEmbed.mapped_data) {
+                if (!tokenEmbed.mapped_data) {
                     fprintf(stderr, "Error: Global tokenEmbed mat is not mapped.\n"); return;
                 }
-                h_transformer_tokenEmbed_flat = flatten(this->tokenEmbed); // this->tokenEmbed is mat
+                h_transformer_tokenEmbed_flat = flatten(tokenEmbed); // tokenEmbed is mat
                 if (!h_transformer_tokenEmbed_flat.empty()) {
                     CUDA_CHECK(cudaMalloc(&d_transformer_tokenEmbed_flat, h_transformer_tokenEmbed_flat.size() * sizeof(float)));
                     CUDA_CHECK(cudaMemcpy(d_transformer_tokenEmbed_flat, h_transformer_tokenEmbed_flat.data(), h_transformer_tokenEmbed_flat.size() * sizeof(float), cudaMemcpyHostToDevice));
@@ -173,7 +173,7 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
         }
 
         // --- Pack Data on Host ---
-        block* prev_block_ptr = (blockCount > 1) ? ((inTraining == 1) ? &t[blockCount - 2] : &t[0]): nullptr;
+        block* prev_block_ptr = (blockCount > 1) ? ((inTraining == 1) ? &blocks[blockCount - 2] : &blocks[0]): nullptr;
 
         for (int i = 0; i < num_heads_in_parallel; ++i) {
             // Check if head exists (safety check)
@@ -282,16 +282,16 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
         int current_tokens_in_window = 0;
         int num_queries_eff = 0;
         int num_keys_eff = 0;
-        int prompt_start_index = 0;
+        int sequence1_start_index = 0;
         int context_len = 0;
-        int effective_prompt_len = 0;
+        int effective_sequence1_len = 0;
         int tokens_processed_in_prev_blocks = 0;
-        int tokens_in_block_before_prompt = 0;
-        int prompt_start_index_in_block = 0;
+        int tokens_in_block_before_sequence1 = 0;
+        int sequence1_start_index_in_block = 0;
         int context_len_in_block = 0;
 
         if (inTraining) {
-            // Effective number of tokens currently in the window *before* adding the prompt
+            // Effective number of tokens currently in the window *before* adding the sequence1
             current_tokens_in_window = currentTokenCount % context_win_size;
             // Handle edge case: if exactly at the boundary, the window is full from previous step
             if (current_tokens_in_window == 0 && currentTokenCount > 0) {
@@ -306,7 +306,7 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
             }
 
             // Calculate effective Q/K lengths for this step within the window limit
-            num_queries_eff = std::min(current_tokens_in_window + promptCount, context_win_size);
+            num_queries_eff = std::min(current_tokens_in_window + sequence1Count, context_win_size);
             num_keys_eff = num_queries_eff; // For both self/cross in training, Q and K span the same updated context
 
             // Calculate grid dimensions based on effective sizes
@@ -316,29 +316,29 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
         }
         else { // Inference
             if (blockCount == 1) {
-                prompt_start_index = currentTokenCount; // Index where the new prompt starts globally
-                context_len = std::min(currentTokenCount + promptCount, context_win_size); // Total tokens in window after prompt
-                // Effective prompt length considering window limit
-                effective_prompt_len = std::min(promptCount, std::max(0, context_win_size - prompt_start_index));
+                sequence1_start_index = currentTokenCount; // Index where the new sequence1 starts globally
+                context_len = std::min(currentTokenCount + sequence1Count, context_win_size); // Total tokens in window after sequence1
+                // Effective sequence1 length considering window limit
+                effective_sequence1_len = std::min(sequence1Count, std::max(0, context_win_size - sequence1_start_index));
 
-                // Grid dimensions depend on the context length (keys/j) and effective prompt length (queries/i)
+                // Grid dimensions depend on the context length (keys/j) and effective sequence1 length (queries/i)
                 numBlocks.x = (context_len + threadsPerBlock.x - 1) / threadsPerBlock.x;
-                numBlocks.y = (effective_prompt_len + threadsPerBlock.y - 1) / threadsPerBlock.y;
+                numBlocks.y = (effective_sequence1_len + threadsPerBlock.y - 1) / threadsPerBlock.y;
                 numBlocks.z = 1;
             }
             else { // Block N > 1
                 tokens_processed_in_prev_blocks = (blockCount - 1) * context_win_size;
-                // Tokens already in this block's window before the current prompt
-                tokens_in_block_before_prompt = std::max(0, std::min(currentTokenCount - tokens_processed_in_prev_blocks, context_win_size));
-                prompt_start_index_in_block = tokens_in_block_before_prompt;
-                // Total relevant tokens in this block's window after adding prompt
-                context_len_in_block = std::min(tokens_in_block_before_prompt + promptCount, context_win_size);
-                // Effective prompt length considering window limit
-                effective_prompt_len = std::min(promptCount, std::max(0, context_win_size - prompt_start_index_in_block));
+                // Tokens already in this block's window before the current sequence1
+                tokens_in_block_before_sequence1 = std::max(0, std::min(currentTokenCount - tokens_processed_in_prev_blocks, context_win_size));
+                sequence1_start_index_in_block = tokens_in_block_before_sequence1;
+                // Total relevant tokens in this block's window after adding sequence1
+                context_len_in_block = std::min(tokens_in_block_before_sequence1 + sequence1Count, context_win_size);
+                // Effective sequence1 length considering window limit
+                effective_sequence1_len = std::min(sequence1Count, std::max(0, context_win_size - sequence1_start_index_in_block));
 
                 // Grid dimensions
                 numBlocks.x = (context_len_in_block + threadsPerBlock.x - 1) / threadsPerBlock.x;
-                numBlocks.y = (effective_prompt_len + threadsPerBlock.y - 1) / threadsPerBlock.y;
+                numBlocks.y = (effective_sequence1_len + threadsPerBlock.y - 1) / threadsPerBlock.y;
                 numBlocks.z = 1;
             }
         }
@@ -369,17 +369,17 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
                  }
             }
             else { // Inference Mode
-                if (effective_prompt_len > 0) { // Only launch if the prompt has effect in this window
+                if (effective_sequence1_len > 0) { // Only launch if the sequence1 has effect in this window
                     if (blockCount == 1) {
                         if (d_transformer_tokenEmbed_flat != nullptr && d_M_head != nullptr) {
                             if (isSelf) {
                                 kernelKdotQ_Block1_Self_Inference<<<numBlocks, threadsPerBlock>>>(
-                                    d_kdotq_head, d_transformer_tokenEmbed_flat, d_M_head, prompt_start_index, effective_prompt_len,
+                                    d_kdotq_head, d_transformer_tokenEmbed_flat, d_M_head, sequence1_start_index, effective_sequence1_len,
                                     context_len, kdotq_full_width, embedding_dim, inv_scaling);
                             }
                             else {
                                 kernelKdotQ_Block1_Cross_Inference<<<numBlocks, threadsPerBlock>>>(
-                                    d_kdotq_head, d_transformer_tokenEmbed_flat, d_M_head, prompt_start_index, effective_prompt_len,
+                                    d_kdotq_head, d_transformer_tokenEmbed_flat, d_M_head, sequence1_start_index, effective_sequence1_len,
                                     context_len, kdotq_full_width, embedding_dim, inv_scaling);
                             }
                             CUDA_CHECK(cudaGetLastError());
@@ -392,12 +392,12 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
                         if (d_block_tokForBlock_flat != nullptr && d_EVp_head != nullptr && d_M_head != nullptr) {
                             if (isSelf) {
                                 kernelKdotQ_BlockN_Self_Inference<<<numBlocks, threadsPerBlock>>>(
-                                    d_kdotq_head, d_block_tokForBlock_flat, d_EVp_head, d_M_head, prompt_start_index_in_block, effective_prompt_len,
+                                    d_kdotq_head, d_block_tokForBlock_flat, d_EVp_head, d_M_head, sequence1_start_index_in_block, effective_sequence1_len,
                                     context_len_in_block, kdotq_full_width, embedding_dim, inv_scaling);
                             }
                             else {
                                 kernelKdotQ_BlockN_Cross_Inference<<<numBlocks, threadsPerBlock>>>(
-                                    d_kdotq_head, d_block_tokForBlock_flat, d_EVp_head, d_M_head, prompt_start_index_in_block, effective_prompt_len,
+                                    d_kdotq_head, d_block_tokForBlock_flat, d_EVp_head, d_M_head, sequence1_start_index_in_block, effective_sequence1_len,
                                     context_len_in_block, kdotq_full_width, embedding_dim, inv_scaling);
                             }
                             CUDA_CHECK(cudaGetLastError());
@@ -407,7 +407,7 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
                                     i, (void*)d_block_tokForBlock_flat, (void*)d_EVp_head, (void*)d_M_head);
                         }
                     }
-                } // End if effective_prompt_len > 0
+                } // End if effective_sequence1_len > 0
             } // End Inference Mode
         } // End loop over heads (i)
 
@@ -464,3 +464,5 @@ void transformer::cuParallelKdotQs(int& promptCount, int& currentTokenCount, int
     // Optional: Synchronize device if needed, but likely handled elsewhere.
     // CUDA_CHECK(cudaDeviceSynchronize());
 }
+
+#endif

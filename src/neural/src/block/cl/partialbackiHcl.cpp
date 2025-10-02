@@ -68,7 +68,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
     }
 
     const int embedding_dim = EMBEDDING;
-    const int mat_heights = MATHEIGHTS;
+    const int mat_heights = CONTEXT_WIN;
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = 1.0f/(sqrt(static_cast<float>(embedding_dim)));
@@ -230,9 +230,12 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             const size_t active_head_bytes = active_head_elements * sizeof(float);
             const size_t active_k_q_elements = static_cast<size_t>(token_count) * mat_heights;
             const size_t active_k_q_bytes = active_k_q_elements * sizeof(float);
-
             auto calculate_global_1d = [&](size_t total_size) { return ((total_size + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; };
-            auto calculate_global_2d = [&](size_t dim0, size_t dim1) { size_t g0 = ((dim0 + local_work_size_2d_arr[0] - 1) / local_work_size_2d_arr[0]) * local_work_size_2d_arr[0]; size_t g1 = ((dim1 + local_work_size_2d_arr[1] - 1) / local_work_size_2d_arr[1]) * local_work_size_2d_arr[1]; return cl::NDRange(g0, g1); };
+            auto calculate_global_2d = [&](size_t dim0, size_t dim1) {
+                size_t g0 = ((dim0 + local_work_size_2d_arr[0] - 1) / local_work_size_2d_arr[0]) * local_work_size_2d_arr[0];
+                size_t g1 = ((dim1 + local_work_size_2d_arr[1] - 1) / local_work_size_2d_arr[1]) * local_work_size_2d_arr[1];
+                return cl::NDRange(g0, g1);
+            };
 
             cl::NDRange global_embed(calculate_global_1d(embedding_dim));
             cl::NDRange global_mat_heights(calculate_global_1d(mat_heights));
@@ -243,8 +246,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             cl::NDRange global_head_2d = calculate_global_2d(token_count, token_count);
             cl::NDRange global_kq_grad_2d = calculate_global_2d(mat_heights, token_count);
             cl::NDRange global_head_1d(calculate_global_1d(active_head_elements));
-
-            bool is_first_head_of_block = (head_idx == 0 && layno_col_idx == 0);
 
             CL_CHECK(current_stream.enqueueWriteBuffer(device_ptrs.d_expected_h, CL_FALSE, 0, embed_bytes, expectedH[head_idx].data()));
             CL_CHECK(current_stream.enqueueWriteBuffer(device_ptrs.d_EH, CL_FALSE, 0, embed_bytes, head_obj.EH.data()));
@@ -330,21 +331,21 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_weights_v, cl::NullRange, global_embed_2d, local_2d));
             }
 
-            cl::Kernel k_grad_mlp_input = clcontext.kernels.at("kernelComputeGradMLPInput"); 
+            cl::Kernel k_grad_mlp_input = clcontext.kernels.at("kernelComputeGradMLPInput");
+            CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim));
+            CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim));
+            // hor
             CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs.d_hor_deltas[0]));
             CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs.d_hor_weights[0]));
             CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs.d_grad_dh));
-            CL_CHECK(k_grad_mlp_input.setArg(3, embedding_dim));
-            CL_CHECK(k_grad_mlp_input.setArg(4, embedding_dim));
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
-            
+            // ver
             CL_CHECK(k_grad_mlp_input.setArg(0, device_ptrs.d_ver_deltas[0]));
             CL_CHECK(k_grad_mlp_input.setArg(1, device_ptrs.d_ver_weights[0]));
             CL_CHECK(k_grad_mlp_input.setArg(2, device_ptrs.d_grad_dv));
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
             
             if (token_count > 0) {
-
                 cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
                 CL_CHECK(k_lota.setArg(0, device_ptrs.d_KdotQ)); 
                 CL_CHECK(k_lota.setArg(1, device_ptrs.d_head)); 
@@ -404,8 +405,10 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
                 CL_CHECK(k_grad_kdotq_lota.setArg(1, device_ptrs.d_lota_deriv));
                 CL_CHECK(k_grad_kdotq_lota.setArg(2, device_ptrs.d_grad_KdotQ));
                 CL_CHECK(k_grad_kdotq_lota.setArg(3, scaling_factor));
-                CL_CHECK(k_grad_kdotq_lota.setArg(4, static_cast<int>(active_head_elements)));
-                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_kdotq_lota, cl::NullRange, global_head_1d, local_1d));
+                CL_CHECK(k_grad_kdotq_lota.setArg(4, context_win));
+                CL_CHECK(k_grad_kdotq_lota.setArg(5, context_win));
+                CL_CHECK(k_grad_kdotq_lota.setArg(6, static_cast<int>(active_head_elements)));
+                CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_kdotq_lota, cl::NullRange, global_head_2d, local_2d));
 
                 cl::Kernel k_grad_k_q = clcontext.kernels.at("kernelComputeGradK_Q"); 
                 CL_CHECK(k_grad_k_q.setArg(0, device_ptrs.d_grad_KdotQ));
@@ -434,7 +437,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             }
 
             cl_int cl_update_eh_flag = (layno_col_idx > 0) ? 1 : 0;
-            cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeights_1stHead_H");
+            cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeightsHeadElastic");
             CL_CHECK(k_update_1st_h.setArg(0, device_ptrs.d_MH_a)); CL_CHECK(cl_err);
             CL_CHECK(k_update_1st_h.setArg(1, device_ptrs.d_MV_a)); CL_CHECK(cl_err);
             CL_CHECK(k_update_1st_h.setArg(2, device_ptrs.d_MQ_a)); CL_CHECK(cl_err);
@@ -449,6 +452,9 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             CL_CHECK(k_update_1st_h.setArg(11, cl_update_eh_flag)); CL_CHECK(cl_err);
             CL_CHECK(k_update_1st_h.setArg(12, mat_heights)); CL_CHECK(cl_err);
             CL_CHECK(k_update_1st_h.setArg(13, embedding_dim)); CL_CHECK(cl_err);
+            CL_CHECK(k_update_1st_h.setArg(14, lambda_l1)); CL_CHECK(cl_err);
+            CL_CHECK(k_update_1st_h.setArg(15, lambda_l2)); CL_CHECK(cl_err);
+            CL_CHECK(k_update_1st_h.setArg(16, MAX_GRAD_CLIP)); CL_CHECK(cl_err);
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_update_1st_h, cl::NullRange, global_proj_mat, local_1d)); CL_CHECK(cl_err);
 
             for(int l=0; l<num_weight_matrices_mlp; ++l) { 
@@ -466,42 +472,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             CL_CHECK(current_stream.finish());
         }
 
-        // Explicitly release all aggregate OpenCL buffers
-        agg_d_expected_h = cl::Buffer();
-        agg_d_EH = cl::Buffer();
-        agg_d_EV = cl::Buffer();
-        agg_d_grad_EH = cl::Buffer();
-        agg_d_grad_EV_scaled = cl::Buffer();
-        agg_d_grad_dh = cl::Buffer();
-        agg_d_grad_dv = cl::Buffer();
-        agg_d_KdotQ = cl::Buffer();
-        agg_d_head_storage = cl::Buffer();
-        agg_d_K = cl::Buffer();
-        agg_d_Q = cl::Buffer();
-        agg_d_pre_MH = cl::Buffer();
-        agg_d_pre_MV = cl::Buffer();
-        agg_d_MH_a = cl::Buffer();
-        agg_d_MV_a = cl::Buffer();
-        agg_d_MQ_a = cl::Buffer();
-        agg_d_MK_a = cl::Buffer();
-        agg_d_grad_MH = cl::Buffer();
-        agg_d_grad_MV = cl::Buffer();
-        agg_d_grad_head_storage_buf = cl::Buffer();
-        agg_d_lota_deriv = cl::Buffer();
-        agg_d_grad_KdotQ_buf = cl::Buffer();
-        agg_d_grad_K_buf = cl::Buffer();
-        agg_d_grad_Q_buf = cl::Buffer();
-        agg_d_grad_MQ_buf = cl::Buffer();
-        agg_d_grad_MK_buf = cl::Buffer();
-        agg_d_hor_activations_storage = cl::Buffer();
-        agg_d_ver_activations_storage = cl::Buffer();
-        agg_d_hor_weights_storage = cl::Buffer();
-        agg_d_ver_weights_storage = cl::Buffer();
-        agg_d_hor_gweights_storage = cl::Buffer();
-        agg_d_ver_gweights_storage = cl::Buffer();
-        agg_d_hor_deltas_storage = cl::Buffer();
-        agg_d_ver_deltas_storage = cl::Buffer();
-
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CL_CHECK(streams_cl[head_idx].finish());
         }
@@ -510,6 +480,42 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
         std::cerr << "Standard Exception during clpartialbackward1stBlock(H_2D) for column " << layno_col_idx << ": " << e.what() << std::endl;
         throw;
     }
+
+    // Explicitly release all aggregate OpenCL buffers
+    agg_d_expected_h = cl::Buffer();
+    agg_d_EH = cl::Buffer();
+    agg_d_EV = cl::Buffer();
+    agg_d_grad_EH = cl::Buffer();
+    agg_d_grad_EV_scaled = cl::Buffer();
+    agg_d_grad_dh = cl::Buffer();
+    agg_d_grad_dv = cl::Buffer();
+    agg_d_KdotQ = cl::Buffer();
+    agg_d_head_storage = cl::Buffer();
+    agg_d_K = cl::Buffer();
+    agg_d_Q = cl::Buffer();
+    agg_d_pre_MH = cl::Buffer();
+    agg_d_pre_MV = cl::Buffer();
+    agg_d_MH_a = cl::Buffer();
+    agg_d_MV_a = cl::Buffer();
+    agg_d_MQ_a = cl::Buffer();
+    agg_d_MK_a = cl::Buffer();
+    agg_d_grad_MH = cl::Buffer();
+    agg_d_grad_MV = cl::Buffer();
+    agg_d_grad_head_storage_buf = cl::Buffer();
+    agg_d_lota_deriv = cl::Buffer();
+    agg_d_grad_KdotQ_buf = cl::Buffer();
+    agg_d_grad_K_buf = cl::Buffer();
+    agg_d_grad_Q_buf = cl::Buffer();
+    agg_d_grad_MQ_buf = cl::Buffer();
+    agg_d_grad_MK_buf = cl::Buffer();
+    agg_d_hor_activations_storage = cl::Buffer();
+    agg_d_ver_activations_storage = cl::Buffer();
+    agg_d_hor_weights_storage = cl::Buffer();
+    agg_d_ver_weights_storage = cl::Buffer();
+    agg_d_hor_gweights_storage = cl::Buffer();
+    agg_d_ver_gweights_storage = cl::Buffer();
+    agg_d_hor_deltas_storage = cl::Buffer();
+    agg_d_ver_deltas_storage = cl::Buffer();
 }
 
 
@@ -545,7 +551,7 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
     }
 
     const int embedding_dim = EMBEDDING;
-    const int mat_heights = MATHEIGHTS;
+    const int mat_heights = CONTEXT_WIN;
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
@@ -912,7 +918,7 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
 
             cl_int cl_update_eh_flag = (layno_col_idx > 0) ? 1 : 0;
             cl_int cl_update_ev_flag = 1; // EV is generally updated in non-first blocks/columns
-            cl::Kernel k_update_weights_eh_ev = clcontext.kernels.at("kernelUpdateWeights_EH_EV");
+            cl::Kernel k_update_weights_eh_ev = clcontext.kernels.at("kernelUpdateWeightsHeadHVElastic");
             CL_CHECK(k_update_weights_eh_ev.setArg(0, device_ptrs.d_MH_a));
             CL_CHECK(k_update_weights_eh_ev.setArg(1, device_ptrs.d_MV_a));
             CL_CHECK(k_update_weights_eh_ev.setArg(2, device_ptrs.d_MQ_a));
@@ -948,42 +954,6 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
             CL_CHECK(current_stream.finish());
         }
 
-        // Explicitly release all aggregate OpenCL buffers
-        agg_d_expected_h = cl::Buffer();
-        agg_d_EH = cl::Buffer();
-        agg_d_EV = cl::Buffer();
-        agg_d_grad_EH = cl::Buffer();
-        agg_d_grad_EV_scaled = cl::Buffer();
-        agg_d_grad_dh = cl::Buffer();
-        agg_d_grad_dv = cl::Buffer();
-        agg_d_KdotQ = cl::Buffer();
-        agg_d_head_storage = cl::Buffer();
-        agg_d_K = cl::Buffer();
-        agg_d_Q = cl::Buffer();
-        agg_d_pre_MH = cl::Buffer();
-        agg_d_pre_MV = cl::Buffer();
-        agg_d_MH_a = cl::Buffer();
-        agg_d_MV_a = cl::Buffer();
-        agg_d_MQ_a = cl::Buffer();
-        agg_d_MK_a = cl::Buffer();
-        agg_d_grad_MH = cl::Buffer();
-        agg_d_grad_MV = cl::Buffer();
-        agg_d_grad_head_storage_buf = cl::Buffer();
-        agg_d_lota_deriv = cl::Buffer();
-        agg_d_grad_KdotQ_buf = cl::Buffer();
-        agg_d_grad_K_buf = cl::Buffer();
-        agg_d_grad_Q_buf = cl::Buffer();
-        agg_d_grad_MQ_buf = cl::Buffer();
-        agg_d_grad_MK_buf = cl::Buffer();
-        agg_d_hor_activations_storage = cl::Buffer();
-        agg_d_ver_activations_storage = cl::Buffer();
-        agg_d_hor_weights_storage = cl::Buffer();
-        agg_d_ver_weights_storage = cl::Buffer();
-        agg_d_hor_gweights_storage = cl::Buffer();
-        agg_d_ver_gweights_storage = cl::Buffer();
-        agg_d_hor_deltas_storage = cl::Buffer();
-        agg_d_ver_deltas_storage = cl::Buffer();
-
         for (int head_idx = 0; head_idx < num_heads_to_process; ++head_idx) {
             CL_CHECK(streams_cl[head_idx].finish());
         }
@@ -992,6 +962,42 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
         std::cerr << "Standard Exception during clpartialbackward(H_2D) for column " << layno_col_idx << ": " << e.what() << std::endl;
         throw;
     }
+
+    // Explicitly release all aggregate OpenCL buffers
+    agg_d_expected_h = cl::Buffer();
+    agg_d_EH = cl::Buffer();
+    agg_d_EV = cl::Buffer();
+    agg_d_grad_EH = cl::Buffer();
+    agg_d_grad_EV_scaled = cl::Buffer();
+    agg_d_grad_dh = cl::Buffer();
+    agg_d_grad_dv = cl::Buffer();
+    agg_d_KdotQ = cl::Buffer();
+    agg_d_head_storage = cl::Buffer();
+    agg_d_K = cl::Buffer();
+    agg_d_Q = cl::Buffer();
+    agg_d_pre_MH = cl::Buffer();
+    agg_d_pre_MV = cl::Buffer();
+    agg_d_MH_a = cl::Buffer();
+    agg_d_MV_a = cl::Buffer();
+    agg_d_MQ_a = cl::Buffer();
+    agg_d_MK_a = cl::Buffer();
+    agg_d_grad_MH = cl::Buffer();
+    agg_d_grad_MV = cl::Buffer();
+    agg_d_grad_head_storage_buf = cl::Buffer();
+    agg_d_lota_deriv = cl::Buffer();
+    agg_d_grad_KdotQ_buf = cl::Buffer();
+    agg_d_grad_K_buf = cl::Buffer();
+    agg_d_grad_Q_buf = cl::Buffer();
+    agg_d_grad_MQ_buf = cl::Buffer();
+    agg_d_grad_MK_buf = cl::Buffer();
+    agg_d_hor_activations_storage = cl::Buffer();
+    agg_d_ver_activations_storage = cl::Buffer();
+    agg_d_hor_weights_storage = cl::Buffer();
+    agg_d_ver_weights_storage = cl::Buffer();
+    agg_d_hor_gweights_storage = cl::Buffer();
+    agg_d_ver_gweights_storage = cl::Buffer();
+    agg_d_hor_deltas_storage = cl::Buffer();
+    agg_d_ver_deltas_storage = cl::Buffer();
 }
 
 #endif

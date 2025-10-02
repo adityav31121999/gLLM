@@ -9,7 +9,7 @@
 
 /**
  * @brief OpenCL implementation of Rprop algorithm for MLP using shared OpenCLContext.
- * @param dataset Input dataset (vector of input samples). Assumes `this->expected` is set correctly for each sample before processing.
+ * @param dataset Input dataset (vector of input samples). Assumes `expected` is set correctly for each sample before processing.
  * @param layers Number of hidden layers (total weight matrices = layers + 1)
  * @param in Input/layer size
  * @param learning Learning rate (Passed to clBackprop, not directly used by Rprop update rule)
@@ -31,7 +31,7 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
     }
     // Assuming 'layers' parameter refers to number of hidden layers.
     // Number of weight matrices = layers + 1.
-    // This should match this->weights.size() which is this->num_layers - 1.
+    // This should match weights.size() which is num_layers - 1.
     if (weights.empty() || weights.size() != static_cast<size_t>(layers + 1) ||
         gweights.size() != static_cast<size_t>(layers + 1) ) {
          throw std::runtime_error("MLP clRprop: Weights or gweights vector size mismatch with 'layers' parameter.");
@@ -54,7 +54,7 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
     try {
         cl_int err; // For OpenCL error codes
         // --- Access Shared OpenCL Context ---
-        OpenCLContext& context_obj = this->clContext; // Use the member reference
+        OpenCLContext& context_obj = clContext; // Use the member reference
 
         // --- OpenCL Kernel Preparation (Retrieve from context) ---
         // Ensure this kernel name was provided during OpenCLContext initialization
@@ -101,27 +101,27 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
             // --- Dataset Loop ---
             // Note: Processing samples sequentially here. Batch processing would require modifications.
             for (size_t sample_idx = 0; sample_idx < dataset.size(); ++sample_idx) {
-                // CRITICAL: Assumes 'this->expected' is correctly set for the current sample
+                // CRITICAL: Assumes 'expected' is correctly set for the current sample
                 // before calling clRprop, or the dataset includes expected outputs.
-                this->input = dataset[sample_idx];
+                input = dataset[sample_idx];
                 // Ensure expected output is set if it varies per sample.
                 // e.g., if dataset is vector<pair<vector<float>, vector<float>>>
-                // this->expected = dataset[sample_idx].second;
+                // expected = dataset[sample_idx].second;
 
                 // 1. Forward Pass (Uses shared context internally)
-                this->clForward(in, layers); // Updates this->output
+                clForward(in, layers); // Updates output
 
                 // 2. Backward Pass (Calculate Gradients using clBackprop - uses shared context internally)
                 // This updates host gweights and host weights (using standard GD step, which Rprop overrides)
-                this->clBackprop(in, layers, learning); // 'learning' is used by clBackprop, not Rprop kernel
+                clBackprop(in, layers, learning); // 'learning' is used by clBackprop, not Rprop kernel
 
                 // 3. Calculate Sample Error (on host for simplicity)
                 float sample_error = 0.0f;
-                if (this->expected.size() != this->output.size()) {
+                if (expected.size() != output.size()) {
                      throw std::runtime_error("MLP clRprop: Mismatch between expected and output vector sizes during error calculation.");
                 }
                 for (int i = 0; i < in; ++i) {
-                    sample_error += std::pow(this->expected[i] - this->output[i], 2);
+                    sample_error += std::pow(expected[i] - output[i], 2);
                 }
                 sample_error /= in; // MSE for this sample
                 totalEpochError += sample_error;
@@ -129,9 +129,9 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
                 // 4. Rprop Weight Update (using calculated gradients)
                 for (int l = 0; l <= layers; ++l) {
                     // Copy current weights (potentially modified by clBackprop)
-                    // and calculated gradients (this->gweights) H->D for this layer (using shared queue)
-                    const mat& current_weights_mat = this->weights[l];
-                    const mat& current_gweights_mat = this->gweights[l]; // Use gradients from clBackprop
+                    // and calculated gradients (gweights) H->D for this layer (using shared queue)
+                    const mat& current_weights_mat = weights[l];
+                    const mat& current_gweights_mat = gweights[l]; // Use gradients from clBackprop
 
                     // Validate mat dimensions against 'in' if strict checking is desired
                     if (current_weights_mat.row != in || current_weights_mat.col != in ||
@@ -157,7 +157,7 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
 
                     // Read updated weights, prev_gradients, delta_weights D->H (using shared queue)
                     // Data is read directly into the mapped_data of the mat objects
-                    CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, this->weights[l].mapped_data));
+                    CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
                     CL_CHECK(context_obj.queue.enqueueReadBuffer(d_prev_gradients[l], CL_TRUE, 0, weights_size_bytes, prev_gradients_mats[l].mapped_data));
                     CL_CHECK(context_obj.queue.enqueueReadBuffer(d_delta_weights[l], CL_TRUE, 0, weights_size_bytes, delta_weights_mats[l].mapped_data));
                 } // End layer loop for Rprop update
@@ -169,7 +169,7 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
 
             // Check for convergence
             if (totalEpochError < 0.01) { // Example threshold
-                this->status = true;
+                status = true;
                 std::cout << "Convergence threshold reached." << std::endl;
                 break;
             }

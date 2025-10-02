@@ -127,7 +127,7 @@ void model::fetchForInference(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmlp(T.t[i].b[j][k].hor, i + 1, j + 1, k + 1, (binDirectory / "hor.bin").string());
+                fetchmlp( T.blocks[i].b[j][k].hor, i + 1, j + 1, k + 1, (binDirectory / "hor.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MLP: HOR fetched" << std::endl;
@@ -136,7 +136,7 @@ void model::fetchForInference(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmlp(T.t[i].b[j][k].ver, i + 1, j + 1, k + 1, (binDirectory / "ver.bin").string());
+                fetchmlp( T.blocks[i].b[j][k].ver, i + 1, j + 1, k + 1, (binDirectory / "ver.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MLP: VER fetched" << std::endl;
@@ -146,7 +146,7 @@ void model::fetchForInference(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].qkCache, i + 1, j + 1, k + 1, (binDirectory / "QK.bin").string());
+                fetchmat( T.blocks[i].b[j][k].qkCache, i + 1, j + 1, k + 1, (binDirectory / "QK.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " CACHE: QK fetched" << std::endl;
@@ -155,7 +155,7 @@ void model::fetchForInference(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].khCache, i + 1, j + 1, k + 1, (binDirectory / "KH.bin").string());
+                fetchmat( T.blocks[i].b[j][k].khCache, i + 1, j + 1, k + 1, (binDirectory / "KH.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " CACHE: KH fetched" << std::endl;
@@ -164,7 +164,7 @@ void model::fetchForInference(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].qvCache, i + 1, j + 1, k + 1, (binDirectory / "QV.bin").string());
+                fetchmat( T.blocks[i].b[j][k].qvCache, i + 1, j + 1, k + 1, (binDirectory / "QV.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " CACHE: QV fetched" << std::endl;
@@ -180,7 +180,7 @@ void model::fetchForTraining(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmlp(T.t[i].b[j][k].hor, i + 1, j + 1, k + 1, (binDirectory / "hor.bin").string());
+                fetchmlp( T.blocks[i].b[j][k].hor, i + 1, j + 1, k + 1, (binDirectory / "hor.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MLP: HOR fetched" << std::endl;
@@ -189,7 +189,7 @@ void model::fetchForTraining(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmlp(T.t[i].b[j][k].ver, i + 1, j + 1, k + 1, (binDirectory / "ver.bin").string());
+                fetchmlp( T.blocks[i].b[j][k].ver, i + 1, j + 1, k + 1, (binDirectory / "ver.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MLP: VER fetched" << std::endl;
@@ -199,7 +199,7 @@ void model::fetchForTraining(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].MQ, i + 1, j + 1, k + 1, (binDirectory / "MQ.bin").string());
+                fetchmat( T.blocks[i].b[j][k].MQ, i + 1, j + 1, k + 1, (binDirectory / "MQ.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MATRIX: MQ fetched" << std::endl;
@@ -208,7 +208,7 @@ void model::fetchForTraining(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].MK, i + 1, j + 1, k + 1, (binDirectory / "MK.bin").string());
+                fetchmat( T.blocks[i].b[j][k].MK, i + 1, j + 1, k + 1, (binDirectory / "MK.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MATRIX: MK fetched" << std::endl;
@@ -217,7 +217,7 @@ void model::fetchForTraining(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].MH, i + 1, j + 1, k + 1, (binDirectory / "MH.bin").string());
+                fetchmat( T.blocks[i].b[j][k].MH, i + 1, j + 1, k + 1, (binDirectory / "MH.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MATRIX: MH fetched" << std::endl;
@@ -226,7 +226,7 @@ void model::fetchForTraining(const std::string &binPath)
         for(int j = 0; j < x; j++) {
             for(int k = 0; k < y; k++) {
                 std::cout << "(" << i << ", " << j << ", " << k << ") - ";
-                fetchmat(T.t[i].b[j][k].MV, i + 1, j + 1, k + 1, (binDirectory / "MV.bin").string());
+                fetchmat( T.blocks[i].b[j][k].MV, i + 1, j + 1, k + 1, (binDirectory / "MV.bin").string());
             }
         }
         std::cout << "Block " << i+1 << " MATRIX: MV fetched" << std::endl;

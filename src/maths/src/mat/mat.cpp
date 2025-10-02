@@ -1,15 +1,14 @@
 #include "include/mat.hpp"
-#include <fstream>    // For std::ofstream
-#include <string>     // For std::string, std::to_string
-#include <stdexcept>  // For std::runtime_error
-#include <cstdint>    // For uint64_t
-#include <algorithm>  // For std::copy, std::fill_n
-#include <cstring>    // For memcpy, strerror (strerror for POSIX)
-#include <chrono>     // For generating unique temporary filenames
+#include <fstream>
+#include <string>
+#include <stdexcept>
+#include <cstdint>
+#include <algorithm>
+#include <cstring>
+#include <chrono>
 
-// OS-specific includes for temporary file creation
 #ifdef _WIN64
-#include <windows.h> // For Windows API functions (GetTempPathA, GetTempFileNameA, CreateFileA, SetFilePointerEx, SetEndOfFile, CloseHandle, DeleteFileA, MAX_PATH, GetLastError, FormatMessageA)
+#include <windows.h> 
 #else // POSIX
 #include <unistd.h>   // For mkstemp, ftruncate, close
 #include <cerrno>     // For errno
@@ -44,7 +43,7 @@ mat::mat(int x, int y) : row(x), col(y) {
     }
 
     char temp_filename_win[MAX_PATH];
-    if (GetTempFileNameA(temp_path, "gllm", 0, temp_filename_win) == 0) {
+    if (GetTempFileNameA(temp_path, "gLLM_", 0, temp_filename_win) == 0) {
         throw std::runtime_error("Failed to create temporary file name: Error " + std::to_string(GetLastError()));
     }
     backing_filename = temp_filename_win;
@@ -75,7 +74,7 @@ mat::mat(int x, int y) : row(x), col(y) {
     }
     CloseHandle(hFile);
 #else // POSIX
-    char temp_name_tpl[] = "/tmp/gllm_mat_XXXXXX"; // Template for mkstemp
+    char temp_name_tpl[] = "/tmp/gLLM_mat_XXXXXX"; // Template for mkstemp
     int fd = mkstemp(temp_name_tpl);
     if (fd == -1) {
         throw std::runtime_error("Failed to generate temporary filename with mkstemp: " + std::string(strerror(errno)));
@@ -83,7 +82,10 @@ mat::mat(int x, int y) : row(x), col(y) {
     backing_filename = temp_name_tpl;
     is_temp_file = true;
 
-    if (ftruncate(fd, required_bytes) == -1) {
+    // ftruncate to 0 bytes is well-defined and necessary.
+    // The check for required_bytes > 0 is more for the Windows SetEndOfFile issue.
+    // Here, we just perform the truncate.
+    if (ftruncate(fd, required_bytes) == -1) { 
         close(fd);
         remove(backing_filename.c_str());
         throw std::runtime_error("Failed to resize temporary file '" + backing_filename + "' with ftruncate: " + std::string(strerror(errno)));
@@ -113,6 +115,39 @@ mat::mat(int x, int y) : row(x), col(y) {
  * @param x number of rows and columns
  */
 mat::mat(int x) : mat(x, x) {} // Delegate to the (int, int) constructor
+
+
+/**
+ * @brief create the matrix with user defined file name
+ * @param filename user defined file name
+ * @param r rows of matrix to be mapped
+ * @param c columns of matrix to be mapped
+ */
+mat::mat(const std::string &filename, int r, int c)
+    : row(r), col(c), backing_filename(filename)
+{
+    if (r <= 0 || c <= 0) {
+        throw std::invalid_argument("Matrix dimensions must be positive.");
+    }
+    size_t required_bytes = static_cast<size_t>(row) * col * sizeof(float);
+
+    // Per the comments, create or resize the file to match the specified dimensions.
+    if (create_or_resize_file(backing_filename.c_str(), required_bytes) != 0) {
+        throw std::runtime_error("Failed to create or resize backing file: " + backing_filename);
+    }
+
+    // Map the newly created/resized file into memory.
+    if (open_mapped_file(backing_filename.c_str(), true, &mapped_file_handle, reinterpret_cast<void**>(&mapped_data), &mapped_size) != 0) {
+        throw std::runtime_error("Failed to map file: " + backing_filename);
+    }
+
+    if (mapped_size < required_bytes) {
+        close_mapped_file(mapped_file_handle);
+        throw std::runtime_error("Mapped file size is smaller than required for specified dimensions.");
+    }
+    // std::cout << "Matrix with file " << filename << " created." << std::endl;
+}
+
 
 /**
  * @brief Constructor to map an existing file or create a new one.
@@ -223,7 +258,7 @@ mat::mat(const mat &b) {
         throw std::runtime_error("Failed to get temporary path for copy: Error " + std::to_string(GetLastError()));
     }
     char temp_filename_copy_win[MAX_PATH];
-    if (GetTempFileNameA(temp_path_copy, "gllmc", 0, temp_filename_copy_win) == 0) {
+    if (GetTempFileNameA(temp_path_copy, "gLLMc", 0, temp_filename_copy_win) == 0) {
         throw std::runtime_error("Failed to create temporary file name for copy: Error " + std::to_string(GetLastError()));
     }
     backing_filename = temp_filename_copy_win;
@@ -242,19 +277,24 @@ mat::mat(const mat &b) {
         throw std::runtime_error("Failed to create temporary file for copy '" + backing_filename + "': Error " + std::to_string(GetLastError()));
     }
 
-    LARGE_INTEGER li_copy;
-    li_copy.QuadPart = required_bytes;
-    if (!SetFilePointerEx(hFileCopy, li_copy, NULL, FILE_BEGIN)) {
-        CloseHandle(hFileCopy); DeleteFileA(backing_filename.c_str());
-        throw std::runtime_error("Failed to set file pointer for resizing copy '" + backing_filename + "': Error " + std::to_string(GetLastError()));
+    // Only resize the file if it's non-zero. Creating a zero-byte file and then trying to
+    // set its size to zero can cause "Error 87: Invalid Parameter" on some Windows systems.
+    if (required_bytes > 0) {
+        LARGE_INTEGER li_copy;
+        li_copy.QuadPart = required_bytes;
+        if (!SetFilePointerEx(hFileCopy, li_copy, NULL, FILE_BEGIN)) {
+            CloseHandle(hFileCopy); DeleteFileA(backing_filename.c_str());
+            throw std::runtime_error("Failed to set file pointer for resizing copy '" + backing_filename + "': Error " + std::to_string(GetLastError()));
+        }
+        if (!SetEndOfFile(hFileCopy)) {
+            CloseHandle(hFileCopy); DeleteFileA(backing_filename.c_str());
+            throw std::runtime_error("Failed to resize temporary file for copy '" + backing_filename + "' with SetEndOfFile: Error " + std::to_string(GetLastError()));
+        }
     }
-    if (!SetEndOfFile(hFileCopy)) {
-        CloseHandle(hFileCopy); DeleteFileA(backing_filename.c_str());
-        throw std::runtime_error("Failed to resize temporary file for copy '" + backing_filename + "' with SetEndOfFile: Error " + std::to_string(GetLastError()));
-    }
-    CloseHandle(hFileCopy);
+    CloseHandle(hFileCopy); // Always close the handle outside the conditional block.
+
 #else // POSIX
-    char temp_name_copy_tpl[] = "/tmp/gllvm_mat_copy_XXXXXX";
+    char temp_name_copy_tpl[] = "/tmp/gLLM_mat_copy_XXXXXX";
     int fd_copy = mkstemp(temp_name_copy_tpl);
     if (fd_copy == -1) {
         throw std::runtime_error("Failed to generate temporary filename for copy with mkstemp: " + std::string(strerror(errno)));
@@ -299,22 +339,22 @@ void mat::assign_shared_segment(MappedFile* shared_map_handle, float* shared_map
                             size_t segment_byte_offset_in_shared_map,
                             int new_row, int new_col, const std::string& path_to_shared_file) {
     // Release any previously owned resources if this mat was initialized differently
-    if (this->mapped_file_handle && !this->is_shared_segment) {
-        close_mapped_file(this->mapped_file_handle);
+    if (mapped_file_handle && !is_shared_segment) {
+        close_mapped_file(mapped_file_handle);
     }
-    if (this->is_temp_file && !this->backing_filename.empty() && !this->is_shared_segment) {
-        remove(this->backing_filename.c_str());
+    if (is_temp_file && !backing_filename.empty() && !is_shared_segment) {
+        remove(backing_filename.c_str());
     }
 
-    this->row = new_row;
-    this->col = new_col;
-    this->mapped_file_handle = shared_map_handle;
-    this->mapped_data = shared_map_base_ptr;
-    this->data_segment_start = (float*)((char*)shared_map_base_ptr + segment_byte_offset_in_shared_map);
-    this->mapped_size = static_cast<size_t>(new_row) * new_col * sizeof(float);
-    this->backing_filename = path_to_shared_file;
-    this->is_temp_file = false;
-    this->is_shared_segment = true;
+    row = new_row;
+    col = new_col;
+    mapped_file_handle = shared_map_handle;
+    mapped_data = shared_map_base_ptr;
+    data_segment_start = (float*)((char*)shared_map_base_ptr + segment_byte_offset_in_shared_map);
+    mapped_size = static_cast<size_t>(new_row) * new_col * sizeof(float);
+    backing_filename = path_to_shared_file;
+    is_temp_file = false;
+    is_shared_segment = true;
 }
 
 

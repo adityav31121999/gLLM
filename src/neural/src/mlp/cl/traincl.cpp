@@ -129,10 +129,10 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
     while (e < max_epochs) {
         try {
             // 1. Forward Pass (Uses shared context internally)
-            clForward(in, layers); // Updates this->output
+            clForward(in, layers); // Updates output
 
             // 2. Calculate MSE using OpenCL helper function (Pass shared context)
-            mse = calculateMseOpenCL(this->clContext, this->expected, this->output, in);
+            mse = calculateMseOpenCL(clContext, expected, output, in);
 
             // 3. Check for convergence
             if (mse < convergence_threshold) {
@@ -179,7 +179,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
 /**
  * @brief Trains the MLP using OpenCL for a dataset of input-output pairs.
  *        Mirrors the logic of mlp::cuTrain (dataset version).
- * @param dataset A vector of input vectors. Assumes `this->expected` is set correctly for each input.
+ * @param dataset A vector of input vectors. Assumes `expected` is set correctly for each input.
  * @param mse Reference to the Mean Squared Error (MSE) value (average over the last epoch).
  * @param in Number of input/output neurons.
  * @param layers Number of hidden layers.
@@ -204,22 +204,22 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
             // Loop through each sample in the dataset
             for (size_t i = 0; i < dataset.size(); ++i) {
                 // Set the current input and expected output
-                // CRITICAL: Assumes 'this->expected' is correctly set *before* calling clTrain,
+                // CRITICAL: Assumes 'expected' is correctly set *before* calling clTrain,
                 // or that the dataset structure includes expected outputs.
                 // If expected output changes per input sample, it needs to be updated here.
-                this->input = dataset[i];
-                if (this->input.size() != static_cast<size_t>(in)) {
+                input = dataset[i];
+                if (input.size() != static_cast<size_t>(in)) {
                      throw std::runtime_error("clTrain (dataset): Sample size mismatch at index " + std::to_string(i));
                 }
                 // Example: If dataset was std::vector<std::pair<std::vector<float>, std::vector<float>>>
-                // this->expected = dataset[i].second;
+                // expected = dataset[i].second;
 
 
                 // 1. Forward Pass (Uses shared context internally)
-                clForward(in, layers); // Updates this->output
+                clForward(in, layers); // Updates output
 
                 // 2. Calculate MSE for this sample using OpenCL helper (Pass shared context)
-                float current_sample_mse = calculateMseOpenCL(this->clContext, this->expected, this->output, in);
+                float current_sample_mse = calculateMseOpenCL(clContext, expected, output, in);
                 total_epoch_squared_error += current_sample_mse * static_cast<float>(in); // Add total squared error for the sample
 
                 // 3. Backward Pass for this sample (Uses shared context internally)
@@ -263,86 +263,6 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
 
     // Set the output mse parameter to the average MSE of the last completed epoch
     mse = average_epoch_mse;
-}
-
-/**
- * @brief Validates the MLP using OpenCL.
- *        Performs forward propagation on validation data and calculates MSE.
- *        Mirrors the logic of mlp::cuValidate.
- * @param in Number of input/output neurons.
- * @param layers Number of hidden layers.
- */
-void mlp::clValidate(int in, int layers) {
-    // --- Placeholder for Validation Data ---
-    std::vector<float> validation_input(in, 0.5f); // Example placeholder input
-    std::vector<float> validation_expected(in, 0.8f); // Example placeholder expected output
-    std::cout << "--- Running OpenCL Validation ---" << std::endl;
-    std::cout << "(Using placeholder validation data)" << std::endl;
-    // -----------------------------------------
-
-    try {
-        // Set the input and expected output for validation
-        this->input = validation_input;
-        this->expected = validation_expected;
-
-        // Perform forward propagation using OpenCL (Uses shared context internally)
-        clForward(in, layers); // Updates this->output
-
-        // Calculate Mean Squared Error using the OpenCL helper (Pass shared context)
-        float mse = calculateMseOpenCL(this->clContext, this->expected, this->output, in);
-
-        // Output the validation MSE
-        std::cout << "Validation MSE: " << mse << std::endl;
-
-    }
-    catch (const std::exception& ex) { // Catches std::runtime_error from CL_CHECK and other std exceptions
-        std::cerr << "Standard Exception during validation: " << ex.what() << std::endl;
-        throw; // Re-throw
-    }
-    std::cout << "--- OpenCL Validation Complete ---" << std::endl;
-}
-
-
-/**
- * @brief Tests the MLP using OpenCL.
- *        Performs forward propagation on test data and prints the output vs expected.
- *        Mirrors the logic of mlp::cuTest.
- * @param in Number of input/output neurons.
- * @param layers Number of hidden layers.
- */
-void mlp::clTest(int in, int layers) {
-    // --- Placeholder for Test Data ---
-    std::vector<float> test_input(in, 0.2f);    // Example placeholder input
-    std::vector<float> test_expected(in, 0.4f); // Example placeholder expected output
-    std::cout << "--- Running OpenCL Test ---" << std::endl;
-    std::cout << "(Using placeholder test data)" << std::endl;
-    // -------------------------------------
-
-    try {
-        // Set the input and expected output for testing
-        this->input = test_input;
-        this->expected = test_expected; // Store expected for comparison printing
-
-        // Perform forward propagation using OpenCL (Uses shared context internally)
-        clForward(in, layers); // Updates this->output
-
-        // Output the results: Expected vs Actual Output
-        std::cout << "Test Results (Expected <-> Output):" << std::endl;
-        if (this->output.size() != this->expected.size()) {
-             std::cerr << "Warning: Output and Expected sizes differ during test printout." << std::endl;
-        }
-        size_t print_count = (std::min)({static_cast<size_t>(in), this->output.size(), this->expected.size()}); // Print up to 'in' or actual sizes
-        for (size_t i = 0; i < print_count; ++i) {
-            std::cout << this->expected[i] << " <-> " << this->output[i] << std::endl;
-        }
-        if (print_count < static_cast<size_t>(in)) {
-             std::cout << "... (output truncated to available data or 'in' size)" << std::endl;
-        }
-    } catch (const std::exception& ex) { // Catches std::runtime_error from CL_CHECK and other std exceptions
-        std::cerr << "Standard Exception during testing: " << ex.what() << std::endl;
-        throw; // Re-throw
-    }
-    std::cout << "--- OpenCL Test Complete ---" << std::endl;
 }
 
 #endif // USE_OPENCL

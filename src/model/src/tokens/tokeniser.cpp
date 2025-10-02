@@ -32,11 +32,12 @@ tokeniser::tokeniser(const std::string& path2data, OpenCLContext& context) noexc
     try {
         // Read the CSV file once and build both data structures
         readFromFiles(path2data);
+        std::cout << "Tokeniser Loaded :)" << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "Error initializing tokenizer: " << e.what() << std::endl;
-        this->vocSize = 0;
-        this->d = 0;
+        vocSize = 0;
+        d = 0;
     }
 }
 
@@ -65,10 +66,11 @@ tokeniser::tokeniser(const std::string& path2data) noexcept : path2data(path2dat
     try {
         // Read the CSV file once and build both data structures
         readFromFiles(path2data);
+        std::cout << "Tokeniser Loaded :)" << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error initializing tokenizer: " << e.what() << std::endl;
-        this->vocSize = 0;
-        this->d = 0;
+        vocSize = 0;
+        d = 0;
     }
 }
 

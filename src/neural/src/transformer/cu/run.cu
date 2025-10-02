@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include "include/transformer.hpp"
 #include "include/mlp.hpp"
 #include "include/attention.hpp"
@@ -25,24 +25,24 @@
 
 /**
  * @brief run transformer for single transformer
- * @param prompt prompt to be used for response
+ * @param sequence1 sequence1 to be used for sequence2
  */
 void transformer::cuRun() {
     // Set for inference
     inTraining = 0; 
-    if (t.empty()) {
+    if (blocks.empty()) {
         throw std::runtime_error("Transformer block 't' is not initialized in cuRun.");
     }
-    if (t[0].b.empty() || t[0].b[0].empty()) {
+    if (blocks[0].b.empty() || blocks[0].b[0].empty()) {
         throw std::runtime_error("Attention heads within the transformer block 't[0]' are not initialized in cuRun.");
     }
 
     int rCount = 0;
     auto start_time = std::chrono::high_resolution_clock::now();
-    std::cout << "Response: ";
+    std::cout << "Sequence2: ";
 
     // --- Device Memory Allocation ---
-    float* d_tokenEmbed = nullptr;      // Holds all token embeddings (prompt + generated) up to FULL_CONTEXT
+    float* d_tokenEmbed = nullptr;      // Holds all token embeddings (sequence1 + generated) up to FULL_CONTEXT
     float* d_embeddings = nullptr;      // Holds the vocabulary embeddings
     float* d_EVuse = nullptr;           // Holds the EV state from the previous block (flattened: x * y * CONTEXT_WIN * d)
     float* d_tokForBlock = nullptr;     // Holds the token embeddings for the current block's context window
@@ -74,31 +74,31 @@ void transformer::cuRun() {
 
 
         // --- Main Inference Loop ---
-        int previousTokenCount = currentTokenCount; // Store count before adding prompt
-        std::vector<float> prompt_embeddings_flat = flatten(tokenEmbed);
-        // Get embeddings for the prompt tokens and copy H->D incrementally
+        int previousTokenCount = currentTokenCount; // Store count before adding sequence1
+        std::vector<float> sequence1_embeddings_flat = flatten(tokenEmbed);
+        // Get embeddings for the sequence1 tokens and copy H->D incrementally
         CUDA_CHECK(cudaMemcpy(d_tokenEmbed + static_cast<size_t>(previousTokenCount) * d,
-                                prompt_embeddings_flat.data(),
-                                prompt_embeddings_flat.size() * sizeof(float),
+                                sequence1_embeddings_flat.data(),
+                                sequence1_embeddings_flat.size() * sizeof(float),
                                 cudaMemcpyHostToDevice));
-        prompt_embeddings_flat.clear(); // Free host memory
+        sequence1_embeddings_flat.clear(); // Free host memory
 
         if (currentTokenCount >= FULL_CONTEXT) {
-            throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT during prompt processing!");
+            throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT during sequence1 processing!");
         }
 
-        // --- Prompt Placement & Initial KdotQ (Mirroring CPU logic) ---
+        // --- Sequence1 Placement & Initial KdotQ (Mirroring CPU logic) ---
         // Calculate offset within the current block's window
         int c = (blockCount == 1) ? previousTokenCount : (previousTokenCount % CONTEXT_WIN);
         // Note: CPU code used std::abs(currentTokenCount - (blockCount-1)*CONTEXT_WIN), which seems complex.
         // Assuming blockCount starts at 0 for the first block.
         // Let's use the simpler modulo logic, assuming blocks align with CONTEXT_WIN.
 
-        int tokens_in_current_block_before_prompt = c;
-        int space_in_current_block = CONTEXT_WIN - tokens_in_current_block_before_prompt;
+        int tokens_in_current_block_before_sequence1 = c;
+        int space_in_current_block = CONTEXT_WIN - tokens_in_current_block_before_sequence1;
 
-        if (promptCount <= space_in_current_block) {
-            // Case 1: Prompt fits entirely within the current block
+        if (sequence1Count <= space_in_current_block) {
+            // Case 1: Sequence1 fits entirely within the current block
             if (blockCount > 1) {
                 int start_idx_in_full_context = currentTokenCount - CONTEXT_WIN;
                 // Safety check: Ensure the start index isn't negative (can happen if total tokens < CONTEXT_WIN)
@@ -115,24 +115,24 @@ void transformer::cuRun() {
             }
 
             for (int col = 0; col < y; ++col) {
-                // Pass the count of *new* prompt tokens and the total count *before* the prompt
-                int effectivePromptCount = promptCount;
+                // Pass the count of *new* sequence1 tokens and the total count *before* the sequence1
+                int effectiveSequence1Count = sequence1Count;
 
-                cuParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
+                cuParallelKdotQs(effectiveSequence1Count, previousTokenCount, blockCount, col, isSelf, inTraining);
             }
             CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ calculation is done
         }
         else {
-            // Case 2: Prompt spans across the current and next block
+            // Case 2: Sequence1 spans across the current and next block
             int m2 = space_in_current_block; // Tokens fitting in the current block
-            int m1 = promptCount - m2;       // Tokens going to the next block
+            int m1 = sequence1Count - m2;       // Tokens going to the next block
 
             // Process the first part (m2 tokens) in the current block
             if (m2 > 0) {
                 for (int col = 0; col < y; ++col) {
                     // Calculate KdotQ for the m2 tokens added
-                    int effectivePromptCount = m2;
-                    cuParallelKdotQs(effectivePromptCount, previousTokenCount, blockCount, col, isSelf, inTraining);
+                    int effectiveSequence1Count = m2;
+                    cuParallelKdotQs(effectiveSequence1Count, previousTokenCount, blockCount, col, isSelf, inTraining);
                 }
                 CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ for m2 is done
             }
@@ -151,7 +151,7 @@ void transformer::cuRun() {
                 for (int j = 0; j < y; ++j) { // Iterate through parallels (columns)
                     try {
                         // Get the device pointer for the EV state of the current head (i, j)
-                        float* d_src_ev_ptr = t[0].b[i][j].d_EV; // Directly access public member
+                        float* d_src_ev_ptr = blocks[0].b[i][j].d_EV; // Directly access public member
 
                         // Calculate the destination offset in the flattened d_EVuse buffer
                         size_t dest_offset_elements = (static_cast<size_t>(i) * y + j) * CONTEXT_WIN * d;
@@ -197,26 +197,26 @@ void transformer::cuRun() {
                 // The "previous token count" for this calculation is effectively the start of the new block
                 int start_of_new_block_count = currentTokenCount - m1;
                 for (int col = 0; col < y; ++col) {
-                    int effectivePromptCount = m1;
+                    int effectiveSequence1Count = m1;
                     // Pass the new blockCount
-                    cuParallelKdotQs(effectivePromptCount, start_of_new_block_count, blockCount, col, isSelf, inTraining);
+                    cuParallelKdotQs(effectiveSequence1Count, start_of_new_block_count, blockCount, col, isSelf, inTraining);
                 }
                 CUDA_CHECK(cudaDeviceSynchronize()); // Ensure KdotQ for m1 is done
             }
         }
 
-        // --- Response Generation Loop (CUDA) ---
+        // --- Sequence2 Generation Loop (CUDA) ---
         int rCount = 0;
         auto start_time = std::chrono::high_resolution_clock::now();
-        std::cout << "Response: ";
+        std::cout << "Sequence2: ";
 
         while (1) {
             // --- Core Forward Pass ---
-            int generationPromptCount = 0; // Indicate we are in generation phase
-            cuForward(blockCount, currentTokenCount, generationPromptCount); // This updates t[0]'s internal state (EH, EV) on device
+            int generationSequence1Count = 0; // Indicate we are in generation phase
+            cuForward(blockCount, currentTokenCount, generationSequence1Count); // This updates blocks[0]'s internal state (EH, EV) on device
             CUDA_CHECK(cudaDeviceSynchronize()); // Ensure forward pass is complete
 
-            cuComputeOutput(d_otok, d_embeddings, vocabsize, indexForToken, d);
+            // cuComputeOutput(d_otok, d_embeddings, vocabsize, indexForToken, d);
             CUDA_CHECK(cudaDeviceSynchronize()); // Ensure output computation is done
 
             // --- Update State (Host & Device) ---
@@ -255,7 +255,7 @@ void transformer::cuRun() {
                 for (int i = 0; i < x; ++i) { // Iterate through layers (rows)
                     for (int j = 0; j < y; ++j) { // Iterate through parallels (columns)
                         try {
-                            float* d_src_ev_ptr = t[0].b[i][j].d_EV; // Directly access public member
+                            float* d_src_ev_ptr = blocks[0].b[i][j].d_EV; // Directly access public member
                             size_t dest_offset_elements = (static_cast<size_t>(i) * y + j) * CONTEXT_WIN * d;
 
                             if (dest_offset_elements * sizeof(float) + head_ev_bytes > ev_use_bytes) {
@@ -288,10 +288,10 @@ void transformer::cuRun() {
                 std::cout << "\nTOKEN LIMIT REACHED AT FULL CONTEXT!";
                 break;
             }
-            if (tokens[indexForToken] == TERMINATE) {
-                break; // End generation for this prompt
+            if (tokens[indexForToken] == "</s>") {
+                break;
             }
-        } // End of response generation loop
+        } // End of sequence2 generation loop
         rCount += 1;
     }
     catch (const std::exception& e) {
@@ -315,7 +315,7 @@ void transformer::cuRun() {
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
     double seconds = duration.count() / 1000000.0;
-    std::cout << "\nTime taken to predict tokens of response: " << seconds << " seconds" << std::endl;
+    std::cout << "\nTime taken to predict tokens of sequence2: " << seconds << " seconds" << std::endl;
     if (seconds > 0) {
         std::cout << "Token Rate: " << static_cast<float>(rCount / seconds) << " tokens/second" << std::endl;
     }
@@ -324,3 +324,5 @@ void transformer::cuRun() {
     }
     std::cout << std::endl;
 }
+
+#endif

@@ -21,7 +21,7 @@ unsigned long long countLinesInCSV(const std::string& filename)
         return -1; // Return -1 to indicate an error
     }
     // Count the number of lines
-    long long int lineCount = 0;
+    unsigned long long lineCount = 0;
     std::string line;
     while (std::getline(file, line)) {
         lineCount++;

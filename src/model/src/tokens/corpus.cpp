@@ -36,9 +36,25 @@ void tokeniser::learn_vocabulary_from_word_counts(const std::unordered_map<std::
 {
     std::cout << "[INFO] Starting BPE training directly from raw corpus word counts." << std::endl;
     std::cout << "[INFO] Total unique words for training: " << corpus_word_counts.size() << std::endl;
+    // groupCommonTokens populates final_vocab with a lexicographically sorted list of all learned tokens.
     groupCommonTokens(corpus_word_counts, num_merges, final_vocab);
-    this->tokens = final_vocab;
-    this->vocSize = this->tokens.size();
+
+    // `vocab_tokens` is the definitive, lexicographically sorted vocabulary list, used for lookups.
+    vocab_tokens = final_vocab;
+
+    // `tokens` is a copy of the vocabulary, sorted by length (descending).
+    // This is a performance optimization for the greedy `splitWord` algorithm.
+    tokens = final_vocab;
+    std::sort(tokens.begin(), tokens.end(), 
+        [](const auto& a, const auto& b) { 
+            if(a.length() == b.length()) {
+                return a < b; // If lengths are equal, sort lexicographically
+            }
+            return a.length() > b.length(); // Longer strings first
+        }
+    );
+
+    vocSize = tokens.size();
 }
 
 
@@ -60,12 +76,12 @@ void tokeniser::buildCorpusWordCounts(const std::vector<std::string>& file_paths
     ThreadSafeQueue<std::vector<std::string>> work_queue;
 
     // Determine number of producers and consumers
-    int num_producers = (this->num_threads <= 4) ? 1 : 2; // Original logic for producers
-    int num_consumers = this->num_threads - num_producers;
+    int num_producers = (num_threads <= 4) ? 1 : 2; // Original logic for producers
+    int num_consumers = num_threads - num_producers;
     // Ensure at least one consumer if possible, otherwise prioritize producer for small thread counts
-    if (num_consumers < 1 && this->num_threads >= 1) { // If num_threads is 1, producer=1, consumer=0, adjust
+    if (num_consumers < 1 && num_threads >= 1) { // If num_threads is 1, producer=1, consumer=0, adjust
         num_consumers = 1;
-        num_producers = this->num_threads - num_consumers; // Adjust producer count if consumers need a thread
+        num_producers = num_threads - num_consumers; // Adjust producer count if consumers need a thread
         if (num_producers < 1) num_producers = 1; // Ensure at least one producer too
     } else if (num_consumers < 1) { // Fallback if num_threads is weird, ensure minimum 1 producer, 1 consumer
         num_producers = 1;
@@ -179,7 +195,7 @@ void tokeniser::buildCorpusWordCounts(const std::vector<std::string>& file_paths
                     chunk_buffer.push_back(std::move(line));
                     if (chunk_buffer.size() >= CHUNK_SIZE) {
                         std::streampos current_pos = file.tellg();
-                        long long bytes_in_chunk = current_pos - last_pos;
+                        unsigned long long bytes_in_chunk = current_pos - last_pos;
                         last_pos = current_pos;
 
                         {
@@ -197,7 +213,7 @@ void tokeniser::buildCorpusWordCounts(const std::vector<std::string>& file_paths
                 file.clear();
                 file.seekg(0, std::ios::end);
                 std::streampos end_pos = file.tellg();
-                long long final_bytes = end_pos - last_pos;
+                unsigned long long final_bytes = end_pos - last_pos;
 
                 if (!chunk_buffer.empty()) {
                     work_queue.push(std::move(chunk_buffer));

@@ -17,7 +17,13 @@
 float sigmoid(const float& x) {
     // The sigmoid function is defined as 1 / (1 + exp(-x)).
     // Use std::exp for clarity and standard library usage
-    return (1.0f / (1.0f + std::exp(-x))); // Use float literals
+    if (x >= 0.0f) {
+        float exp_neg_x = std::expf(-x);
+        return 1.0f / (1.0f + exp_neg_x);
+    } else {
+        float exp_x = std::expf(x);
+        return exp_x / (1.0f + exp_x);
+    }
 }
 
 /**
@@ -39,9 +45,14 @@ float sigmoidder(const float& x) {
  * @return A new vector containing the element-wise sigmoid results.
  */
 std::vector<float> sigmoid(const std::vector<float>& x) {
-    std::vector<float> y = x; // Create a copy to store results
-    // CORRECTED LAMBDA PARAMETER: const float& i
-    std::transform(x.begin(), x.end(), y.begin(), [](const float& i){ return sigmoid(i); });
+    if (x.empty()) {
+        return {};  // Or throw std::invalid_argument("Empty input vector") if preferred
+    }
+
+    std::vector<float> y(x.size());
+    std::transform(x.begin(), x.end(), y.begin(), [](float val) {  // No need for const& in lambda for primitives
+        return sigmoid(val);  // Calls the scalar sigmoid (no recursion)
+    });
     return y;
 }
 
@@ -101,7 +112,52 @@ std::vector<std::vector<float>> sigmoidder(const std::vector<std::vector<float>>
     return result;
 }
 
+//----------------SOFTSIGN----------------//
+
+/**
+ * @brief softsign function
+ * @param x value for softsign
+ * @return value between (-1, 1)
+ */
+float softsign(const float& x) {
+    return x / (1.0f + std::abs(x));
+}
+
 //----------------SOFTMAX----------------//
+
+/**
+ * @brief Softmax activation function for a vector. Applies the softmax function.
+ *          Numerically stable version using max_val subtraction.
+ * @param x The input vector (const reference).
+ * @param temp The temperature parameter (passed by value, as it's not modified).
+ * @return Vector of softmax probabilities.
+ */
+std::vector<float> softmax(const std::vector<float>& x) { // Pass temp by value
+    if (x.empty()) return {};
+
+    // Find max element for numerical stability
+    float max_val = *std::max_element(x.begin(), x.end());
+
+    std::vector<float> exps(x.size());
+    float sum = 0.0f;
+    for (size_t i = 0; i < x.size(); ++i) {
+        // Subtract max_val before exponentiating
+        exps[i] = std::exp(x[i] - max_val);
+        sum += exps[i];
+    }
+
+    // Handle case where sum is zero (e.g., all inputs were -inf after scaling)
+    if (sum == 0.0f || !std::isfinite(sum)) {
+        // Return uniform distribution if sum is zero or non-finite
+        return std::vector<float>(x.size(), 1.0f / static_cast<float>(x.size()));
+    }
+
+    // Normalize
+    for (float& val : exps) {
+        val /= sum;
+    }
+    return exps;
+}
 
 /**
  * @brief Softmax activation function for a vector. Applies the softmax function.
@@ -286,7 +342,7 @@ std::vector<std::vector<float>> ReLU(const std::vector<std::vector<float>>& x, i
  * @brief Calculate the derivative of the ReLU activation function for each element in a matrix.
  * @param x input matrix (const reference).
  * @param t Number of rows/cols to process (passed by value).
- * @return A new matrix containing element-wise ReLU derivative results up to t x t.
+ * @return A new matrix containing element-wise ReLU derivative results up to t x blocks.
  */
 std::vector<std::vector<float>> ReLUder(const std::vector<std::vector<float>>& x, int t_val) {
     if (x.empty() || t_val <= 0) return {};

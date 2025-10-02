@@ -9,11 +9,12 @@
 #include <fstream>
 #include <map>
 
+#define LAYERS_MLP 4                        // layers of mlp
 #define EPOCHS 25                           // number of epochs for training of token
 #define LEARNING_MAX 1.0f                   // maximum learning rate allowable
-#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
-#define TERMINATE "</s>"                    // end of conversation (And Its Over)
-
+#define LEARNING_MIN 0.0001f                // minimum learning rate allowable
+#define LR_PATIENCE 10                      // for learning rate adaptability by plateau
+#define MAX_GRAD_CLIP 0.01f                 // maximum gradient clipping
 
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
@@ -44,11 +45,14 @@ public:
 #ifdef USE_OPENCL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
+    mlp() = default;
     mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp(OpenCLContext& context, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #elif USE_CUDA || USE_CPU
     mlp() = default;
     // Constructor when OpenCL is disabled
     mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp(std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator
@@ -68,9 +72,6 @@ public:
     void cuRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void cuTrain(float& mse, int in, int layers, float learning);
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
-    void cuValidate(int in, int layers);
-    void cuTest(int in, int layers);
-    void cuAdamUpdate();
 
 #elif USE_OPENCL
 
@@ -85,9 +86,6 @@ public:
     void clRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void clTrain(float& mse, int in, int layers, float learning);
     void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
-    void clValidate(int in, int layers);
-    void clTest(int in, int layers);
-    void clAdamUpdate(); 
 
 #else
 
@@ -101,9 +99,6 @@ public:
     void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
     void train(float& mse, int in, int layers, float learning);
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
-    void validate(int in, int layers);
-    void test(int in, int layers);
-    void adamUpdate(); 
 
 #endif
     void initializeWeights();
@@ -131,8 +126,8 @@ public:
     }
 
     void clearValues();
-    void serialise(long long int offset, const std::string& locationWithFilename);
-    void deserialise(long long int offset, const std::string& locationWithFilename);
+    void serialise(unsigned long long offset, const std::string& locationWithFilename);
+    void deserialise(unsigned long long offset, const std::string& locationWithFilename);
     void serialise4train(const std::string& locationWithFileName);
     void serialise4use(const std::string& locationWithFileName);
     

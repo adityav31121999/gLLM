@@ -1,6 +1,6 @@
-
+#ifdef USE_CUDA
 #include "include/mlp.hpp"
-#include "include/attention.hpp" // Includes constants like EMBEDDING, MATHEIGHTS, etc.
+#include "include/attention.hpp" // Includes constants like EMBEDDING, CONTEXT_WIN, etc.
 #include "include/block.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -18,6 +18,35 @@
     } \
 } while (0)
 
+// Helper struct to manage device pointers for one head's worth of data
+struct HeadDevicePointers {
+    // Attention related
+    float *d_expected_h = nullptr, *d_EH = nullptr, *d_EV = nullptr;
+    float *d_grad_EH = nullptr, *d_grad_EV_scaled = nullptr;
+    float *d_grad_dh = nullptr, *d_grad_dv = nullptr;
+    float *d_KdotQ = nullptr, *d_head = nullptr;
+    float *d_K = nullptr, *d_Q = nullptr;
+    float *d_pre_MH = nullptr, *d_pre_MV = nullptr;
+    float *d_MH_a = nullptr, *d_MV_a = nullptr, *d_MQ_a = nullptr, *d_MK_a = nullptr;
+    float *d_grad_MH = nullptr, *d_grad_MV = nullptr;
+    float *d_grad_head = nullptr;
+    float *d_lota_deriv = nullptr;
+    float *d_grad_KdotQ = nullptr;
+    float *d_grad_K = nullptr, *d_grad_Q = nullptr;
+    float *d_grad_MQ = nullptr, *d_grad_MK = nullptr;
+
+    // MLP Internals
+    std::vector<float*> d_hor_activations;
+    std::vector<float*> d_hor_weights;
+    std::vector<float*> d_hor_gweights;
+    std::vector<float*> d_hor_deltas;
+    std::vector<float*> d_ver_activations;
+    std::vector<float*> d_ver_weights;
+    std::vector<float*> d_ver_gweights;
+    std::vector<float*> d_ver_deltas;
+
+    HeadDevicePointers() = default; // Default constructor for vector initialization
+};
 
 /**
  * @brief CUDA backward propagation for a single column in the FIRST block,
@@ -28,7 +57,7 @@
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2)
+void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers_mlp, int& layno, float& learning, float& lambda_l1, float& lambda_l2)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -47,13 +76,13 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
 
     // Constants used within the loop
     const int embedding_dim = EMBEDDING;
-    const int mat_heights = MATHEIGHTS;
+    const int mat_heights = CONTEXT_WIN;
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
 
     // MLP structure parameters based on 'layers' (L = number of hidden layers)
-    const int num_total_layers_mlp = layers; // 'layers' parameter represents the total number of layers (Input + Hidden + Output)
+    const int num_total_layers_mlp = LAYERS_MLP; // 'layers' parameter represents the total number of layers (Input + Hidden + Output)
     const int num_neuron_layers_mlp = num_total_layers_mlp;     // Number of activation/delta vectors needed
     const int num_weight_matrices_mlp = num_total_layers_mlp - 1; // Number of weight/gweight matrices
 
@@ -452,7 +481,7 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
  * @param layers Number of MLP layers.
  * @param layno The column index within the block (0 to y-1).
  */
-void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning, float& lambda_l1, float& lambda_l2)
+void block::cupartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2)
 {
     const int num_heads_to_process = x; // 'x' is the number of rows/heads in this column
 
@@ -468,7 +497,7 @@ void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layer
 
     // Constants
     const int embedding_dim = EMBEDDING;
-    const int mat_heights = MATHEIGHTS;
+    const int mat_heights = CONTEXT_WIN;
     const int context_win = CONTEXT_WIN;
     const float learning_rate = learning;
     const float scaling_factor = SCALING;
@@ -809,3 +838,5 @@ void block::cupartialbackward(std::vector<float>& expectedH, int& in, int& layer
     cudaFree(agg_d_hor_gweights_storage); cudaFree(agg_d_ver_gweights_storage);
     cudaFree(agg_d_hor_deltas_storage); cudaFree(agg_d_ver_deltas_storage);
 }
+
+#endif

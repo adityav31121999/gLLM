@@ -79,8 +79,8 @@ void tokeniser::splitWord(const std::string& word, std::vector<std::string>& sub
     while (!current_word.empty()) {
         bool found_match = false;
         // Greedily find the longest token in our vocabulary that is a prefix of the current word.
-        // This requires the vocabulary `this->tokens` to be sorted by length, descending.
-        for (const auto& token : this->tokens) {
+        // This requires the vocabulary `tokens` to be sorted by length, descending.
+        for (const auto& token : tokens) {
             if (current_word.rfind(token, 0) == 0) { // check if string starts with token
                 subwords.push_back(token);
                 current_word = current_word.substr(token.length());
