@@ -94,10 +94,6 @@ add_library(neural STATIC
     src/transformer/cu/train2.cu
     src/transformer/cu/train3.cu
     src/transformer/cu/train4.cu
-    src/transformer/cu/train5.cu
-    src/transformer/cu/train6.cu
-    src/transformer/cu/train7.cu
-    src/transformer/cu/train8.cu
     src/transformer/cu/test.cu
     src/transformer/cu/run.cu
     # OpenCL
@@ -108,10 +104,6 @@ add_library(neural STATIC
     src/transformer/cl/train2cl.cpp
     src/transformer/cl/train3cl.cpp
     src/transformer/cl/train4cl.cpp
-    src/transformer/cl/train5cl.cpp
-    src/transformer/cl/train6cl.cpp
-    src/transformer/cl/train7cl.cpp
-    src/transformer/cl/train8cl.cpp
     src/transformer/cl/testcl.cpp
     src/transformer/cl/runcl.cpp
     src/transformer/cl/runclbuffer.cpp
