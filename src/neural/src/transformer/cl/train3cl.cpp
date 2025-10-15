@@ -42,7 +42,6 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
     int initial_token_count = currentTokenCount; // Store initial count
     bool blockShifted = 0;
     int effective_context_size = 0;
-    int start = 0;
 
     // --- Device Buffer Allocation & H->D Transfer ---
     size_t totalTokenEmbedFloats = static_cast<size_t>(m) * CONTEXT_WIN * d;
@@ -74,45 +73,22 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
         otok.clear(); otok.resize(d*x, 0.0f);
         pred.clear(); pred.resize(vocabsize, 0.0f);
         oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
-        // check for currentTokenCount : if 0, start from original, else, continue from where left
-        std::vector<float> flat_host_tokenEmbed(totalTokenEmbedFloats, 0.0f);
-        // start training from first
-        if(currentTokenCount == 0) {
-            // set tokenEmbed
-            blockCount = 1;
-            tokenEmbed.addRow(sentence[0], 0);
-            effective_context_size = 1;
-            currentTokenCount += 1;
-            start = 1;
-        }
-        // continue training in first block
-        else if(currentTokenCount > 0 && currentTokenCount < CONTEXT_WIN) {
-            // set tokens from currentTokenCount index
-            blockCount = 1;
-            effective_context_size = currentTokenCount;
-            for (int tk = 0; tk < currentTokenCount; ++tk) { // Copy existing context
-                float* row_ptr = tokenEmbed.mapped_data + (static_cast<size_t>(tk) * d);
-                flat_host_tokenEmbed.insert(flat_host_tokenEmbed.end(), row_ptr, row_ptr + d);
-            }
-            start = 0;
-        }
-        // non-first block training
-        else {
-            effective_context_size = currentTokenCount % CONTEXT_WIN;
-            blockCount = (currentTokenCount / CONTEXT_WIN) + 1;
-            for (int tk = 0; tk < currentTokenCount; ++tk) {
-                // Copy existing context from block specific tokForBlock
-                float* row_ptr = tokenEmbed.mapped_data + (static_cast<size_t>(tk) * d);
-                flat_host_tokenEmbed.insert(flat_host_tokenEmbed.end(), row_ptr, row_ptr + d);
-            }
-            start = 0;
-        }
 
-        sequence1Count = 1;
-        std::cout << "Prediction | Index | Entropy LOSS | del | e^Loss | EPOCHS | Learning Rate" << std::endl;
+        // --- set all tokens to tokenEmbed ---
+        std::fill(tokenEmbed.mapped_data, tokenEmbed.mapped_data + totalTokenEmbedFloats, 0.0f);
+        std::fill(positional.mapped_data, positional.mapped_data + totalTokenEmbedFloats, 0.0f);
+        std::fill(embedPlusPos.mapped_data, embedPlusPos.mapped_data + totalTokenEmbedFloats, 0.0f);
+        for(int i = 0; i < rString.size(); i++) {
+            tokenEmbed.addRow(sentence[i], i);
+            positional.addRow(positionalEmbeddings(i, d), i);
+        }
+        effective_context_size += 1;
+        currentTokenCount += 1;
+        sequence1Count = 1, blockCount = 1;
+        std::cout << "Predicted (Index;) | CE Loss | del (cur - pre) | e^Loss | Epochs | Learning Rate" << std::endl;
 
         // --- Train for each subsequent token in the sentence (i=1 to N-1) ---
-        for (size_t i = start; i < sentence.size(); ++i) {
+        for (size_t i = 1; i < sentence.size(); ++i) {
             if (currentTokenCount >= FULL_CONTEXT) {
                 std::cerr << "Warning: clTrainContext(sentence) reached FULL_CONTEXT limit ("
                           << currentTokenCount << "). Stopping training early at sentence index " << i << "." << std::endl;
@@ -141,7 +117,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
 
             while (j < epochs) {
                 current_error = 0.0f;
-
+                embedPlusPos = tokenEmbed + positional; // update embedPlusPos each epoch
                 if(current_block_idx == 1) {
                     // keys and queries for each head of first block
                     int tokInContext = i;
@@ -243,6 +219,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                         CL_CHECK(clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, sizeof(cl_int), &host_indexForToken));
                         CL_CHECK(clcontext.queue.enqueueReadBuffer(d_predictions, CL_TRUE, 0, predBytes, pred.data()));
                         indexForToken = host_indexForToken;
+                        pred = softmax(pred);
                     }
                     catch (const std::exception& e) {
                         std::cerr << "Error during kernelComputePredictionWithScores in clTrainCONTEXT: " << e.what() << std::endl;
@@ -250,19 +227,19 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                     }
                 }
 
-                current_error = crossEntropy(oneHotEncode, pred);
+                current_error = - std::log(pred[indexVec[i]] + 1e-15f);
+                float del = current_error - prev_error;
                 std::string predicted_token_str = (indexForToken >= 0 && indexForToken < static_cast<unsigned int>(tokens.size()))
                                                   ? tokens[indexForToken] : "INVALID_INDEX";
 
-                std::cout << predicted_token_str << "\t: " << indexForToken << " | "
-                          << std::fixed << std::setprecision(8) << current_error << " | "
-                          << std::fixed << std::setprecision(8) << current_error - prev_error << " | "
-                          << std::fixed << std::setprecision(8) << std::exp(current_error) << " | "
-                          << j+1 << " | " << learning << std::endl;
+                std::cout << predicted_token_str << " ( " << indexForToken << " ) \t: "
+                          << current_error << " | " << del << " | "
+                          << std::exp(current_error) << " | " << j+1 << " | " << learning << std::endl;
 
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     std::cout << "Token '" << expected_str << "' predicted correctly after " 
                               << j+1 << " epochs. Moving to next token." << std::endl;
+                    prev_error = 0.0f;
                     if(predicted_token_str != "</s>")
                         std::cout << "              -------------- To Next Token --------------              " << std::endl;
                     break;
@@ -273,8 +250,8 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                     epochs += 15;
                 }
 
+                learning = std::max<float>(1.5*LEARNING_MIN, std::min<float>(0.9*LEARNING_MAX, (del > 0) ? learning * 0.98f : learning * 1.15f));
                 // modify the de-embeddings and get gradients for backprop
-                learning *= (current_error > prev_error) ? 1.05 : 0.95;
                 std::vector<float> gradEH(d * x, 0.0f);
                 clUpdateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
                 // get expected target for backprop
@@ -288,8 +265,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                         targets_for_heads[head_idx][eidx] = otok[(head_idx * EMBEDDING) + eidx] - gradient;
                     }
                 }
-
-                // backpropagate
+                // backpropagate block
                 clBackwardContext(targets_for_heads, current_block_idx);
                 // update embeddings which are in use
                 clUpdateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, 12454);
@@ -325,7 +301,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                 blockShifted = 0;
             }
         }
-        // learning = initial_learning_rate; // Reset for next line
+        learning = initial_learning_rate; // Reset for next line
     }
     catch (const std::runtime_error& e) { // Catches std::runtime_error from CL_CHECK
         std::cerr << "Standard Exception in clTrainContext(sentence): " << e.what() << std::endl;

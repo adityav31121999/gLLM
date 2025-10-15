@@ -34,6 +34,10 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
     if (currentTokenCount + sequence1.size() + sequence2.size() > FULL_CONTEXT) {
         throw std::runtime_error("clTrain(sequence1-sequence2): Adding sequence1 and sequence2 exceeds FULL_CONTEXT limit.");
     }
+    if (contextTrain == 0 && otok.size() != static_cast<size_t>(d)) {
+        otok.clear();
+        otok.resize(d, 0.0f); // ensure otok is correctly sized
+    }
 
     cl_int cl_err;
     cl::Kernel kq_kernel, predKernel;
@@ -128,7 +132,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 }
                 currentTokenCount += sequence1.size();
                 effective_context_size = currentTokenCount;
-                clForward(blockCount, effective_context_size, promptCount);
+                clForward_ev(blockCount, effective_context_size, promptCount);
                 tokenEmbed.addRow(sequence1[sequence1.size() - 1] + positionalEmbeddings(currentTokenCount, d), currentTokenCount);
                 // prepare EVs
                 for(int m1 = 0; m1 < x; m1++) {
@@ -159,7 +163,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
             }
             currentTokenCount += dif;
             effective_context_size += dif;
-            clForward(blockCount, effective_context_size, promptCount);
+            clForward_ev(blockCount, effective_context_size, promptCount);
             // shift to next block
             blockCount = 2;
             for(int i = 0; i < dif1; i++) {
@@ -196,7 +200,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
             // 8194 % 1024 = 2
             else if(effective_context_size > 0 && effective_context_size + sequence1.size() < CONTEXT_WIN) {
                 for(int i = 0; i < sequence1.size(); i++) {
-                    tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -211,7 +215,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
             else if (effective_context_size > 0 && effective_context_size + sequence1.size() == CONTEXT_WIN) {
                 int promptCount = 0;
                 for(int i = 0; i < sequence1.size(); i++) {
-                    tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -221,9 +225,9 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 }
                 currentTokenCount += sequence1.size();
                 effective_context_size += sequence1.size();
-                clForward(blockCount, effective_context_size, promptCount);
+                clForward_ev(blockCount, effective_context_size, promptCount);
                 // shift to next block
-                tokenEmbed.addRow(sequence1[sequence1.size() - 1], currentTokenCount);
+                tokenEmbed.addRow(sequence1[sequence1.size() - 1] + positionalEmbeddings(currentTokenCount + 1, d), currentTokenCount);
                 for(int m1 = 0; m1 < x; m1++) {
                     for(int m2 = 0; m2 < y; m2++) {
                         std::vector<float> v(EMBEDDING, 0.0f);
@@ -239,24 +243,24 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 int dif = currentTokenCount + sequence1.size() - CONTEXT_WIN;
                 int dif1 = sequence1.size() - dif;
                 for(int i = 0; i < dif; i++) {
-                    tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
-                            blocks[blockCount - 1].b[m1][m2].EV.addRow(sequence1[i], i);
+                            blocks[blockCount - 1].b[m1][m2].EV.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), i);
                         }
                     }
                 }
                 currentTokenCount += dif;
                 effective_context_size += dif;
-                clForward(blockCount, effective_context_size, promptCount);
+                clForward_ev(blockCount, effective_context_size, promptCount);
                 // shift to next block
                 for(int i = 0; i < dif1; i++) {
                     tokenEmbed.addRow(sequence1[dif + i], currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
-                            blocks[blockCount].b[m1][m2].EV.addRow(sequence1[i], i);
+                            blocks[blockCount].b[m1][m2].EV.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), i);
                         }
                     }
                 }
@@ -311,6 +315,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
             // --- Training Loop for sequence2 token i ---
             int j = 0;
             while (j < epochs) {
+                embedPlusPos = tokenEmbed + positional; // update embedPlusPos each epoch
+                CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, embedPlusPos.mapped_data));
                 if(current_block_idx == 1) {
                     // keys and queries for each head of first block
                     int tokInContext = i;
@@ -337,10 +343,10 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 }
                 else {
                     int tokInContext = currentTokenCount % CONTEXT_WIN;
-                    cl::Buffer pEV = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err); CL_CHECK(cl_err);
+                    cl::Buffer pEV = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err);
                     // start from last token of previous local context
                     size_t fromHereInTokenEmbed = static_cast<size_t>(CONTEXT_WIN) * (blockCount - 1) * sizeof(float);
-                    const float* host_src_ptr = tokenEmbed.mapped_data + (fromHereInTokenEmbed / sizeof(float));
+                    const float* host_src_ptr = embedPlusPos.mapped_data + (fromHereInTokenEmbed / sizeof(float));
                     CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, host_src_ptr));
 
                     // keys and queries for each head of non-first block
@@ -375,9 +381,6 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 if (current_prompt_count_in_block == 0 && effective_context_size > 0) current_prompt_count_in_block = CONTEXT_WIN;
                 clForward(current_block_idx, effective_context_size, current_prompt_count_in_block);
 
-                if (contextTrain == 0 && otok.size() != static_cast<size_t>(d)) {
-                    throw std::runtime_error("clTrain(sentence): otok from clForward has incorrect size: " + std::to_string(otok.size()) + " != " + std::to_string(d) + ".");
-                }
                 // --- Get EH output ---
                 if (y > 0) {
                     for (int j = 0; j < x; ++j) {
@@ -385,16 +388,17 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                             otok[k] += blocks[blockCount-1].b[j][y - 1].EH[k];
                         }
                     }
+                    for(size_t k_dim = 0; k_dim < static_cast<size_t>(d); k_dim++) {
+                        if (std::isnan(otok[k_dim])) {
+                            otok[k_dim] = 0.0f;
+                        }
+                        else if (std::isinf(otok[k_dim])) {
+                            otok[k_dim] = -1.0f;
+                        }
+                    }
                 }
                 else {
                     std::cerr << "Warning: clForward called with y = 0 columns. Cannot accumulate EH." << std::endl;
-                }
-                for(size_t k_dim = 0; k_dim < static_cast<size_t>(d); k_dim++) {
-                    if (std::isnan(otok[k_dim])) { otok[k_dim] = 0.0f; }
-                    else if (std::isinf(otok[k_dim])) { otok[k_dim] = std::copysign((std::numeric_limits<float>::max)(), otok[k_dim]); }
-                }
-                if (contextTrain == 0 && otok.size() != static_cast<size_t>(d)) {
-                    throw std::runtime_error("clTrain(sentence): otok from clForward has incorrect size: " + std::to_string(otok.size()) + " != " + std::to_string(d) + ".");
                 }
 
                 // use kernelComputePrediction for output prediction
@@ -424,42 +428,30 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 }
 
                 // calculate error
-                std::vector<float> expv = sigmoid(expected_vec);
-                current_error = binaryCrossEntropy(expv, otok);
+                current_error = binaryCrossEntropy(expected_vec, otok);
+                float del = current_error - prev_error;
                 std::string predicted_token_str = (indexForToken >= 0 && indexForToken < static_cast<unsigned long long>(tokens.size()))
                                                   ? tokens[indexForToken] : "INVALID_INDEX";
 
-                std::cout << predicted_token_str << "\t: " << indexForToken << " | "
-                          << current_error << " | " << current_error - prev_error << " | "
+                std::cout << predicted_token_str << " ( " << indexForToken << " ) \t: "
+                          << current_error << " | " << del << " | "
                           << std::exp(current_error) << " | " << j+1 << " | " << learning << std::endl;
 
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     std::cout << "Token '" << expected_str << "' predicted correctly after " 
                               << j+1 << " epochs. Moving to next token." << std::endl;
+                    // learning = initial_learning_rate; // reset learning rate
                     if(predicted_token_str != "</s>")
                         std::cout << "              -------------- To Next Token --------------              " << std::endl;
                     break;
                 }
                 if(j == epochs - 1) {
                     std::cout << "Reached maximum epochs (" << epochs << ") for current token without correct prediction." << std::endl;
-                    std::cout << "Increasing Epochs by 15." << std::endl;
-                    epochs += 15;
+                    std::cout << "Increasing Epochs by " << EPOCHS/2 << "." << std::endl;
+                    epochs += EPOCHS/2;
                 }
 
-                // update learning rate starting from second epoch and specific conditions
-                if(current_error < prev_error) {
-                    if(j <= 6)   
-                        learning *= 1.1;
-                    else if (j % 6 == 0)
-                        learning *= (1.05 + (j/6)*0.15);
-                }
-                else {
-                    if(j <= 6)   
-                        learning *= 0.95;
-                    else if (j % 6 == 0)
-                        learning *= (0.95 - (j/6)*0.01);
-                }
-
+                learning = std::max<float>(1.5*LEARNING_MIN, std::min<float>(0.9*LEARNING_MAX, (del > 0) ? learning * 0.98f : learning * 1.15f));
                 clBackward(expected_vec, current_block_idx);
                 totalLearning += learning;
                 prev_error = current_error;

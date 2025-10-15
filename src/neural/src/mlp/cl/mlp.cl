@@ -418,6 +418,7 @@ __kernel void kernelUpdateElasticNet(__global const float* deltas, __global cons
             float4 current_weight_vec = vload4(0, &weights[weight_idx]);
 
             float4 error_gradient = delta_val * prev_activations_vec;
+            // taking 0.5 * current_weight^2 -> lambda * current_weight
             float4 l2_gradient = lambda_l2 * current_weight_vec;
 
             // Vectorized subgradient for L1

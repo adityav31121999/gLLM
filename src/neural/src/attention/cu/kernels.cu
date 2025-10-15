@@ -31,20 +31,114 @@ __global__ void kernelElementwiseMultiply(float* target_and_output, const float*
     }
 }
 
+
 /**
- * @brief CUDA kernel wrapper to launch the computePredictionWithScores device function.
- *        This kernel is intended to be launched with a single thread.
- * @param[in] EH Device pointer to the input vector (size dim).
- * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
- * @param[out] predictionLogits Device pointer to store the dot products for all tokens (size voc).
- * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
- * @param[in] dim The embedding dimension.
- * @param[in] voc The vocabulary size.
+ * @brief CUDA kernel to compute a single Key or Query vector using the cuComputeKorQ device function.
+ * @param d_token_embedding Device pointer to the token embedding vector (size EMBEDDING).
+ * @param d_projection_matrix Device pointer to the MQ or MK matrix (row-major, CONTEXT_WIN x EMBEDDING).
+ * @param d_output_kq_vector Device pointer to store the resulting K or Q vector (size CONTEXT_WIN).
+ * @param embedding_dim The dimension of the token embedding (EMBEDDING).
+ * @param mat_heights The height of the projection matrix (CONTEXT_WIN), also the size of the output vector.
  */
-__global__ void kernelComputePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits, int* result_index, int dim, int voc)
+__global__ void compute_single_kq_vector_kernel(
+    const float* d_token_embedding, 
+    const float* d_projection_matrix, 
+    float* d_output_kq_vector,      
+    int embedding_dim,
+    int mat_heights)
 {
-    // This kernel is launched with a single thread, which calls the device function.
-    *result_index = computePredictionWithScores(EH, embeddings, predictionLogits, dim, voc);
+    // This kernel is designed to compute one K or Q vector.
+    // It calls the cuComputeKorQ device function.
+    cuComputeKorQ(d_token_embedding, d_projection_matrix, d_output_kq_vector, embedding_dim, mat_heights);
+}
+
+
+/**
+ * @brief CUDA device function to compute a key or query vector by multiplying a token embedding with a matrix.
+ *        KorQ = tokenEmbed * matrix^T (effectively, as matrix is row-major)
+ * @param[in] tokenEmbed Device pointer to the token embedding vector (size dim).
+ * @param[in] matrix Device pointer to the key or query matrix (row-major, height x dim).
+ * @param[out] KorQ Device pointer to the resulting Key or Query vector (size height). Must be zero-initialized before calling.
+ * @param[in] dim The embedding dimension (columns of matrix, size of tokenEmbed).
+ * @param[in] height The number of rows in the key/query matrix (size of KorQ).
+ */
+__device__ void cuComputeKorQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height) {
+    // This computes KorQ[i] = dot(tokenEmbed, matrix_row_i)
+    for (int i = 0; i < height; ++i) {
+        const float* matrix_row_i = matrix + i * dim;
+        float dot_product = 0.0f; // Accumulate dot product locally
+        for (int j = 0; j < dim; ++j) {
+            dot_product += tokenEmbed[j] * matrix_row_i[j];
+        }
+        KorQ[i] = dot_product; // Assign the computed dot product
+    }
+}
+
+
+/**
+ * @brief CUDA device function to compute a key or query matrix by multiplying token embedding matrix with a weight
+ *        projection matrix.
+ *        KorQ = tokenEmbed * matrix^T
+ * @param[in] tokenEmbed Device pointer to the token embedding vector (height * dim).
+ * @param[in] matrix Device pointer to the key or query matrix (row-major, dim x height).
+ * @param[out] KorQ Device pointer to the resulting Key or Query vector (size height).
+ * @param[in] dim The embedding dimension (columns of matrix, size of tokenEmbed).
+ * @param[in] height The number of rows in the key/query matrix (size of KorQ).
+ */
+__device__ void cuComputeKQ(const float* tokenEmbed, const float* matrix, float* KorQ, int dim, int height) {
+    // KorQ[i][j] = dot(tokenEmbed[i], matrix[j])       // This computes KorQ[i][j]
+    for (int i = 0; i < height; ++i) {
+        const float* matrix_row_i = matrix + i * dim;
+        for (int j = 0; j < dim; ++j) {
+            float dot_product = 0.0f; // Accumulate dot product locally
+            for (int k = 0; k < dim; ++k) {
+                dot_product += tokenEmbed[j * dim + k] * matrix_row_i[k];
+            }
+            KorQ[i * dim + j] = dot_product; // Assign the computed dot product
+        }
+    }
+}
+
+
+/**
+ * @brief CUDA device function to compute the dot product of two vectors.
+ * @param[in] vec1 Device pointer to the first vector.
+ * @param[in] vec2 Device pointer to the second vector.
+ * @param[in] dim The dimension (number of elements) of the vectors.
+ * @return The scalar dot product of vec1 and vec2.
+ */
+__device__ float compute_dot_product(const float* vec1, const float* vec2, int dim) {
+    float dot_product = 0.0f;
+    for (int k = 0; k < dim; ++k) {
+        dot_product += vec1[k] * vec2[k];
+    }
+    return dot_product;
+}
+
+
+/**
+ * @brief CUDA device function to compute the quadratic form vec1 * matrix * vec2^T.
+ * @param[in] vec1 Device pointer to the first vector (treated as a row vector, size dim).
+ * @param[in] vec2 Device pointer to the second vector (treated as a column vector, size dim).
+ * @param[in] matrix Device pointer to the matrix (row-major, dim x dim).
+ * @param[in] dim The dimension of the vectors and the square matrix.
+ * @return The scalar result of vec1 * matrix * vec2^T.
+ */
+__device__ float compute_dot_product(const float* vec1, const float* vec2, const float* matrix, int dim)
+{
+    float final_dot_product = 0.0f;
+    // This computes (vec1 * matrix) * vec2^T
+    for (int i = 0; i < dim; ++i) { // Iterate over rows of matrix (and elements of vec2)
+        float inner_sum = 0.0f; // Represents element i of (vec1 * matrix)
+        const float* matrix_row_i = matrix + i * dim;
+        // Compute dot product of vec1 with i-th row of matrix
+        for (int j = 0; j < dim; ++j) {
+            inner_sum += vec1[j] * matrix_row_i[j];
+        }
+        // Multiply the result by the corresponding element of vec2 and accumulate
+        final_dot_product += inner_sum * vec2[i];
+    }
+    return final_dot_product;
 }
 
 /**
@@ -55,9 +149,10 @@ __global__ void kernelComputePredictionWithScores(const float* EH, const float* 
  * @param[in] dim The embedding dimension (size of EH and columns of embeddings).
  * @param[in] voc The vocabulary size (number of rows in embeddings).
  * @return The index of the token embedding with the highest dot product. Returns -1 if voc <= 0 or embeddings is null.
+ * @note Assumes that the case of "all dot products being exactly equal" is handled implicitly by returning the first max index found.
+ * @note Assumes FLT_MAX is available (usually via <cfloat> or CUDA includes).
  */
-__device__ int computePrediction(const float* EH, const float* embeddings, int dim, int voc) 
-{
+__device__ int compute_prediction(const float* EH, const float* embeddings, int dim, int voc) {
     if (voc <= 0 || embeddings == nullptr) {
         return -1; // Handle invalid input
     }
@@ -66,7 +161,7 @@ __device__ int computePrediction(const float* EH, const float* embeddings, int d
 
     for (int i = 0; i < voc; ++i) {
         const float* current_embedding_row = embeddings + i * dim;
-        float current_dot_product = cuComputeDot(EH, current_embedding_row, dim);
+        float current_dot_product = compute_dot_product(EH, current_embedding_row, dim);
 
         if (current_dot_product > max_dot_product) {
             max_dot_product = current_dot_product;
@@ -77,32 +172,17 @@ __device__ int computePrediction(const float* EH, const float* embeddings, int d
 }
 
 /**
- * @brief CUDA kernel wrapper to launch the computePrediction device function.
- *        This kernel is intended to be launched with a single thread.
- * @param[in] EH Device pointer to the horizontal retention vector (size dim).
- * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
- * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
- * @param[in] dim The embedding dimension.
- * @param[in] voc The vocabulary size.
- */
-__global__ void kernelComputePrediction(const float* EH, const float* embeddings, int* result_index, int dim, int voc) {
-    // This kernel is launched with a single thread, which calls the device function.
-    *result_index = computePrediction(EH, embeddings, dim, voc);
-}
-
-/**
  * @brief CUDA device function to compute the predicted token index by finding the highest dot product
  *        between a vector (EH) and rows of an embedding matrix.
  * @param[in] EH Device pointer to the horizontal retention vector (size dim).
  * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
- * @param[out] predictionLogits Device pointer to store the dot products for all tokens (size voc).
  * @param[in] dim The embedding dimension (size of EH and columns of embeddings).
  * @param[in] voc The vocabulary size (number of rows in embeddings).
  * @return The index of the token embedding with the highest dot product. Returns -1 if voc <= 0 or embeddings is null.
  * @note Assumes that the case of "all dot products being exactly equal" is handled implicitly by returning the first max index found.
  * @note Assumes FLT_MAX is available (usually via <cfloat> or CUDA includes).
  */
-__device__ int computePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits,
+__device__ int compute_prediction(const float* EH, const float* deEmbeddings, float* predictionLogits,
          int dim, int voc) 
 {
     if (voc <= 0 || embeddings == nullptr) {
@@ -113,7 +193,7 @@ __device__ int computePredictionWithScores(const float* EH, const float* embeddi
 
     for (int i = 0; i < voc; ++i) {
         const float* current_embedding_row = embeddings + i * dim;
-        float current_dot_product = cuComputeDot(EH, current_embedding_row, dim);
+        float current_dot_product = compute_dot_product(EH, current_embedding_row, dim);
         predictionLogits[i] = current_dot_product;
 
         if (current_dot_product > max_dot_product) {
@@ -145,21 +225,32 @@ __global__ void kernelComputeHeadSumsMasked(const float* d_head, float* d_row_su
         float row_sum_k = 0.0f;
         float col_sum_l = 0.0f;
 
+        // Determine the upper limit for summation based on attention type
+        // For self-attention, sum up to (but not including) the current token index 'i' for causal masking?
+        // The C++ comment says limit = isSelfAttention ? i : num_tokens. Let's assume it means sum up to j=i-1.
+        // Re-reading C++ comment: limit = isSelfAttention ? i : num_tokens. This means sum up to j=i-1 for self-attention.
+        // Let's implement the comment's logic: sum up to j = limit-1.
         int limit = isSelfAttention ? i + 1 : num_tokens; // If self-attention, limit is i+1 (sum j=0 to i)
         if (limit > num_tokens) limit = num_tokens; // Ensure limit doesn't exceed bounds
 
         // Calculate row sum (k) for token i: sum head[i][j] for j < limit
         for (int j = 0; j < limit; ++j) {
-            // Apply self-attention mask: only sum if j <= i
-            if (!isSelfAttention || j <= i) {
-            row_sum_k += d_head[i * num_tokens + j];
-            }
+             // Apply self-attention mask: only sum if j <= i
+             if (!isSelfAttention || j <= i) {
+                row_sum_k += d_head[i * num_tokens + j];
+             }
         }
 
         // Calculate column sum (l) for token i: sum head[j][i] for j < limit
         for (int j = 0; j < limit; ++j) {
-            col_sum_l += d_head[j * num_tokens + i];
+             // Apply self-attention mask: only sum if i <= j (for head[j][i], this means j >= i)
+             // Wait, the C++ comment implies the same limit 'j < limit' for both sums. Let's stick to that.
+             // This means col_sum_l[i] = sum_{j=0}^{limit-1} head[j][i]
+             // If self-attention, limit = i+1, so col_sum_l[i] = sum_{j=0}^{i} head[j][i]
+             // This seems consistent with typical attention backprop needs.
+             col_sum_l += d_head[j * num_tokens + i];
         }
+
 
         d_row_sums[i] = row_sum_k;
         d_col_sums[i] = col_sum_l;
@@ -281,6 +372,7 @@ __global__ void updateEVRowsKernel(float* d_EV_rows, const float* d_vector_to_ad
         }
     }
 }
+
 
 /**------------------------------------BACKPROP------------------------------------**/
 

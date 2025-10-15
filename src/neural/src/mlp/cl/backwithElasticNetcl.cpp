@@ -108,9 +108,9 @@ void mlp::clBackwithElasticNet(int in, int layers, float learning) {
         cl::NDRange local_2d = cl::NullRange;
 
         cl_int cl_in = static_cast<cl_int>(in);
-        cl_float cl_learning = static_cast<cl_float>(learning);
-        cl_float cl_lambda_l1 = static_cast<cl_float>(lambda_l1);
-        cl_float cl_lambda_l2 = static_cast<cl_float>(lambda_l2);
+        float cl_learning = static_cast<float>(learning);
+        float cl_lambda_l1 = static_cast<float>(lambda_l1);
+        float cl_lambda_l2 = static_cast<float>(lambda_l2);
 
         // --- Backpropagation Steps ---
 

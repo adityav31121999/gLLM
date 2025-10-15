@@ -326,7 +326,7 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
                         T.clTrainContext(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);
                 #elif USE_CPU
                     std::cout << "Using C++ Implementation" << std::endl;
-                    T.blocksrain(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);
+                    T.train(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);
                 #endif
                 if (i == num_pairs - 1)
                     std::cout << "              ---------------- To Next Pair Line --------------              " << std::endl;

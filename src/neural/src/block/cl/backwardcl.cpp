@@ -42,13 +42,17 @@ void block::clbackward1stBlock(std::vector<float>& expectedH, int& in, int& laye
             // Call the partial backward function for the current column j
             if(j == y-1) {
                 // for last column
+                expectedH /= x; // average expectedH over all heads
                 clpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
-            else if(j >= 0 && j < y-1) {
+            else if(j < y-1 && j >= 0) {
                 // for columns second last to first
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < x; i++) {
-                    exp2h[i] = b[i][j+1].EH;
+                    for(int k = 0; k < EMBEDDING; k++) {
+                        if (std::isnan(b[i][j + 1].EH[k])) { exp2h[i][k] = 0.0f; }
+                        else if (std::isinf(b[i][j + 1].EH[k])) { exp2h[i][k] = std::copysign((std::numeric_limits<float>::max)(), b[i][j + 1].EH[k]); }
+                    }
                 }
                 clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
@@ -104,7 +108,11 @@ void block::clbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& 
                 // for columns inbetween, compute expectedH from the next column's EH
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < x; i++) {
-                    exp2h[i] = b[i][j+1].EH;
+                    for(int k = 0; k < EMBEDDING; k++) {
+                        if (std::isnan(b[i][j + 1].EH[k])) { exp2h[i][k] = 0.0f; }
+                        else if (std::isinf(b[i][j + 1].EH[k])) { exp2h[i][k] = std::copysign((std::numeric_limits<float>::max)(), b[i][j + 1].EH[k]); }
+                    }
+                    
                 }
                 clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
@@ -160,17 +168,25 @@ void block::clrbackward1stBlock(std::vector<std::vector<float>>& expectedH, int&
                 // for columns inbetween, compute expectedH from the next column's EH
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < x; i++) {
-                    exp2h[i] = b[i][j+1].EH;
+                    for(int k = 0; k < EMBEDDING; k++) {
+                        if (std::isnan(b[i][j + 1].EH[k])) { exp2h[i][k] = 0.0f; }
+                        else if (std::isinf(b[i][j + 1].EH[k])) { exp2h[i][k] = std::copysign((std::numeric_limits<float>::max)(), b[i][j + 1].EH[k]); }
+                    }
+                    
                 }
                 clpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j == 0) {
                 std::vector<std::vector<float>> exp2h(x, std::vector<float>(EMBEDDING, 0.0));
                 for(int i = 0; i < x; i++) {
-                    exp2h[i] = b[i][1].EH;
+                    for(int k = 0; k < EMBEDDING; k++) {
+                        if (std::isnan(b[i][j + 1].EH[k])) { exp2h[i][k] = 0.0f; }
+                        else if (std::isinf(b[i][j + 1].EH[k])) { exp2h[i][k] = std::copysign((std::numeric_limits<float>::max)(), b[i][j + 1].EH[k]); }
+                    }
+                    
                 }
                 // for first column, no previous column to get EH from, so use the provided expectedH
-                clrpartialbackward1stBlock(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
+                clrpartialbackward1stBlock(exp2h, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else {
                 throw std::runtime_error("clrbackward1stBlock(H_2D): Invalid column index j: " + std::to_string(j));
@@ -212,6 +228,7 @@ void block::clbackward(std::vector<float>& expectedH, int& in, int& layers, int&
             // Call the partial backward function for the current column j
             if(j == y-1) {
                 // for last column
+                expectedH /= x; // average expectedH over all heads
                 clpartialbackward(expectedH, in, layers, j, learning, lambda_l1, lambda_l2);
             }
             else if(j >= 0 && j < y-1) {

@@ -53,6 +53,46 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
     // std::cout << "ATTENTION constructed." << std::endl;
 }
 
+/**
+ * @brief Constructor for incomplete attention from name - NO OpenCL
+ * @param inAtt attention block name
+ * @param n context window
+ * @param d embedding dimension
+ * @param h feature dimension = n
+ * @param l layers of mlp
+ * @param isSelf self attention = 1, else 0 for cross attention
+ * @param trainMode in training = 1, else 0 for inference
+ */
+attention::attention(const std::string& inAtt, int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
+    isSelfAttention(isSelf), inTraining(trainMode), tokenCount(0),
+    hor(inAtt + "H", std::vector<unsigned int>(l, d), EPOCHS, learning),
+    ver(inAtt + "V", std::vector<unsigned int>(l, d), EPOCHS, learning),
+    h(d, 0.0f), v(d, 0.0f), EH(d, 0)
+{
+    if (n <= 0 || d <= 0 || h <= 0 || l <= 0) {
+        throw std::invalid_argument("Attention dimensions must be positive.");
+    }
+
+    std::string ina = inAtt + "EV";         EV = mat(ina, n, d);
+    ina = inAtt + "KdotQ";      KdotQ = mat(ina, n, n);
+    if (trainMode == 1) {
+        ina = inAtt + "K";      K = mat(ina, n, h);
+        ina = inAtt + "Q";      Q = mat(ina, n, h);
+        ina = inAtt + "MQ";     MQ = mat(ina, h, d);
+        ina = inAtt + "MK";     MK = mat(ina, h, d);
+        ina = inAtt + "MV";     MV = mat(ina, d, h);
+        ina = inAtt + "MH";     MH = mat(ina, d, h);
+        params = hor.params + ver.params + (4*static_cast<size_t>(h)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
+    }
+    else {
+        ina = inAtt + "qk";     qkCache = mat(ina, d, d);
+        ina = inAtt + "kh";     khCache = mat(ina, d, d);
+        ina = inAtt + "qv";     qvCache = mat(ina, d, d);
+        params = hor.params + ver.params + (3*static_cast<size_t>(d)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d);
+    }
+    // std::cout << "ATTENTION with filename " << inAtt << " constructed." << std::endl;
+}
+
 #else // USE_OPENCL is defined
 
 #include <CL/cl.hpp>

@@ -89,10 +89,10 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
         cl::NDRange local_rprop = cl::NullRange; // Let runtime choose
 
         cl_int cl_size = static_cast<cl_int>(in * in);
-        cl_float cl_etaPlus = static_cast<cl_float>(etaPlus);
-        cl_float cl_etaMinus = static_cast<cl_float>(etaMinus);
-        cl_float cl_deltaMax = static_cast<cl_float>(deltaMax);
-        cl_float cl_deltaMin = static_cast<cl_float>(deltaMin);
+        float cl_etaPlus = static_cast<float>(etaPlus);
+        float cl_etaMinus = static_cast<float>(etaMinus);
+        float cl_deltaMax = static_cast<float>(deltaMax);
+        float cl_deltaMin = static_cast<float>(deltaMin);
 
         // --- Epoch Loop ---
         for (int epoch = 0; epoch < epochs; ++epoch) {

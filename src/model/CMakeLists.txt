@@ -1,10 +1,9 @@
-
 # src/model/CMakeLists.txt
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(model C CXX)
-
+# all .hpp and .h files
 include_directories(include)
-
+# all source files
 add_library(model STATIC
     # tokenization and corpus handling
     src/tokens/tokeniser.cpp
@@ -32,7 +31,6 @@ add_library(model STATIC
 
     # training, testing, inference
     src/training/train.cpp
-    src/training/trainbatch.cpp
     src/testing/testpr.cpp
     src/testing/testsent.cpp
     src/inference/chat.cpp

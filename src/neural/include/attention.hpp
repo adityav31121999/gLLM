@@ -6,7 +6,7 @@
  * Attention Mechanism for SHADY ATTENTION ARCHITECTURE
  * ---------------------------------------------------------------------
  * K[i] = T[i] * MK, Q[i] = T[i] * MQ, M = MQ x MK'
- * KdotQ[i][j] = (T[i] x MK) x (T[i] x MQ)' = K[i] x Q'[j] 
+ * KdotQ[i][j] = (blocks[i] x MK) x (blocks[i] x MQ)' = K[i] x Q'[j] 
  *             = T[i] x MQ x MK' x T'[j]  = T[i] x M x T'[j]
  * head = LOTA(KdotQ) OR LOTA(ReLU(KdotQ)) OR Softmax(KdotQ)
  * dh = sum(head[i][j] * Ki.MH), dv = sum(head[i][j] * Qi.MV)
@@ -19,6 +19,9 @@
  */
 
 #include <vector>
+#include <cmath>
+#include <stdexcept>
+#include <numeric>
 #include <maths.hpp>
 #include "mlp.hpp"
 
@@ -108,8 +111,10 @@ public:
     // backward propagation
     void backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning);
+    void backward1stHeadContext(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void backward(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
     void backward(std::vector<std::vector<float>>& expectedV, int& layers, int blocknumber, float& learning);
+    void backwardContext(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning);
 
 #endif
 
@@ -151,8 +156,7 @@ inline attention::attention(const attention& other) :
     h(other.h),
     v(other.v),
     params(other.params)
-{
-}
+{}
 
 inline attention& attention::operator=(const attention& other) {
     if (this == &other) {
@@ -209,9 +213,9 @@ inline attention& attention::operator=(const attention& other) {
                 int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
     __global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, const float* d_querys, int num_queries_eff,
                 int num_keys_eff, int kdotq_width, int embedding_dim, float inv_scaling);
-    __global__ void computeHeadSumsMaskedKernel(const float* d_head, float* d_row_sums, float* d_col_sums, 
+    __global__ void kernelComputeHeadSumsMasked(const float* d_head, float* d_row_sums, float* d_col_sums, 
         int num_tokens, bool isSelfAttention);
-    __global__ void accumulateWeightedVectorsKernel(const float* d_row_sums, const float* d_col_sums,
+    __global__ void kernelAccumulateWeightedVectors(const float* d_row_sums, const float* d_col_sums,
         const float* d_K, const float* d_Q, float* d_dh_accum, float* d_dv_accum, int num_tokens, int h_dim);
     __global__ void accumulateEVRowsKernel(const float* d_EV, float* d_output, int num_rows, int col_size);
     __global__ void updateEVRowsKernel(float* d_EV_rows, const float* d_vector_to_add, int num_rows_to_update, int num_cols);
@@ -265,14 +269,14 @@ inline attention& attention::operator=(const attention& other) {
     __global__ void kernelUpdateWeights_1stHead_HV(float* mh_a, float* mv_a, float* mq_a, float* mk_a, const float* grad_mh, 
         const float* grad_mv, const float* grad_mq, const float* grad_mk, float learning_rate, int mat_heights, int embedding_dim);
     // inference 
-    __global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M, 
+    __global__ void kernelKdotQ_Block1_Selfi(float* d_kdotq, const float* d_tokenEmbed, const float* d_M, 
                 int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);            
-    __global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
+    __global__ void kernelKdotQ_Block1_Crossi(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
                 int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling);
-    __global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
+    __global__ void kernelKdotQ_BlockN_Selfi(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
                 const float* d_M, int sequence1_start_index_in_block, int sequence1_len, int context_len_in_block, int kdotq_width, 
                 int embedding_dim, float inv_scaling);
-    __global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
+    __global__ void kernelKdotQ_BlockN_Crossi(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp, 
                 const float* d_M, int sequence1_start_index_in_block, int sequence1_len, int context_len_in_block, int kdotq_width, 
                 int embedding_dim, float inv_scaling);
     __global__ void kernelComputeGradDhDv_1stHead(const float* d_hor_gweights0, const float* d_ver_gweights0,
@@ -281,5 +285,4 @@ inline attention& attention::operator=(const attention& other) {
     __global__ void kernelUpdateEVBroadcasted(float* d_EV, const float* d_grad_EV_scaled, float learning_rate, 
                 int context_win, int embedding_dim);
 #endif
-
 #endif

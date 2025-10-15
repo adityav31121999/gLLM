@@ -35,21 +35,6 @@ void block::partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, 
 
 
 /**
- * @brief backward propagation for first block
- * @param expectedV expected vertical retention vectors for each head of vertical vectors
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k column number
- */
-void block::partialbackward1stBlock(std::vector<std::vector<std::vector<float>>>& expectedV, int& in, int& layers, int k, float& learning) {
-    for(int i = 0; i < x; i ++) {
-        // for all columns of block
-        b[i][k].backward1stHead(expectedV[i], in, layers, learning);
-    }
-}
-
-
-/**
  * @brief backward propagation for last column of kth block
  * @param expectedH expected token vector
  * @param in dimension of embedding = EMBEDDING and input-output vector of mlp
@@ -78,20 +63,8 @@ void block::partialbackward(std::vector<std::vector<float>>& expectedH, int& in,
     }
 }
 
-
-/**
- * @brief backward propagation for kth layer of ith block
- * @param expectedV expected vertical retention vectors for each head of vertical vectors
- * @param in dimension of embedding = EMBEDDING
- * @param layers layers of MLP
- * @param k column number
- * @param i current block index 1-based
- */
-void block::partialbackward(std::vector<std::vector<std::vector<float>>>& expectedV, int& layers, int k, int i, float& learning) {
-    for(int i = 0; i < x; i ++) {
-        // for all columns of block
-        b[i][k].backward(expectedV[i], layers, i, learning);
-    }
+void block::rpartialbackward1stBlock(std::vector<std::vector<float>> &expectedH, int &in, int &layers, int layno, float &learning)
+{
 }
 
 #endif

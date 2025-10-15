@@ -30,7 +30,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
     learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), 
     trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), tokenEmbed(n * m, d),
-    deEmbeddings(vocab_param, d_param*x_param), contextTrain(contextTrain_param)
+    positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param), contextTrain(contextTrain_param)
 {
     if(inTraining) {
        blocks.reserve(m); // Reserve space
@@ -47,7 +47,9 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         currentTokenCount = 0;
@@ -72,7 +74,9 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
@@ -119,7 +123,7 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
     learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), 
     trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), tokenEmbed(n * m, d),
-    deEmbeddings(vocab_param, d_param*x_param), contextTrain(contextTrain_param)
+    positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param), contextTrain(contextTrain_param)
 {
     if(inTraining) {
        blocks.reserve(m); // Reserve space
@@ -136,7 +140,9 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         currentTokenCount = 0;
@@ -161,7 +167,9 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
@@ -206,12 +214,13 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
 transformer::transformer(OpenCLContext& context_param, int m_param, int x_param, int y_param, 
     int n_param, int d_param, int h_param, int l_param, unsigned int vocab_param, float learning_rate_param, 
     float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
-    bool& contextTrain_param, const std::string& modelDir_param) : clcontext(context_param), 
-    m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param), 
+    bool& contextTrain_param, const std::string& modelDir_param) : clcontext(context_param),
+    m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param),
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
-    learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), 
-    error(0.0f), trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), 
-    deEmbeddings(vocab_param, d_param*x_param), tokenEmbed(m_param * n_param, d_param), contextTrain(contextTrain_param)
+    learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS),
+    error(0.0f), trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param),
+    tokenEmbed(m_param * n_param, d_param), positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param),
+    contextTrain(contextTrain_param)
 {
     if(inTraining) {
         std::cout << "TRANSFORMER: About to initialize block vector t (training, size " << m << ")..." << std::endl << std::flush;
@@ -229,7 +238,9 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         currentTokenCount = 0;
@@ -257,7 +268,9 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         tokForBlock = mat(n_param, d_param);
@@ -300,7 +313,8 @@ transformer::transformer(OpenCLContext& context_param, const std::string& modelN
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
     learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), 
     error(0.0f), trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), 
-    deEmbeddings(vocab_param, d_param*x_param), tokenEmbed(m_param * n_param, d_param), contextTrain(contextTrain_param)
+    tokenEmbed(m_param * n_param, d_param), positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param),
+    contextTrain(contextTrain_param)
 {
     if(inTraining) {
         std::cout << "TRANSFORMER: About to initialize block vector t (training, size " << m << ")..." << std::endl << std::flush;
@@ -319,7 +333,9 @@ transformer::transformer(OpenCLContext& context_param, const std::string& modelN
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         currentTokenCount = 0;
@@ -347,7 +363,9 @@ transformer::transformer(OpenCLContext& context_param, const std::string& modelN
         }
         else {
             oneHotEncode.resize(vocabsize, 0.0f);
+            pred.resize(vocabsize, 0.0f);
             otok.resize(x * d, 0.0f);
+            deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         tokForBlock = mat(n_param, d_param);

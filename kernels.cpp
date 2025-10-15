@@ -5,6 +5,7 @@
 #include "gllm.h"
 
 #ifdef USE_OPENCL
+
     // Source files - Paths relative to this header file's location
     std::vector<std::string> kernelSourceFiles = {
         "d:/gLLM/src/maths/src/basic/cl/activations.cl",
@@ -12,6 +13,8 @@
         "d:/gLLM/src/maths/src/mat/cl/operators.cl",
         "d:/gLLM/src/neural/src/mlp/cl/mlp.cl",
         "d:/gLLM/src/neural/src/attention/cl/attention.cl",
+        "d:/gLLM/src/neural/src/attention/cl/kdotq.cl",
+        "d:/gLLM/src/neural/src/attention/cl/weights.cl",
         "d:/gLLM/src/model/src/tokens/token.cl"
     };
 
@@ -22,7 +25,7 @@
         "vectorAddKernel",
         "vectorsAddKernel",
         // operators.cl
-        "matrix_transpose",
+        "kernelTransposeMatrix",
         "matrix_multiply",
         "vector_matrix_multiply",
         "dot_matrix_vector",
@@ -40,8 +43,6 @@
         "clSoftmax2d",
         "clSoftmax1dder",
         "clSoftmax2dder",
-        "clSoftmaxd1dder_from_s",
-        "clSoftmaxd2dder_from_s",
         "clReLU",
         "clReLU1d",
         "clReLU2d",
@@ -65,29 +66,24 @@
         "kernelLastLayerDeltaSigmoid",
         "kernelUpdateWeights",
         "kernelUpdateWeightsAndGradients",
-        "kernelUpdateWeightsL1",
-        "kernelUpdateWeightsL2",
         "kernelUpdateInputMLP",
         "kernelLayerForward",
         "kernelMseReduction",
         "kernelRpropUpdate",
         "kernelUpdateElasticNet",
         // attention.cl
-        "vectorAddKernel_attention",
-        "kernelComputeKorQ",
-        "kernelDotvecmatvec",
-        "kernelComputePrediction",
+        "updateEVRowsKernelCL",
         "kernelElementwiseMultiply",
-        "kernelKdotQforSelf_train",
-        "kernelKdotQforCross_train",
-        "kernelKdotQ_Block1_Self_Inference",
-        "kernelKdotQ_Block1_Cross_Inference",
-        "kernelKdotQ_BlockN_Self_Inference",
-        "kernelKdotQ_BlockN_Cross_Inference",
-        "computeHeadSumsMaskedKernel",
-        "accumulateWeightedVectorsKernel",
+        "kernelComputeHeadSumsMasked",
+        "kernelComputeHeadSumsMaskedev",
+        "kernelAccumulateWeightedVectors",
+        "kernelAccumulateWeightedVectorsev",
+        "kernelComputeGradpred",
+        "KernelComputeGradDeEmbeddings",
+        "kernelGradForAttentionOutput",
         "kernelComputeGradientsEH",
         "kernelComputeGradientsEH_EV",
+        "kernelComputeGradientsEHEVFromMSE",
         "kernelComputeGradientsEV_V",
         "kernelComputeGradDhDv",
         "kernelComputeGradDhDv_1stHead",
@@ -97,27 +93,55 @@
         "kernelComputeGradKdotQ_LOTA",
         "kernelComputeGradK_Q",
         "kernelComputeGradMK_MQ",
-        "kernelUpdateWeights_EH_EV",
-        "kernelComputeGradDv_V",
         "kernelComputePreMV_V",
         "kernelComputeGradMV_V",
         "kernelComputeGradHead_V",
         "kernelComputeGradQ_V",
         "kernelComputeGradMQ_V",
         "kernelComputeGradMKCorrection",
-        "kernelUpdateWeights_EV_V",
         "kernelComputeSimpleLOTAder",
         "kernelRowSum",
         "kernelComputeGradMK_MQ_Simplified",
-        "kernelUpdateWeights_1stHead_H",
-        "kernelUpdateWeights_1stHead_V",
-        "kernelUpdateWeights_1stHead_HV",
-        "kernelUpdateSimple",
-        "accumulateEVRowsKernelCL",
-        "updateEVRowsKernelCL",
+        // kdotq.cl
         "kernelCompute_single_kq_vector",
+        "kernelComputeKQall",
+        "kernelKdotQforSelf_train",
+        "kernelKdotQforCross_train",
+        "kernelKdotQ_Block1_Selfi",
+        "kernelKdotQ_Block1_Crossi",
+        "kernelKdotQ_BlockN_Selfi",
+        "kernelKdotQ_BlockN_Crossi",
+        // weights.cl
+        "kernelUpdateEVrows",
+        "kernelUpdateWeightsHeadHVElastic",
+        "kernelUpdateWeightsHeadElastic",
+        "kernelUpdateWeightsGeneral",
+        "kernelUpdateWeightsGeneral_f4",
+        "kernelUpdateSimple",
+        "kernelUpdateSimple_Elastic",
+        "accumulateEVRowsKernelCL",
+        "kernelComputePrediction",
+        "kernelComputePredictionWithScores",
+        "updateEmbeddings",
         // model
         "generate_embeddings",
         "batchedVectorInverseKernel"
     };
+
 #endif
+
+/*
+                if(current_error < prev_error) {
+                    if(j <= 6)   
+                        learning *= 1.1;
+                    else if (j % 6 == 0)
+                        learning *= (1.05 + (j/6)*0.15);
+                }
+                else {
+                    if(j <= 6)   
+                        learning *= 0.95;
+                    else if (j % 6 == 0)
+                        learning *= (0.95 - (j/6)*0.01);
+                }
+
+*/

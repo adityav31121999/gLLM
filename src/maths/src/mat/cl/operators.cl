@@ -55,7 +55,7 @@ __kernel void matrix_multiply( // C = A * B, using float4 for A and B
 
 
 __kernel void vector_matrix_multiply( // y = A * x, using float4 for A and x
-    __global const float *A_f,
+    __global const float *A_f,      // Input matrix A of size M x N -> 
     __global const float *x_f,
     __global float *y_f,
     const int M,

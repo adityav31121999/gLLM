@@ -107,7 +107,7 @@ void mlp::clBackward(int in, int layers, float learning) {
         cl::NDRange local_2d = cl::NullRange; // Let runtime choose, or tune e.g., cl::NDRange(16, 16)
 
         cl_int cl_in = static_cast<cl_int>(in);
-        cl_float cl_learning = static_cast<cl_float>(learning);
+        float cl_learning = static_cast<float>(learning);
 
         // --- Data Transfer: Host -> Device (using shared queue) ---
         // NOTE: Assuming 'output' holds the *activated* output for kernelOutputDeltaSigmoid.

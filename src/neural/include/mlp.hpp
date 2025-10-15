@@ -10,11 +10,11 @@
 #include <map>
 
 #define LAYERS_MLP 4                        // layers of mlp
-#define EPOCHS 25                           // number of epochs for training of token
-#define LEARNING_MAX 1.0f                   // maximum learning rate allowable
-#define LEARNING_MIN 0.0001f                // minimum learning rate allowable
+#define EPOCHS 30                           // number of epochs for training of token
+#define LEARNING_MAX 0.01f                  // maximum learning rate allowable
+#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
 #define LR_PATIENCE 10                      // for learning rate adaptability by plateau
-#define MAX_GRAD_CLIP 0.01f                 // maximum gradient clipping
+#define MAX_GRAD_CLIP 1.0f                  // maximum gradient clipping
 
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
@@ -52,7 +52,7 @@ public:
     mlp() = default;
     // Constructor when OpenCL is disabled
     mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp(std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp(const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator

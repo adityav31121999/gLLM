@@ -5,8 +5,11 @@
 #include <algorithm>
 
 #ifndef M_PI
-    #define M_PI 3.14159
+// Define M_PI
+    #define M_PI 3.141592653
 #endif
+
+#define WARMUP_EPOCHS 5
 
 /**
  * @brief set all the dimension for transformer
@@ -19,39 +22,21 @@
  * @param l layers of mlp
  */
 void transformer::setDims(int m, int x, int y, int n, int d, int h, int l) {
-    m = m;
-    x = x;
-    y = y;
-    n = n;
-    d = d;
-    h = h;
-    l = l;
+    this->m = m;        // number of blocks
+    this->x = x;        // number of layers in block
+    this->y = y;        // number of heads in each layer
+    this->n = n;        // number of tokens for each head
+    this->d = d;        // dimension of each token
+    this->h = h;        // height of MQ, MK and columns of MV, MH
+    this->l = l;        // layers of mlp
 }
+
 
 /**
- * @brief set learning rate for MLPs
- * @param learning learning rate
+ * @brief Clear values in transformer to avoid data leakage between training iterations.
+ * This function resets string vectors, float vectors, and mat objects to their initial
+ * 0 states.
  */
-void transformer::setLearning(float learning) {
-    learning = learning;
-}
-
-/**
- * @brief set training cycle for training
- * @param epochs training cycle
- */
-void transformer::setEpochs(int epochs) {
-    epochs = epochs;
-}
-
-/**
- * @brief set attention type for transformer
- * @param attentionType type of attention (1 for self and 0 for cross) 
- */
-void transformer::setAttention(bool attentionType) {
-    isSelf = attentionType;
-}
-
 void transformer::clearValues() {
     // Clear string vectors
     tokens.clear();
@@ -77,26 +62,6 @@ void transformer::clearValues() {
         }
     }
     std::cout << "<====Transformer values cleared====>" << std::endl;
-}
-
-
-/**
- * @brief experimental: Smoothly adjusts the learning rate based on error changes.
- * @param current_error Current epoch's error for token prediction.
- * @param prev_error Previous epoch's error for token prediction.
- * @param current_lr The current learning rate.
- * @param initial_lr The initial learning rate at the start of training.
- * @param epochs The number of epochs completed so far.
- * @return The adjusted learning rate, smoothed based on error trends.
- */
-float transformer::smoothLearningRate(float current_error, float prev_error, float current_lr, float initial_lr, int epochs)
-{
-    // get difference in error
-    float errordif = current_error - prev_error;
-    // check percentage change in error
-    float del_lr = (current_lr - initial_lr)/initial_lr;
-    // 
-    return 0.0f;
 }
 
 
@@ -144,21 +109,6 @@ float transformer::adaptiveLearningRateOnPlateau(float current_error, float prev
 }
 
 
-float transformer::adaptiveLearningRate(float current_error, float prev_error, int epochs, float current_lr, float min_lr, float max_lr) {
-    float del = current_error - prev_error;
-    if (del > 0.1) { // Significant loss increase
-        return std::max<float>(current_lr * 0.95f, min_lr);     // Smoother reduction
-    } else if (std::fabs(del) < 0.02 && epochs > 5) { // Slow progress
-        return std::min<float>(current_lr * 1.025f, max_lr);    // Moderate increase
-    } else if (del < -0.02 && epochs > 5) { // Steady decrease
-        return std::min<float>(current_lr * 1.05f, max_lr);     // Gradual increase
-    } else if (std::fabs(del) < 0.05 && epochs > 10) { // Stagnation
-        return std::min<float>(current_lr * 1.075f, max_lr);    // Nudge upward
-    }
-    return std::max<float>(current_lr, 0.00005f); // Prevent overly small rates
-}
-
-
 /**
  * @brief Sets the learning rate of a parameter group using a cosine annealing schedule.
  * @param current_epoch The current epoch number (0-indexed).
@@ -172,159 +122,70 @@ float transformer::cosineAnnealingLR(int current_epoch, int total_epochs, float 
         return max_lr;
     }
     // The `(total_epochs - 1)` ensures the cosine reaches its minimum at the last epoch.
-    return min_lr + (0.5f * (max_lr - min_lr) * (1.0f + std::cos(static_cast<float>(current_epoch % total_epochs) / (total_epochs - 1) * M_PI)));
+    // return min_lr + (0.5f * (max_lr - min_lr) * (1.0f + std::cos(0.55f * static_cast<float>(current_epoch) / (total_epochs + 1))));
+    return min_lr + (0.5f * (max_lr - min_lr) * (1.0f + std::cos(1.57f * current_epoch / static_cast<float>(total_epochs))));
 }
 
 
 /**
- * @brief Calculates the value of a periodic function similar to sin(x).
- *      This function models f(x) = -((v - u) / 2) * sin(x) + (v + u) / 2.
- *      It is designed to have a minimum value 'u' at x = PI/2 and a maximum
- *      value 'v' at x = 3*PI/2. The value at x = 0 will be the midline (u+v)/2.
- *      For learning rate over the epochs.
- * @param x The input value (angle in radians).
- * @param u The desired minimum value of the function.
- * @param v The desired maximum value of the function.
- * @param val The desired value of the function at 0 radians.
- * @return The calculated value of the function at x.
- */
-float transformer::periodicLearning(float x, float u, float v, float val) {
-    // --- Input Validation ---
-    // The value 'k' must be between the minimum (u) and maximum (v).
-    // We add a small epsilon for floating-point comparison.
-    if (val < u - 1e-6f || val > v + 1e-6f) {
-        std::cerr << "Error: The value 'k' (" << val
-                  << ") must be between u (" << u
-                  << ") and v (" << v << ")." << std::endl;
-        return std::numeric_limits<float>::quiet_NaN(); // Return Not-a-Number
-    }
-
-    // Amplitude of the function
-    float amplitude = (v - u) / 2.0f;
-
-    // Vertical shift (midline) of the function
-    float midline = (u + v) / 2.0f;
-
-    // Calculate the argument for arcsin to find the phase shift.
-    // This is equivalent to (k - midline) / amplitude
-    float arcsin_arg = (2.0f * val - u - v) / (v - u);
-
-    // Clamp the argument to [-1, 1] to prevent domain errors from float inaccuracy
-    if (arcsin_arg > 1.0f) arcsin_arg = 1.0f;
-    if (arcsin_arg < -1.0f) arcsin_arg = -1.0f;
-
-    // Calculate the phase shift 'C' needed to make f(0) = k
-    float phase_shift_C = std::asin(arcsin_arg);
-
-    // The final function uses this shift 'C'
-    return -amplitude * std::sin(x - phase_shift_C) + midline;
-}
-
-
-/**
- * @brief Softsign-based adaptive learning rate function. (Modified for more responsive behavior)
- * @details Computes an adaptive learning rate based on the error difference (current - previous).
- * Uses a softsign function to smoothly adjust the learning rate. This version is tuned to be
- * more aggressive in its adaptations based on performance.
- * @param errordif Difference in current and previous error (positive if error increased).
- * @param currentLearning Current epoch's learning rate.
- * @return New adapted learning rate, bounded by LEARNING_MIN and LEARNING_MAX.
- */
-float transformer::softsignLearning(float errordif, float currentLearning) {
-    // for extremes
-    if(currentLearning < LEARNING_MIN) return LEARNING_MIN*10.0f;
-    if(currentLearning > LEARNING_MAX) return LEARNING_MAX*0.9f;
-
-    // MODIFIED: Increased scale for sensitivity, reduced momentum for responsiveness.
-    const float scale = 50.0f;
-    const float momentum = 0.70f;
-    const float tolerance = 1e-5f;
-    // MODIFIED: Increased adjustment factors for more aggressive changes.
-    const float reduction_factor = 0.85f; // Penalize error increases more heavily
-    const float increase_factor = 1.15f;  // Reward error decreases more strongly
-
-    // Compute softsign scaling factor
-    float del = scale * (std::abs(errordif) < tolerance ? 0.0f : errordif);
-    float f = del / (1.0f + std::abs(del)); // Maps to (-1, 1)
-
-    // Adjust learning rate: reduce for f > 0 (error increase), increase for f < 0 (error decrease)
-    float adjustment = (f > 0.0f) ? reduction_factor * f : increase_factor * f;
-    float newLr = currentLearning * (1.0f - adjustment);
-
-    // Apply momentum to smooth updates
-    static float prevLr = currentLearning;
-    newLr = (momentum * prevLr) + ((1.0f - momentum) * newLr);
-
-    // Clamp to [LEARNING_MIN, LEARNING_MAX]
-    newLr = std::min<float>(LEARNING_MAX, std::max<float>(LEARNING_MIN, newLr));
-    prevLr = newLr; // Update static previous learning rate for the next call
-    
-    return newLr;
-}
-
-/**
- * @brief Softsign-based adaptive learning rate function. (Modified for stability and recovery)
- * @details Computes an adaptive learning rate based on the error difference. This version includes
- * a hard reset mechanism to handle catastrophic divergence (inf/NaN loss) and uses more
- * conservative parameters to prevent the learning rate from growing too aggressively.
- * @param currentError The current epoch's error/loss value.
+ * @brief Softsign-based adaptive learning rate function
+ * @param error_del current and previous epochs error difference.
  * @param currentLearning Current epoch's learning rate.
  * @param initialLearning The initial learning rate specified at the start of training.
  * @return New adapted learning rate, bounded by LEARNING_MIN and LEARNING_MAX.
  */
-float transformer::softsignLearning(float currentError, float currentLearning, float initialLearning) {
-    // Static variables to hold state between calls
-    static float prevError = -1.0f;
-    static float prevLr = currentLearning;
+float transformer::softsignLearning(float error_del, float currentLearning) {
+if(currentLearning <= LEARNING_MIN) return 1.50f * LEARNING_MIN;
+    if(currentLearning >= LEARNING_MAX) return 0.90f * LEARNING_MAX;
+    if(error_del == 0) return currentLearning;
+    // --- Softsign Adjustment ---
+    float new_learning = 0.0f;
+    new_learning = currentLearning * (1 - (softsign(error_del) * ((error_del > 0.001) ? ((error_del > 0.25 ) ? 0.25 : 1) : 1000)));
+    return std::min<float>(LEARNING_MAX, std::max<float>(new_learning, LEARNING_MIN));
+}
 
-    // --- Emergency Reset for Catastrophic Divergence ---
-    // If loss is infinity or NaN, the model has exploded. Reset LR to a safe value.
-    if (std::isinf(currentError) || std::isnan(currentError)) {
-        prevError = -1.0f; // Reset error history to re-initialize on next valid run
-        prevLr = initialLearning;
-        return initialLearning; // Return a safe, initial learning rate to recover
+
+/**
+ * @brief Calculates an adaptive learning rate based on the prediction error.
+ * This function takes the difference between the predicted and expected embeddings,
+ * smooths this error signal, and clamps it within a safe range to prevent
+ * training instability. A higher error will gently push the learning rate up,
+ * while a lower error will bring it down.
+ * @param pred A std::vector<float> representing token prediction.
+ * @param exp A std::vector<float> representing expected output.
+ * @param del The change in error from the previous step.
+ * @param currentLearning current epochs learning rate.
+ * @return A new, adjusted learning rate as a float.
+ */
+float transformer::errorGradLearning(const std::vector<float>& pred, const std::vector<float>& exp, const float del, float currentLearning) 
+{
+    // 1. --- Input Validation ---
+    if (pred.size() != exp.size() || pred.empty()) {
+        throw std::invalid_argument("Prediction and expectation vectors must be non-empty and of the same size.");
     }
 
-    // Initialize prevError on the first valid run after a reset or at the beginning
-    if (prevError < 0.0f) {
-        prevError = currentError;
-        prevLr = currentLearning;
-        return currentLearning;
+    if(currentLearning <= LEARNING_MIN) return 1.10f * LEARNING_MIN;
+    if(currentLearning >= LEARNING_MAX) return 0.90f * LEARNING_MAX;
+
+    // --- Hyperparameter ---
+    const float smoothing_factor = 10.0f;
+
+    // 2. --- Calculate rms gradient + epsilon ---
+    float squared_err_sum = 0.0f;
+    for (size_t i = 0; i < pred.size(); ++i) {
+        squared_err_sum += std::pow(pred[i] - exp[i], 2.0f);
     }
-    
-    // Boundary checks for safety
-    if(currentLearning < LEARNING_MIN) return LEARNING_MIN * 1.1f;
-    if(currentLearning > LEARNING_MAX) return LEARNING_MAX * 0.9f;
+    // float d = std::sqrt(squared_err_sum / pred.size()) + 1E-10f;
+    float d = std::sqrt(squared_err_sum / pred.size()) + 1E-10f;
 
-    // MODIFIED: More conservative parameters to prevent rapid LR growth
-    const float scale = 40.0f;          // A balanced scale
-    const float momentum = 0.75f;         // Increased momentum for smoother, less jerky changes
-    const float tolerance = 1e-6f;
-    const float reduction_factor = 0.9f;  // Keep reduction strong to punish failure
-    const float increase_factor = 0.5f;   // SIGNIFICANTLY reduce the increase factor to prevent over-excitement
+    // 3. --- Smooth the Learning Rate Update ---
+    float r = ((del < 0) ? 1.20f : -1.0f) / (smoothing_factor * d); // direction of error change
+    float new_learning_rate = currentLearning * (1.0f + r);
+    // std::cout << "Error change (del): " << del << ", Gradient magnitude (d): " << d 
+    //           << ", Adjustment factor (r): " << r << ", New learning rate (pre-clamp): " << new_learning_rate << std::endl;
 
-    // Compute error difference
-    float errordif = currentError - prevError;
-
-    // Compute softsign scaling factor
-    float del = scale * (std::abs(errordif) < tolerance ? 0.0f : errordif);
-    float f = del / (1.0f + std::abs(del)); // Maps to (-1, 1)
-
-    // Adjust learning rate: reduce for f > 0 (error increase), increase for f < 0 (error decrease)
-    float adjustment = (f > 0.0f) ? reduction_factor * f : increase_factor * f;
-    float newLr = currentLearning * (1.0f - adjustment);
-
-    // Apply momentum to smooth updates
-    newLr = (momentum * prevLr) + ((1.0f - momentum) * newLr);
-
-    // Clamp to [LEARNING_MIN, LEARNING_MAX]
-    newLr = std::min<float>(LEARNING_MAX, std::max<float>(LEARNING_MIN, newLr));
-    
-    // Update state for the next call
-    prevError = currentError;
-    prevLr = newLr;
-    
-    return newLr;
+    // 4. --- Clamp the Result (Safety Rails) ---
+    return std::min<float>(LEARNING_MAX, std::max<float>(new_learning_rate, LEARNING_MIN));
 }
 
 

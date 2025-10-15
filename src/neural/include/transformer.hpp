@@ -75,6 +75,8 @@ public:
     mat embeddings;                     // all trained embeddings (Mapped, vocabsize x d)
     mat deEmbeddings;                   // deEmbeddings obtained while training
     mat tokenEmbed;                     // token embedding (sequence1 + sequence2) (Mapped, currentTokenCount x d)
+    mat positional;                     // positional encodings (Mapped, currentTokenCount x d)
+    mat embedPlusPos;                   // token embeddings + positional encodings (Mapped, currentTokenCount x d)
     FILE* seqChat;              // sequence1 and sequence2 text file
     // when model is in inference, hold EV of ith block here
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse; // Keeping as vector due to complexity
@@ -105,28 +107,28 @@ public:
     void cuForward(int& blockCount, int& currentTokenCount, int& sequence1Count);
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
     void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void cuBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
     void cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken, std::vector<float> one_hot_host,
                             int indexForToken, float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+    void cuBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void cuTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void cuBufferTrain(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
-    void cuBufferTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void cuBufferTrainContext(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
-    void cuBufferTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void cuTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void cuBufferTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void cuRun();
+    void cuRunContext();
     void cuBufferRun();
+    void cuBufferRunContext();
 
 #elif USE_OPENCL
 
 // opencl implementation
     void clParallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
+    void clKdotQ4Train(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
+    void clKdotQ4Infer(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void clForward(int& blockCount, int& currentTokenCount, int& sequence1Count);
+    void clForward_ev(int& blockCount, int& currentTokenCount, int& sequence1Count);
     void clBackward(std::vector<float>& expectedH, int& blockCount);
     void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
@@ -137,12 +139,7 @@ public:
     void clTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void clBufferTrain(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
-    void clBufferTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void clBufferTrainContext(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
-    void clBufferTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void clBufferTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clRun();
     void clRunContext();
     void clBufferRun();
@@ -154,13 +151,17 @@ public:
     void parallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void computeKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& sequence1Count);
-    void backward(std::vector<float>& expectedH);
     void backward(std::vector<float>& expectedH, int& blockCount);
-    void backward(std::vector<std::vector<float>>& expectedH);
     void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void backwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void train(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void trainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void trainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void trainOnThreads(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
     void trainOnThreads(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void trainOnThreadsContext(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
+    void trainOnThreadsContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void test(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void testOnThreads(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void run();
@@ -168,27 +169,23 @@ public:
 
 #endif
 
-    float periodicLearning(float x, float u, float v, float value_at_0);
-    float cosineAnnealingLR(int current_epoch, int total_epochs, float max_lr, float min_lr);
-    float adaptiveLearningRateOnPlateau(float current_error, float previous_error, float& learning_rate, 
-                                        float factor, float max_lr, float min_lr, float epsilon, int patience);
-    float adaptiveLearningRate(float current_error, float prev_error, int epochs, float current_lr, float min_lr = 1e-5, float max_lr = 0.1);
-    float softsignLearning(float errordif, float currentLearning);
-    float softsignLearning(float errordif, float currentLearning, float initialLearning);
-    float smoothLearningRate(float current_error, float prev_error, float current_lr, float initial_lr, int epochs);
     void setDims(int m, int x, int y, int n, int d, int h, int l);
-    void setLearning(float learning);
-    void setEpochs(int epochs);
     void getIndexOfAllTokens(std::vector<std::string>& tokensOfLine, std::vector<int>& indexVec);
-    void setAttention(bool attentionType);
     void getAllValues(int blockCount, std::string path2folderOfAllBins, bool& inTraining);
     void getcache(int blockCount, int i, int j, mat& q, std::string path2file);
     void getmat(int blockCount, int i, int j, mat& q, std::string path2file, int& row, int& column);
     void getmlp(int blockCount, int i, int j, std::vector<mat>& weights, std::string path2file);
     void getEmbedding(std::string& word, std::vector<float>& embed);
-    std::vector<float> positionalEmbeddings(int position, int embeddingDimension);
     void makeCommon(std::string& path2folderOfAllBins);
     void clearValues();
+
+    float cosineAnnealingLR(int current_epoch, int total_epochs, float max_lr, float min_lr);
+    float adaptiveLearningRateOnPlateau(float current_error, float previous_error, float& learning_rate, 
+                                        float factor, float max_lr, float min_lr, float epsilon, int patience);
+    float softsignLearning(float errordif, float currentLearning);
+    float errorGradLearning(const std::vector<float>& pred, const std::vector<float>& exp, const float del, float currentLearning);
+
+    std::vector<float> positionalEmbeddings(int position, int embeddingDimension);
 
     ~transformer() = default;
 };
@@ -199,9 +196,9 @@ std::string toLower(const std::string& str);
 
 void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, unsigned long long& voc, int& index);
 void computeOutput(const std::vector<float>& output, mat& embeddings, unsigned long long& voc, int& index);
-void computeKorQ(std::vector<float>& tokenEmmbed, mat& m, std::vector<float>& KorQ);
+void computeKorQ(const std::vector<float>& tokenEmbed, const mat& m, std::vector<float>& KorQ);
+void computeDot(const std::vector<float>& Ti, const mat& M, const std::vector<float>& Tj, float& dot);
 void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
-void computeDot(std::vector<float>& Ti, mat& M, std::vector<float>& Tj, float& dot);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
     int& currentTokenCount, int& sequence1Count, int& blockCount, bool& attentionType);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount,

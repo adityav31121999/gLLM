@@ -164,9 +164,7 @@ std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename)
         std::cerr << "readCsvTo2DVector: Warning: No data found in file " << filename << std::endl;
     }
     else {
-        std::cout << "readCsvTo2DVector: Successfully read " << csvData.size() 
-        << " rows from file " << filename 
-        << ".\nUsed " << num_threads << " threads." << std::endl;
+        std::cout << "readCsvTo2DVector: Used " << num_threads << " to read " << filename << " successfully."<< std::endl;
     }
 
     return csvData;
@@ -403,7 +401,7 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
     std::vector<std::string> loaded_tokens = readSpecificColumnFromCsv(token_stats_file, 0);
     vocab_tokens = loaded_tokens; // Store the lexicographically sorted tokens for lookups.
     embeddings = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
-    deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
+    if(contextTok == 1) deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
 
     if (loaded_tokens.size() != embeddings.size()) {
         std::cerr << "Warning: Mismatch between number of tokens (" << loaded_tokens.size() 
@@ -437,11 +435,12 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
                 return a < b; // If lengths are equal, sort lexicographically
             }
             return a.length() > b.length(); // Longer strings first
-        });
+        }
+    );
 
     std::cout << "readFromFiles: Tokenizer initialized successfully:" << std::endl;
     std::cout << "  - Tokens loaded: " << tokens.size() << std::endl;
     std::cout << "  - Vocabulary size: " << vocSize << std::endl;
     std::cout << "  - embedding dimension: " << embeddings.size() << " x " << (embeddings.empty() ? 0 : embeddings[0].size()) << std::endl;
-    std::cout << "  - deEmbedding dimension: " << deEmbeddings.size() << " x " << (deEmbeddings.empty() ? 0 : deEmbeddings[0].size()) << std::endl;
+    if (contextTok == 1) std::cout << "  - deEmbedding dimension: " << deEmbeddings.size() << " x " << (deEmbeddings.empty() ? 0 : deEmbeddings[0].size()) << std::endl;
 }

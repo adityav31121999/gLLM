@@ -18,7 +18,7 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
     if (tokenCount <= 0 || tokenCount > KdotQ.row || tokenCount > KdotQ.col) {
         return;
     }
-    if (EH.size() != EMBEDDING || dh.size() != EMBEDDING || dv.size() != EMBEDDING) {
+    if (EH.size() != EMBEDDING || h.size() != EMBEDDING || v.size() != EMBEDDING) {
         return;
     }
 
@@ -26,8 +26,8 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
     float k_sum, l_sum;
     mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
 
-    dh.assign(EMBEDDING, 0.0f);
-    dv.assign(EMBEDDING, 0.0f);
+    h.assign(EMBEDDING, 0.0f);
+    v.assign(EMBEDDING, 0.0f);
 
     for(int i = 0; i < tokenCount; ++i) {
         k_sum = 0.0f;   // row sum
@@ -42,18 +42,18 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
         }
         // Ensure K and Q have enough rows before accessing
         if (i < K.row && i < Q.row) {
-            dh = dh + (k_sum * getRow(K, i)); // Vector addition and scalar multiplication
-            dv = dv + (l_sum * getRow(Q, i)); // Vector addition and scalar multiplication
+            h = h + (k_sum * getRow(K, i)); // Vector addition and scalar multiplication
+            v = v + (l_sum * getRow(Q, i)); // Vector addition and scalar multiplication
         }
     }
  
-    dh = dot(dh, MH);
-    dv = dot(dv, MV);
-    hor.input = EH + dh;
+    h = dot(h, MH);
+    v = dot(v, MV);
+    hor.input = EH + h;
     for(int i = 0; i < tokenCount; ++i) {
         ver.input += getRow(EV, i);
     }
-    ver.input += dv;
+    ver.input += v;
 
     hor.forward(in, layers);
     ver.forward(in, layers);
@@ -90,15 +90,15 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
     if (currentBlockTokenCount <= 0 || KdotQ.row == 0 || KdotQ.col == 0 || currentBlockTokenCount > KdotQ.row || currentBlockTokenCount > KdotQ.col) {
         return;
     }
-    if (EH.size() != EMBEDDING || dh.size() != EMBEDDING || dv.size() != EMBEDDING) {
+    if (EH.size() != EMBEDDING || h.size() != EMBEDDING || v.size() != EMBEDDING) {
         return;
     }
 
     // probability distribution
     float k_sum, l_sum;
     mat head = LOTA(KdotQ, currentBlockTokenCount, isSelfAttention);
-    dh.assign(EMBEDDING, 0.0f);
-    dv.assign(EMBEDDING, 0.0f);
+    h.assign(EMBEDDING, 0.0f);
+    v.assign(EMBEDDING, 0.0f);
     // K, Q, KdotQ are for currentBlockTokenCount
     for(int i = 0; i < currentBlockTokenCount; ++i) {
         k_sum = 0.0f;   // row sum
@@ -115,15 +115,15 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
         // If K and Q are full context, an offset is needed.
         // Assuming K and Q members are already correctly populated for this block's 'currentBlockTokenCount'
         if (i < K.row && i < Q.row) { // K.row and Q.row should match currentBlockTokenCount
-            dh = dh + (k_sum * getRow(K, i)); // Vector addition and scalar multiplication
-            dv = dv + (l_sum * getRow(Q, i)); // Vector addition and scalar multiplication
+            h = h + (k_sum * getRow(K, i)); // Vector addition and scalar multiplication
+            v = v + (l_sum * getRow(Q, i)); // Vector addition and scalar multiplication
         }
     }
 
-    dh = dot(dh, MH);
-    dv = dot(dv, MV);
+    h = dot(h, MH);
+    v = dot(v, MV);
 
-    hor.input = EH + dh;
+    hor.input = EH + h;
 
     // Use EVp from the previous block for ver.input
     ver.input.assign(EMBEDDING, 0.0f); // Clear previous ver.input
@@ -135,10 +135,10 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
         }
     } else if (tokenCount > 0 && EVp.row != tokenCount) { // If EVp is not valid but we expected tokens
         // Potentially log a warning or handle as an error if EVp is expected to be valid
-        // For now, ver.input will just be dv if EVp is not usable.
+        // For now, ver.input will just be v if EVp is not usable.
          throw std::runtime_error("EVp dimension mismatch in attention::forprop. Expected rows: " + std::to_string(tokenCount) + ", got: " + std::to_string(EVp.row));
     }
-    ver.input += dv;
+    ver.input += v;
 
     hor.forward(in, layers);
     ver.forward(in, layers);

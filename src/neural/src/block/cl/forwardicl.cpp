@@ -312,7 +312,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             }
 
             // weight accumulation row and column wise
-            cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "computeHeadSumsMaskedKernel");
+            cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "kernelComputeHeadSumsMasked");
             size_t global_sums_raw = static_cast<size_t>(count_tokens_in_block); 
             size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
             cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d); 
@@ -325,7 +325,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(current_queue.enqueueNDRangeKernel(sums_kernel, cl::NullRange, global_sums, local_sums));
 
             // weighted pool
-            cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "accumulateWeightedVectorsKernel");
+            cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "kernelAccumulateWeightedVectors");
             size_t global_accum_raw = static_cast<size_t>(count_tokens_in_block); size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_accum(global_accum_padded); cl::NDRange local_accum(local_work_size_1d);
             CL_CHECK(accum_kernel.setArg(0, current_gpu_bufs.d_row_sums)); 
             CL_CHECK(accum_kernel.setArg(1, current_gpu_bufs.d_col_sums)); 
@@ -738,45 +738,39 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             }
 
             // weight accumulation row and column wise
-            cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "computeHeadSumsMaskedKernel");
-            size_t global_sums_raw = static_cast<size_t>(count_tokens_in_block); 
-            size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
-            cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d); 
+            cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "kernelComputeHeadSumsMaskedev");
+            size_t global_sums_raw = static_cast<size_t>(count_tokens_in_block);
+            size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
+            cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d);
             cl_int cl_isSelfAttention = head_cpu.isSelfAttention;
-            CL_CHECK(sums_kernel.setArg(0, current_gpu_bufs.d_head_attention)); 
-            CL_CHECK(sums_kernel.setArg(1, current_gpu_bufs.d_row_sums)); 
-            CL_CHECK(sums_kernel.setArg(2, current_gpu_bufs.d_col_sums)); 
-            CL_CHECK(sums_kernel.setArg(3, count_tokens_in_block)); 
-            CL_CHECK(sums_kernel.setArg(4, cl_isSelfAttention));
+            CL_CHECK(sums_kernel.setArg(0, current_gpu_bufs.d_head_attention));
+            CL_CHECK(sums_kernel.setArg(1, current_gpu_bufs.d_col_sums));
+            CL_CHECK(sums_kernel.setArg(2, count_tokens_in_block));
+            CL_CHECK(sums_kernel.setArg(3, cl_isSelfAttention));
             CL_CHECK(current_queue.enqueueNDRangeKernel(sums_kernel, cl::NullRange, global_sums, local_sums));
 
             // weighted pool
-            cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "accumulateWeightedVectorsKernel");
+            cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "kernelAccumulateWeightedVectorsev");
             size_t global_accum_raw = static_cast<size_t>(count_tokens_in_block); size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_accum(global_accum_padded); cl::NDRange local_accum(local_work_size_1d);
-            CL_CHECK(accum_kernel.setArg(0, current_gpu_bufs.d_row_sums)); 
-            CL_CHECK(accum_kernel.setArg(1, current_gpu_bufs.d_col_sums)); 
-            CL_CHECK(accum_kernel.setArg(2, current_gpu_bufs.d_K)); 
-            CL_CHECK(accum_kernel.setArg(3, current_gpu_bufs.d_Q)); 
-            CL_CHECK(accum_kernel.setArg(4, current_gpu_bufs.d_dh_accum)); 
-            CL_CHECK(accum_kernel.setArg(5, current_gpu_bufs.d_dv_accum)); 
-            CL_CHECK(accum_kernel.setArg(6, count_tokens_in_block)); 
-            CL_CHECK(accum_kernel.setArg(7, h_attention));
+            CL_CHECK(accum_kernel.setArg(0, current_gpu_bufs.d_row_sums));
+            CL_CHECK(accum_kernel.setArg(1, current_gpu_bufs.d_col_sums));
+            CL_CHECK(accum_kernel.setArg(2, current_gpu_bufs.d_K));
+            CL_CHECK(accum_kernel.setArg(3, current_gpu_bufs.d_Q));
+            CL_CHECK(accum_kernel.setArg(4, current_gpu_bufs.d_dv_accum));
+            CL_CHECK(accum_kernel.setArg(5, count_tokens_in_block));
+            CL_CHECK(accum_kernel.setArg(6, h_attention));
             CL_CHECK(current_queue.enqueueNDRangeKernel(accum_kernel, cl::NullRange, global_accum, local_accum));
 
             // value propagation using MH and MV
             cl::Kernel proj_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
-            size_t global_proj_raw = static_cast<size_t>(d_embedding); 
-            size_t global_proj_padded = ((global_proj_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
+            size_t global_proj_raw = static_cast<size_t>(d_embedding);
+            size_t global_proj_padded = ((global_proj_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
             cl::NDRange global_proj(global_proj_padded); cl::NDRange local_proj(local_work_size_1d);
-            CL_CHECK(proj_kernel.setArg(3, h_attention)); 
-            CL_CHECK(proj_kernel.setArg(4, d_embedding));
-            CL_CHECK(proj_kernel.setArg(0, current_gpu_bufs.d_dh_accum));
-            CL_CHECK(proj_kernel.setArg(1, current_gpu_bufs.d_MH_hxd));
-            CL_CHECK(proj_kernel.setArg(2, current_gpu_bufs.d_dh)); 
-            CL_CHECK(current_queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
             CL_CHECK(proj_kernel.setArg(0, current_gpu_bufs.d_dv_accum));
             CL_CHECK(proj_kernel.setArg(1, current_gpu_bufs.d_MV_hxd));
-            CL_CHECK(proj_kernel.setArg(2, current_gpu_bufs.d_dv)); 
+            CL_CHECK(proj_kernel.setArg(2, current_gpu_bufs.d_dv));
+            CL_CHECK(proj_kernel.setArg(3, h_attention));
+            CL_CHECK(proj_kernel.setArg(4, d_embedding));
             CL_CHECK(current_queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
 
             // residual connection
@@ -784,8 +778,6 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             size_t global_add_raw = static_cast<size_t>(d_embedding); 
             size_t global_add_padded = ((global_add_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
             cl::NDRange global_add(global_add_padded); cl::NDRange local_add(local_work_size_1d); CL_CHECK(add_kernel.setArg(3, d_embedding));
-            CL_CHECK(add_kernel.setArg(0, current_gpu_bufs.d_EH)); CL_CHECK(add_kernel.setArg(1, current_gpu_bufs.d_dh)); CL_CHECK(add_kernel.setArg(2, current_gpu_bufs.d_hor_inputs)); 
-            CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
             cl::Kernel accum_ev_kernel = get_kernel_with_check(context_obj, "accumulateEVRowsKernelCL");
             CL_CHECK(accum_ev_kernel.setArg(0, current_gpu_bufs.d_EV_processed_data));
             CL_CHECK(accum_ev_kernel.setArg(1, current_gpu_bufs.d_ver_accumulated_ev));
@@ -800,13 +792,10 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             // mlp forprop
             cl::Kernel mlp_fwd_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
             cl::Kernel sigmoid_kernel = get_kernel_with_check(context_obj, "clSigmoid1d");
-            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_hor_inputs, current_gpu_bufs.d_mlp_bufferA_hor, 0, 0, embed_bytes_ph));
             CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_ver_inputs, current_gpu_bufs.d_mlp_bufferA_ver, 0, 0, embed_bytes_ph));
-            cl::Buffer& current_in_hor_mlp = current_gpu_bufs.d_mlp_bufferA_hor;
-            cl::Buffer& current_out_hor_mlp = current_gpu_bufs.d_mlp_bufferB_hor;
             cl::Buffer& current_in_ver_mlp = current_gpu_bufs.d_mlp_bufferA_ver;
             cl::Buffer& current_out_ver_mlp = current_gpu_bufs.d_mlp_bufferB_ver;
-            size_t num_weight_matrices_mlp = head_cpu.hor.weights.size();
+            size_t num_weight_matrices_mlp = head_cpu.ver.weights.size();
             size_t global_mlp_raw_mlp = static_cast<size_t>(d_embedding);
             size_t global_mlp_padded_mlp = ((global_mlp_raw_mlp + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
             cl::NDRange global_mlp_ndr(global_mlp_padded_mlp); cl::NDRange local_mlp_ndr(local_work_size_1d);
@@ -846,22 +835,12 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
 
             // relu mlp outputs
             cl::Kernel relu_kernel = get_kernel_with_check(context_obj, "clReLU1d");
-            CL_CHECK(relu_kernel.setArg(2, d_embedding));
-            // hor
-            CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_hor_output)); 
-            CL_CHECK(relu_kernel.setArg(1, current_gpu_bufs.d_relu_hor_output));
-            CL_CHECK(current_queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add));
-            // ver
             CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_ver_output)); 
             CL_CHECK(relu_kernel.setArg(1, current_gpu_bufs.d_relu_ver_output));
+            CL_CHECK(relu_kernel.setArg(2, d_embedding));
             CL_CHECK(current_queue.enqueueNDRangeKernel(relu_kernel, cl::NullRange, global_add, local_add));
-            CL_CHECK(current_queue.finish());
+
             // second residual connection
-            // EH
-            CL_CHECK(add_kernel.setArg(0, current_gpu_bufs.d_EH));
-            CL_CHECK(add_kernel.setArg(1, current_gpu_bufs.d_relu_hor_output));
-            CL_CHECK(add_kernel.setArg(2, current_gpu_bufs.d_EH));
-            CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
             // EV
             cl::Kernel update_ev_kernel = get_kernel_with_check(context_obj, "updateEVRowsKernelCL");
             size_t global_update_ev_raw = static_cast<size_t>(num_ev_rows_to_process_for_evp);

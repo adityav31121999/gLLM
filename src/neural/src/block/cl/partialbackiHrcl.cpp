@@ -634,7 +634,7 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
             }
 
             // update weights MQ, MK, MH, MV,
-            cl_int cl_update_eh_flag_1sth = 0;
+            cl_int cl_update_eh_flag = 1;
             cl::Kernel k_update_1st_h = clcontext.kernels.at("kernelUpdateWeightsHeadElastic");
             CL_CHECK(k_update_1st_h.setArg(0, device_ptrs.d_MH_a));
             CL_CHECK(k_update_1st_h.setArg(1, device_ptrs.d_MV_a));
@@ -646,10 +646,10 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
             CL_CHECK(k_update_1st_h.setArg(7, device_ptrs.d_grad_MQ));
             CL_CHECK(k_update_1st_h.setArg(8, device_ptrs.d_grad_MK));
             CL_CHECK(k_update_1st_h.setArg(9, device_ptrs.d_grad_EH));
-            CL_CHECK(k_update_1st_h.setArg(10, learning_rate));
-            CL_CHECK(k_update_1st_h.setArg(11, cl_update_eh_flag_1sth));
-            CL_CHECK(k_update_1st_h.setArg(12, mat_heights));
-            CL_CHECK(k_update_1st_h.setArg(13, embedding_dim));
+            CL_CHECK(k_update_1st_h.setArg(10, cl_update_eh_flag));
+            CL_CHECK(k_update_1st_h.setArg(11, mat_heights));
+            CL_CHECK(k_update_1st_h.setArg(12, embedding_dim));
+            CL_CHECK(k_update_1st_h.setArg(13, learning_rate));
             CL_CHECK(k_update_1st_h.setArg(14, lambda_l1));
             CL_CHECK(k_update_1st_h.setArg(15, lambda_l2));
             CL_CHECK(k_update_1st_h.setArg(16, MAX_GRAD_CLIP));

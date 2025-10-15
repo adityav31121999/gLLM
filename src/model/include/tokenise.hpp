@@ -66,6 +66,7 @@ private:
     int d;          // embedding dimension
     int vocSize;    // vocabulary size (number of merges performed while BPE algorithm)
     int d_val;      // divisor (makes it look like repeatation)
+    bool contextTok;    // context based tokeniser or not
 
     std::vector<std::string> tokens;                // all possible tokens
     std::vector<std::string> vocab_tokens;          // lexicographically sorted tokens for lookups
@@ -78,8 +79,8 @@ private:
 
 public:
 
-    std::string path2data;                          // path to dataset
-    std::string path2token;                         // path to tokens and embeddings
+    std::string path2data;                  // path to dataset
+    std::string path2token;                 // path to tokens and embeddings
     int num_threads;                        // number of threads
     int totalCorpusWordCount;               // corpus word count
     std::unique_ptr<ProgressData> bpe_progress;
@@ -91,9 +92,9 @@ public:
 // constructors
     // default constructors
 #ifdef USE_OPENCL
-    tokeniser(int d, OpenCLContext& context); // You'd need to initialize bpe_progress here too
-    tokeniser(int d, int d_val, OpenCLContext& context); // And here
-    explicit tokeniser(const std::string& path2data, OpenCLContext& context) noexcept; // And here
+    tokeniser(int d, bool contextTok, OpenCLContext& context); // You'd need to initialize bpe_progress here too
+    tokeniser(int d, int d_val, bool contextTok, OpenCLContext& context); // And here
+    explicit tokeniser(const std::string& path2data, bool contextTok, OpenCLContext& context) noexcept; // And here
 #elif USE_CUDA || USE_CPU
     // Initialize bpe_progress in all constructors
     tokeniser() : bpe_progress(std::make_unique<ProgressData>()) {}
@@ -218,6 +219,7 @@ public:
     void setEmbedding(const std::string& token, std::vector<float> embedding);
     void readFromFiles(const std::string& path2ClassDataFolder);
     void setStats(const std::unordered_map<std::string, int>& stats) { statOfTokens = stats; }
+    void setContext(bool ctx) { contextTok = ctx; }
 
     // Getters for read-only access to internal state
     int getEmbeddingDimension() const { return d; }

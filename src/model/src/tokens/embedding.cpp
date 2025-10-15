@@ -61,7 +61,7 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
         std::random_device rd;
         std::mt19937 gen(rd());
         // std::uniform_real_distribution<float> dis(r1, r2); // (-2.50f, 5.0f);
-        std::uniform_real_distribution<float> dis<int> dis(r1, r2);
+        std::uniform_real_distribution<float> dis(r1, r2);
         // The embeddings are generated for the length-sorted `tokens` order.
         for (int i = 0; i < vocSize; ++i) {
             // `embeddings` will be in the same (length-sorted) order as `tokens`
@@ -138,7 +138,7 @@ void tokeniser::generateAndSavedeEmbeddings(const std::string& embeddingCSVpath,
         std::random_device rd;
         std::mt19937 gen(rd());
         // std::uniform_real_distribution<float> dis(r1, r2); // (-2.50f, 5.0f);
-        std::uniform_real_distribution<float> dis<int> dis(r1, r2);
+        std::uniform_real_distribution<float> dis(r1, r2);
         // The embeddings are generated for the length-sorted `tokens` order.
         for (int i = 0; i < vocSize; ++i) {
             // `embeddings` will be in the same (length-sorted) order as `tokens`

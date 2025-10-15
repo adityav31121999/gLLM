@@ -138,7 +138,7 @@ void transformer::cuRun() {
             }
 
             // --- Transition to the next block ---
-            // Copy the EV state from the completed block (t[0]) to d_EVuse (D->D)
+            // Copy the EV state from the completed block (blocks[0]) to d_EVuse (D->D)
             size_t head_ev_bytes = static_cast<size_t>(CONTEXT_WIN) * d * sizeof(float);
 
             // Check if the total size matches the allocated buffer size
@@ -146,7 +146,7 @@ void transformer::cuRun() {
                 throw std::runtime_error("Mismatch between calculated EVuse size and allocated buffer size during block transition.");
             }
 
-            // Loop through each attention head in the completed block (t[0])
+            // Loop through each attention head in the completed block (blocks[0])
             for (int i = 0; i < x; ++i) { // Iterate through layers (rows)
                 for (int j = 0; j < y; ++j) { // Iterate through parallels (columns)
                     try {
@@ -246,7 +246,7 @@ void transformer::cuRun() {
 
             // --- Context Window / Block Transition Check ---
             if (currentTokenCount % CONTEXT_WIN == 0 && currentTokenCount > 0) {
-                // Copy the EV state from the completed block (t[0]) to d_EVuse (D->D)
+                // Copy the EV state from the completed block (blocks[0]) to d_EVuse (D->D)
                 size_t head_ev_bytes = static_cast<size_t>(CONTEXT_WIN) * d * sizeof(float);
                 if (static_cast<size_t>(x) * y * head_ev_bytes != ev_use_bytes) {
                     throw std::runtime_error("Mismatch between calculated EVuse size and allocated buffer size during block transition in generation.");

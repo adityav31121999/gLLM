@@ -185,7 +185,7 @@ __kernel void updateEVRowsKernelCL(__global float* d_EV_rows, __global const flo
     }
 }
 
-__kernel void computeHeadSumsMaskedKernel(__global const float* d_head, __global float* d_row_sums, __global float* d_col_sums,
+__kernel void kernelComputeHeadSumsMasked(__global const float* d_head, __global float* d_row_sums, __global float* d_col_sums,
                                           int num_tokens, int isSelfAttention) // Use int for bool
 {
     int i = get_global_id(0); // Parallelize over token index 'i'
@@ -230,7 +230,38 @@ __kernel void computeHeadSumsMaskedKernel(__global const float* d_head, __global
     }
 }
 
-__kernel void accumulateWeightedVectorsKernel(__global const float* d_row_sums, __global const float* d_col_sums,
+__kernel void kernelComputeHeadSumsMaskedev(__global const float* d_head, __global float* d_col_sums,
+                                          int num_tokens, int isSelfAttention)
+{
+    int i = get_global_id(0); // Parallelize over token index 'i'
+ 
+    if (i < num_tokens) {
+        float4 col_sum_l4 = (float4)(0.0f);
+ 
+        int limit = (isSelfAttention != 0) ? (i + 1) : num_tokens;
+        int limit_div_4 = limit / 4;
+ 
+        // Calculate column sum (l) for token i: sum head[j][i] for j < num_tokens, applying mask if needed
+        // Vectorized part (unrolled reads)
+        for (int j = 0; j < limit_div_4; ++j) {
+            int j_base = j * 4;
+            col_sum_l4.s0 += d_head[(j_base + 0) * num_tokens + i];
+            col_sum_l4.s1 += d_head[(j_base + 1) * num_tokens + i];
+            col_sum_l4.s2 += d_head[(j_base + 2) * num_tokens + i];
+            col_sum_l4.s3 += d_head[(j_base + 3) * num_tokens + i];
+        }
+ 
+        // Scalar part for remaining elements
+        float col_sum_l = col_sum_l4.s0 + col_sum_l4.s1 + col_sum_l4.s2 + col_sum_l4.s3;
+        for (int j = limit_div_4 * 4; j < limit; ++j) {
+            col_sum_l += d_head[j * num_tokens + i];
+        }
+ 
+        d_col_sums[i] = col_sum_l;
+    }
+}
+
+__kernel void kernelAccumulateWeightedVectors(__global const float* d_row_sums, __global const float* d_col_sums,
                                               __global const float* d_K, __global const float* d_Q,
                                               __global float* d_dh_accum, __global float* d_dv_accum,
                                               int num_tokens, int h_dim)
@@ -258,6 +289,32 @@ __kernel void accumulateWeightedVectorsKernel(__global const float* d_row_sums, 
         atomic_add_float(&d_dh_accum[h_idx_base + 2], total_dh4.s2);
         atomic_add_float(&d_dh_accum[h_idx_base + 3], total_dh4.s3);
 
+        atomic_add_float(&d_dv_accum[h_idx_base + 0], total_dv4.s0);
+        atomic_add_float(&d_dv_accum[h_idx_base + 1], total_dv4.s1);
+        atomic_add_float(&d_dv_accum[h_idx_base + 2], total_dv4.s2);
+        atomic_add_float(&d_dv_accum[h_idx_base + 3], total_dv4.s3);
+    }
+}
+
+__kernel void kernelAccumulateWeightedVectorsev(__global const float* d_row_sums, __global const float* d_col_sums,
+                                              __global const float* d_K, __global const float* d_Q,
+                                              __global float* d_dv_accum, int num_tokens, int h_dim)
+{
+    int h_idx_base = get_global_id(0) * 4; // Each work-item handles 4 elements of h_dim
+
+    if (h_idx_base < h_dim) {
+        float4 total_dv4 = (float4)(0.0f);
+
+        // Loop over tokens
+        for (int i = 0; i < num_tokens; ++i) {
+            // Load 4 elements from d_K and d_Q for the current token 'i'
+            float4 q_i_h4 = vload4(0, d_Q + i * h_dim + h_idx_base);
+
+            // Accumulate weighted vectors using FMA (fused multiply-add) for performance
+            total_dv4 = fma(d_col_sums[i], q_i_h4, total_dv4);
+        }
+
+        // Atomically add the 4 computed sums to the global accumulators
         atomic_add_float(&d_dv_accum[h_idx_base + 0], total_dv4.s0);
         atomic_add_float(&d_dv_accum[h_idx_base + 1], total_dv4.s1);
         atomic_add_float(&d_dv_accum[h_idx_base + 2], total_dv4.s2);

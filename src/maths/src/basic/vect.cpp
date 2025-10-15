@@ -751,9 +751,8 @@ float crossEntropy(std::vector<float>& y_true, std::vector<float>& y_pred) {
  * (y_pred, after sigmoid) and the true probability distribution (y_true, should be in [0,1]).
  * The formula for Binary Cross-Entropy is: 
  *  L = -1 * sum(y_true[i] * log(y_pred[i]) + (1 - y_true[i]) * log(1 - y_pred[i])) / size()
- * A small epsilon is used to clamp probabilities and prevent taking the logarithm of zero.
- * @param[in] a The true values (should be in range [0, 1]).
- * @param[in] b The predicted values (logits, sigmoid will be applied internally).
+ * @param[in] a The true values (raw).
+ * @param[in] b The predicted values (raw).
  * @return The Binary Cross-Entropy loss
  * @throws std::runtime_error if the vector sizes do not match.
  */
@@ -761,76 +760,46 @@ float binaryCrossEntropy(std::vector<float>& a, std::vector<float>& b) {
     if (a.size() != b.size()) {
         throw std::runtime_error("binaryCrossEntropy: Vector sizes do not match: " + std::to_string(a.size()) + " vs " + std::to_string(b.size()));
     }
-    std::vector<float> y_true = a;
+    std::vector<float> y_true = sigmoid(a);
     std::vector<float> y_pred = sigmoid(b);
     float loss = 0.0f;
-    float epsilon = 1e-15f; // Small value to prevent log(0)
+    float epsilon = 1e-10f;
     for (size_t i = 0; i < y_true.size(); ++i) {
-        // Clamp predictions to [epsilon, 1-epsilon] to avoid log(0) or log(negative)
-        float pred_clamped = std::max<float>(epsilon, std::min<float>(1.0f - epsilon, y_pred[i]));
-        float l = y_true[i] * std::logf(pred_clamped) + (1.0f - y_true[i]) * std::logf(1.0f - pred_clamped);
-        loss += l;
+        float p = std::max<float>(y_pred[i], epsilon);
+        float p_inv = std::max<float>(1.0f - y_pred[i], epsilon);
+        loss += (y_true[i] * std::log(p)) + ((1.0f - y_true[i]) * std::log(p_inv));
     }
-    return -1.0f*loss/static_cast<float>(y_true.size());
+    return -(loss / static_cast<float>(y_true.size()));
 }
 
 /**
- * @brief Calculates the error between two vectors as a fraction of the first vector.
- * @param v1 The first vector: expected.
- * @param v2 The second vector: produced.
- * @return A vector containing the error between the two vectors as a fraction of the first vector.
+ * @brief Calculates Categorical Cross-Entropy loss between true and predicted probability distributions.
+ * @param[in] y_true One-hot encoded true labels (vector of vectors, each inner vector has one 1.0 and rest 0.0).
+ * @param[in] y_pred Predicted probabilities (logits, softmax applied internally).
+ * @return The Categorical Cross-Entropy loss.
+ * @throws std::runtime_error if vector sizes mismatch or y_true is invalid.
  */
-std::vector<float> percenterrorofvec(std::vector<float> v1, std::vector<float> v2) {
-    if(v1.size() != v2.size()) {
-        throw std::runtime_error("Vectors must be of the same size, enlarge or shorten any one.");
+float categoricalCrossEntropy(std::vector<std::vector<float>>& y_true, std::vector<std::vector<float>>& y_pred) {
+    if (y_true.size() != y_pred.size() || y_true.empty()) {
+        throw std::runtime_error("categoricalCrossEntropy: Vector sizes mismatch or empty");
     }
-    std::vector<float> error;
-    for(int i = 0; i < v1.size(); i++) {
-        // Calculate the error between the two vectors as a fraction of the first vector.
-        error.push_back((v1[i] - v2[i])*100/v1[i]);
+    size_t num_classes = y_true[0].size();
+    std::vector<std::vector<float>> y_pred_softmax = softmax(y_pred, 1.0f); // Apply softmax to logits
+    float loss = 0.0f;
+    float epsilon = 1e-15f;
+    for (size_t i = 0; i < y_true.size(); ++i) {
+        if (y_true[i].size() != num_classes) {
+            throw std::runtime_error("y_true[" + std::to_string(i) + "] size mismatch");
+        }
+        for (size_t j = 0; j < num_classes; ++j) {
+            if (y_true[i][j] != 0.0f && y_true[i][j] != 1.0f) {
+                throw std::runtime_error("y_true[" + std::to_string(i) + "][" + std::to_string(j) + "] not 0 or 1");
+            }
+            float p = std::max<float>(y_pred_softmax[i][j], epsilon);
+            loss += y_true[i][j] * std::log(p);
+        }
     }
-    return error;
-}
-
-/**
- * @brief Gradient descent for a given output vector and expected value vector
- * @param y_true Output vector
- * @param y_pred Expected value vector
- * @param size Size of the vectors
- * @return The gradient descent output
- */
-std::vector<float> gradient_descent(std::vector<float> y_true, std::vector<float> y_pred, float learning_rate) {
-    if(y_true.size() != y_pred.size()) {
-        throw std::runtime_error("Vectors must be of the same size");
-    }
-    std::vector<float> dw(y_true.size(), 0.0);
-    for (size_t i = 0; i < y_true.size(); i++) {
-        dw[i] = learning_rate * (y_true[i] - y_pred[i]);
-    }
-    return dw;
-}
-
-/**
- * @brief Calculate the error between two vectors and return the sum of the errors
- * This function takes two vectors as an input and returns the sum of the errors
- * between the two vectors. The error is calculated as the difference between
- * the corresponding elements of the input vectors divided by 100.
- * @param x first vector
- * @param y second vector
- * @return the sum of the errors
- */
-float gradientdesc1(std::vector<float> x, std::vector<float> y) {
-    if(x.size() != y.size()) {
-        throw std::runtime_error("Vectors must be of the same size");
-    }
-    // Create a vector to hold the errors
-    std::vector<float> b(x.size());
-    // Use std::transform to calculate the error
-    std::transform(x.begin(), x.end(), y.begin(), b.begin(), \
-                // lambda to calculate the error
-                [](const auto& i, const auto& j) { return (i - j)/100; });
-    // Return the vector of errors
-    return (std::accumulate(b.begin(), b.end(), 0.0)/b.size());
+    return -loss / static_cast<float>(y_true.size());
 }
 
 /**

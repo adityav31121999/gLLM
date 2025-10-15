@@ -373,12 +373,12 @@ void transformer::cuParallelKdotQs(int& sequence1Count, int& currentTokenCount, 
                     if (blockCount == 1) {
                         if (d_transformer_tokenEmbed_flat != nullptr && d_M_head != nullptr) {
                             if (isSelf) {
-                                kernelKdotQ_Block1_Self_Inference<<<numBlocks, threadsPerBlock>>>(
+                                kernelKdotQ_Block1_Selfi<<<numBlocks, threadsPerBlock>>>(
                                     d_kdotq_head, d_transformer_tokenEmbed_flat, d_M_head, sequence1_start_index, effective_sequence1_len,
                                     context_len, kdotq_full_width, embedding_dim, inv_scaling);
                             }
                             else {
-                                kernelKdotQ_Block1_Cross_Inference<<<numBlocks, threadsPerBlock>>>(
+                                kernelKdotQ_Block1_Crossi<<<numBlocks, threadsPerBlock>>>(
                                     d_kdotq_head, d_transformer_tokenEmbed_flat, d_M_head, sequence1_start_index, effective_sequence1_len,
                                     context_len, kdotq_full_width, embedding_dim, inv_scaling);
                             }
@@ -391,12 +391,12 @@ void transformer::cuParallelKdotQs(int& sequence1Count, int& currentTokenCount, 
                     else { // Block N > 1
                         if (d_block_tokForBlock_flat != nullptr && d_EVp_head != nullptr && d_M_head != nullptr) {
                             if (isSelf) {
-                                kernelKdotQ_BlockN_Self_Inference<<<numBlocks, threadsPerBlock>>>(
+                                kernelKdotQ_BlockN_Selfi<<<numBlocks, threadsPerBlock>>>(
                                     d_kdotq_head, d_block_tokForBlock_flat, d_EVp_head, d_M_head, sequence1_start_index_in_block, effective_sequence1_len,
                                     context_len_in_block, kdotq_full_width, embedding_dim, inv_scaling);
                             }
                             else {
-                                kernelKdotQ_BlockN_Cross_Inference<<<numBlocks, threadsPerBlock>>>(
+                                kernelKdotQ_BlockN_Crossi<<<numBlocks, threadsPerBlock>>>(
                                     d_kdotq_head, d_block_tokForBlock_flat, d_EVp_head, d_M_head, sequence1_start_index_in_block, effective_sequence1_len,
                                     context_len_in_block, kdotq_full_width, embedding_dim, inv_scaling);
                             }

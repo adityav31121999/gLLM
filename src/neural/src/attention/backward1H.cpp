@@ -1,5 +1,4 @@
 #ifdef USE_CPU
-
 #include "include/attention.hpp"
 #include <vector>
 #include <cmath>
@@ -7,12 +6,13 @@
 #include <maths.hpp>
 #include <numeric>
 
-
 /**
  * @brief Backward propagation for heads of first block. Use in training of first block.
  * @param expected Expected output vector (target embedding for next token prediction).
  * @param in Input size (embedding dimension)
  * @param layers Number of layers in the MLPs
+ * @param headnumber 1-based index of position of head in local context
+ * @param learning Learning rate
  */
 void attention::backward1stHead(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning) 
 {
@@ -248,10 +248,10 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
 /**
  * @brief Backward Propagation (for first heaad) for the attention class using gradients from expected 
  *      Vertical output only.
- * @details full transformer training
  * @param expectedV vertical retention vector
  * @param in Input size (number of tokens)
  * @param layers Number of layers in the MLPs
+ * @param learning Learning rate
  */
 void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int& in, int& layers, float& learning) 
 {
@@ -447,6 +447,264 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
             MQ(i, j) -= learning_rate * grad_MQ(i, j);
         }
     }
+}
+
+
+/**
+ * @brief Backward propagation for heads of first block for contextualised training.
+ * @param expectedH Expected output vector (target embedding for next token prediction).
+ * @param in Input size (embedding dimension)
+ * @param layers Number of layers in the MLPs
+ * @param headnumber Number of heads in the attention block
+ * @param learning Learning rate for weight updates
+ */
+void attention::backward1stHeadContext(std::vector<float>& expectedH, int& in, int& layers, int headnumber, float& learning)
+{
+    // Check dimensions before starting
+    if (expectedH.size() != EMBEDDING || EH.size() != EMBEDDING) {
+        throw std::runtime_error("Dimension mismatch for expectedH/EH in backward1stHead (H)");
+    }
+    if (tokenCount <= 0 || tokenCount > K.row || tokenCount > Q.row || tokenCount > KdotQ.row || tokenCount > KdotQ.col) {
+        throw std::runtime_error("Invalid or inconsistent tokenCount in backward1stHead (H)");
+    }
+
+    // Step 1: Compute loss gradient w.r.t. EH (for token prediction) and EV (for context)
+    std::vector<float> grad_EH(EMBEDDING, 0.0f);
+    std::vector<float> grad_EV(EMBEDDING, 0.0f); 
+    for (int i = 0; i < EMBEDDING; i++) {
+        grad_EH[i] = (EH[i] - expectedH[i]);
+        grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation);
+    }
+
+    // Step 2: Backprop through MLPs (hor for EH, ver for EV)
+    // Pass gradients through ReLU derivatives
+    std::vector<float> grad_hor_input(EMBEDDING, 0.0f);
+    std::vector<float> grad_ver_input(EMBEDDING, 0.0f);
+    for (int i = 0; i < EMBEDDING; i++) {
+        grad_hor_input[i] = grad_EH[i] * (hor.output[i] > 0 ? 1.0f : 0.0f);
+        grad_ver_input[i] = grad_EV[i] * (ver.output[i] > 0 ? 1.0f : 0.0f);
+    }
+
+    // Set MLP for backprop
+    hor.expected = grad_hor_input;
+    ver.output = grad_ver_input;
+    hor.backwithL2(in, layers, learning);
+    ver.backwithL2(in, layers, learning);
+
+    // Step 3: Compute gradients w.r.t. dh and dv
+    std::vector<float> grad_dh(EMBEDDING, 0.0f);
+    std::vector<float> grad_dv(EMBEDDING, 0.0f);
+    for (int i = 0; i < EMBEDDING; i++) {
+        for(int j = 0; j < EMBEDDING; j++) {
+            grad_dh[i] += hor.gweights[0].mapped_data[i*EMBEDDING + j]; // Gradient from first layer of hor MLP
+            grad_dv[i] += ver.gweights[0].mapped_data[j*EMBEDDING + i]; // Gradient from first layer of ver MLP
+        }
+    }
+
+    // Step 4: Compute gradients w.r.t. MH and MV
+    mat grad_MH(CONTEXT_WIN, EMBEDDING);
+    mat grad_MV(CONTEXT_WIN, EMBEDDING);
+    std::fill_n(grad_MH.mapped_data, grad_MH.row * grad_MH.col, 0.0f);
+    std::fill_n(grad_MV.mapped_data, grad_MV.row * grad_MV.col, 0.0f);
+
+    // Declare and initialize pre_MH and pre_MV
+    std::vector<float> pre_MH(CONTEXT_WIN, 0.0f);
+    std::vector<float> pre_MV(CONTEXT_WIN, 0.0f);
+    mat head = LOTA(KdotQ, tokenCount, isSelfAttention);
+
+    for (int i = 0; i < tokenCount; i++) {
+        float sum_head_row = 0.0f;
+        float sum_head_col = 0.0f;
+        int limit_j = isSelfAttention ? (i + 1) : tokenCount;
+        limit_j = std::min(limit_j, head.col);
+        for (int j = 0; j < limit_j; j++) {
+            sum_head_row += head(i, j);
+            if (j < head.row && i < head.col) {
+                sum_head_col += head(j, i);
+            }
+        }
+        std::vector<float> K_row_i = getRow(K, i);
+        std::vector<float> Q_row_i = getRow(Q, i);
+
+        for (int h = 0; h < CONTEXT_WIN; h++) {
+            if (h < K_row_i.size()) 
+                pre_MH[h] += sum_head_row * K_row_i[h];
+            if (h < Q_row_i.size()) 
+                pre_MV[h] += sum_head_col * Q_row_i[h];
+        }
+    }
+
+    for (int h = 0; h < CONTEXT_WIN; h++) {
+        for (int d = 0; d < EMBEDDING; d++) {
+            grad_MH(h, d) = pre_MH[h] * grad_dh[d];
+            grad_MV(h, d) = pre_MV[h] * grad_dv[d];
+        }
+    }
+
+    // Step 5: Compute gradients w.r.t. head
+    mat grad_head(tokenCount, tokenCount);
+    std::fill_n(grad_head.mapped_data, grad_head.row * grad_head.col, 0.0f);
+
+    for (int i = 0; i < tokenCount; i++) {
+        std::vector<float> K_row_i = getRow(K, i);
+        int limit_j = isSelfAttention ? (i + 1) : tokenCount;
+        limit_j = std::min(limit_j, grad_head.col);
+        for (int j = 0; j < limit_j; j++) {
+            if (j >= Q.row) continue;
+            std::vector<float> Q_row_j = getRow(Q, j);
+            float grad_dh_sum = 0.0f;
+            float grad_dv_sum = 0.0f;
+            for (int d = 0; d < EMBEDDING; d++) {
+                float mh_grad_dh_d = 0.0f;
+                float mv_grad_dv_d = 0.0f;
+                for (int h = 0; h < CONTEXT_WIN; h++) {
+                    mh_grad_dh_d += MH(h, d) * grad_dh[d];
+                    mv_grad_dv_d += MV(h, d) * grad_dv[d];
+                }
+                for (int h = 0; h < CONTEXT_WIN; ++h) {
+                    if (h < K_row_i.size()) 
+                        grad_dh_sum += K_row_i[h] * mh_grad_dh_d;
+                    if (h < Q_row_j.size()) 
+                        grad_dv_sum += Q_row_j[h] * mv_grad_dv_d;
+                }
+            }
+            if (i < grad_head.row && j < grad_head.col) {
+                grad_head(i, j) = grad_dh_sum + grad_dv_sum;
+            }
+        }
+    }
+
+    // Step 6: Backprop through LOTA
+    mat grad_KdotQ(tokenCount, tokenCount);
+    mat lota_derivative = LOTAder(KdotQ, tokenCount, isSelfAttention);
+
+    if (grad_head.row != lota_derivative.row || grad_head.col != lota_derivative.col ||
+        grad_head.row != grad_KdotQ.row || grad_head.col != grad_KdotQ.col) {
+        throw std::runtime_error("Dimension mismatch for LOTA backprop in backward1stHead (H)");
+    }
+
+    float inv_scaling = 1.0f / SCALING;
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j = isSelfAttention ? (i + 1) : tokenCount;
+        limit_j = std::min(limit_j, grad_KdotQ.col);
+        for (int j = 0; j < limit_j; j++)
+        {
+            grad_KdotQ(i, j) = grad_head(i, j) * lota_derivative(i, j) * inv_scaling;
+        }
+    }
+
+    // Step 7: Compute gradients w.r.t. K and Q
+    // grad_K = grad_KdotQ * Q^T
+    // grad_Q = grad_KdotQ^T * K
+    mat grad_K(CONTEXT_WIN, CONTEXT_WIN);
+    mat grad_Q(CONTEXT_WIN, CONTEXT_WIN);
+    std::fill_n(grad_K.mapped_data, grad_K.row * grad_K.col, 0.0f);
+    std::fill_n(grad_Q.mapped_data, grad_Q.row * grad_Q.col, 0.0f);
+
+    for (int i = 0; i < tokenCount; i++) {
+        int limit_j_k = CONTEXT_WIN;
+        limit_j_k = std::min({limit_j_k, grad_KdotQ.col, Q.row});
+        for (int j = 0; j < limit_j_k; j++) {
+            std::vector<float> Q_row_j = getRow(Q, j);
+            float grad_kq_ij = (i < grad_KdotQ.row && j < grad_KdotQ.col) ? grad_KdotQ(i, j) : 0.0f;
+            for (int h = 0; h < CONTEXT_WIN; h++) {
+                if (h < Q_row_j.size()) {
+                    grad_K(i, h) += grad_kq_ij * Q_row_j[h];
+                }
+            }
+        }
+        int limit_j_q = CONTEXT_WIN;
+        limit_j_q = std::min({limit_j_q, grad_KdotQ.row, K.row});
+        for (int j = 0; j < limit_j_q; ++j) {
+            std::vector<float> K_row_j = getRow(K, j);
+            float grad_kq_ji = (j < grad_KdotQ.row && i < grad_KdotQ.col) ? grad_KdotQ(j, i) : 0.0f; // Transposed access
+            for (int h = 0; h < CONTEXT_WIN; ++h) {
+                if (h < K_row_j.size()) {
+                    grad_Q(i, h) += grad_kq_ji * K_row_j[h];
+                }
+            }
+        }
+    }
+
+    // Step 8: Compute gradients w.r.t. MQ and MK
+    // grad_MK = InputEmbed^T * grad_K
+    // grad_MQ = InputEmbed^T * grad_Q
+    mat grad_MQ(CONTEXT_WIN, EMBEDDING);
+    mat grad_MK(CONTEXT_WIN, EMBEDDING);
+    std::fill_n(grad_MQ.mapped_data, grad_MQ.row * grad_MQ.col, 0.0f);
+    std::fill_n(grad_MK.mapped_data, grad_MK.row * grad_MK.col, 0.0f);
+
+    for (int i = 0; i < tokenCount; i++) {
+        std::vector<float> grad_K_row_i = getRow(grad_K, i);
+        std::vector<float> grad_Q_row_i = getRow(grad_Q, i);
+        std::vector<float> K_row_i = getRow(K, i);
+        std::vector<float> Q_row_i = getRow(Q, i);
+
+        for (int h = 0; h < CONTEXT_WIN; h++) {
+            for (int d = 0; d < EMBEDDING; d++) {
+                float K_proxy_d = (d < K_row_i.size()) ? K_row_i[d] : 0.0f;
+                float Q_proxy_d = (d < Q_row_i.size()) ? Q_row_i[d] : 0.0f;
+                if (h < grad_K_row_i.size()) grad_MK(h, d) += grad_K_row_i[h] * K_proxy_d;
+                if (h < grad_Q_row_i.size()) grad_MQ(h, d) += grad_Q_row_i[h] * Q_proxy_d;
+            }
+        }
+    }
+
+    // Ensure dimensions match before update
+    if (MH.row != grad_MH.row || MH.col != grad_MH.col ||
+        MV.row != grad_MV.row || MV.col != grad_MV.col ||
+        MQ.row != grad_MQ.row || MQ.col != grad_MQ.col ||
+        MK.row != grad_MK.row || MK.col != grad_MK.col) 
+    {
+        throw std::runtime_error("Weight and gradient dimension mismatch in backward1stHead (H)");
+    }
+
+    float learning_rate = learning;
+    for (int i = 0; i < CONTEXT_WIN; i++) {
+        for (int j = 0; j < EMBEDDING; j++) {
+            MH(i, j) -= learning_rate * grad_MH(i, j);
+            MV(i, j) -= learning_rate * grad_MV(i, j);
+            MQ(i, j) -= learning_rate * grad_MQ(i, j);
+            MK(i, j) -= learning_rate * grad_MK(i, j);
+        }
+    }
+
+    // gradient for token-embeddings
+    // dL/dT_Q = grad_Q * MQ^T
+    std::vector<float> grad_T_Q(EMBEDDING, 0.0f);
+    mat qT = MQ.transpose();
+    std::vector<std::vector<float>> MQ_T = qT.make2dVector(qT, MQ.col, MQ.row);
+    for(int i = 0; i < CONTEXT_WIN; i++) { // Iterate over rows of grad_Q
+        for(int j = 0; j < CONTEXT_WIN; j++) {
+            grad_T_Q[j] += std::inner_product(grad_Q(i).begin(), grad_Q(i).end(), MQ_T[j].begin(), 0.0f);
+        }
+    }
+    // dL/dT_K = grad_K * MK^T
+    std::vector<float> grad_T_K(EMBEDDING, 0.0f);
+    mat kT = MK.transpose();
+    std::vector<std::vector<float>> MK_T = kT.make2dVector(kT, MK.col, MK.row);
+    for(int i = 0; i < EMBEDDING; i++) {
+        for(int j = 0; j < CONTEXT_WIN; j++) {
+            grad_T_K[j] += std::inner_product(grad_K(i).begin(), grad_K(i).end(), MK_T[j].begin(), 0.0f);
+        }
+    }
+    // dL/dT_h = grad_dh * (head * MK^T)^T * MH
+    std::vector<float> grad_T_H(EMBEDDING, 0.0f);
+    mat hKt = head * kT;
+    mat hKt_T = hKt * MH;
+    for(int j = 0; j < EMBEDDING; j++) {
+        grad_T_H[j] += std::inner_product(grad_dh.begin(), grad_dh.end(), hKt_T(j).begin(), 0.0f);
+    }
+    // dL/dT_v = grad_dv * (head * MQ^T)^T * MV
+    mat hQt = head * qT;
+    mat hQt_T = hQt * MH;
+    std::vector<float> grad_T_V(EMBEDDING, 0.0f);
+    for(int j = 0; j < EMBEDDING; j++) {
+        grad_T_V[j] += std::inner_product(grad_dv.begin(), grad_dv.end(), hQt_T(j).begin(), 0.0f);
+    }
+    // dL/dT = dL/dT_Q + dL/dT_K + dL/dT_h + dL/dT_v
+    std::vector<float> grad_T(EMBEDDING, 0.0f);
+    grad_T = grad_T_Q + grad_T_K + grad_T_H + grad_T_V;
 }
 
 #endif

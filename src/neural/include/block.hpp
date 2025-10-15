@@ -162,7 +162,7 @@ public:
 
 #endif
 
-    void randomValuesForBlock(float min, float max);
+    void randomValuesForBlock(float x1, float x2, int n);
     void setVerticalRetention(std::vector<std::vector<std::vector<std::vector<float>>>>& EV);
     void clearValues();
     void serialise(const std::string& locationWithFilename);

@@ -119,7 +119,7 @@ __global__ void kernelKdotQforCross_train(float* d_kdotq, const float* d_keys, c
  * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
  * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
  */
-__global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
+__global__ void kernelKdotQ_Block1_Selfi(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
     int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling)
 {
     int j = blockIdx.x * blockDim.x + threadIdx.x;        // Global key index (column) spanning full context
@@ -155,7 +155,7 @@ __global__ void kernelKdotQ_Block1_Self_Inference(float* d_kdotq, const float* d
  * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
  * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
  */
-__global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
+__global__ void kernelKdotQ_Block1_Crossi(float* d_kdotq, const float* d_tokenEmbed, const float* d_M,
     int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width, int embedding_dim, float inv_scaling)
 {
     int j = blockIdx.x * blockDim.x + threadIdx.x;        // Global key index (column) spanning full context
@@ -193,7 +193,7 @@ __global__ void kernelKdotQ_Block1_Cross_Inference(float* d_kdotq, const float* 
  * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
  * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
  */
-__global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
+__global__ void kernelKdotQ_BlockN_Selfi(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
     const float* d_M, int sequence1_start_index_in_block, int sequence1_len, int context_len_in_block, int kdotq_width,
     int embedding_dim, float inv_scaling)
 {
@@ -232,7 +232,7 @@ __global__ void kernelKdotQ_BlockN_Self_Inference(float* d_kdotq, const float* d
  * @param[in]  embedding_dim   The dimension of token vectors and the matrix M.
  * @param[in]  inv_scaling     The inverse scaling factor (1.0f / sqrt(embedding_dim)).
  */
-__global__ void kernelKdotQ_BlockN_Cross_Inference(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
+__global__ void kernelKdotQ_BlockN_Crossi(float* d_kdotq, const float* d_tokForBlock, const float* d_EVp,
     const float* d_M, int sequence1_start_index_in_block, int sequence1_len, int context_len_in_block, int kdotq_width,
     int embedding_dim, float inv_scaling)
 {

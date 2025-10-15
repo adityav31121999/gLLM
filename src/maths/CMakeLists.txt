@@ -1,10 +1,9 @@
-
 # src/maths/CMakeLists.txt
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(maths C CXX)
-
+# all .hpp and .h files
 include_directories(include)
-
+# all source files
 add_library(maths STATIC
     # basic files
     src/basic/activations.cpp

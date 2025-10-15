@@ -276,7 +276,7 @@ public:
     // train seq2seq and sequence with context in consideration
     void trainSeq2Seq(const std::string& txtFileLocation, int context_window, bool contextTrain);
     void trainSequence(const std::string& txtFileLocation, int context_window, bool contextTrain);
-    void testSeq2Seq(const std::string& txtFileLocation, int context_window, bool contextTrain);
+    void test(const std::string& txtFileLocation, int context_window, bool contextTrain);
 
     // get offsets for layout and components
     void calculateAndSetLayout();

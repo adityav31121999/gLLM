@@ -1,4 +1,24 @@
 
+__kernel void kernelCompute_single_kq_vector( __global const float* d_token_embedding,  // Input: token vector (size: embedding_dim)
+                                            __global const float* d_projection_matrix, // Input: MQ or MK matrix (size: mat_heights x embedding_dim)
+                                            __global float* d_output_kq_vector,     // Output: K or Q vector (size: mat_heights)
+                                            int embedding_dim,
+                                            int mat_heights)
+{
+    // This kernel is intended to be launched with a single global work-item.
+    // It computes: d_output_kq_vector[i] = dot(d_token_embedding, d_projection_matrix_row_i)
+    if (get_global_id(0) == 0) {
+        for (int i = 0; i < mat_heights; ++i) {
+            __global const float* matrix_row_i = d_projection_matrix + i * embedding_dim;
+            float dot_product = 0.0f;
+            for (int j = 0; j < embedding_dim; ++j) {
+                dot_product += d_token_embedding[j] * matrix_row_i[j];
+            }
+            d_output_kq_vector[i] = dot_product;
+        }
+    }
+}
+
 __kernel void kernelComputeKQall(
     __global const float* tokenMatrix,  // token matrix or EV of size local_context x embedding_dim
     __global const float* KQmatrix,     // weight Q/K matrix of size mat_heights x embedding_dim
@@ -87,7 +107,7 @@ __kernel void kernelKdotQforCross_train(__global float* d_kdotq, __global const 
 
 /**------------------------------------INFERENCE------------------------------------**/
 
-__kernel void kernelKdotQ_Block1_Self_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
+__kernel void kernelKdotQ_Block1_Selfi(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
                                                 int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width,
                                                 int embedding_dim, float inv_scaling)
 {
@@ -115,7 +135,7 @@ __kernel void kernelKdotQ_Block1_Self_Inference(__global float* d_kdotq, __globa
     }
 }
 
-__kernel void kernelKdotQ_Block1_Cross_Inference(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
+__kernel void kernelKdotQ_Block1_Crossi(__global float* d_kdotq, __global const float* d_tokenEmbed, __global const float* d_M,
                                                  int sequence1_start_index, int sequence1_len, int context_len, int kdotq_width,
                                                  int embedding_dim, float inv_scaling)
 {
@@ -143,7 +163,7 @@ __kernel void kernelKdotQ_Block1_Cross_Inference(__global float* d_kdotq, __glob
     }
 }
 
-__kernel void kernelKdotQ_BlockN_Self_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
+__kernel void kernelKdotQ_BlockN_Selfi(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
                                                 __global const float* d_M, int sequence1_start_index_in_block, int sequence1_len,
                                                 int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling)
 {
@@ -171,7 +191,7 @@ __kernel void kernelKdotQ_BlockN_Self_Inference(__global float* d_kdotq, __globa
     }
 }
 
-__kernel void kernelKdotQ_BlockN_Cross_Inference(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
+__kernel void kernelKdotQ_BlockN_Crossi(__global float* d_kdotq, __global const float* d_tokForBlock, __global const float* d_EVp,
                                                  __global const float* d_M, int sequence1_start_index_in_block, int sequence1_len,
                                                  int context_len_in_block, int kdotq_width, int embedding_dim, float inv_scaling)
 {

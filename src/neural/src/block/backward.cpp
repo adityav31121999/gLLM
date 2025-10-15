@@ -84,33 +84,6 @@ void block::backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in
 
 
 /**
- * @brief backward propagation for block (when only EV need to be corrected)
- * @param expectedV expected EVs for each head
- * @param in dimension of embeddings
- * @param layers layers of MLPs
- */
-void block::backward1stBlock(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, float& learning)
-{
-    for(int i = y; i >= 1; i--) {
-        partialbackward1stBlock(expectedV[i-1], in, layers, i, learning);
-        /*if(i == y) {
-            partialbackward1stBlock(expectedV[i-1], in, layers, i);
-        }
-        else if(i < y and i > 1) {
-            partialbackward1stBlock(expectedV[i-1], in, layers, i);
-        }
-        else if(i == 1) {
-            partialbackward1stBlock(expectedV[i-1], in, layers, i);
-        }
-        else {
-            throw std::runtime_error("invalid index in backward1stBlock (V)");
-        }*/
-    }
-    // serialise(blockFilePath);
-}
-
-
-/**
  * @brief backward propagation for block (when only EH need to be corrected), used in 
  *      transformer::backward(std::vector<float>& expected)
  * @param expectedH expected EH for last head of each partial attention (common)
@@ -185,31 +158,8 @@ void block::backward(std::vector<std::vector<float>>& expectedH, int& in, int& l
     // serialise(blockFilePath);
 }
 
-
-/**
- * @brief backward propagation for block (when only EV need to be corrected)
- * @param expectedV expected EVs for each head
- * @param in dimension of embeddings
- * @param layers layers of MLPs
- */
-void block::backward(std::vector<std::vector<std::vector<std::vector<float>>>>& expectedV, int& in, int& layers, int blockCount, float& learning)
+void block::rbackward1stBlock(std::vector<std::vector<float>> &expectedH, int &in, int &layers, float &learning)
 {
-    for(int i = y; i >= 1; i--) {
-        partialbackward(expectedV[i-1], layers, i, blockCount, learning);
-        /*if(i == y) {
-            partialbackward(expectedV[i-1], in, layers, i);
-        }
-        else if(i < y and i > 1) {
-            partialbackward(expectedV[i-1], in, layers, i);
-        }
-        else if(i == 1) {
-            partialbackward(expectedV[i-1], in, layers, i);
-        }
-        else {
-            throw std::runtime_error("invalid index in backward1stBlock (V)");
-        }*/
-    }
-    // serialise(blockFilePath);
 }
 
 #endif

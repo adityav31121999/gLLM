@@ -341,9 +341,9 @@ void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, in
         if(inTraining == 1) {
             // in training
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> KdotQ = blocks[0].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                std::vector<std::vector<float>> K = blocks[0].b[i][column].K.make2dVector(t[0].b[i][column].K, CONTEXT_WIN, EMBEDDING);
-                std::vector<std::vector<float>> Q = blocks[0].b[i][column].Q.make2dVector(t[0].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> KdotQ = blocks[0].b[i][column].KdotQ.make2dVector(blocks[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> K = blocks[0].b[i][column].K.make2dVector(blocks[0].b[i][column].K, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> Q = blocks[0].b[i][column].Q.make2dVector(blocks[0].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
                 // compute KdotQ of (i, j) head of first block
                 computeKdotQ(KdotQ, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
                 blocks[0].b[i][column].KdotQ = KdotQ;
@@ -352,7 +352,7 @@ void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, in
         else {
             // for inference
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> KdotQ = blocks[0].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> KdotQ = blocks[0].b[i][column].KdotQ.make2dVector(blocks[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
                 std::vector<std::vector<float>> TokenEmbed = tokenEmbed.make2dVector(tokenEmbed, CONTEXT_WIN, EMBEDDING);
                 // compute KdotQ of (i, j) head of first block
                 computeKdotQ(KdotQ, TokenEmbed, blocks[0].b[i][column].qkCache, currentTokenCount, sequence1Count, isSelf);
@@ -365,9 +365,9 @@ void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, in
         if(inTraining == 1) {
             // in training
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> KdotQ = blocks[blockCount-1].b[i][column].KdotQ.make2dVector(t[blockCount-1].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                std::vector<std::vector<float>> K = blocks[blockCount-1].b[i][column].K.make2dVector(t[blockCount-1].b[i][column].K, CONTEXT_WIN, EMBEDDING);
-                std::vector<std::vector<float>> Q = blocks[blockCount-1].b[i][column].Q.make2dVector(t[blockCount-1].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> KdotQ = blocks[blockCount-1].b[i][column].KdotQ.make2dVector(blocks[blockCount-1].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> K = blocks[blockCount-1].b[i][column].K.make2dVector(blocks[blockCount-1].b[i][column].K, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> Q = blocks[blockCount-1].b[i][column].Q.make2dVector(blocks[blockCount-1].b[i][column].Q, CONTEXT_WIN, EMBEDDING);
                 computeKdotQ(KdotQ, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
                 blocks[0].b[i][column].KdotQ = KdotQ;
             }
@@ -375,9 +375,9 @@ void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, in
         else {
             // for inference
             for(int i = 0; i < x; i++) {
-                std::vector<std::vector<float>> kdotq = blocks[blockCount-1].b[i][column].KdotQ.make2dVector(t[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                std::vector<std::vector<float>> tokforblock = blocks[blockCount-1].tokForBlock.make2dVector(t[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
-                std::vector<std::vector<float>> ev = blocks[blockCount-1].b[i][column].EV.make2dVector(t[0].b[i][column].EV, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> kdotq = blocks[blockCount-1].b[i][column].KdotQ.make2dVector(blocks[0].b[i][column].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                std::vector<std::vector<float>> tokforblock = blocks[blockCount-1].tokForBlock.make2dVector(blocks[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
+                std::vector<std::vector<float>> ev = blocks[blockCount-1].b[i][column].EV.make2dVector(blocks[0].b[i][column].EV, CONTEXT_WIN, EMBEDDING);
                 // compute KdotQ of (i, j) head of first block
                 computeKdotQ(kdotq, tokforblock, ev, blocks[blockCount-1].b[i][column].qkCache, currentTokenCount, sequence1Count, blockCount, isSelf);
             }
@@ -401,9 +401,9 @@ void transformer::computeKdotQs(int &sequence1Count, int &currentTokenCount, int
             // in training
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> KdotQ = blocks[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                    std::vector<std::vector<float>> K = blocks[0].b[i][j].K.make2dVector(t[0].b[i][j].K, CONTEXT_WIN, EMBEDDING);
-                    std::vector<std::vector<float>> Q = blocks[0].b[i][j].Q.make2dVector(t[0].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
+                    std::vector<std::vector<float>> KdotQ = blocks[0].b[i][j].KdotQ.make2dVector(blocks[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> K = blocks[0].b[i][j].K.make2dVector(blocks[0].b[i][j].K, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> Q = blocks[0].b[i][j].Q.make2dVector(blocks[0].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(KdotQ, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
                     blocks[0].b[i][j].KdotQ = KdotQ;
@@ -414,7 +414,7 @@ void transformer::computeKdotQs(int &sequence1Count, int &currentTokenCount, int
             // in use
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> KdotQ = blocks[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> KdotQ = blocks[0].b[i][j].KdotQ.make2dVector(blocks[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
                     std::vector<std::vector<float>> ctokenEmbed = tokenEmbed.make2dVector(tokenEmbed, CONTEXT_WIN, EMBEDDING);
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(KdotQ, ctokenEmbed, blocks[0].b[i][j].qkCache, currentTokenCount,
@@ -429,9 +429,9 @@ void transformer::computeKdotQs(int &sequence1Count, int &currentTokenCount, int
             // in training
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> kdotq = blocks[blockCount-1].b[i][j].KdotQ.make2dVector(t[blockCount-1].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                    std::vector<std::vector<float>> K = blocks[blockCount-1].b[i][j].K.make2dVector(t[blockCount-1].b[i][j].K, CONTEXT_WIN, EMBEDDING);
-                    std::vector<std::vector<float>> Q = blocks[blockCount-1].b[i][j].Q.make2dVector(t[blockCount-1].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
+                    std::vector<std::vector<float>> kdotq = blocks[blockCount-1].b[i][j].KdotQ.make2dVector(blocks[blockCount-1].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> K = blocks[blockCount-1].b[i][j].K.make2dVector(blocks[blockCount-1].b[i][j].K, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> Q = blocks[blockCount-1].b[i][j].Q.make2dVector(blocks[blockCount-1].b[i][j].Q, CONTEXT_WIN, EMBEDDING);    
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(kdotq, K, Q, currentTokenCount, sequence1Count, blockCount, isSelf);
                     blocks[blockCount-1].b[i][j].KdotQ = kdotq;
@@ -442,9 +442,9 @@ void transformer::computeKdotQs(int &sequence1Count, int &currentTokenCount, int
             // in use
             for(int i = 0; i < x; i++) {
                 for(int j = 0; j < y; j++) {
-                    std::vector<std::vector<float>> kdotq = blocks[0].b[i][j].KdotQ.make2dVector(t[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
-                    std::vector<std::vector<float>> tokForBlock = blocks[blockCount-1].tokForBlock.make2dVector(t[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
-                    std::vector<std::vector<float>> EV = blocks[0].b[i][j].EV.make2dVector(t[0].b[i][j].EV, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> kdotq = blocks[0].b[i][j].KdotQ.make2dVector(blocks[0].b[i][j].KdotQ, CONTEXT_WIN, CONTEXT_WIN);
+                    std::vector<std::vector<float>> tokForBlock = blocks[blockCount-1].tokForBlock.make2dVector(blocks[0].tokForBlock, CONTEXT_WIN, EMBEDDING);
+                    std::vector<std::vector<float>> EV = blocks[0].b[i][j].EV.make2dVector(blocks[0].b[i][j].EV, CONTEXT_WIN, EMBEDDING);
                     // compute KdotQ of (i, j) head of first block
                     computeKdotQ(kdotq, tokForBlock, EV, blocks[blockCount-1].b[i][j].qkCache, currentTokenCount, sequence1Count, blockCount, isSelf);
                     blocks[blockCount-1].b[i][j].KdotQ = kdotq;

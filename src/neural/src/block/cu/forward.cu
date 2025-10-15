@@ -284,9 +284,9 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             // Kernel: Perform KdotQ score normalisation (and masking if needed)
             cuLOTA<<<( (n_tokens * n_tokens) + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_KdotQ, d_head_attention, CONTEXT_WIN, CONTEXT_WIN, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
             // Kernel: Compute row and column sums of the attention matrix
-            computeHeadSumsMaskedKernel<<<(n_tokens + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
+            kernelComputeHeadSumsMasked<<<(n_tokens + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, n_tokens, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
             // Kernel: Accumulate weighted K and Q vectors based on attention sums
-            accumulateWeightedVectorsKernel<<<(h_attention + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_row_sums, d_col_sums, d_K, d_Q, d_dh_accum, d_dv_accum, n_tokens, h_attention); CUDA_CHECK(cudaGetLastError());
+            kernelAccumulateWeightedVectors<<<(h_attention + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_row_sums, d_col_sums, d_K, d_Q, d_dh_accum, d_dv_accum, n_tokens, h_attention); CUDA_CHECK(cudaGetLastError());
             // Kernel: Project accumulated dh_accum through MH to get dh
             matrixMultiplyKernel<<<(d_embedding + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_dh_accum, d_MH_hxd, d_dh, 1, h_attention, d_embedding); CUDA_CHECK(cudaGetLastError());
             // Kernel: Project accumulated dv_accum through MV to get dv
@@ -598,9 +598,9 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
                 // Kernel: Perform KdotQ score normalisation (and masking if needed)
                 cuLOTA<<<( (count_tokens_this_block * count_tokens_this_block) + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_KdotQ, d_head_attention, count_tokens_this_block, count_tokens_this_block); CUDA_CHECK(cudaGetLastError());
                 // Kernel: Compute row and column sums of the attention matrix
-                computeHeadSumsMaskedKernel<<<(count_tokens_this_block + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, count_tokens_this_block, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
+                kernelComputeHeadSumsMasked<<<(count_tokens_this_block + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_head_attention, d_row_sums, d_col_sums, count_tokens_this_block, head_cpu.isSelfAttention); CUDA_CHECK(cudaGetLastError());
                 // Kernel: Accumulate weighted K and Q vectors
-                accumulateWeightedVectorsKernel<<<(h_attention + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_row_sums, d_col_sums, d_K, d_Q, d_dh_accum, d_dv_accum, count_tokens_this_block, h_attention); CUDA_CHECK(cudaGetLastError());
+                kernelAccumulateWeightedVectors<<<(h_attention + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_row_sums, d_col_sums, d_K, d_Q, d_dh_accum, d_dv_accum, count_tokens_this_block, h_attention); CUDA_CHECK(cudaGetLastError());
             }
             // Kernel: Project accumulated dh_accum through MH
             matrixMultiplyKernel<<<(d_embedding + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_dh_accum, d_MH_hxd, d_dh, 1, h_attention, d_embedding); CUDA_CHECK(cudaGetLastError());

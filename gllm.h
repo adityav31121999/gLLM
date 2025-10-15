@@ -1,4 +1,3 @@
-
 // genmod.h: header for main.cpp
 #ifndef GLLM_H
 #define GLLM_H 1
@@ -8,7 +7,7 @@
 #include <vector>
 #include <maths.hpp>            // math functions for ai/ml
 #include <neural.hpp>           // LLM related classes
-#include <mod.hpp>            // model related operations
+#include <model.hpp>            // model related operations
 
 #ifdef USE_OPENCL
 #include <CL/cl.hpp> // Required for OpenCL C++ bindings, e.g., cl::BuildError

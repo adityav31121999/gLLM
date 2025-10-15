@@ -77,12 +77,17 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
         otok.clear(); otok.resize(d*x, 0.0f);
         pred.clear(); pred.resize(vocabsize, 0.0f);
         oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
+        // --- set all tokens to tokenEmbed ---
+        std::fill(tokenEmbed.mapped_data, tokenEmbed.mapped_data + totalTokenEmbedFloats, 0.0f);
+        std::fill(positional.mapped_data, positional.mapped_data + totalTokenEmbedFloats, 0.0f);
+        std::fill(embedPlusPos.mapped_data, embedPlusPos.mapped_data + totalTokenEmbedFloats, 0.0f);
         // start training from first
         if(currentTokenCount == 0) {
             // set tokenEmbed
             blockCount = 1;
             for(int i = 0; i < sequence1.size(); i++) {
-                tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(i, d), i);
+                tokenEmbed.addRow(sequence1[i], i);
+                positional.addRow(positionalEmbeddings(i, d), i);
                 // prepare EVs
                 for(int m1 = 0; m1 < x; m1++) {
                     for(int m2 = 0; m2 < y; m2++) {
@@ -100,11 +105,11 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
             if(currentTokenCount + sequence1.size() < CONTEXT_WIN) {
                 for(int i = 0; i < sequence1.size(); i++) {
                     int actual_row_in_ev = (currentTokenCount + i) % CONTEXT_WIN;
-                    tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
+                    tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
-                            std::vector<float> v(EMBEDDING, 0.0f);
                             blocks[0].b[m1][m2].EV.addRow(sequence1[i], actual_row_in_ev);
                         }
                     }
@@ -117,23 +122,23 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 int promptCount = 0;
                 for(int i = 0; i < sequence1.size(); i++) {
                     int actual_row_in_ev = (currentTokenCount + i) % CONTEXT_WIN;
-                    tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
+                    tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
-                            std::vector<float> v(EMBEDDING, 0.0f);
                             blocks[0].b[m1][m2].EV.addRow(sequence1[i], actual_row_in_ev);
                         }
                     }
                 }
                 currentTokenCount += sequence1.size();
                 effective_context_size = currentTokenCount;
-                clForward(blockCount, effective_context_size, promptCount);
-                tokenEmbed.addRow(sequence1[sequence1.size() - 1] + positionalEmbeddings(currentTokenCount, d), currentTokenCount);
+                clForward_ev(blockCount, effective_context_size, promptCount);
+                tokenEmbed.addRow(sequence1[sequence1.size() - 1], currentTokenCount);
+                positional.addRow(positionalEmbeddings(currentTokenCount, d), currentTokenCount);
                 // prepare EVs
                 for(int m1 = 0; m1 < x; m1++) {
                     for(int m2 = 0; m2 < y; m2++) {
-                        std::vector<float> v(EMBEDDING, 0.0f);
                         blocks[1].b[m1][m2].EV.addRow(sequence1[sequence1.size() - 1], 0);
                     }
                 }
@@ -149,21 +154,22 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
             int dif1 = sequence1.size() - dif;
             for(int i = 0; i < dif; i++) {
                 int actual_row_in_ev = (currentTokenCount + i) % CONTEXT_WIN;
-                tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
+                tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                 for(int m1 = 0; m1 < x; m1++) {
                     for(int m2 = 0; m2 < y; m2++) {
-                        std::vector<float> v(EMBEDDING, 0.0f);
                         blocks[0].b[m1][m2].EV.addRow(sequence1[i], actual_row_in_ev);
                     }
                 }
             }
             currentTokenCount += dif;
             effective_context_size += dif;
-            clForward(blockCount, effective_context_size, promptCount);
+            clForward_ev(blockCount, effective_context_size, promptCount);
             // shift to next block
             blockCount = 2;
             for(int i = 0; i < dif1; i++) {
-                tokenEmbed.addRow(sequence1[dif + i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
+                tokenEmbed.addRow(sequence1[dif + i], currentTokenCount + i);
+                positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                 // prepare EVs
                 for(int m1 = 0; m1 < x; m1++) {
                     for(int m2 = 0; m2 < y; m2++) {
@@ -182,7 +188,8 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
             // add sequence1 tokens from currentTokenCount: 8192 % 1024 = 0
             if(effective_context_size == 0 && effective_context_size + sequence1.size() < CONTEXT_WIN) {
                 for(int i = 0; i < sequence1.size(); i++) {
-                    tokenEmbed.addRow(sequence1[i] + positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
+                    tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -197,6 +204,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
             else if(effective_context_size > 0 && effective_context_size + sequence1.size() < CONTEXT_WIN) {
                 for(int i = 0; i < sequence1.size(); i++) {
                     tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -212,6 +220,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 int promptCount = 0;
                 for(int i = 0; i < sequence1.size(); i++) {
                     tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -221,9 +230,10 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 }
                 currentTokenCount += sequence1.size();
                 effective_context_size += sequence1.size();
-                clForward(blockCount, effective_context_size, promptCount);
+                clForward_ev(blockCount, effective_context_size, promptCount);
                 // shift to next block
                 tokenEmbed.addRow(sequence1[sequence1.size() - 1], currentTokenCount);
+                positional.addRow(positionalEmbeddings(currentTokenCount, d), currentTokenCount);
                 for(int m1 = 0; m1 < x; m1++) {
                     for(int m2 = 0; m2 < y; m2++) {
                         std::vector<float> v(EMBEDDING, 0.0f);
@@ -240,6 +250,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 int dif1 = sequence1.size() - dif;
                 for(int i = 0; i < dif; i++) {
                     tokenEmbed.addRow(sequence1[i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -249,10 +260,11 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 }
                 currentTokenCount += dif;
                 effective_context_size += dif;
-                clForward(blockCount, effective_context_size, promptCount);
+                clForward_ev(blockCount, effective_context_size, promptCount);
                 // shift to next block
                 for(int i = 0; i < dif1; i++) {
                     tokenEmbed.addRow(sequence1[dif + i], currentTokenCount + i);
+                    positional.addRow(positionalEmbeddings(currentTokenCount + i, d), currentTokenCount + i);
                     // prepare EVs
                     for(int m1 = 0; m1 < x; m1++) {
                         for(int m2 = 0; m2 < y; m2++) {
@@ -274,8 +286,8 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
         // Copy sequence1 D->D from d_tokenEmbed into d_EV of each head in block 0
         size_t prompt_bytes = sequence1.size() * d * sizeof(float);
         size_t prompt_start_offset_bytes = initial_token_count * d * sizeof(float);
-        for (int i = 0; i < x; ++i) { // Layers
-            for (int j = 0; j < y; ++j) { // Parallels
+        for (int i = 0; i < x; ++i) {
+            for (int j = 0; j < y; ++j) {
                 cl::Buffer& d_head_ev = blocks[0].b[i][j].getDeviceEVBuffer(); // Assuming getter exists
                 size_t dest_offset_bytes = (initial_token_count % CONTEXT_WIN) * d * sizeof(float); // Correct offset within the block's context window
                 CL_CHECK(clcontext.queue.enqueueCopyBuffer(d_tokenEmbed, d_head_ev, prompt_start_offset_bytes, dest_offset_bytes, prompt_bytes));
@@ -306,13 +318,15 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
             std::cout << "Training token " << i+1 << "/" << sequence2.size() << ": '" << expected_str << "'" << " at " << indexVec[i] << std::endl;
             std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << " & eff. context size: " << effective_context_size <<std::endl;
             size_t currentBytes = static_cast<size_t>(EMBEDDING) * effective_context_size * sizeof(float);
-            CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, tokenEmbed.mapped_data));
 
             int j = 0;
             std::fill(oneHotEncode.begin(), oneHotEncode.end(), 0.0f);
             oneHotEncode[indexVec[i]] = 1.0f;
 
             while (j < epochs) {
+                // add
+                embedPlusPos = tokenEmbed + positional;
+                CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, embedPlusPos.mapped_data));
                 if(current_block_idx == 1) {
                     // keys and queries for each head of first block
                     int tokInContext = i;
@@ -342,7 +356,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     cl::Buffer pEV = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err); CL_CHECK(cl_err);
                     // start from last token of previous local context
                     size_t fromHereInTokenEmbed = static_cast<size_t>(CONTEXT_WIN) * (blockCount - 1) * sizeof(float);
-                    const float* host_src_ptr = tokenEmbed.mapped_data + (fromHereInTokenEmbed / sizeof(float));
+                    const float* host_src_ptr = embedPlusPos.mapped_data + (fromHereInTokenEmbed / sizeof(float));
                     CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, host_src_ptr));
 
                     // keys and queries for each head of non-first block
@@ -403,24 +417,25 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     cl::Buffer d_otok_buffer, d_predictions, d_result_index_buffer;
                     try {
                         d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes,
-                                                    deEmbeddings.mapped_data, &cl_err); CL_CHECK(cl_err);
+                                                    deEmbeddings.mapped_data, &cl_err);
                         size_t otok_bytes = static_cast<size_t>(x) * d * sizeof(float);
-                        d_otok_buffer = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, otok.data(), &cl_err); CL_CHECK(cl_err);
-                        d_predictions = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, predBytes, nullptr, &cl_err); CL_CHECK(cl_err);
-                        d_result_index_buffer = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int), nullptr, &cl_err); CL_CHECK(cl_err);
-                        // The kernel signature is: (EH, deEmbeddings, scores, result_index, dim, voc)
+                        d_otok_buffer = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, otok.data(), &cl_err);
+                        d_predictions = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, predBytes, nullptr, &cl_err);
+                        d_result_index_buffer = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, sizeof(cl_int), nullptr, &cl_err);
                         CL_CHECK(predKernel.setArg(0, d_otok_buffer));
                         CL_CHECK(predKernel.setArg(1, d_deEmbeddings));
-                        CL_CHECK(predKernel.setArg(2, d_predictions)); // This is the 'scores' output buffer
-                        CL_CHECK(predKernel.setArg(3, d_result_index_buffer)); // This is the 'result_index' output buffer
-                        CL_CHECK(predKernel.setArg(4, static_cast<cl_int>(d * x))); // This is 'dim'
-                        CL_CHECK(predKernel.setArg(5, static_cast<cl_int>(vocabsize))); // This is 'voc'
+                        CL_CHECK(predKernel.setArg(2, d_predictions));
+                        CL_CHECK(predKernel.setArg(3, d_result_index_buffer));
+                        CL_CHECK(predKernel.setArg(4, static_cast<cl_int>(d * x)));
+                        CL_CHECK(predKernel.setArg(5, static_cast<cl_int>(vocabsize)));
                         cl::NDRange global(1);
                         cl::NDRange local(1);
                         CL_CHECK(clcontext.queue.enqueueNDRangeKernel(predKernel, cl::NullRange, global, local));
                         CL_CHECK(clcontext.queue.enqueueReadBuffer(d_result_index_buffer, CL_TRUE, 0, indexBytes, &host_indexForToken));
                         CL_CHECK(clcontext.queue.enqueueReadBuffer(d_predictions, CL_TRUE, 0, predBytes, pred.data()));
                         indexForToken = host_indexForToken;
+                        pred = softmax(pred);
+                        CL_CHECK(cl_err);
                     }
                     catch (const std::exception& e) {
                         std::cerr << "Error during kernelComputePredictionWithScores in clTrainCONTEXT: " << e.what() << std::endl;
@@ -428,15 +443,14 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     }
                 }
 
-                current_error = crossEntropy(oneHotEncode, pred);
+                current_error = - std::log(pred[indexVec[i]] + 1e-15f);
+                float del = current_error - prev_error;
                 std::string predicted_token_str = (indexForToken >= 0 && indexForToken < static_cast<unsigned int>(tokens.size()))
                                                   ? tokens[indexForToken] : "INVALID_INDEX";
 
-                std::cout << predicted_token_str << "\t: " << indexForToken << " | "
-                          << std::fixed << std::setprecision(8) << current_error << " | "
-                          << std::fixed << std::setprecision(8) << current_error - prev_error << " | "
-                          << std::fixed << std::setprecision(8) << std::exp(current_error) << " | "
-                          << j+1 << " | " << learning << std::endl;
+                std::cout << predicted_token_str << " ( " << indexForToken << " ) \t: "
+                          << current_error << " | " << del << " | "
+                          << std::exp(current_error) << " | " << j+1 << " | " << learning << std::endl;
 
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     std::cout << "Token '" << expected_str << "' predicted correctly after " 
@@ -451,8 +465,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     epochs += 15;
                 }
 
-                // modify the de-embeddings and get gradients for backprop
-                learning *= (current_error > prev_error) ? 1.05 : 0.95;
+                learning = adaptiveLearningRateOnPlateau(current_error, prev_error, learning, 0.95, LEARNING_MAX, LEARNING_MIN, 1e-10, 5);
                 std::vector<float> gradEH(d * x, 0.0f);
                 clUpdateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
                 // get expected target for backprop

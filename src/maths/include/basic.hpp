@@ -40,21 +40,19 @@ std::vector<std::vector<float>> operator*=(std::vector<std::vector<float>>, floa
 std::vector<std::vector<float>> operator/=(std::vector<std::vector<float>>, float y);
 
 float errorofv(std::vector<float>&, std::vector<float>&);
-float gradientdesc1(std::vector<float>, std::vector<float>);
 float vdotv2val(std::vector<float>, std::vector<float>);
 float vdotv2scal(std::vector<float> , std::vector<float>);
 float MAE(std::vector<float>&, std::vector<float>&);
 float MSE(std::vector<float>&, std::vector<float>&);
 float crossEntropy(std::vector<float>&, std::vector<float>&);
 float binaryCrossEntropy(std::vector<float>&, std::vector<float>&);
+float categoricalCrossEntropy(std::vector<std::vector<float>>& y_true, std::vector<std::vector<float>>& y_pred);
 float sum(std::vector<float>);
 float sum(std::vector<std::vector<float>>);
 float product(std::vector<float>);
 float product(std::vector<std::vector<float>>);
 
 std::vector<float> error(std::vector<float>&, std::vector<float>&);
-std::vector<float> percenterrorofvec(std::vector<float> , std::vector<float>);
-std::vector<float> gradient_descent(std::vector<float>, std::vector<float>, float);
 std::vector<float> power(std::vector<float>, float);
 std::vector<float> sumofrow(std::vector<std::vector<float>>);
 std::vector<float> sumofcol(std::vector<std::vector<float>>);

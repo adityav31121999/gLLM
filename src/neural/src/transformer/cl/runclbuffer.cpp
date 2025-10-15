@@ -141,7 +141,7 @@ void transformer::clBufferRun()
             }
 
             // --- Transition to the next block ---
-            // Copy the EV state from the completed block (t[0]) to d_EVuse (D->D)
+            // Copy the EV state from the completed block (blocks[0]) to d_EVuse (D->D)
             size_t head_ev_bytes = static_cast<size_t>(CONTEXT_WIN) * d * sizeof(float);
 
             // Check if the total size matches the allocated buffer size
@@ -149,7 +149,7 @@ void transformer::clBufferRun()
                 throw std::runtime_error("Mismatch between calculated EVuse size and allocated buffer size during block transition.");
             }
 
-            // Loop through each attention head in the completed block (t[0])
+            // Loop through each attention head in the completed block (blocks[0])
             for (int i = 0; i < x; ++i) { // Iterate through layers (rows)
                 for (int j = 0; j < y; ++j) { // Iterate through parallels (columns)
                     try {
@@ -291,7 +291,7 @@ void transformer::clBufferRun()
 
             // --- Context Window / Block Transition Check ---
             if (currentTokenCount % CONTEXT_WIN == 0 && currentTokenCount > 0 && currentTokenCount < FULL_CONTEXT) {
-                // Copy the EV state from the completed block (t[0]) to d_EVuse (D->D)
+                // Copy the EV state from the completed block (blocks[0]) to d_EVuse (D->D)
                 std::cerr << "\nWarning: Device-to-device copy for EV->EVuse not implemented yet in clRun generation loop.\n" << std::endl;
                 // queue.finish();
 

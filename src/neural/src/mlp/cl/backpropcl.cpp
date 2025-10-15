@@ -128,7 +128,7 @@ void mlp::clBackprop(int in, int layers, float learning) {
         cl::NDRange local_2d = cl::NullRange;
 
         cl_int cl_in = static_cast<cl_int>(in);
-        cl_float cl_learning = static_cast<cl_float>(learning);
+        float cl_learning = static_cast<float>(learning);
 
         // --- Backpropagation Steps ---
 
@@ -304,7 +304,7 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         cl::NDRange local_2d = cl::NullRange;
 
         cl_int cl_in = static_cast<cl_int>(in);
-        cl_float cl_learning = static_cast<cl_float>(learning);
+        float cl_learning = static_cast<float>(learning);
 
         // --- Backpropagation Steps ---
 

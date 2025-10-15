@@ -61,41 +61,4 @@ void mlp::train(std::vector<std::vector<float>>& inputs, float& mse, int in, int
     mse = total_mse;
 }
 
-/**
- * @brief Validation function for MLP
- * @param in Number of inputs
- * @param layers Number of layers
- */
-void mlp::validate(int in, int layers) {
-    std::vector<float> validation_input(in, 0.0);
-    std::vector<float> validation_expected(in, 0.0);
-    input = validation_input;
-    expected = validation_expected;
-    forward(in, layers);
-    float mse = 0.0;
-    for (size_t i = 0; i < output.size(); ++i) {
-        mse += std::pow(expected[i] - output[i], 2);
-    }
-    mse /= output.size();
-    std::cout << "Validation MSE: " << mse << std::endl;
-}
-
-/**
- * @brief Testing function for MLP
- * @param in Number of inputs
- * @param layers Number of layers
- */
-void mlp::test(int in, int layers) {
-    std::vector<float> test_input(in, 0.0);
-    std::vector<float> test_expected(in, 0.0);
-    input = test_input;
-    expected = test_expected;
-    forward(in, layers);
-    std::cout << "Expected " << "<-> Output" << std::endl;
-    std::cout << "Test Results:" << std::endl;
-    for (size_t i = 0; i < output.size(); ++i) {
-        std::cout << expected[i] << " <-> " << output[i] << std::endl;
-    }
-}
-
 #endif

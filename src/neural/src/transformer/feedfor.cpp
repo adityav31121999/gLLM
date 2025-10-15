@@ -15,10 +15,10 @@ void transformer::forward(int& blockCount, int& currentTokenCount, int& sequence
     if (blockCount < 0 || blockCount >= m) {
         throw std::out_of_range("transformer::forward: blockCount (" + std::to_string(blockCount) + ") is out of range [0, " + std::to_string(m - 1) + "].");
     }
-    if (t.empty() || static_cast<size_t>(blockCount) >= blocks.size()) {
+    if (blocks.empty() || static_cast<size_t>(blockCount) >= blocks.size()) {
         throw std::runtime_error("transformer::forward: Transformer blocks not initialized or blockCount exceeds allocated blocks.");
     }
-    if (blockCount < blocks.size() && (t[blockCount].b.empty() || blocks[blockCount].b[0].empty())) {
+    if (blockCount < blocks.size() && (blocks[blockCount].b.empty() || blocks[blockCount].b[0].empty())) {
         throw std::runtime_error("transformer::forward: Attention heads not initialized for block " + std::to_string(blockCount) + ".");
     }
 
@@ -45,7 +45,7 @@ void transformer::forward(int& blockCount, int& currentTokenCount, int& sequence
                 otok[i] += blocks[0].b[j][y-1].EH[i];
             }  
         }
-        computeOutput(otok, tokenEmbed, vocabsize, indexForToken);
+        // computeOutput(otok, tokenEmbed, vocabsize, indexForToken);
     }
     else {
         if (blockCount > 0 && static_cast<size_t>(blockCount-1) < blocks.size() && (blockCount == 1 || static_cast<size_t>(blockCount-2) < blocks.size())) {
@@ -59,7 +59,7 @@ void transformer::forward(int& blockCount, int& currentTokenCount, int& sequence
                 otok[i] += blocks[0].b[j][y-1].EH[i];
             }
         }
-        computeOutput(otok, embeddings, vocabsize, indexForToken);
+        // computeOutput(otok, embeddings, vocabsize, indexForToken);
     }
 }
 

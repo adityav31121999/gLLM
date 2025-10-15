@@ -32,7 +32,8 @@ inline void apply_elastic_net_and_clip(volatile __global float* weight_ptr, __gl
     float error_gradient = (gradient_ptr != NULL) ? gradient_ptr[index] : 0.0f;
 
     float l1_reg_term = lambda_l1 * sign_f(current_weight);
-    float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+    // taking 0.5 * current_weight^2 -> lambda * current_weight
+    float l2_reg_term = lambda_l2 * current_weight;
 
     float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
@@ -73,9 +74,8 @@ __kernel void kernelUpdateWeightsHeadHVElastic(__global float* mh_a, __global fl
                                         __global const float* grad_mh, __global const float* grad_mv,
                                         __global const float* grad_mq, __global const float* grad_mk,
                                         __global const float* grad_eh, __global const float* grad_ev_scaled,
-                                        float learning_rate, int update_eh, int update_ev,
-                                        int mat_heights, int embedding_dim, int context_win,
-                                        float lambda_l1, float lambda_l2, float max_grad_clip_value)
+                                        int update_eh, int update_ev, int mat_heights, int embedding_dim, int context_win,
+                                        float learning_rate, float lambda_l1, float lambda_l2, float max_grad_clip_value)
 {
     int idx = get_global_id(0);
     int ev_size = context_win * embedding_dim;
@@ -106,9 +106,8 @@ __kernel void kernelUpdateWeightsHeadElastic(__global float* mh_a, __global floa
                                             __global const float* grad_mh, __global const float* grad_mv,
                                             __global const float* grad_mq, __global const float* grad_mk,
                                             __global const float* grad_eh,
-                                            float learning_rate, int update_eh,
-                                            int mat_heights, int embedding_dim,
-                                            float lambda_l1, float lambda_l2, float max_grad_clip_value)
+                                            int update_eh, int mat_heights, int embedding_dim,
+                                            float learning_rate, float lambda_l1, float lambda_l2, float max_grad_clip_value)
 {
     int idx = get_global_id(0);
     int matrix_size = mat_heights * embedding_dim;

@@ -27,7 +27,7 @@ model::model(OpenCLContext& context, const std::string& baseDirectory, const std
     clcontext(context), baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), 
     matheight(matheight), l(l), learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n),
     isSelf(isSelfAttention), toTrain(toTrainModel), metadata(nullptr), chat(nullptr), currentChatLogPath(""),
-    contextTrain(contextTrainModel), TOK(tokenDirectory, clcontext), vocabsize(TOK.getVocabularySize()),
+    contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain, clcontext), vocabsize(TOK.getVocabularySize()),
     T(context, m, x, y, n, d, matheight, l, TOK.getVocabularySize(), learning, lambda_L1, lambda_L2, 
         isSelfAttention, toTrainModel, contextTrainModel, baseDirectory)
 {
@@ -63,13 +63,13 @@ model::model(OpenCLContext& context, const std::string& baseDirectory, const std
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(OpenCLContext& context, const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, 
-    int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
+model::model(OpenCLContext& context, const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, 
+    int m, int x, int y, int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
     bool toTrainModel, bool contextTrainModel) :
     clcontext(context), baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), 
     matheight(matheight), l(l), learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n),
     isSelf(isSelfAttention), toTrain(toTrainModel), metadata(nullptr), chat(nullptr), currentChatLogPath(""),
-    contextTrain(contextTrainModel), TOK(tokenDirectory, clcontext), vocabsize(TOK.getVocabularySize()),
+    contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain, clcontext), vocabsize(TOK.getVocabularySize()),
     T(context, modelName + "_", m, x, y, n, d, matheight, l, TOK.getVocabularySize(), learning, lambda_L1, lambda_L2, 
         isSelfAttention, toTrainModel, contextTrainModel, baseDirectory)
 {
@@ -158,11 +158,12 @@ void printCudaDeviceName() {
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
-        float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel) :
+model::model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d,
+    int matHeightParam, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
+    bool contextTrainModel) :
     baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), matheight(matheight), l(l), 
     learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n), isSelf(isSelfAttention), toTrain(toTrainModel),
-    metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory), vocabsize(TOK.getVocabularySize()),
+    metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain), vocabsize(TOK.getVocabularySize()),
     T(m, x, y, n, d, matheight, l, TOK.getVocabularySize(), learning, lambda_L1, lambda_L2, 
         isSelfAttention, toTrainModel, contextTrainModel, baseDirectory)
 {
@@ -182,7 +183,6 @@ model::model(const std::string& baseDirectory, const std::string& tokenDirectory
     info.matheight = matheight;
     info.attentionType = isSelf;
     info.totalContext = m * n;
-    setTokens2Transformer();
     calculateAndSetLayout();
     #ifdef USE_CUDA
     std::cout << "Model Created. "; printCudaDeviceName();
@@ -203,11 +203,12 @@ model::model(const std::string& baseDirectory, const std::string& tokenDirectory
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
-        float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel) :
+model::model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, 
+    int n, int d, int matHeightParam, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, 
+    bool contextTrainModel) :
     baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), matheight(matheight), l(l), 
     learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n), isSelf(isSelfAttention), toTrain(toTrainModel),
-    metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory), vocabsize(TOK.getVocabularySize()),
+    metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain), vocabsize(TOK.getVocabularySize()),
     T(modelName + "_", m, x, y, n, d, matheight, l, TOK.getVocabularySize(), learning, lambda_L1, lambda_L2, 
         isSelfAttention, toTrainModel, contextTrainModel, baseDirectory)
 {
@@ -227,7 +228,6 @@ model::model(const std::string& modelName, const std::string& baseDirectory, con
     info.matheight = matheight;
     info.attentionType = isSelf;
     info.totalContext = m * n;
-    setTokens2Transformer();
     calculateAndSetLayout();
     #ifdef USE_CUDA
     std::cout << "Model Created. "; printCudaDeviceName();

@@ -13,21 +13,24 @@
  * @brief constructor for tokeniser (use dimensions directly)
  * @param d dimension for embedding
  */
-tokeniser::tokeniser(int d, OpenCLContext& context) : d(d), bpe_progress(std::make_unique<ProgressData>()), ocl(context) {}
+tokeniser::tokeniser(int d, bool contextTok, OpenCLContext& context) : d(d), bpe_progress(std::make_unique<ProgressData>()), contextTok(contextTok), 
+        ocl(context) {}
 
 /**
  * @brief constructor for tokeniser (use dimensions directly)
  * @param d dimension for embedding
  * @param vocSize vocabulary size
  */
-tokeniser::tokeniser(int d, int d_val, OpenCLContext& context) : d(d), d_val(d_val), bpe_progress(std::make_unique<ProgressData>()), ocl(context) {}
+tokeniser::tokeniser(int d, int d_val, bool contextTok, OpenCLContext& context) : d(d), d_val(d_val), bpe_progress(std::make_unique<ProgressData>()), 
+        contextTok(contextTok), ocl(context) {}
 
 
 /**
  * @brief constructor for tokeniser (use data set directly) - preserves CSV order
  * @param path2data path to folder with all dataset files
  */
-tokeniser::tokeniser(const std::string& path2data, OpenCLContext& context) noexcept : path2data(path2data), bpe_progress(std::make_unique<ProgressData>()), ocl(context)
+tokeniser::tokeniser(const std::string& path2data, bool contextTok, OpenCLContext& context) noexcept : path2data(path2data), 
+        bpe_progress(std::make_unique<ProgressData>()), contextTok(contextTok), ocl(context)
 {
     try {
         // Read the CSV file once and build both data structures
@@ -48,20 +51,20 @@ tokeniser::tokeniser(const std::string& path2data, OpenCLContext& context) noexc
  * @brief constructor for tokeniser (use dimensions directly)
  * @param d dimension for embedding
  */
-tokeniser::tokeniser(int d) : d(d), bpe_progress(std::make_unique<ProgressData>()) {}
+tokeniser::tokeniser(int d) : d(d), contextTok(contextTok), bpe_progress(std::make_unique<ProgressData>()) {}
 
 /**
  * @brief constructor for tokeniser (use dimensions directly)
  * @param d dimension for embedding
  * @param vocSize vocabulary size
  */
-tokeniser::tokeniser(int d, int d_val) : d(d), d_val(d_val), bpe_progress(std::make_unique<ProgressData>()) {}
+tokeniser::tokeniser(int d, int d_val) : d(d), d_val(d_val), contextTok(contextTok), bpe_progress(std::make_unique<ProgressData>()) {}
 
 /**
  * @brief constructor for tokeniser (use data set directly) - preserves CSV order
  * @param path2data path to folder with all dataset files
  */
-tokeniser::tokeniser(const std::string& path2data) noexcept : path2data(path2data), bpe_progress(std::make_unique<ProgressData>())
+tokeniser::tokeniser(const std::string& path2data) noexcept : path2data(path2data), contextTok(contextTok), bpe_progress(std::make_unique<ProgressData>())
 {
     try {
         // Read the CSV file once and build both data structures

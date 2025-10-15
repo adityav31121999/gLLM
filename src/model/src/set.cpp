@@ -28,11 +28,6 @@ int ensure_file_size_basic(FILE* fp, size_t required_size) {
     return 0;
 }
 
-void model::setLearning(float learning) {
-    learning = learning;
-    T.setLearning(learning);
-}
-
 void model::setVocab(int vocab) {
     info.vocab = vocab;
 }
@@ -72,26 +67,23 @@ void model::setInfo(std::string& modelName, std::string& version, std::string& a
     info.license = license;
 }
 
+
 void model::setTokens2Transformer()
 {
     T.embeddings = TOK.getEmbeddings();
-    T.deEmbeddings = TOK.getDeEmbeddings();
+    if (contextTrain == 1) T.deEmbeddings = TOK.getDeEmbeddings();
     T.tokens = TOK.getTokens();
     T.vocabsize = TOK.getVocabularySize();
     // sort the  T.tokens lexicographically in descending order of their length
     std::sort(T.tokens.begin(),  T.tokens.end(), [](const std::string& a, const std::string& b) {
-        if(a.length() != b.length()) {
-            // larger length first
-            return a.length() > b.length();
+            if(a.length() != b.length()) {
+                // larger length first
+                return a.length() > b.length();
+            }
+            // alphabetically
+            return a < b;
         }
-        // alphabetically
-        return a < b;
-    });
-    /*
-    for(int i = 0; i <  T.tokens.size(); i++) {
-        std::cout <<  T.tokens[i] << " | ";
-    }
-    */
+    );
     std::cout << "Tokeniser data set to transformer :)" << std::endl;
 }
 
