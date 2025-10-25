@@ -396,19 +396,19 @@ void tokeniser::readFromFiles(const std::string& path2ClassDataFolder)
     if (!std::filesystem::exists(token_stats_file)) {
         throw std::runtime_error("readFromFiles: Required token statistics file missing. Ensure training created '_final_token_stats.csv' in the specified path.");
     }
-    statOfTokens = readUnorderedMap(token_stats_file);
-    // Load tokens and embeddings. Assume they are in the same order from their respective files.
-    std::vector<std::string> loaded_tokens = readSpecificColumnFromCsv(token_stats_file, 0);
-    vocab_tokens = loaded_tokens; // Store the lexicographically sorted tokens for lookups.
-    embeddings = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
-    if(contextTok == 1) deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
 
+    statOfTokens = readUnorderedMap(token_stats_file);
+    std::vector<std::string> loaded_tokens = readSpecificColumnFromCsv(token_stats_file, 0);
+    vocab_tokens = loaded_tokens;
+
+    embeddings = readCsvTo2DVector(path2ClassDataFolder + "/_embeddings_only.csv");
     if (loaded_tokens.size() != embeddings.size()) {
         std::cerr << "Warning: Mismatch between number of tokens (" << loaded_tokens.size() 
                   << ") and embeddings (" << embeddings.size() << "). Data may be corrupt." << std::endl;
     }
 
-    if (loaded_tokens.size() != deEmbeddings.size()) {
+    if(contextTok == 1) deEmbeddings = readCsvTo2DVector(path2ClassDataFolder + "/_deEmbeddings_only.csv");
+    if (loaded_tokens.size() != deEmbeddings.size() && contextTok == 1) {
         std::cerr << "Warning: Mismatch between number of tokens (" << loaded_tokens.size() 
                   << ") and deEmbeddings (" << deEmbeddings.size() << "). Data may be corrupt." << std::endl;
     }

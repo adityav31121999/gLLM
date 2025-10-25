@@ -66,7 +66,7 @@ public:
 
     std::vector<block> blocks;          // attention block ('1' for inference and 'm' for training)
     std::vector<std::string> tokens;    // tokens in vocabulary
-    std::vector<std::string> mTokens;   // sequence1s and sequence2 tokens
+    std::vector<std::string> mTokens;   // chat tokens
     std::vector<int> indexVec;          // indices vector
     std::vector<int> expIndex;          // expected index vector
     std::vector<float> otok;            // output token (vector, size d * NUMBER_OF_HEADS)
@@ -77,7 +77,7 @@ public:
     mat tokenEmbed;                     // token embedding (sequence1 + sequence2) (Mapped, currentTokenCount x d)
     mat positional;                     // positional encodings (Mapped, currentTokenCount x d)
     mat embedPlusPos;                   // token embeddings + positional encodings (Mapped, currentTokenCount x d)
-    FILE* seqChat;              // sequence1 and sequence2 text file
+    FILE* seqChat;                      // sequence1 and sequence2 text file
     // when model is in inference, hold EV of ith block here
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse; // Keeping as vector due to complexity
     mat tokForBlock;                    // token embeddings for local context for inference (Mapped, n x d)
@@ -124,7 +124,6 @@ public:
 #elif USE_OPENCL
 
 // opencl implementation
-    void clParallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void clKdotQ4Train(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void clKdotQ4Infer(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void clForward(int& blockCount, int& currentTokenCount, int& sequence1Count);
@@ -139,11 +138,11 @@ public:
     void clTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void clTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void clTest(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
     void clRun();
     void clRunContext();
-    void clBufferRun();
-    void clBufferRunContext();
+    void clRunBuffer();
+    void clRunBufferContext();
 
 #else
 
@@ -158,14 +157,12 @@ public:
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void trainOnThreads(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
-    void trainOnThreads(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void trainOnThreadsContext(std::vector<std::vector<float>> &sentence, std::vector<std::string> &rString);
-    void trainOnThreadsContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void test(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void testOnThreads(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void run();
+    void runContext();
     void runOnThreads();
+    void runOnThreadsContext();
 
 #endif
 
@@ -182,7 +179,7 @@ public:
     float cosineAnnealingLR(int current_epoch, int total_epochs, float max_lr, float min_lr);
     float adaptiveLearningRateOnPlateau(float current_error, float previous_error, float& learning_rate, 
                                         float factor, float max_lr, float min_lr, float epsilon, int patience);
-    float softsignLearning(float errordif, float currentLearning);
+    float softsignLearning(float error_del, float currentLearning);
     float errorGradLearning(const std::vector<float>& pred, const std::vector<float>& exp, const float del, float currentLearning);
 
     std::vector<float> positionalEmbeddings(int position, int embeddingDimension);

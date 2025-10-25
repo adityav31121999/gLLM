@@ -37,7 +37,7 @@ struct allBuffers {
 /**
  * @brief run transformer to get sequence2 from sequence1
  */
-void transformer::clBufferRun()
+void transformer::clRunBuffer()
 {
     // Set for inference
     inTraining = 0;
@@ -119,13 +119,10 @@ void transformer::clBufferRun()
         if (sequence1Count <= space_in_current_block) {
             // Case 1: Sequence1 fits entirely within the current block
             // Pre-calculate KdotQ for the sequence1 tokens added
-            for (int col = 0; col < y; ++col) {
-                int effectiveSequence1Count = sequence1Count; // Number of new tokens
-                // The 'currentTokenCount' argument to clParallelKdotQs should be the count *before* adding the sequence1
-                clParallelKdotQs(effectiveSequence1Count, previousTokenCount, blockCount, col, isSelf, inTraining);
-            }
+            int effectiveSequence1Count = sequence1Count; // Number of new tokens
+            clKdotQ4Infer(effectiveSequence1Count, previousTokenCount, blockCount, isSelf, inTraining);
             CL_CHECK(clcontext.queue.finish()); // Ensure KdotQ calculation is done
-        } 
+        }
         else {
             // Case 2: Sequence1 spans across the current and next block
             int m2 = space_in_current_block; // Tokens fitting in the current block
@@ -133,10 +130,8 @@ void transformer::clBufferRun()
 
             // Process the first part (m2 tokens) in the current block
             if (m2 > 0) {
-                for (int col = 0; col < y; ++col) {
-                    int effectiveSequence1Count = m2;
-                    clParallelKdotQs(effectiveSequence1Count, previousTokenCount, blockCount, col, isSelf, inTraining);
-                }
+                int effectiveSequence1Count = m2;
+                clKdotQ4Infer(effectiveSequence1Count, previousTokenCount, blockCount, isSelf, inTraining);
                 CL_CHECK(clcontext.queue.finish()); // Ensure KdotQ for m2 is done
             }
 
@@ -195,11 +190,8 @@ void transformer::clBufferRun()
             if (m1 > 0) {
                 // The "previous token count" for this calculation is effectively the start of the new block's relevant context
                 int start_of_new_block_count = currentTokenCount - m1;
-                for (int col = 0; col < y; ++col) {
-                    int effectiveSequence1Count = m1;
-                    // Pass the new blockCount
-                    clParallelKdotQs(effectiveSequence1Count, start_of_new_block_count, blockCount, col, isSelf, inTraining);
-                }
+                int effectiveSequence1Count = m1;
+                clKdotQ4Infer(effectiveSequence1Count, start_of_new_block_count, blockCount, isSelf, inTraining);
                 CL_CHECK(clcontext.queue.finish()); // Ensure KdotQ for m1 is done
             }
         }

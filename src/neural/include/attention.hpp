@@ -1,6 +1,11 @@
-// attention.hpp: header source for attention class
 #ifndef ATTENTION_HPP
 #define ATTENTION_HPP 1
+#include <vector>
+#include <cmath>
+#include <stdexcept>
+#include <numeric>
+#include <maths.hpp>
+#include "mlp.hpp"
 
 /**
  * Attention Mechanism for SHADY ATTENTION ARCHITECTURE
@@ -18,23 +23,18 @@
  * qkCache, khCache, qvcache => EMBEDDING x EMBEDDING
  */
 
-#include <vector>
-#include <cmath>
-#include <stdexcept>
-#include <numeric>
-#include <maths.hpp>
-#include "mlp.hpp"
-
 // macros for models
 #define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
 #define NUMBER_OF_HEADS 8                   // number of heads in each layer (partial attention)
 #define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
 #define EMBEDDING 128                       // embedding dimension for each token
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head (or number of PA * embedding)
-#define PROMPT_THRESHOLD CONTEXT_WIN/4      // token limit for sequence1
-#define FULL_CONTEXT CONTEXT_WIN*NUMBER_OF_BLOCKS               // maximum tokens for full context
+#define PROMPT_THRESHOLD CONTEXT_WIN/4                          // token limit for sequence1
+#define FULL_CONTEXT (CONTEXT_WIN*NUMBER_OF_BLOCKS)             // maximum tokens for full context
+#define CHAT_CONTEXT (FULL_CONTEXT - NUMBER_OF_BLOCKS + 1)      // maximum tokens for chat
+#define DEEMBEDDING (EMBEDDING*NUMBER_OF_PA)                    // embedding dimension for each token
 #define SCALING std::sqrt(static_cast<float>(EMBEDDING))        // SCALING FACTOR for ATTENTION HEAD
-#define DEEMBEDDING EMBEDDING*NUMBER_OF_PA  // embedding dimension for each token
+
 
 /**
  * @brief ATTENTION CLASS for calculating attention head and Embeddings.

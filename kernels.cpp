@@ -90,7 +90,6 @@
         "kernelComputePreMH_MV",
         "kernelComputeGradMH_MV",
         "kernelComputeGradHead",
-        "kernelComputeGradKdotQ_LOTA",
         "kernelComputeGradK_Q",
         "kernelComputeGradMK_MQ",
         "kernelComputePreMV_V",
@@ -99,9 +98,7 @@
         "kernelComputeGradQ_V",
         "kernelComputeGradMQ_V",
         "kernelComputeGradMKCorrection",
-        "kernelComputeSimpleLOTAder",
         "kernelRowSum",
-        "kernelComputeGradMK_MQ_Simplified",
         // kdotq.cl
         "kernelCompute_single_kq_vector",
         "kernelComputeKQall",
@@ -111,6 +108,7 @@
         "kernelKdotQ_Block1_Crossi",
         "kernelKdotQ_BlockN_Selfi",
         "kernelKdotQ_BlockN_Crossi",
+        "kernelComputeGradKdotQ_LOTA",
         // weights.cl
         "kernelUpdateEVrows",
         "kernelUpdateWeightsHeadHVElastic",

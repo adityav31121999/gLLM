@@ -31,17 +31,16 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
         throw std::runtime_error("clTrainContext(sentence): Sentence embedding dimension mismatch. Expected " + std::to_string(d) + ", got " + std::to_string(sentence[0].size()));
     }
 
-    cl_int cl_err;          // error
+    cl_int cl_err;
     cl::Kernel kq_kernel, predKernel;
-    cl::Buffer d_tokenEmbed, d_deEmbeddings, d_expected_token;    // embeddings
-    cl::Buffer d_Q_cl, d_K_cl, d_mQ_cl, d_mK_cl, d_tok_cl;      // matrices and output
-    float initial_learning_rate = learning; // Store initial learning rate
-    float current_error = 0.0f;
-    float prev_error = 0.0f;
+    cl::Buffer d_tokenEmbed, d_deEmbeddings, d_expected_token;
+    cl::Buffer d_Q_cl, d_K_cl, d_mQ_cl, d_mK_cl, d_tok_cl;
+    float initial_learning_rate = learning;
+    float current_error = 0.0f, prev_error = 0.0f;
     int initial_epochs = epochs;
-    int initial_token_count = currentTokenCount; // Store initial count
-    bool blockShifted = 0;
+    int initial_token_count = currentTokenCount;
     int effective_context_size = 0;
+    bool blockShifted = 0;
 
     // --- Device Buffer Allocation & H->D Transfer ---
     size_t totalTokenEmbedFloats = static_cast<size_t>(m) * CONTEXT_WIN * d;
@@ -52,12 +51,9 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
     size_t projection_matrix_bytes = static_cast<size_t>(CONTEXT_WIN) * EMBEDDING * sizeof(float);
     size_t KQmatbytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
     size_t predBytes = static_cast<size_t>(vocabsize) * sizeof(float);
-    size_t outputBytes = singleTokenBytes; // Size of h_otok_buffer
-    size_t indexBytes = sizeof(int);       // Size for the result index
+    size_t indexBytes = sizeof(int);
 
     // allot buffers
-    std::vector<float> flat_deEmbeddings = ::flatten(deEmbeddings);
-    d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes, flat_deEmbeddings.data(), &cl_err); CL_CHECK(cl_err);
     d_tokenEmbed = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes, nullptr, &cl_err); CL_CHECK(cl_err);
     d_expected_token = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, singleTokenBytes, nullptr, &cl_err); CL_CHECK(cl_err); // Buffer for the target token
     d_Q_cl = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, KQmatbytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -65,11 +61,11 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
     d_mQ_cl = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, projection_matrix_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
     d_mK_cl = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, projection_matrix_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
     d_tok_cl = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err); CL_CHECK(cl_err);
-    // get kernel needed
     kq_kernel = clcontext.kernels.at("kernelComputeKQall");
     predKernel = clcontext.kernels.at("kernelComputePredictionWithScores");
 
     try {
+        // for token prediction
         otok.clear(); otok.resize(d*x, 0.0f);
         pred.clear(); pred.resize(vocabsize, 0.0f);
         oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
@@ -81,6 +77,12 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
         for(int i = 0; i < rString.size(); i++) {
             tokenEmbed.addRow(sentence[i], i);
             positional.addRow(positionalEmbeddings(i, d), i);
+            // add the last token of local context to first token of next local
+            if(i + 1 % CONTEXT_WIN == 0 && i + 1 < rString.size()) {
+                tokenEmbed.addRow(sentence[i], i + 1);
+                positional.addRow(positionalEmbeddings(i, d), i + 1);
+                i++;
+            }
         }
         effective_context_size += 1;
         currentTokenCount += 1;
@@ -94,26 +96,23 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                           << currentTokenCount << "). Stopping training early at sentence index " << i << "." << std::endl;
                 break;
             }
+            int current_block_idx = blockCount;
+            if (current_block_idx <= 0 || current_block_idx > m) {
+                throw std::out_of_range("clTrainContext(sentence): Calculated current_block_idx (" + std::to_string(current_block_idx) + ") is out of range [1, " + std::to_string(m) + "].");
+            }
 
             // Target token for this iteration
             std::vector<float>& expected_vec = sentence[i];
             std::string& expected_str = rString[i];
             CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_expected_token, CL_TRUE, 0, singleTokenBytes, expected_vec.data()));
 
-            // Context size *before* adding token i
-            int current_block_idx = blockCount;
-            if (current_block_idx <= 0 || current_block_idx > m) {
-                throw std::out_of_range("clTrainContext(sentence): Calculated current_block_idx (" + std::to_string(current_block_idx) + ") is out of range [1, " + std::to_string(m) + "].");
-            }
-
-            int j = 0;          // Epoch counter for this token
+            int j = 0;
             std::fill(oneHotEncode.begin(), oneHotEncode.end(), 0.0f);
             oneHotEncode[indexVec[i]] = 1.0f;
 
             std::cout << "Training token " << i+1 << "/" << sentence.size() << ": '" << expected_str << "'" << " at " << indexVec[i] << std::endl;
             std::cout << "current block: " << current_block_idx << " | current token count: " << currentTokenCount << " | eff. context size: " << effective_context_size <<std::endl;
             size_t currentBytes = static_cast<size_t>(EMBEDDING) * effective_context_size * sizeof(float);
-            CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, tokenEmbed.mapped_data));
 
             while (j < epochs) {
                 current_error = 0.0f;
@@ -143,10 +142,11 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                     clcontext.queue.finish();
                 }
                 else {
+                    int tokInContext = currentTokenCount % CONTEXT_WIN;
                     cl::Buffer pEV = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err); CL_CHECK(cl_err);
-                    // start from previous local context's last token
+                    // start from previous local context's last token (only for this training)
                     size_t fromHereInTokenEmbed = static_cast<size_t>((CONTEXT_WIN) * (blockCount - 1) - 1) * sizeof(float);
-                    const float* host_src_ptr = tokenEmbed.mapped_data + (fromHereInTokenEmbed / sizeof(float));
+                    const float* host_src_ptr = embedPlusPos.mapped_data + (fromHereInTokenEmbed / sizeof(float));
                     CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, host_src_ptr));
 
                     // keys and queries for each head of non-first block
@@ -183,7 +183,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                     std::fill(otok.begin(), otok.end(), 0.0f);
                     for (int j = 0; j < x; ++j) {
                         for (int k = 0; k < d; ++k) {
-                            otok[(j * d) +k] = blocks[blockCount-1].b[j][y - 1].EH[k];  // sigmoid(blocks[blockCount-1].b[j][y - 1].EH[k]);
+                            otok[(j * d) +k] = blocks[blockCount-1].b[j][y - 1].EH[k];
                         }
                     }
                 }
@@ -194,12 +194,11 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                     if (std::isnan(otok[k_dim])) { otok[k_dim] = 0.0f; }
                     else if (std::isinf(otok[k_dim])) { otok[k_dim] = std::copysign((std::numeric_limits<float>::max)(), otok[k_dim]); }
                 }
-                if (contextTrain == 0 && otok.size() != static_cast<size_t>(d)) {
-                    throw std::runtime_error("clTrainContext(sentence): otok from clForward has incorrect size: " + std::to_string(otok.size()) + " != " + std::to_string(d) + ".");
-                }
 
-                // use kernelComputePredictionWithScores for output prediction
+                // use kernelComputePredictionWithScores for scores and output prediction
                 {
+                    std::vector<float> flat_deEmbeddings = ::flatten(deEmbeddings);
+                    d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes, flat_deEmbeddings.data(), &cl_err); CL_CHECK(cl_err);
                     cl::Buffer d_otok_buffer, d_predictions, d_result_index_buffer;
                     try {
                         size_t otok_bytes = static_cast<size_t>(x) * d * sizeof(float);
@@ -225,6 +224,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                         std::cerr << "Error during kernelComputePredictionWithScores in clTrainCONTEXT: " << e.what() << std::endl;
                         throw;
                     }
+                    d_deEmbeddings = cl::Buffer();
                 }
 
                 current_error = - std::log(pred[indexVec[i]] + 1e-15f);
@@ -239,18 +239,17 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     std::cout << "Token '" << expected_str << "' predicted correctly after " 
                               << j+1 << " epochs. Moving to next token." << std::endl;
-                    prev_error = 0.0f;
+                    learning = initial_learning_rate;
                     if(predicted_token_str != "</s>")
                         std::cout << "              -------------- To Next Token --------------              " << std::endl;
                     break;
                 }
                 if(j == epochs - 1) {
                     std::cout << "Reached maximum epochs (" << epochs << ") for current token without correct prediction." << std::endl;
-                    std::cout << "Increasing Epochs by 15." << std::endl;
-                    epochs += 15;
+                    epochs += EPOCHS/2;
+                    std::cout << "Increasing Epochs by " << EPOCHS/2 << "." << std::endl;
                 }
 
-                learning = std::max<float>(1.5*LEARNING_MIN, std::min<float>(0.9*LEARNING_MAX, (del > 0) ? learning * 0.98f : learning * 1.15f));
                 // modify the de-embeddings and get gradients for backprop
                 std::vector<float> gradEH(d * x, 0.0f);
                 clUpdateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
@@ -260,7 +259,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
                     for(int eidx = 0; eidx < EMBEDDING; ++eidx) {
                         float gradient = learning * (gradEH[(head_idx * EMBEDDING) + eidx]
                                                   + (lambda_L1 * embeddings(indexForToken, eidx))
-                                                  + (lambda_L2 * embeddings(indexForToken, eidx)));
+                                                  + (2.0f * lambda_L2 * embeddings(indexForToken, eidx)));
                         if (fabs(gradient) >= MAX_GRAD_CLIP) gradient = std::copysign(MAX_GRAD_CLIP, gradient);
                         targets_for_heads[head_idx][eidx] = otok[(head_idx * EMBEDDING) + eidx] - gradient;
                     }
@@ -285,17 +284,14 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
             prev_error = current_error;
             totalBCELoss += current_error;
             totalBCEPerplexity += std::exp(current_error);
-            CL_CHECK(clcontext.queue.enqueueReadBuffer(d_tokenEmbed, CL_TRUE, currentBytes, singleTokenBytes, expected_vec.data()));
-            if (tokenEmbed.mapped_data && static_cast<size_t>(currentTokenCount) < tokenEmbed.row && tokenEmbed.col == static_cast<size_t>(d)) {
-                // place the embedding at the current location
-                tokenEmbed.addRow(expected_vec, currentTokenCount - 1);
-            }
-
             currentTokenCount++;
             effective_context_size++;
+
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
                 blockShifted = 1;
+                tokenEmbed.addRow(sentence[i], currentTokenCount - 1); // repeat last token to new block
+                positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
             } else {
                 blockShifted = 0;
@@ -316,7 +312,6 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
     d_mQ_cl = cl::Buffer();
     d_mK_cl = cl::Buffer();
     d_tok_cl = cl::Buffer();
-    d_deEmbeddings = cl::Buffer();
     kq_kernel = cl::Kernel();
     predKernel = cl::Kernel();
 }

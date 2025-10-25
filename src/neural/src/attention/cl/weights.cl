@@ -44,9 +44,7 @@ inline void apply_elastic_net_and_clip(volatile __global float* weight_ptr, __gl
         total_gradient = copysign(FLT_MAX, total_gradient);
     }
     // Apply element-wise gradient clipping
-    if (fabs(total_gradient) > max_grad_clip_value) {
-        total_gradient = copysign(max_grad_clip_value, total_gradient);
-    }
+    // if (fabs(total_gradient) > max_grad_clip_value) { total_gradient = copysign(max_grad_clip_value, total_gradient); }
 
     // Apply weight decay: w = w * (1 - lr * weight_decay) - lr * gradient
     // weight_ptr[index] = current_weight * (1.0f - learning_rate * weight_decay) - learning_rate * total_gradient;
@@ -136,7 +134,7 @@ __kernel void kernelUpdateSimple(__global float* weights_to_update, __global con
         float tgradients = gradients[idx];
         // NOTE: Using a hardcoded clip value. It is recommended to pass max_grad_clip_value
         // to this kernel for consistency with other update kernels.
-        const float clip_val = 10.0f;
+        const float clip_val = 1.0f;
 
         if (isnan(tgradients)) {
             tgradients = 0.0f;
@@ -164,7 +162,7 @@ __kernel void kernelUpdateSimple_Elastic(__global float* weights_to_update, __gl
             // Apply regularization even if gradients are NULL
             float current_weight = weights_to_update[idx];
             float l1_reg_term = lambda_l1 * sign_f(current_weight);
-            float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+            float l2_reg_term = lambda_l2 * current_weight;
             float total_gradient = l1_reg_term + l2_reg_term;
 
             if (isnan(total_gradient)) {
@@ -183,7 +181,7 @@ __kernel void kernelUpdateSimple_Elastic(__global float* weights_to_update, __gl
         float error_gradient = gradients[idx];
 
         float l1_reg_term = lambda_l1 * sign_f(current_weight);
-        float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+        float l2_reg_term = lambda_l2 * current_weight;
 
         float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
@@ -219,7 +217,7 @@ __kernel void kernelUpdateWeightsGeneral(__global float* weights, __global const
         float error_gradient = (gradients != NULL) ? gradients[idx] : 0.0f; // Handle NULL gradients
 
         float l1_reg_term = lambda_l1 * sign_f(current_weight); // L1 regularization term
-        float l2_reg_term = 2.0f * lambda_l2 * current_weight;  // L2 regularization term (derivative of lambda*w^2), now consistent
+        float l2_reg_term = lambda_l2 * current_weight;  // L2 regularization term (derivative of lambda*w^2), now consistent
 
         float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
         if (isnan(total_gradient)) {
@@ -249,7 +247,7 @@ __kernel void kernelUpdateWeightsGeneral_f4(__global float* weights, __global co
         float4 error_gradient = (gradients_f4 != NULL) ? gradients_f4[idx] : (float4)(0.0f);
 
         float4 l1_reg_term = lambda_l1 * sign(current_weight);
-        float4 l2_reg_term = 2.0f * lambda_l2 * current_weight;
+        float4 l2_reg_term = lambda_l2 * current_weight;
 
         float4 total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
@@ -268,7 +266,7 @@ __kernel void kernelUpdateWeightsGeneral_f4(__global float* weights, __global co
             float current_weight = weights[current_idx];
             float error_gradient = (gradients != NULL) ? gradients[current_idx] : 0.0f;
             float l1_reg_term = lambda_l1 * sign_f(current_weight);
-            float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+            float l2_reg_term = lambda_l2 * current_weight;
             float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
             if (isnan(total_gradient)) {
                 total_gradient = 0.0f;
@@ -307,7 +305,7 @@ __kernel void updateEmbeddings(__global float* embeddings, __global const float*
             float4 error_gradient = (gradientsVector_f4 != NULL) ? gradientsVector_f4[i] : (float4)(0.0f); // gradientsVector is size embeddingDim
 
             float4 l1_reg_term = lambda_l1 * sign(current_weight);
-            float4 l2_reg_term = 2.0f * lambda_l2 * current_weight;
+            float4 l2_reg_term = lambda_l2 * current_weight;
 
             float4 total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
@@ -326,7 +324,7 @@ __kernel void updateEmbeddings(__global float* embeddings, __global const float*
             float current_weight = embeddings[current_idx];
             float error_gradient = (gradientsVector != NULL) ? gradientsVector[i] : 0.0f;
             float l1_reg_term = lambda_l1 * sign_f(current_weight);
-            float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+            float l2_reg_term = lambda_l2 * current_weight;
             float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
             if (isnan(total_gradient)) {
                 total_gradient = 0.0f;

@@ -42,7 +42,7 @@ struct HeadDeviceSubBuffersH {
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx,
     float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
@@ -96,7 +96,6 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
     const size_t local_work_size_2d_arr[2] = { 16, 16 };
     cl::NDRange local_2d(local_work_size_2d_arr[0], local_work_size_2d_arr[1]);
 
-    OpenCLContext& clcontext = this->clcontext;
     cl::Buffer agg_d_expected_h, agg_d_EH, agg_d_EV;
     cl::Buffer agg_d_grad_EH, agg_d_grad_EV_scaled;
     cl::Buffer agg_d_grad_dh, agg_d_grad_dv;
@@ -346,15 +345,17 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
 
             if (token_count > 0) {
+/*
                 cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
                 CL_CHECK(k_lota.setArg(0, device_ptrs.d_KdotQ)); 
                 CL_CHECK(k_lota.setArg(1, device_ptrs.d_head)); 
                 CL_CHECK(k_lota.setArg(2, context_win)); // rows
                 CL_CHECK(k_lota.setArg(3, context_win)); // cols
                 CL_CHECK(k_lota.setArg(4, token_count)); 
-                cl_int cl_att_is_self_lota = att_is_self ? 1 : 0;
+                cl_int cl_att_is_self_lota = 0 ? 1 : 0;
                 CL_CHECK(k_lota.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d));
+*/
 
                 cl::Kernel k_pre_mh_mv = clcontext.kernels.at("kernelComputePreMH_MV"); 
                 CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head));
@@ -529,7 +530,7 @@ void block::clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH
  * @param layers number of layers of activations of mlp
  * @param layno_col_idx column number
  */
-void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx,
     float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
@@ -582,7 +583,6 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
     const size_t local_work_size_2d_arr[2] = { 16, 16 };
     cl::NDRange local_2d(local_work_size_2d_arr[0], local_work_size_2d_arr[1]);
 
-    OpenCLContext& clcontext = this->clcontext;
     cl::Buffer agg_d_expected_h, agg_d_EH, agg_d_EV; // ... (rest of aggregate buffers as in clpartialbackward1stBlock)
     // ... (Full list of aggregate buffer declarations from clpartialbackward1stBlock)
     cl::Buffer agg_d_grad_EH, agg_d_grad_EV_scaled;
@@ -831,6 +831,7 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d)); CL_CHECK(cl_err);
 
             if (token_count > 0) {
+/*
                 cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
                 CL_CHECK(k_lota.setArg(0, device_ptrs.d_KdotQ)); 
                 CL_CHECK(k_lota.setArg(1, device_ptrs.d_head));  
@@ -840,7 +841,8 @@ void block::clpartialbackward(std::vector<std::vector<float>>& expectedH, int &i
                 cl_int cl_att_is_self_lota = att_is_self ? 1 : 0;
                 CL_CHECK(k_lota.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d)); CL_CHECK(cl_err);
-                
+*/                
+
                 cl::Kernel k_pre_mh_mv = clcontext.kernels.at("kernelComputePreMH_MV"); 
                 CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head)); CL_CHECK(cl_err);
                 CL_CHECK(k_pre_mh_mv.setArg(1, device_ptrs.d_K)); CL_CHECK(cl_err);

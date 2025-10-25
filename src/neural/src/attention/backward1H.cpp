@@ -270,7 +270,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
 
     for(int j = 0; j < CONTEXT_WIN; j++) {
         for(int i = 0; i < EMBEDDING; i++) {
-            grad_EV_mat(i, j) = 2.0f * (EV(i, j) - expectedV[i][j]);
+            grad_EV_mat(i, j) (EV(i, j) - expectedV[i][j]);
             grad_EV[i] += grad_EV_mat(i, j);
         }
     }

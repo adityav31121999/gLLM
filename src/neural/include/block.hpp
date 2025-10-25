@@ -101,7 +101,7 @@ public:
     void cupartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
     void cupartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     void curpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void cupartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
+    void cupartialbackward(std::vector<float> &expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
     void cupartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     // parallel partialbackward(i)
     void cubackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);
@@ -126,7 +126,7 @@ public:
     void clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
     void clpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     void clrpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
-    void clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
+    void clpartialbackward(std::vector<float> &expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx, float& learning, float& lambda_l1, float& lambda_l2);
     void clpartialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& layno, float& learning, float& lambda_l1, float& lambda_l2);
     // parallel partialbackward(i)
     void clbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning, float& lambda_l1, float& lambda_l2);

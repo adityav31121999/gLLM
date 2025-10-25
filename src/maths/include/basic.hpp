@@ -200,6 +200,7 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
 #include <map>
 #include <set>
 #include <vector> // Ensure vector is included
+#include <thread> // For std::this_thread
 
 #define CL_CHECK(call)                                                      \
     do {                                                                        \
@@ -310,7 +311,7 @@ public:
     OpenCLContext(const std::vector<std::string>& kernelSourceFiles, const std::vector<std::string>& kernelNames, 
         cl_device_type device_type = CL_DEVICE_TYPE_GPU) 
     {
-        std::cout << "CL context Preparation." << std::endl;
+        std::cout << "CL Context Preparation." << std::endl;
         cl_int err; // To store error codes from OpenCL calls
         // Input validation remains important
         if (kernelSourceFiles.empty()) { // Check only files, names check below
@@ -325,7 +326,20 @@ public:
         // try {
         // --- Platform and Device Selection (No changes needed) ---
         std::vector<cl::Platform> platforms;
-        CL_CHECK(cl::Platform::get(&platforms)); // cl::Platform::get returns cl_int
+        // Add retry logic for platform discovery, as it can fail with CL_OUT_OF_HOST_MEMORY
+        int retries = 3;
+        while (retries > 0) {
+            err = cl::Platform::get(&platforms);
+            if (err == CL_SUCCESS) break;
+            if (err == CL_OUT_OF_HOST_MEMORY) {
+                std::cerr << "Warning: OpenCL cl::Platform::get failed with CL_OUT_OF_HOST_MEMORY. Retrying in 1 second..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                retries--;
+            } else {
+                CL_CHECK(err); // Throw for any other error
+            }
+        }
+        CL_CHECK(err); // Check final status after retries
         if (platforms.empty()) {
             throw std::runtime_error("OpenCL Error: No platforms found.");
         }
@@ -343,10 +357,8 @@ public:
         device = devices[0];
         std::cout << "Using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
         std::cout << "Device Version: " << device.getInfo<CL_DEVICE_VERSION>() << std::endl;
-        context = cl::Context({device}, nullptr, nullptr, nullptr, &err);
-        CL_CHECK(err);
-        queue = cl::CommandQueue(context, device, 0, &err); // 0 for default properties
-        CL_CHECK(err);
+        context = cl::Context({device}, nullptr, nullptr, nullptr, &err); CL_CHECK(err);
+        queue = cl::CommandQueue(context, device, 0, &err); CL_CHECK(err);
         std::cout << "CONTEXT and QUEUE created successfully" << std::endl;
 
         // --- Load and Compile Program from Multiple Files (No changes needed) ---
@@ -422,11 +434,9 @@ public:
                 continue;
             }
             kernels[kernelName] = createKernel(kernelName); // Calls internal createKernel
-            std::cout << "Created OpenCL kernel: " << kernelName << std::endl;
+            // std::cout << "Created OpenCL kernel: " << kernelName << std::endl;
         }
-        std::cerr << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "Successfully created " << kernels.size() << " OpenCL kernels." << std::endl;
-        std::cerr << "-----------------------------------------------------------------------" << std::endl;
     }
 
     // Disable copy constructor and assignment operator (Good practice)

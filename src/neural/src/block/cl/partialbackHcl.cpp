@@ -88,7 +88,6 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
     const size_t local_work_size_2d_arr[2] = { 16, 16 };
     cl::NDRange local_2d(local_work_size_2d_arr[0], local_work_size_2d_arr[1]);
 
-    OpenCLContext& clcontext = this->clcontext;
     // Aggregate Buffers
     cl::Buffer agg_d_expected_h, agg_d_EH, agg_d_EV;
     cl::Buffer agg_d_grad_EH, agg_d_grad_EV_scaled;
@@ -345,6 +344,7 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
 
             if (token_count > 0) {
+/*
                 cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking");
                 CL_CHECK(k_lota.setArg(0, device_ptrs.d_KdotQ)); 
                 CL_CHECK(k_lota.setArg(1, device_ptrs.d_head)); 
@@ -354,6 +354,7 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
                 cl_int cl_att_is_self_lota = att_is_self ? 1 : 0;
                 CL_CHECK(k_lota.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d));
+*/
 
                 cl::Kernel k_pre_mh_mv = clcontext.kernels.at("kernelComputePreMH_MV"); 
                 CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head));
@@ -531,7 +532,7 @@ void block::clpartialbackward1stBlock(std::vector<float>& expectedH, int& in_dim
  * @param layno column number
  * @param blocknumber_param (unused for H-backprop, but kept for signature consistency if needed later)
  */
-void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+void block::clpartialbackward(std::vector<float> &expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx,
     float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
@@ -578,7 +579,6 @@ void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &l
     const size_t local_work_size_2d_arr[2] = { 16, 16 };
     cl::NDRange local_2d(local_work_size_2d_arr[0], local_work_size_2d_arr[1]);
 
-    OpenCLContext& clcontext = this->clcontext;
     // Aggregate Buffers (same as clpartialbackward1stBlock)
     cl::Buffer agg_d_expected_h, agg_d_EH, agg_d_EV;
     cl::Buffer agg_d_grad_EH, agg_d_grad_EV_scaled;
@@ -828,6 +828,7 @@ void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &l
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
 
             if (token_count > 0) {
+/*
                 cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
                 CL_CHECK(k_lota.setArg(0, device_ptrs.d_KdotQ)); 
                 CL_CHECK(k_lota.setArg(1, device_ptrs.d_head)); 
@@ -837,6 +838,7 @@ void block::clpartialbackward(std::vector<float> &expectedH, int &in_dim, int &l
                 cl_int cl_att_is_self_lota = att_is_self ? 1 : 0;
                 CL_CHECK(k_lota.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d));
+*/
 
                 cl::Kernel k_pre_mh_mv = clcontext.kernels.at("kernelComputePreMH_MV"); 
                 CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head));

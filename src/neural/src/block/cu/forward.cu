@@ -101,20 +101,20 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
 
     // Per-head byte sizes
     // K, Q are CONTEXT_WIN x h_attention, but kernels use n_tokens rows. Data transfer is for CONTEXT_WIN rows.
-    size_t k_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * h_attention * sizeof(float);
-    size_t q_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * h_attention * sizeof(float);
+    size_t k_bytes = static_cast<size_t>(CONTEXT_WIN) * h_attention * sizeof(float);
+    size_t q_bytes = static_cast<size_t>(CONTEXT_WIN) * h_attention * sizeof(float);
     // KdotQ is CONTEXT_WIN x CONTEXT_WIN, kernels use n_tokens x n_tokens.
-    size_t kdotq_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t kdotq_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
     // head_attention is n_tokens x n_tokens, but allocated for max (CONTEXT_WIN x CONTEXT_WIN).
-    size_t head_attention_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t head_attention_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
     // row_sums, col_sums are for n_tokens, but allocated for max (CONTEXT_WIN).
-    size_t sums_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * sizeof(float);
-    size_t accum_bytes_ph = static_cast<size_t>(h_attention) * sizeof(float);
+    size_t sums_bytes = static_cast<size_t>(CONTEXT_WIN) * sizeof(float);
+    size_t accum_bytes = static_cast<size_t>(h_attention) * sizeof(float);
     // MH, MV are d_embedding x h_attention on host, transposed to h_attention x d_embedding on device.
-    size_t proj_mat_bytes_ph = static_cast<size_t>(h_attention) * d_embedding * sizeof(float);
+    size_t proj_mat_bytes = static_cast<size_t>(h_attention) * d_embedding * sizeof(float);
     // EV is CONTEXT_WIN x d_embedding, kernels use n_tokens rows.
-    size_t ev_processed_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * d_embedding * sizeof(float);
-    size_t embed_bytes_ph = static_cast<size_t>(d_embedding) * sizeof(float);
+    size_t ev_processed_bytes = static_cast<size_t>(CONTEXT_WIN) * d_embedding * sizeof(float);
+    size_t embed_bytes = static_cast<size_t>(d_embedding) * sizeof(float);
 
     // --- Aggregate Buffer Allocation ---
     float *agg_d_K = nullptr, *agg_d_Q = nullptr, *agg_d_KdotQ = nullptr, *agg_d_head_attention = nullptr;
@@ -136,32 +136,32 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
 
     try {
         // Allocate aggregate buffers
-        CUDA_CHECK(cudaMalloc(&agg_d_K, num_heads_in_col * k_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_Q, num_heads_in_col * q_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_KdotQ, num_heads_in_col * kdotq_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_head_attention, num_heads_in_col * head_attention_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_row_sums, num_heads_in_col * sums_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_col_sums, num_heads_in_col * sums_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dh_accum, num_heads_in_col * accum_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dv_accum, num_heads_in_col * accum_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_MH_hxd, num_heads_in_col * proj_mat_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_MV_hxd, num_heads_in_col * proj_mat_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dh, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dv, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_EV_processed_data, num_heads_in_col * ev_processed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_accumulated_ev, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_hor_inputs, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_inputs, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_hor_output, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_output, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_relu_hor_output, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_relu_ver_output, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferA_hor, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferB_hor, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferA_ver, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferB_ver, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_mlp_pre_activation, num_heads_in_col * embed_bytes_ph));
+        CUDA_CHECK(cudaMalloc(&agg_d_K, num_heads_in_col * k_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_Q, num_heads_in_col * q_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_KdotQ, num_heads_in_col * kdotq_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_head_attention, num_heads_in_col * head_attention_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_row_sums, num_heads_in_col * sums_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_col_sums, num_heads_in_col * sums_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dh_accum, num_heads_in_col * accum_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dv_accum, num_heads_in_col * accum_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MH_hxd, num_heads_in_col * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MV_hxd, num_heads_in_col * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dh, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dv, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_EV_processed_data, num_heads_in_col * ev_processed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_accumulated_ev, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_hor_inputs, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_inputs, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_hor_output, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_output, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_relu_hor_output, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_relu_ver_output, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferA_hor, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferB_hor, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferA_ver, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_mlp_bufferB_ver, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_mlp_pre_activation, num_heads_in_col * embed_bytes));
 
         for (int layer_idx = 0; layer_idx < num_heads_in_col; ++layer_idx) 
         {
@@ -171,8 +171,8 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             cudaStream_t current_stream = streams[layer_idx];
 
             // Initialize accumulators on their respective streams
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes_ph, current_stream));
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes_ph, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
 
             // Per-head validation
             if (head_cpu.EH.size() != static_cast<size_t>(d_embedding) ||
@@ -202,26 +202,26 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             current_head_pointers.d_pre_MV = agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float));
             current_head_pointers.d_MH_a = agg_d_MH_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
             current_head_pointers.d_MV_a = agg_d_MV_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
-            current_head_pointers.d_EH = agg_d_EH + layer_idx * (embed_bytes_ph / sizeof(float));
+            current_head_pointers.d_EH = agg_d_EH + layer_idx * (embed_bytes / sizeof(float));
             current_head_pointers.d_EV = agg_d_EV_processed_data + layer_idx * (ev_processed_bytes_ph / sizeof(float));
 
             // Local pointers for buffers not directly in HeadDevicePointers or for clarity
             float* local_d_row_sums = agg_d_row_sums + layer_idx * (sums_bytes_ph / sizeof(float));
             float* local_d_col_sums = agg_d_col_sums + layer_idx * (sums_bytes_ph / sizeof(float));
-            float* local_d_dh = agg_d_dh + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_dv = agg_d_dv + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_ver_accumulated_ev = agg_d_ver_accumulated_ev + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_hor_inputs = agg_d_hor_inputs + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_ver_inputs = agg_d_ver_inputs + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_hor_output = agg_d_hor_output + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_ver_output = agg_d_ver_output + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_relu_hor_output = agg_d_relu_hor_output + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_relu_ver_output = agg_d_relu_ver_output + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_mlp_bufferA_hor = agg_d_mlp_bufferA_hor + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_mlp_bufferB_hor = agg_d_mlp_bufferB_hor + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_mlp_bufferA_ver = agg_d_mlp_bufferA_ver + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_mlp_bufferB_ver = agg_d_mlp_bufferB_ver + layer_idx * (embed_bytes_ph / sizeof(float));
-            float* local_d_mlp_pre_activation = agg_d_mlp_pre_activation + layer_idx * (embed_bytes_ph / sizeof(float));
+            float* local_d_dh = agg_d_dh + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_dv = agg_d_dv + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_ver_accumulated_ev = agg_d_ver_accumulated_ev + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_hor_inputs = agg_d_hor_inputs + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_ver_inputs = agg_d_ver_inputs + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_hor_output = agg_d_hor_output + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_ver_output = agg_d_ver_output + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_relu_hor_output = agg_d_relu_hor_output + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_relu_ver_output = agg_d_relu_ver_output + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_mlp_bufferA_hor = agg_d_mlp_bufferA_hor + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_mlp_bufferB_hor = agg_d_mlp_bufferB_hor + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_mlp_bufferA_ver = agg_d_mlp_bufferA_ver + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_mlp_bufferB_ver = agg_d_mlp_bufferB_ver + layer_idx * (embed_bytes / sizeof(float));
+            float* local_d_mlp_pre_activation = agg_d_mlp_pre_activation + layer_idx * (embed_bytes / sizeof(float));
 
             float *d_K = nullptr, *d_Q = nullptr, *d_KdotQ = nullptr, *d_head_attention = nullptr;
             float *d_row_sums = nullptr, *d_col_sums = nullptr;
@@ -268,17 +268,17 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             // Data Transfer H->D (Asynchronous)
             if (!head_cpu.K.mapped_data || !head_cpu.Q.mapped_data || !head_cpu.KdotQ.mapped_data)
                 throw std::runtime_error("K, Q, or KdotQ have null mapped_data.");
-            CUDA_CHECK(cudaMemcpyAsync(d_K, head_cpu.K.mapped_data, k_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_Q, head_cpu.Q.mapped_data, q_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_KdotQ, head_cpu.KdotQ.mapped_data, kdotq_bytes_ph, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_K, head_cpu.K.mapped_data, k_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_Q, head_cpu.Q.mapped_data, q_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_KdotQ, head_cpu.KdotQ.mapped_data, kdotq_bytes, cudaMemcpyHostToDevice, current_stream));
             
             std::vector<float> flat_MH_hxd, flat_MV_hxd;
             transposeMatToFlatVector(head_cpu.MH, flat_MH_hxd); // MH is d_embedding x h_attention on host
             transposeMatToFlatVector(head_cpu.MV, flat_MV_hxd); // MV is d_embedding x h_attention on host
-            CUDA_CHECK(cudaMemcpyAsync(d_MH_hxd, flat_MH_hxd.data(), proj_mat_bytes_ph, cudaMemcpyHostToDevice, current_stream)); // d_MH_hxd is h_attention x d_embedding
-            CUDA_CHECK(cudaMemcpyAsync(d_MV_hxd, flat_MV_hxd.data(), proj_mat_bytes_ph, cudaMemcpyHostToDevice, current_stream)); // d_MV_hxd is h_attention x d_embedding
-            CUDA_CHECK(cudaMemcpyAsync(d_EH, head_cpu.EH.data(), embed_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_EV_processed_data, head_cpu.EV.mapped_data, ev_processed_bytes_ph, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_MH_hxd, flat_MH_hxd.data(), proj_mat_bytes, cudaMemcpyHostToDevice, current_stream)); // d_MH_hxd is h_attention x d_embedding
+            CUDA_CHECK(cudaMemcpyAsync(d_MV_hxd, flat_MV_hxd.data(), proj_mat_bytes, cudaMemcpyHostToDevice, current_stream)); // d_MV_hxd is h_attention x d_embedding
+            CUDA_CHECK(cudaMemcpyAsync(d_EH, head_cpu.EH.data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_EV_processed_data, head_cpu.EV.mapped_data, ev_processed_bytes, cudaMemcpyHostToDevice, current_stream));
 
             const int threadsPerBlock = 256;
             // Kernel: Perform KdotQ score normalisation (and masking if needed)
@@ -301,8 +301,8 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             vectorAddKernel<<<(d_embedding + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_ver_accumulated_ev, d_dv, d_ver_inputs, d_embedding); CUDA_CHECK(cudaGetLastError());
             CUDA_CHECK(cudaStreamSynchronize(current_stream)); // Sync for this head
 
-            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_hor, d_hor_inputs, embed_bytes_ph, cudaMemcpyDeviceToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_ver, d_ver_inputs, embed_bytes_ph, cudaMemcpyDeviceToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_hor, d_hor_inputs, embed_bytes, cudaMemcpyDeviceToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_ver, d_ver_inputs, embed_bytes, cudaMemcpyDeviceToDevice, current_stream));
             float* d_curr_in_h = d_mlp_bufferA_hor, *d_curr_out_h = d_mlp_bufferB_hor;
             float* d_curr_in_v = d_mlp_bufferA_ver, *d_curr_out_v = d_mlp_bufferB_ver;
             size_t num_weights_mats = head_cpu.hor.weights.size();
@@ -351,8 +351,8 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             updateEVRowsKernel<<<(n_tokens + threadsPerBlock - 1)/threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_EV_processed_data, d_relu_ver_output, n_tokens, d_embedding); CUDA_CHECK(cudaGetLastError());
             CUDA_CHECK(cudaStreamSynchronize(current_stream)); // Sync for this head
 
-            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EH.data(), d_EH, embed_bytes_ph, cudaMemcpyDeviceToHost, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EV.mapped_data, d_EV_processed_data, ev_processed_bytes_ph, cudaMemcpyDeviceToHost, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EH.data(), d_EH, embed_bytes, cudaMemcpyDeviceToHost, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EV.mapped_data, d_EV_processed_data, ev_processed_bytes, cudaMemcpyDeviceToHost, current_stream));
         } // End of loop over heads (layer_idx)
 
         // Final synchronization for all streams
@@ -449,19 +449,19 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
     // Per-head byte sizes
     // K, Q, KdotQ, head_attention, sums are based on count_tokens_this_block.
-    size_t k_bytes_ph = static_cast<size_t>(count_tokens_this_block) * h_attention * sizeof(float);
-    size_t q_bytes_ph = static_cast<size_t>(count_tokens_this_block) * h_attention * sizeof(float);
-    size_t kdotq_bytes_ph = static_cast<size_t>(count_tokens_this_block) * count_tokens_this_block * sizeof(float);
-    size_t head_attention_bytes_ph = static_cast<size_t>(count_tokens_this_block) * count_tokens_this_block * sizeof(float);
-    size_t sums_bytes_ph = static_cast<size_t>(count_tokens_this_block) * sizeof(float);
+    size_t k_bytes = static_cast<size_t>(count_tokens_this_block) * h_attention * sizeof(float);
+    size_t q_bytes = static_cast<size_t>(count_tokens_this_block) * h_attention * sizeof(float);
+    size_t kdotq_bytes = static_cast<size_t>(count_tokens_this_block) * count_tokens_this_block * sizeof(float);
+    size_t head_attention_bytes = static_cast<size_t>(count_tokens_this_block) * count_tokens_this_block * sizeof(float);
+    size_t sums_bytes = static_cast<size_t>(count_tokens_this_block) * sizeof(float);
 
-    size_t accum_bytes_ph = static_cast<size_t>(h_attention) * sizeof(float);
-    size_t proj_mat_bytes_ph = static_cast<size_t>(h_attention) * d_embedding * sizeof(float); // Transposed
+    size_t accum_bytes = static_cast<size_t>(h_attention) * sizeof(float);
+    size_t proj_mat_bytes = static_cast<size_t>(h_attention) * d_embedding * sizeof(float); // Transposed
     // EVp_head data (input from previous block)
-    size_t ev_from_prev_block_bytes_ph = static_cast<size_t>(num_ev_rows_to_process_for_evp) * d_embedding * sizeof(float);
+    size_t ev_from_prev_block_bytes = static_cast<size_t>(num_ev_rows_to_process_for_evp) * d_embedding * sizeof(float);
     // Output EV for the current head (head_cpu.EV) is typically CONTEXT_WIN x d_embedding
-    // size_t ev_output_current_block_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * d_embedding * sizeof(float);
-    size_t embed_bytes_ph = static_cast<size_t>(d_embedding) * sizeof(float);
+    // size_t ev_output_current_block_bytes = static_cast<size_t>(CONTEXT_WIN) * d_embedding * sizeof(float);
+    size_t embed_bytes = static_cast<size_t>(d_embedding) * sizeof(float);
 
     // --- Aggregate Buffer Allocation ---
     float *agg_d_K = nullptr, *agg_d_Q = nullptr, *agg_d_KdotQ = nullptr, *agg_d_head_attention = nullptr;
@@ -481,24 +481,24 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
     try {
         // Allocate aggregate buffers
         if (count_tokens_this_block > 0) { // Buffers dependent on count_tokens_this_block
-            CUDA_CHECK(cudaMalloc(&agg_d_K, num_heads_in_col * k_bytes_ph));
-            CUDA_CHECK(cudaMalloc(&agg_d_Q, num_heads_in_col * q_bytes_ph));
-            CUDA_CHECK(cudaMalloc(&agg_d_KdotQ, num_heads_in_col * kdotq_bytes_ph));
-            CUDA_CHECK(cudaMalloc(&agg_d_head_attention, num_heads_in_col * head_attention_bytes_ph));
-            CUDA_CHECK(cudaMalloc(&agg_d_row_sums, num_heads_in_col * sums_bytes_ph));
-            CUDA_CHECK(cudaMalloc(&agg_d_col_sums, num_heads_in_col * sums_bytes_ph));
+            CUDA_CHECK(cudaMalloc(&agg_d_K, num_heads_in_col * k_bytes));
+            CUDA_CHECK(cudaMalloc(&agg_d_Q, num_heads_in_col * q_bytes));
+            CUDA_CHECK(cudaMalloc(&agg_d_KdotQ, num_heads_in_col * kdotq_bytes));
+            CUDA_CHECK(cudaMalloc(&agg_d_head_attention, num_heads_in_col * head_attention_bytes));
+            CUDA_CHECK(cudaMalloc(&agg_d_row_sums, num_heads_in_col * sums_bytes));
+            CUDA_CHECK(cudaMalloc(&agg_d_col_sums, num_heads_in_col * sums_bytes));
         }
         // Buffers always needed
-        CUDA_CHECK(cudaMalloc(&agg_d_dh_accum, num_heads_in_col * accum_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dv_accum, num_heads_in_col * accum_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_MH_hxd, num_heads_in_col * proj_mat_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_MV_hxd, num_heads_in_col * proj_mat_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dh, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_dv, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_EV_processed_data_from_prev_block, num_heads_in_col * ev_from_prev_block_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_ver_accumulated_ev, num_heads_in_col * embed_bytes_ph));
-        CUDA_CHECK(cudaMalloc(&agg_d_mlp_pre_activation, num_heads_in_col * embed_bytes_ph));
+        CUDA_CHECK(cudaMalloc(&agg_d_dh_accum, num_heads_in_col * accum_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dv_accum, num_heads_in_col * accum_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MH_hxd, num_heads_in_col * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_MV_hxd, num_heads_in_col * proj_mat_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dh, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_dv, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_EH, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_EV_processed_data_from_prev_block, num_heads_in_col * ev_from_prev_block_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_ver_accumulated_ev, num_heads_in_col * embed_bytes));
+        CUDA_CHECK(cudaMalloc(&agg_d_mlp_pre_activation, num_heads_in_col * embed_bytes));
 
         for (int layer_idx = 0; layer_idx < num_heads_in_col; ++layer_idx) 
         {
@@ -509,8 +509,8 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             cudaStream_t current_stream = streams[layer_idx];
 
             // Initialize accumulators on their respective streams
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes_ph, current_stream));
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes_ph, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
 
             if (count_tokens_this_block <= 0) {
                 std::fill(head_cpu.EH.begin(), head_cpu.EH.end(), 0.0f);
@@ -532,7 +532,7 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             current_head_pointers.d_pre_MV = agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float));
             current_head_pointers.d_MH_a = agg_d_MH_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
             current_head_pointers.d_MV_a = agg_d_MV_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
-            current_head_pointers.d_EH = agg_d_EH + layer_idx * (embed_bytes_ph / sizeof(float));
+            current_head_pointers.d_EH = agg_d_EH + layer_idx * (embed_bytes / sizeof(float));
             // d_EV in HeadDevicePointers will point to the buffer holding EVp data for this head
             current_head_pointers.d_EV = agg_d_EV_processed_data_from_prev_block + layer_idx * (ev_from_prev_block_bytes_ph / sizeof(float));
 
@@ -540,7 +540,7 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             float* local_d_row_sums = (count_tokens_this_block > 0) ? (agg_d_row_sums + layer_idx * (sums_bytes_ph / sizeof(float))) : nullptr;
             float* local_d_col_sums = (count_tokens_this_block > 0) ? (agg_d_col_sums + layer_idx * (sums_bytes_ph / sizeof(float))) : nullptr;
             // ... (Assign all other local_... pointers similarly to the first overload)
-            float* local_d_dh = agg_d_dh + layer_idx * (embed_bytes_ph / sizeof(float));
+            float* local_d_dh = agg_d_dh + layer_idx * (embed_bytes / sizeof(float));
             // ...
 
             float *d_K = nullptr, *d_Q = nullptr, *d_KdotQ = nullptr, *d_head_attention = nullptr;
@@ -570,7 +570,7 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             d_MH_hxd = current_head_pointers.d_MH_a;
             d_MV_hxd = current_head_pointers.d_MV_a;
             d_dh = local_d_dh;
-            d_dv = agg_d_dv + layer_idx * (embed_bytes_ph / sizeof(float)); // Assign local_d_dv
+            d_dv = agg_d_dv + layer_idx * (embed_bytes / sizeof(float)); // Assign local_d_dv
             // d_dv = local_d_dv;
             d_EH = current_head_pointers.d_EH;
             d_EV_processed_data_from_prev_block = current_head_pointers.d_EV; // EVp data
@@ -579,19 +579,19 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             if (count_tokens_this_block > 0) {
                 if (!head_cpu.K.mapped_data || !head_cpu.Q.mapped_data || !head_cpu.KdotQ.mapped_data)
                 throw std::runtime_error("K, Q, or KdotQ have null mapped_data.");
-                CUDA_CHECK(cudaMemcpyAsync(d_K, head_cpu.K.mapped_data, k_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(d_Q, head_cpu.Q.mapped_data, q_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-                CUDA_CHECK(cudaMemcpyAsync(d_KdotQ, head_cpu.KdotQ.mapped_data, kdotq_bytes_ph, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(d_K, head_cpu.K.mapped_data, k_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(d_Q, head_cpu.Q.mapped_data, q_bytes, cudaMemcpyHostToDevice, current_stream));
+                CUDA_CHECK(cudaMemcpyAsync(d_KdotQ, head_cpu.KdotQ.mapped_data, kdotq_bytes, cudaMemcpyHostToDevice, current_stream));
             }
             std::vector<float> flat_MH_hxd, flat_MV_hxd;
             transposeMatToFlatVector(head_cpu.MH, flat_MH_hxd); transposeMatToFlatVector(head_cpu.MV, flat_MV_hxd);
-            CUDA_CHECK(cudaMemcpyAsync(d_MH_hxd, flat_MH_hxd.data(), proj_mat_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_MV_hxd, flat_MV_hxd.data(), proj_mat_bytes_ph, cudaMemcpyHostToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_EH, head_cpu.EH.data(), embed_bytes_ph, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_MH_hxd, flat_MH_hxd.data(), proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_MV_hxd, flat_MV_hxd.data(), proj_mat_bytes, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_EH, head_cpu.EH.data(), embed_bytes, cudaMemcpyHostToDevice, current_stream));
             
             std::vector<float> flat_EVp_head;
             flatten2DVector(EVp_head, flat_EVp_head, num_ev_rows_to_process_for_evp, d_embedding);
-            CUDA_CHECK(cudaMemcpyAsync(d_EV_processed_data_from_prev_block, flat_EVp_head.data(), ev_from_prev_block_bytes_ph, cudaMemcpyHostToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_EV_processed_data_from_prev_block, flat_EVp_head.data(), ev_from_prev_block_bytes, cudaMemcpyHostToDevice, current_stream));
 
             const int threadsPerBlock = 256;
             if (count_tokens_this_block > 0) {
@@ -617,8 +617,8 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CUDA_CHECK(cudaStreamSynchronize(current_stream));
 
             // --- MLP Forward (Identical to 1st overload's MLP logic) ---
-            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_hor, d_hor_inputs, embed_bytes_ph, cudaMemcpyDeviceToDevice, current_stream));
-            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_ver, d_ver_inputs, embed_bytes_ph, cudaMemcpyDeviceToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_hor, d_hor_inputs, embed_bytes, cudaMemcpyDeviceToDevice, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(d_mlp_bufferA_ver, d_ver_inputs, embed_bytes, cudaMemcpyDeviceToDevice, current_stream));
             float* d_curr_in_h = d_mlp_bufferA_hor, *d_curr_out_h = d_mlp_bufferB_hor;
             float* d_curr_in_v = d_mlp_bufferA_ver, *d_curr_out_v = d_mlp_bufferB_ver;
             size_t num_weights_mats = head_cpu.hor.weights.size();
@@ -664,13 +664,13 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             updateEVRowsKernel<<<(num_ev_rows_to_process_for_evp + threadsPerBlock - 1)/threadsPerBlock, threadsPerBlock, 0, current_stream>>>(d_EV_processed_data_from_prev_block, d_relu_ver_output, num_ev_rows_to_process_for_evp, d_embedding); CUDA_CHECK(cudaGetLastError());
             CUDA_CHECK(cudaStreamSynchronize(current_stream));
 
-            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EH.data(), d_EH, embed_bytes_ph, cudaMemcpyDeviceToHost, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EH.data(), d_EH, embed_bytes, cudaMemcpyDeviceToHost, current_stream));
             // Copy the updated EV (which originated from EVp_head) back to head.EV
             // This assumes head.EV is meant to store the output EV for this block, based on previous block's EV.
             if (static_cast<size_t>(head_cpu.EV.row) < static_cast<size_t>(num_ev_rows_to_process_for_evp) || static_cast<size_t>(head_cpu.EV.col) != static_cast<size_t>(d_embedding)) {
                  throw std::runtime_error("head.EV dimensions are insufficient to store updated EV from previous block.");
             }
-            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EV.mapped_data, d_EV_processed_data_from_prev_block, ev_from_prev_block_bytes_ph, cudaMemcpyDeviceToHost, current_stream));
+            CUDA_CHECK(cudaMemcpyAsync(head_cpu.EV.mapped_data, d_EV_processed_data_from_prev_block, ev_from_prev_block_bytes, cudaMemcpyDeviceToHost, current_stream));
         } // End loop over heads
 
         // Final synchronization for all streams

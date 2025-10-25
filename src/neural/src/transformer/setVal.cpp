@@ -123,7 +123,7 @@ float transformer::cosineAnnealingLR(int current_epoch, int total_epochs, float 
     }
     // The `(total_epochs - 1)` ensures the cosine reaches its minimum at the last epoch.
     // return min_lr + (0.5f * (max_lr - min_lr) * (1.0f + std::cos(0.55f * static_cast<float>(current_epoch) / (total_epochs + 1))));
-    return min_lr + (0.5f * (max_lr - min_lr) * (1.0f + std::cos(1.57f * current_epoch / static_cast<float>(total_epochs))));
+    return min_lr + (0.5f * (max_lr - min_lr) * (1.0f + std::cos(1.57 * static_cast<float>(current_epoch) / static_cast<float>(total_epochs-1))));
 }
 
 
@@ -131,7 +131,6 @@ float transformer::cosineAnnealingLR(int current_epoch, int total_epochs, float 
  * @brief Softsign-based adaptive learning rate function
  * @param error_del current and previous epochs error difference.
  * @param currentLearning Current epoch's learning rate.
- * @param initialLearning The initial learning rate specified at the start of training.
  * @return New adapted learning rate, bounded by LEARNING_MIN and LEARNING_MAX.
  */
 float transformer::softsignLearning(float error_del, float currentLearning) {
@@ -140,7 +139,7 @@ if(currentLearning <= LEARNING_MIN) return 1.50f * LEARNING_MIN;
     if(error_del == 0) return currentLearning;
     // --- Softsign Adjustment ---
     float new_learning = 0.0f;
-    new_learning = currentLearning * (1 - (softsign(error_del) * ((error_del > 0.001) ? ((error_del > 0.25 ) ? 0.25 : 1) : 1000)));
+    new_learning = currentLearning * (1.0f - (softsign(error_del) * ((error_del > 0.001) ? ((error_del > 0.25 ) ? 0.05 : 1) : 50)));
     return std::min<float>(LEARNING_MAX, std::max<float>(new_learning, LEARNING_MIN));
 }
 
@@ -165,10 +164,10 @@ float transformer::errorGradLearning(const std::vector<float>& pred, const std::
     }
 
     if(currentLearning <= LEARNING_MIN) return 1.10f * LEARNING_MIN;
-    if(currentLearning >= LEARNING_MAX) return 0.90f * LEARNING_MAX;
+    if(currentLearning >= LEARNING_MAX) return 0.95f * LEARNING_MAX;
 
     // --- Hyperparameter ---
-    const float smoothing_factor = 10.0f;
+    const float smoothing_factor = 5.0f;
 
     // 2. --- Calculate rms gradient + epsilon ---
     float squared_err_sum = 0.0f;
@@ -179,10 +178,10 @@ float transformer::errorGradLearning(const std::vector<float>& pred, const std::
     float d = std::sqrt(squared_err_sum / pred.size()) + 1E-10f;
 
     // 3. --- Smooth the Learning Rate Update ---
-    float r = ((del < 0) ? 1.20f : -1.0f) / (smoothing_factor * d); // direction of error change
+    float r = ((del < 0) ? 1.10f : -1.0f) / (smoothing_factor * d); // direction of error change
     float new_learning_rate = currentLearning * (1.0f + r);
-    // std::cout << "Error change (del): " << del << ", Gradient magnitude (d): " << d 
-    //           << ", Adjustment factor (r): " << r << ", New learning rate (pre-clamp): " << new_learning_rate << std::endl;
+    std::cout << "Error change (del): " << del << ", Gradient magnitude (d): " << d 
+              << ", Adjustment factor (r): " << r << ", New learning rate (pre-clamp): " << new_learning_rate << std::endl;
 
     // 4. --- Clamp the Result (Safety Rails) ---
     return std::min<float>(LEARNING_MAX, std::max<float>(new_learning_rate, LEARNING_MIN));

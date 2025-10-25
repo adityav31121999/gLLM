@@ -158,7 +158,7 @@ void block::backward(std::vector<std::vector<float>>& expectedH, int& in, int& l
     // serialise(blockFilePath);
 }
 
-void block::rbackward1stBlock(std::vector<std::vector<float>> &expectedH, int &in, int &layers, float &learning)
+void block::rbackward1stBlock(std::vector<std::vector<float>> &expectedH, int& in, int& layers, float &learning)
 {
 }
 

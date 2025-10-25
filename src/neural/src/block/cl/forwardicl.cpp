@@ -11,28 +11,6 @@
 #include <map>
 #include <maths.hpp>
 
-// Helper macro for OpenCL error checking (copied from attention/cl/forwardcl.cpp for self-containment)
-#ifndef CL_CHECK
-    #define CL_CHECK(call) do { \
-        cl_int err = call; \
-        if (err != CL_SUCCESS) { \
-            fprintf(stderr, "OpenCL Error in %s at line %d (%s): %s\n", __FILE__, __LINE__, #call, getCLErrorString(err)); \
-            throw std::runtime_error(getCLErrorString(err)); \
-        } \
-    } while (0)
-#endif
-
-
-// Helper function to safely get a kernel from the context's map
-static cl::Kernel get_kernel_with_check(OpenCLContext& context_obj, const std::string& kernel_name) {
-    auto it = context_obj.kernels.find(kernel_name);
-    if (it == context_obj.kernels.end()) {
-        throw std::runtime_error("OpenCL kernel not found in context: '" + kernel_name +
-                                 "'. Check OpenCLContext initialization and kernel compilation/naming.");
-    }
-    return it->second;
-}
-
 // Local struct to manage device buffers for one head's forward pass
 struct HeadForwardDeviceBuffersCL {
     cl::Buffer d_K, d_Q, d_KdotQ, d_head_attention;
@@ -50,24 +28,6 @@ struct HeadForwardDeviceBuffersCL {
     cl::Buffer d_mlp_pre_activation;
 
     HeadForwardDeviceBuffersCL() = default;
-};
-
-// Local struct to manage device buffers for one head's forward pass
-struct HeadForwardDeviceBuffersEVCL {
-    cl::Buffer d_K, d_Q, d_KdotQ, d_head_attention;
-    cl::Buffer d_col_sums;
-    cl::Buffer d_dv_accum;
-    cl::Buffer d_MV_hxd;
-    cl::Buffer d_dv;
-    cl::Buffer d_EV_processed_data;
-    cl::Buffer d_ver_accumulated_ev;
-    cl::Buffer d_ver_inputs;
-    cl::Buffer d_ver_output;
-    cl::Buffer d_relu_ver_output;
-    cl::Buffer d_mlp_bufferA_ver, d_mlp_bufferB_ver;
-    cl::Buffer d_mlp_pre_activation;
-
-    HeadForwardDeviceBuffersEVCL() = default;
 };
 
 
@@ -91,16 +51,13 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
         throw std::out_of_range("cl1ParallelForprop (subsequent block): column index 'i' (" + std::to_string(col_idx_param) + ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
 
-    cl_int cl_err; // For OpenCL error codes
-    OpenCLContext& context_obj = clcontext;
-    cl::Context context = context_obj.context;
-
     // Validate the incoming EVp for this column
     if (EVp_col.size() != static_cast<size_t>(x)) {
          throw std::runtime_error("cl1ParallelForprop (subsequent block): EVp_col layer dimension mismatch for column " + std::to_string(col_idx_param)
                                   + ". Expected " + std::to_string(x) + " layers, got " + std::to_string(EVp_col.size()) + ".");
     }
 
+    cl_int cl_err; // For OpenCL error codes
     const int num_heads_in_col = x;
     const int d_embedding = EMBEDDING;
     const int h_attention = CONTEXT_WIN;
@@ -110,16 +67,16 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
     const int num_ev_rows_to_process_for_evp = CONTEXT_WIN;
 
     // Per-head byte sizes
-    size_t k_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
-    size_t q_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
-    size_t kdotq_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
-    size_t head_bytes_ph = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block * sizeof(float);
-    size_t sums_bytes_ph = static_cast<size_t>(count_tokens_in_block) * sizeof(float);
+    size_t k_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t q_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t kdotq_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t head_bytes = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block * sizeof(float);
+    size_t sums_bytes = static_cast<size_t>(count_tokens_in_block) * sizeof(float);
 
-    size_t accum_bytes_ph = static_cast<size_t>(h_attention) * sizeof(float);
-    size_t proj_mat_bytes_ph = static_cast<size_t>(d_embedding) * h_attention * sizeof(float);
-    size_t ev_from_prev_block_bytes_ph = static_cast<size_t>(num_ev_rows_to_process_for_evp) * d_embedding * sizeof(float);
-    size_t embed_bytes_ph = static_cast<size_t>(d_embedding) * sizeof(float);
+    size_t accum_bytes = static_cast<size_t>(h_attention) * sizeof(float);
+    size_t proj_mat_bytes = static_cast<size_t>(d_embedding) * h_attention * sizeof(float);
+    size_t ev_from_prev_block_bytes = static_cast<size_t>(num_ev_rows_to_process_for_evp) * d_embedding * sizeof(float);
+    size_t embed_bytes = static_cast<size_t>(d_embedding) * sizeof(float);
 
     // --- Aggregate Buffer Allocation ---
     cl::Buffer agg_d_K, agg_d_Q, agg_d_KdotQ, agg_d_head_attention;
@@ -137,35 +94,35 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
     cl::Buffer agg_d_mlp_pre_activation;
 
     if (count_tokens_in_block > 0) {
-        agg_d_K = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * k_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_Q = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * q_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_KdotQ = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * kdotq_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_head_attention = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * head_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_row_sums = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * sums_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_col_sums = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * sums_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_K = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * k_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_Q = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * q_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_KdotQ = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * kdotq_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_head_attention = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * head_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_row_sums = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * sums_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_col_sums = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * sums_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
     }
-    agg_d_EV_processed_data = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * ev_from_prev_block_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_dh_accum = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * accum_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_dv_accum = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * accum_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_MH_hxd = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * proj_mat_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_MV_hxd = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * proj_mat_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_dh = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_dv = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_EH = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_ver_accumulated_ev = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_hor_inputs = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_ver_inputs = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_hor_output = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_ver_output = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_relu_hor_output = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_relu_ver_output = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_bufferA_hor = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_bufferB_hor = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_bufferA_ver = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_bufferB_ver = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_pre_activation = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_EV_processed_data = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * ev_from_prev_block_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_dh_accum = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * accum_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_dv_accum = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * accum_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_MH_hxd = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * proj_mat_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_MV_hxd = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * proj_mat_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_dh = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_dv = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_EH = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_ver_accumulated_ev = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_hor_inputs = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_ver_inputs = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_hor_output = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_ver_output = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_relu_hor_output = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_relu_ver_output = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_bufferA_hor = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_bufferB_hor = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_bufferA_ver = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_bufferB_ver = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_pre_activation = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
     
-    cl::CommandQueue queue(context, context_obj.device, 0, &cl_err); CL_CHECK(cl_err);
+    cl::CommandQueue queue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
     std::vector<HeadForwardDeviceBuffersCL> head_gpu_data(num_heads_in_col); // Using the same struct
 
     // --- Pre-allocate MLP weight buffers to avoid creation in the loop ---
@@ -180,11 +137,11 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
         for (size_t mlp_layer = 0; mlp_layer < num_weight_matrices; ++mlp_layer) {
             mat& hor_weights_mat = head_cpu.hor.weights[mlp_layer];
             size_t weights_bytes = static_cast<size_t>(hor_weights_mat.row) * hor_weights_mat.col * sizeof(float);
-            all_d_hor_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, hor_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
+            all_d_hor_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, hor_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
 
             mat& ver_weights_mat = head_cpu.ver.weights[mlp_layer];
             weights_bytes = static_cast<size_t>(ver_weights_mat.row) * ver_weights_mat.col * sizeof(float);
-            all_d_ver_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, ver_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
+            all_d_ver_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, ver_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
         }
     }
     // Iterate through the layers (rows) of attention heads in the specified column 'i'
@@ -242,57 +199,57 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             HeadForwardDeviceBuffersCL current_gpu_bufs;
 
             if (count_tokens_in_block > 0) {
-                current_gpu_bufs.d_K = create_sub_buffer(agg_d_K, k_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_Q = create_sub_buffer(agg_d_Q, q_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_KdotQ = create_sub_buffer(agg_d_KdotQ, kdotq_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_head_attention = create_sub_buffer(agg_d_head_attention, head_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_row_sums = create_sub_buffer(agg_d_row_sums, sums_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_col_sums = create_sub_buffer(agg_d_col_sums, sums_bytes_ph); CL_CHECK(cl_err);
+                current_gpu_bufs.d_K = create_sub_buffer(agg_d_K, k_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_Q = create_sub_buffer(agg_d_Q, q_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_KdotQ = create_sub_buffer(agg_d_KdotQ, kdotq_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_head_attention = create_sub_buffer(agg_d_head_attention, head_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_row_sums = create_sub_buffer(agg_d_row_sums, sums_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_col_sums = create_sub_buffer(agg_d_col_sums, sums_bytes); CL_CHECK(cl_err);
             }
-            current_gpu_bufs.d_EV_processed_data = create_sub_buffer(agg_d_EV_processed_data, ev_from_prev_block_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_EH = create_sub_buffer(agg_d_EH, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_dh_accum = create_sub_buffer(agg_d_dh_accum, accum_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_dv_accum = create_sub_buffer(agg_d_dv_accum, accum_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_MH_hxd = create_sub_buffer(agg_d_MH_hxd, proj_mat_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_MV_hxd = create_sub_buffer(agg_d_MV_hxd, proj_mat_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_dh = create_sub_buffer(agg_d_dh, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_dv = create_sub_buffer(agg_d_dv, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_ver_accumulated_ev = create_sub_buffer(agg_d_ver_accumulated_ev, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_hor_inputs = create_sub_buffer(agg_d_hor_inputs, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_ver_inputs = create_sub_buffer(agg_d_ver_inputs, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_hor_output = create_sub_buffer(agg_d_hor_output, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_ver_output = create_sub_buffer(agg_d_ver_output, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_relu_hor_output = create_sub_buffer(agg_d_relu_hor_output, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_relu_ver_output = create_sub_buffer(agg_d_relu_ver_output, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_bufferA_hor = create_sub_buffer(agg_d_mlp_bufferA_hor, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_bufferB_hor = create_sub_buffer(agg_d_mlp_bufferB_hor, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_bufferA_ver = create_sub_buffer(agg_d_mlp_bufferA_ver, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_bufferB_ver = create_sub_buffer(agg_d_mlp_bufferB_ver, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_pre_activation = create_sub_buffer(agg_d_mlp_pre_activation, embed_bytes_ph); CL_CHECK(cl_err);
+            current_gpu_bufs.d_EV_processed_data = create_sub_buffer(agg_d_EV_processed_data, ev_from_prev_block_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_EH = create_sub_buffer(agg_d_EH, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_dh_accum = create_sub_buffer(agg_d_dh_accum, accum_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_dv_accum = create_sub_buffer(agg_d_dv_accum, accum_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_MH_hxd = create_sub_buffer(agg_d_MH_hxd, proj_mat_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_MV_hxd = create_sub_buffer(agg_d_MV_hxd, proj_mat_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_dh = create_sub_buffer(agg_d_dh, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_dv = create_sub_buffer(agg_d_dv, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_ver_accumulated_ev = create_sub_buffer(agg_d_ver_accumulated_ev, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_hor_inputs = create_sub_buffer(agg_d_hor_inputs, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_ver_inputs = create_sub_buffer(agg_d_ver_inputs, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_hor_output = create_sub_buffer(agg_d_hor_output, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_ver_output = create_sub_buffer(agg_d_ver_output, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_relu_hor_output = create_sub_buffer(agg_d_relu_hor_output, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_relu_ver_output = create_sub_buffer(agg_d_relu_ver_output, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_bufferA_hor = create_sub_buffer(agg_d_mlp_bufferA_hor, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_bufferB_hor = create_sub_buffer(agg_d_mlp_bufferB_hor, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_bufferA_ver = create_sub_buffer(agg_d_mlp_bufferA_ver, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_bufferB_ver = create_sub_buffer(agg_d_mlp_bufferB_ver, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_pre_activation = create_sub_buffer(agg_d_mlp_pre_activation, embed_bytes); CL_CHECK(cl_err);
 
             // Initialize accumulators to zero
             float zero = 0.0f;
-            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dh_accum, zero, 0, accum_bytes_ph));
-            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dv_accum, zero, 0, accum_bytes_ph));
+            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dh_accum, zero, 0, accum_bytes));
+            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dv_accum, zero, 0, accum_bytes));
 
             // --- Data Transfer H->D
             if (count_tokens_in_block > 0) { // Transfer these only if count_tokens_in_block > 0
-                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_K, CL_FALSE, 0, k_bytes_ph, head_cpu.K.mapped_data));
-                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_Q, CL_FALSE, 0, q_bytes_ph, head_cpu.Q.mapped_data));
-                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_KdotQ, CL_FALSE, 0, kdotq_bytes_ph, head_cpu.KdotQ.mapped_data));
+                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_K, CL_FALSE, 0, k_bytes, head_cpu.K.mapped_data));
+                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_Q, CL_FALSE, 0, q_bytes, head_cpu.Q.mapped_data));
+                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_KdotQ, CL_FALSE, 0, kdotq_bytes, head_cpu.KdotQ.mapped_data));
             }
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MH_hxd, CL_FALSE, 0, proj_mat_bytes_ph, head_cpu.MH.mapped_data));
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MV_hxd, CL_FALSE, 0, proj_mat_bytes_ph, head_cpu.MV.mapped_data));
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes_ph, head_cpu.EH.data()));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MH_hxd, CL_FALSE, 0, proj_mat_bytes, head_cpu.MH.mapped_data));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MV_hxd, CL_FALSE, 0, proj_mat_bytes, head_cpu.MV.mapped_data));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes, head_cpu.EH.data()));
 
             // Copy EVp_layer data to d_EV_processed_data_from_prev_block
             std::vector<float> flat_EVp_layer;
             flatten2DVector(EVp_layer, flat_EVp_layer, num_ev_rows_to_process_for_evp, d_embedding);
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes_ph, flat_EVp_layer.data()));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes, flat_EVp_layer.data()));
 
             // score normalisation
             const size_t local_work_size_1d = 256;
-            cl::Kernel lota_kernel = get_kernel_with_check(context_obj, "clLOTA2dmasking");
+            cl::Kernel lota_kernel = clcontext.kernels.at("clLOTA2dmasking");
             size_t totalElementsLOTA = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block;
             if (totalElementsLOTA > 0) {
                 size_t global_lota_raw = totalElementsLOTA;
@@ -312,7 +269,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             }
 
             // weight accumulation row and column wise
-            cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "kernelComputeHeadSumsMasked");
+            cl::Kernel sums_kernel = clcontext.kernels.at("kernelComputeHeadSumsMasked");
             size_t global_sums_raw = static_cast<size_t>(count_tokens_in_block); 
             size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
             cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d); 
@@ -325,7 +282,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(current_queue.enqueueNDRangeKernel(sums_kernel, cl::NullRange, global_sums, local_sums));
 
             // weighted pool
-            cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "kernelAccumulateWeightedVectors");
+            cl::Kernel accum_kernel = clcontext.kernels.at("kernelAccumulateWeightedVectors");
             size_t global_accum_raw = static_cast<size_t>(count_tokens_in_block); size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_accum(global_accum_padded); cl::NDRange local_accum(local_work_size_1d);
             CL_CHECK(accum_kernel.setArg(0, current_gpu_bufs.d_row_sums)); 
             CL_CHECK(accum_kernel.setArg(1, current_gpu_bufs.d_col_sums)); 
@@ -338,7 +295,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(current_queue.enqueueNDRangeKernel(accum_kernel, cl::NullRange, global_accum, local_accum));
 
             // value propagation using MH and MV
-            cl::Kernel proj_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
+            cl::Kernel proj_kernel = clcontext.kernels.at("kernelLayerForward");
             size_t global_proj_raw = static_cast<size_t>(d_embedding); 
             size_t global_proj_padded = ((global_proj_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
             cl::NDRange global_proj(global_proj_padded); cl::NDRange local_proj(local_work_size_1d);
@@ -350,13 +307,13 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(current_queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
 
             // residual connection
-            cl::Kernel add_kernel = get_kernel_with_check(context_obj, "vectorAddKernel");
+            cl::Kernel add_kernel = clcontext.kernels.at("vectorAddKernel");
             size_t global_add_raw = static_cast<size_t>(d_embedding); 
             size_t global_add_padded = ((global_add_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
             cl::NDRange global_add(global_add_padded); cl::NDRange local_add(local_work_size_1d); CL_CHECK(add_kernel.setArg(3, d_embedding));
             CL_CHECK(add_kernel.setArg(0, current_gpu_bufs.d_EH)); CL_CHECK(add_kernel.setArg(1, current_gpu_bufs.d_dh)); CL_CHECK(add_kernel.setArg(2, current_gpu_bufs.d_hor_inputs)); 
             CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
-            cl::Kernel accum_ev_kernel = get_kernel_with_check(context_obj, "accumulateEVRowsKernelCL");
+            cl::Kernel accum_ev_kernel = clcontext.kernels.at("accumulateEVRowsKernelCL");
             CL_CHECK(accum_ev_kernel.setArg(0, current_gpu_bufs.d_EV_processed_data));
             CL_CHECK(accum_ev_kernel.setArg(1, current_gpu_bufs.d_ver_accumulated_ev));
             CL_CHECK(accum_ev_kernel.setArg(2, num_ev_rows_to_process_for_evp));
@@ -368,10 +325,10 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
 
             // mlp forprop
-            cl::Kernel mlp_fwd_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
-            cl::Kernel sigmoid_kernel = get_kernel_with_check(context_obj, "clSigmoid1d");
-            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_hor_inputs, current_gpu_bufs.d_mlp_bufferA_hor, 0, 0, embed_bytes_ph));
-            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_ver_inputs, current_gpu_bufs.d_mlp_bufferA_ver, 0, 0, embed_bytes_ph));
+            cl::Kernel mlp_fwd_kernel = clcontext.kernels.at("kernelLayerForward");
+            cl::Kernel sigmoid_kernel = clcontext.kernels.at("clSigmoid1d");
+            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_hor_inputs, current_gpu_bufs.d_mlp_bufferA_hor, 0, 0, embed_bytes));
+            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_ver_inputs, current_gpu_bufs.d_mlp_bufferA_ver, 0, 0, embed_bytes));
             cl::Buffer& current_in_hor_mlp = current_gpu_bufs.d_mlp_bufferA_hor;
             cl::Buffer& current_out_hor_mlp = current_gpu_bufs.d_mlp_bufferB_hor;
             cl::Buffer& current_in_ver_mlp = current_gpu_bufs.d_mlp_bufferA_ver;
@@ -443,7 +400,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             }
 
             // relu mlp outputs
-            cl::Kernel relu_kernel = get_kernel_with_check(context_obj, "clReLU1d");
+            cl::Kernel relu_kernel = clcontext.kernels.at("clReLU1d");
             CL_CHECK(relu_kernel.setArg(2, d_embedding));
             // hor
             CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_hor_output)); 
@@ -461,7 +418,7 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(add_kernel.setArg(2, current_gpu_bufs.d_EH));
             CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
             // EV
-            cl::Kernel update_ev_kernel = get_kernel_with_check(context_obj, "updateEVRowsKernelCL");
+            cl::Kernel update_ev_kernel = clcontext.kernels.at("updateEVRowsKernelCL");
             size_t global_update_ev_raw = static_cast<size_t>(num_ev_rows_to_process_for_evp);
             size_t global_update_ev_padded = ((global_update_ev_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
             cl::NDRange global_update_ev(global_update_ev_padded); cl::NDRange local_update_ev(local_work_size_1d);
@@ -472,8 +429,8 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             CL_CHECK(current_queue.enqueueNDRangeKernel(update_ev_kernel, cl::NullRange, global_update_ev, local_update_ev));
             CL_CHECK(current_queue.finish());
 
-            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes_ph, head_cpu.EH.data()));
-            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes_ph, head_cpu.EV.mapped_data));
+            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes, head_cpu.EH.data()));
+            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes, head_cpu.EV.mapped_data));
             current_gpu_bufs.d_EH = cl::Buffer();
             current_gpu_bufs.d_EV_processed_data = cl::Buffer();
             CL_CHECK(current_queue.finish());
@@ -517,6 +474,25 @@ void block::cl1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 }
 
 
+// Local struct to manage device buffers for one head's forward pass
+struct HeadForwardDeviceBuffersEVCL {
+    cl::Buffer d_K, d_Q, d_KdotQ, d_head_attention;
+    cl::Buffer d_col_sums;
+    cl::Buffer d_dv_accum;
+    cl::Buffer d_MV_hxd;
+    cl::Buffer d_dv;
+    cl::Buffer d_EV_processed_data;
+    cl::Buffer d_ver_accumulated_ev;
+    cl::Buffer d_ver_inputs;
+    cl::Buffer d_ver_output;
+    cl::Buffer d_relu_ver_output;
+    cl::Buffer d_mlp_bufferA_ver, d_mlp_bufferB_ver;
+    cl::Buffer d_mlp_pre_activation;
+
+    HeadForwardDeviceBuffersEVCL() = default;
+};
+
+
 /**
  * @brief OpenCL forward propagation on single ith column of a SUBSEQUENT block (blockCount > 0).
  * @param context OpenCL context.
@@ -537,16 +513,13 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
         throw std::out_of_range("cl1ParallelForprop (subsequent block): column index 'i' (" + std::to_string(col_idx_param) + ") is out of range [0, " + std::to_string(y - 1) + "].");
     }
 
-    cl_int cl_err; // For OpenCL error codes
-    OpenCLContext& context_obj = clcontext;
-    cl::Context context = context_obj.context;
-
     // Validate the incoming EVp for this column
     if (EVp_col.size() != static_cast<size_t>(x)) {
          throw std::runtime_error("cl1ParallelForprop (subsequent block): EVp_col layer dimension mismatch for column " + std::to_string(col_idx_param)
                                   + ". Expected " + std::to_string(x) + " layers, got " + std::to_string(EVp_col.size()) + ".");
     }
 
+    cl_int cl_err; // For OpenCL error codes
     const int num_heads_in_col = x;
     const int d_embedding = EMBEDDING;
     const int h_attention = CONTEXT_WIN;
@@ -556,16 +529,16 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
     const int num_ev_rows_to_process_for_evp = CONTEXT_WIN;
 
     // Per-head byte sizes
-    size_t k_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
-    size_t q_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
-    size_t kdotq_bytes_ph = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
-    size_t head_bytes_ph = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block * sizeof(float);
-    size_t sums_bytes_ph = static_cast<size_t>(count_tokens_in_block) * sizeof(float);
+    size_t k_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t q_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t kdotq_bytes = static_cast<size_t>(CONTEXT_WIN) * CONTEXT_WIN * sizeof(float);
+    size_t head_bytes = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block * sizeof(float);
+    size_t sums_bytes = static_cast<size_t>(count_tokens_in_block) * sizeof(float);
 
-    size_t accum_bytes_ph = static_cast<size_t>(h_attention) * sizeof(float);
-    size_t proj_mat_bytes_ph = static_cast<size_t>(d_embedding) * h_attention * sizeof(float);
-    size_t ev_from_prev_block_bytes_ph = static_cast<size_t>(num_ev_rows_to_process_for_evp) * d_embedding * sizeof(float);
-    size_t embed_bytes_ph = static_cast<size_t>(d_embedding) * sizeof(float);
+    size_t accum_bytes = static_cast<size_t>(h_attention) * sizeof(float);
+    size_t proj_mat_bytes = static_cast<size_t>(d_embedding) * h_attention * sizeof(float);
+    size_t ev_from_prev_block_bytes = static_cast<size_t>(num_ev_rows_to_process_for_evp) * d_embedding * sizeof(float);
+    size_t embed_bytes = static_cast<size_t>(d_embedding) * sizeof(float);
 
     // --- Aggregate Buffer Allocation ---
     cl::Buffer agg_d_K, agg_d_Q, agg_d_KdotQ, agg_d_head_attention;
@@ -582,25 +555,25 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
     cl::Buffer agg_d_mlp_pre_activation;
 
     if (count_tokens_in_block > 0) {
-        agg_d_K = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * k_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_Q = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * q_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_KdotQ = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * kdotq_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_head_attention = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * head_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-        agg_d_col_sums = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * sums_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_K = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * k_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_Q = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * q_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_KdotQ = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * kdotq_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_head_attention = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * head_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+        agg_d_col_sums = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * sums_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
     }
-    agg_d_EV_processed_data = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * ev_from_prev_block_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_dv_accum = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * accum_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_MV_hxd = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * proj_mat_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_dv = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_ver_accumulated_ev = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_ver_inputs = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_ver_output = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_relu_ver_output = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_bufferA_ver = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_bufferB_ver = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
-    agg_d_mlp_pre_activation = cl::Buffer(context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes_ph, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_EV_processed_data = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * ev_from_prev_block_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_dv_accum = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * accum_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_MV_hxd = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * proj_mat_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_dv = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_ver_accumulated_ev = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_ver_inputs = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_ver_output = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_relu_ver_output = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_bufferA_ver = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_bufferB_ver = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
+    agg_d_mlp_pre_activation = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, num_heads_in_col * embed_bytes, nullptr, &cl_err); CL_CHECK(cl_err);
 
-    cl::CommandQueue queue(context, context_obj.device, 0, &cl_err); CL_CHECK(cl_err);
+    cl::CommandQueue queue(clcontext.context, clcontext.device, 0, &cl_err); CL_CHECK(cl_err);
     std::vector<HeadForwardDeviceBuffersCL> head_gpu_data(num_heads_in_col); // Using the same struct
 
     // --- Pre-allocate MLP weight buffers to avoid creation in the loop ---
@@ -615,11 +588,11 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
         for (size_t mlp_layer = 0; mlp_layer < num_weight_matrices; ++mlp_layer) {
             mat& hor_weights_mat = head_cpu.hor.weights[mlp_layer];
             size_t weights_bytes = static_cast<size_t>(hor_weights_mat.row) * hor_weights_mat.col * sizeof(float);
-            all_d_hor_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, hor_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
+            all_d_hor_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, hor_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
 
             mat& ver_weights_mat = head_cpu.ver.weights[mlp_layer];
             weights_bytes = static_cast<size_t>(ver_weights_mat.row) * ver_weights_mat.col * sizeof(float);
-            all_d_ver_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, ver_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
+            all_d_ver_mlp_weights[layer_idx][mlp_layer] = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, weights_bytes, ver_weights_mat.mapped_data, &cl_err); CL_CHECK(cl_err);
         }
     }
 
@@ -678,47 +651,47 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             HeadForwardDeviceBuffersCL current_gpu_bufs;
 
             if (count_tokens_in_block > 0) {
-                current_gpu_bufs.d_K = create_sub_buffer(agg_d_K, k_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_Q = create_sub_buffer(agg_d_Q, q_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_KdotQ = create_sub_buffer(agg_d_KdotQ, kdotq_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_head_attention = create_sub_buffer(agg_d_head_attention, head_bytes_ph); CL_CHECK(cl_err);
-                current_gpu_bufs.d_col_sums = create_sub_buffer(agg_d_col_sums, sums_bytes_ph); CL_CHECK(cl_err);
+                current_gpu_bufs.d_K = create_sub_buffer(agg_d_K, k_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_Q = create_sub_buffer(agg_d_Q, q_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_KdotQ = create_sub_buffer(agg_d_KdotQ, kdotq_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_head_attention = create_sub_buffer(agg_d_head_attention, head_bytes); CL_CHECK(cl_err);
+                current_gpu_bufs.d_col_sums = create_sub_buffer(agg_d_col_sums, sums_bytes); CL_CHECK(cl_err);
             }
-            current_gpu_bufs.d_EV_processed_data = create_sub_buffer(agg_d_EV_processed_data, ev_from_prev_block_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_dv_accum = create_sub_buffer(agg_d_dv_accum, accum_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_MV_hxd = create_sub_buffer(agg_d_MV_hxd, proj_mat_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_dv = create_sub_buffer(agg_d_dv, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_ver_accumulated_ev = create_sub_buffer(agg_d_ver_accumulated_ev, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_ver_inputs = create_sub_buffer(agg_d_ver_inputs, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_ver_output = create_sub_buffer(agg_d_ver_output, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_relu_ver_output = create_sub_buffer(agg_d_relu_ver_output, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_bufferA_ver = create_sub_buffer(agg_d_mlp_bufferA_ver, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_bufferB_ver = create_sub_buffer(agg_d_mlp_bufferB_ver, embed_bytes_ph); CL_CHECK(cl_err);
-            current_gpu_bufs.d_mlp_pre_activation = create_sub_buffer(agg_d_mlp_pre_activation, embed_bytes_ph); CL_CHECK(cl_err);
+            current_gpu_bufs.d_EV_processed_data = create_sub_buffer(agg_d_EV_processed_data, ev_from_prev_block_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_dv_accum = create_sub_buffer(agg_d_dv_accum, accum_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_MV_hxd = create_sub_buffer(agg_d_MV_hxd, proj_mat_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_dv = create_sub_buffer(agg_d_dv, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_ver_accumulated_ev = create_sub_buffer(agg_d_ver_accumulated_ev, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_ver_inputs = create_sub_buffer(agg_d_ver_inputs, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_ver_output = create_sub_buffer(agg_d_ver_output, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_relu_ver_output = create_sub_buffer(agg_d_relu_ver_output, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_bufferA_ver = create_sub_buffer(agg_d_mlp_bufferA_ver, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_bufferB_ver = create_sub_buffer(agg_d_mlp_bufferB_ver, embed_bytes); CL_CHECK(cl_err);
+            current_gpu_bufs.d_mlp_pre_activation = create_sub_buffer(agg_d_mlp_pre_activation, embed_bytes); CL_CHECK(cl_err);
 
             // Initialize accumulators to zero
             float zero = 0.0f;
-            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dh_accum, zero, 0, accum_bytes_ph));
-            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dv_accum, zero, 0, accum_bytes_ph));
+            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dh_accum, zero, 0, accum_bytes));
+            CL_CHECK(current_queue.enqueueFillBuffer(current_gpu_bufs.d_dv_accum, zero, 0, accum_bytes));
 
             // --- Data Transfer H->D
             if (count_tokens_in_block > 0) { // Transfer these only if count_tokens_in_block > 0
-                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_K, CL_FALSE, 0, k_bytes_ph, head_cpu.K.mapped_data));
-                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_Q, CL_FALSE, 0, q_bytes_ph, head_cpu.Q.mapped_data));
-                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_KdotQ, CL_FALSE, 0, kdotq_bytes_ph, head_cpu.KdotQ.mapped_data));
+                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_K, CL_FALSE, 0, k_bytes, head_cpu.K.mapped_data));
+                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_Q, CL_FALSE, 0, q_bytes, head_cpu.Q.mapped_data));
+                CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_KdotQ, CL_FALSE, 0, kdotq_bytes, head_cpu.KdotQ.mapped_data));
             }
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MH_hxd, CL_FALSE, 0, proj_mat_bytes_ph, head_cpu.MH.mapped_data));
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MV_hxd, CL_FALSE, 0, proj_mat_bytes_ph, head_cpu.MV.mapped_data));
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes_ph, head_cpu.EH.data()));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MH_hxd, CL_FALSE, 0, proj_mat_bytes, head_cpu.MH.mapped_data));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_MV_hxd, CL_FALSE, 0, proj_mat_bytes, head_cpu.MV.mapped_data));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes, head_cpu.EH.data()));
 
             // Copy EVp_layer data to d_EV_processed_data_from_prev_block
             std::vector<float> flat_EVp_layer;
             flatten2DVector(EVp_layer, flat_EVp_layer, num_ev_rows_to_process_for_evp, d_embedding);
-            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes_ph, flat_EVp_layer.data()));
+            CL_CHECK(current_queue.enqueueWriteBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes, flat_EVp_layer.data()));
 
             // score normalisation
             const size_t local_work_size_1d = 256;
-            cl::Kernel lota_kernel = get_kernel_with_check(context_obj, "clLOTA2dmasking");
+            cl::Kernel lota_kernel = clcontext.kernels.at("clLOTA2dmasking");
             size_t totalElementsLOTA = static_cast<size_t>(count_tokens_in_block) * count_tokens_in_block;
             if (totalElementsLOTA > 0) {
                 size_t global_lota_raw = totalElementsLOTA;
@@ -738,7 +711,7 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             }
 
             // weight accumulation row and column wise
-            cl::Kernel sums_kernel = get_kernel_with_check(context_obj, "kernelComputeHeadSumsMaskedev");
+            cl::Kernel sums_kernel = clcontext.kernels.at("kernelComputeHeadSumsMaskedev");
             size_t global_sums_raw = static_cast<size_t>(count_tokens_in_block);
             size_t global_sums_padded = ((global_sums_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
             cl::NDRange global_sums(global_sums_padded); cl::NDRange local_sums(local_work_size_1d);
@@ -750,7 +723,7 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             CL_CHECK(current_queue.enqueueNDRangeKernel(sums_kernel, cl::NullRange, global_sums, local_sums));
 
             // weighted pool
-            cl::Kernel accum_kernel = get_kernel_with_check(context_obj, "kernelAccumulateWeightedVectorsev");
+            cl::Kernel accum_kernel = clcontext.kernels.at("kernelAccumulateWeightedVectorsev");
             size_t global_accum_raw = static_cast<size_t>(count_tokens_in_block); size_t global_accum_padded = ((global_accum_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; cl::NDRange global_accum(global_accum_padded); cl::NDRange local_accum(local_work_size_1d);
             CL_CHECK(accum_kernel.setArg(0, current_gpu_bufs.d_row_sums));
             CL_CHECK(accum_kernel.setArg(1, current_gpu_bufs.d_col_sums));
@@ -762,7 +735,7 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             CL_CHECK(current_queue.enqueueNDRangeKernel(accum_kernel, cl::NullRange, global_accum, local_accum));
 
             // value propagation using MH and MV
-            cl::Kernel proj_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
+            cl::Kernel proj_kernel = clcontext.kernels.at("kernelLayerForward");
             size_t global_proj_raw = static_cast<size_t>(d_embedding);
             size_t global_proj_padded = ((global_proj_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
             cl::NDRange global_proj(global_proj_padded); cl::NDRange local_proj(local_work_size_1d);
@@ -774,11 +747,11 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             CL_CHECK(current_queue.enqueueNDRangeKernel(proj_kernel, cl::NullRange, global_proj, local_proj));
 
             // residual connection
-            cl::Kernel add_kernel = get_kernel_with_check(context_obj, "vectorAddKernel");
+            cl::Kernel add_kernel = clcontext.kernels.at("vectorAddKernel");
             size_t global_add_raw = static_cast<size_t>(d_embedding); 
             size_t global_add_padded = ((global_add_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d; 
             cl::NDRange global_add(global_add_padded); cl::NDRange local_add(local_work_size_1d); CL_CHECK(add_kernel.setArg(3, d_embedding));
-            cl::Kernel accum_ev_kernel = get_kernel_with_check(context_obj, "accumulateEVRowsKernelCL");
+            cl::Kernel accum_ev_kernel = clcontext.kernels.at("accumulateEVRowsKernelCL");
             CL_CHECK(accum_ev_kernel.setArg(0, current_gpu_bufs.d_EV_processed_data));
             CL_CHECK(accum_ev_kernel.setArg(1, current_gpu_bufs.d_ver_accumulated_ev));
             CL_CHECK(accum_ev_kernel.setArg(2, num_ev_rows_to_process_for_evp));
@@ -790,9 +763,9 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             CL_CHECK(current_queue.enqueueNDRangeKernel(add_kernel, cl::NullRange, global_add, local_add));
 
             // mlp forprop
-            cl::Kernel mlp_fwd_kernel = get_kernel_with_check(context_obj, "kernelLayerForward");
-            cl::Kernel sigmoid_kernel = get_kernel_with_check(context_obj, "clSigmoid1d");
-            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_ver_inputs, current_gpu_bufs.d_mlp_bufferA_ver, 0, 0, embed_bytes_ph));
+            cl::Kernel mlp_fwd_kernel = clcontext.kernels.at("kernelLayerForward");
+            cl::Kernel sigmoid_kernel = clcontext.kernels.at("clSigmoid1d");
+            CL_CHECK(current_queue.enqueueCopyBuffer(current_gpu_bufs.d_ver_inputs, current_gpu_bufs.d_mlp_bufferA_ver, 0, 0, embed_bytes));
             cl::Buffer& current_in_ver_mlp = current_gpu_bufs.d_mlp_bufferA_ver;
             cl::Buffer& current_out_ver_mlp = current_gpu_bufs.d_mlp_bufferB_ver;
             size_t num_weight_matrices_mlp = head_cpu.ver.weights.size();
@@ -834,7 +807,7 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             }
 
             // relu mlp outputs
-            cl::Kernel relu_kernel = get_kernel_with_check(context_obj, "clReLU1d");
+            cl::Kernel relu_kernel = clcontext.kernels.at("clReLU1d");
             CL_CHECK(relu_kernel.setArg(0, current_gpu_bufs.d_ver_output)); 
             CL_CHECK(relu_kernel.setArg(1, current_gpu_bufs.d_relu_ver_output));
             CL_CHECK(relu_kernel.setArg(2, d_embedding));
@@ -842,7 +815,7 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
 
             // second residual connection
             // EV
-            cl::Kernel update_ev_kernel = get_kernel_with_check(context_obj, "updateEVRowsKernelCL");
+            cl::Kernel update_ev_kernel = clcontext.kernels.at("updateEVRowsKernelCL");
             size_t global_update_ev_raw = static_cast<size_t>(num_ev_rows_to_process_for_evp);
             size_t global_update_ev_padded = ((global_update_ev_raw + local_work_size_1d - 1) / local_work_size_1d) * local_work_size_1d;
             cl::NDRange global_update_ev(global_update_ev_padded); cl::NDRange local_update_ev(local_work_size_1d);
@@ -853,8 +826,8 @@ void block::cl1ParallelForpropev(std::vector<std::vector<std::vector<float>>>& E
             CL_CHECK(current_queue.enqueueNDRangeKernel(update_ev_kernel, cl::NullRange, global_update_ev, local_update_ev));
             CL_CHECK(current_queue.finish());
 
-            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes_ph, head_cpu.EH.data()));
-            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes_ph, head_cpu.EV.mapped_data));
+            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EH, CL_FALSE, 0, embed_bytes, head_cpu.EH.data()));
+            CL_CHECK(current_queue.enqueueReadBuffer(current_gpu_bufs.d_EV_processed_data, CL_FALSE, 0, ev_from_prev_block_bytes, head_cpu.EV.mapped_data));
             current_gpu_bufs.d_EH = cl::Buffer();
             current_gpu_bufs.d_EV_processed_data = cl::Buffer();
             CL_CHECK(current_queue.finish());

@@ -1,6 +1,5 @@
 #ifndef MLP_HPP
 #define MLP_HPP 1
-
 #include <maths.hpp>
 #include <string>
 #include <cmath>
@@ -10,11 +9,11 @@
 #include <map>
 
 #define LAYERS_MLP 4                        // layers of mlp
-#define EPOCHS 30                           // number of epochs for training of token
+#define EPOCHS 100                          // number of epochs for training of token
 #define LEARNING_MAX 0.01f                  // maximum learning rate allowable
-#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
+#define LEARNING_MIN 0.0001f                // minimum learning rate allowable
 #define LR_PATIENCE 10                      // for learning rate adaptability by plateau
-#define MAX_GRAD_CLIP 1.0f                  // maximum gradient clipping
+#define MAX_GRAD_CLIP 0.5f                  // maximum gradient clipping
 
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs

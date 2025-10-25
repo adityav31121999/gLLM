@@ -334,7 +334,7 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
  * @param isSelf attention type (self or cross)
  * @param inTraining training or inference
  */
-void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, int &blockCount, int &column, bool &isSelf, bool &inTraining)
+void transformer::parallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool&  isSelf, bool&  inTraining)
 {
     // first block
     if(blockCount == 1) {
@@ -393,7 +393,7 @@ void transformer::parallelKdotQs(int &sequence1Count, int &currentTokenCount, in
  * @param isSelf attention type (= 1 for self, = 0 for cross)
  * @param inTraining 1 for training and 0 for inference
  */
-void transformer::computeKdotQs(int &sequence1Count, int &currentTokenCount, int &blockCount, bool &isSelf, bool &inTraining)
+void transformer::computeKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, bool&  isSelf, bool&  inTraining)
 {
     // for first block
     if(blockCount == 1) {

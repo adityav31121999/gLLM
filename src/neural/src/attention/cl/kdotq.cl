@@ -1,3 +1,4 @@
+/**------------------------------------KQ Calculation------------------------------------**/
 
 __kernel void kernelCompute_single_kq_vector( __global const float* d_token_embedding,  // Input: token vector (size: embedding_dim)
                                             __global const float* d_projection_matrix, // Input: MQ or MK matrix (size: mat_heights x embedding_dim)
@@ -103,7 +104,6 @@ __kernel void kernelKdotQforCross_train(__global float* d_kdotq, __global const 
         d_kdotq[kdotq_index] = dot_product * inv_scaling;
     }
 }
-
 
 /**------------------------------------INFERENCE------------------------------------**/
 
@@ -216,5 +216,29 @@ __kernel void kernelKdotQ_BlockN_Crossi(__global float* d_kdotq, __global const 
 
         int kdotq_index = i * kdotq_width + j;
         d_kdotq[kdotq_index] = final_dot_product * inv_scaling;
+    }
+}
+
+/// Lota derivatives
+
+__kernel void kernelComputeGradKdotQ_LOTA(__global const float* grad_head, __global const float* lota_derivative,
+                                          __global float* grad_kdotq, float scaling_factor, int row, int col, int size)
+{
+    int idx = get_global_id(0);
+    if (idx < size) {
+        grad_kdotq[idx] = (fabs(scaling_factor) > 1e-15f) ? (grad_head[idx] * lota_derivative[idx] / scaling_factor) : 0.0f;
+    }
+}
+
+
+__kernel void kernelComputeSimpleLOTAder(__global const float* head, __global const float* row_sums,
+                                         __global float* lota_deriv_simple, int token_count)
+{
+    int row = get_global_id(1);
+    int col = get_global_id(0);
+    if (row < token_count && col < token_count) {
+        float sum = row_sums[row];
+        int idx = row * token_count + col;
+        lota_deriv_simple[idx] = (sum > 1e-15f) ? ((sum - head[idx]) / (sum * sum)) : 0.0f;
     }
 }

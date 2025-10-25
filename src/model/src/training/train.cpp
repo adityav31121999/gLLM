@@ -80,6 +80,7 @@ void model::trainSequence(const std::string& txtFileLocation, int context_window
     unsigned long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     unsigned long long linesProcessedInThisRun = 0;
 
+    std::cout << "Starting Sequential Training with trainSequence :)" << std::endl;
     // tokenise each line and povide their respective emebeddings
     for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
     {
@@ -131,6 +132,7 @@ void model::trainSequence(const std::string& txtFileLocation, int context_window
                 std::cout << "Using C++ Implementation" << std::endl;
                 T.train(sentenceEmbeddings, tokensOfLine);
             #endif
+
             if(contextTrain == 1) {
                 TOK.saveEmbeddings(TOK.path2token + "/_embeddings_only.csv", T.deEmbeddings.mapped_data);
                 TOK.savedeEmbeddings(TOK.path2token + "/_deEmbeddings_only.csv", T.deEmbeddings.mapped_data);
@@ -230,7 +232,7 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
 
     unsigned long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
     unsigned long long linesProcessedInThisRun = 0;
-    bool sortIt = 0;    // off
+    std::cout << "Starting sequence-sequence Training with trainSeq2Seq :)" << std::endl;
     for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
     {
         tokensOfFile.clear();
@@ -282,12 +284,14 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
                 embed = T.embeddings(T.indexVec[j]);
                 sequence1Embeddings.push_back(embed);
             }
+
             // sequence second tokens and indices for embeddings
             TOK.splitSentence(tokensOfFile[2*i+1], evenSentence[i]);
             evenSentence[i].push_back("</s>");
             T.indexVec.clear();
             T.indexVec.resize(evenSentence[i].size(), 0);
             T.getIndexOfAllTokens(evenSentence[i], T.indexVec);
+
             // get embedding for sequence2
             sequence2Embeddings.clear();
             std::vector<std::string> sequence2Tokens;
@@ -297,15 +301,16 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
                 sequence2Embeddings.push_back(embed);
                 sequence2Tokens.push_back(evenSentence[i][j]);
             }
+
             // total tokens in this pair
             tok += sequence1Embeddings.size() + sequence2Embeddings.size();
             std::cout << "Current Token Count: " << T.currentTokenCount 
                       << " | No. of Tokens in Sequence " << 2*i + 1 <<": " << oddSentence[i].size() 
                       << " | No. of Tokens in Sequence " << 2*i + 2 << ": " << evenSentence[i].size() << std::endl;
-            std::cout << "Sequence " << 2*i + 1 << ": ";
+            std::cout << "Sequence " << 2*i + 1 << " ---> ";
             for(int ch = 0; ch < oddSentence[i].size(); ch++) std::cout << oddSentence[i][ch] << "  ";
             std::cout << std::endl;
-            std::cout << "Sequence " << 2*i + 2 << ": ";
+            std::cout << "Sequence " << 2*i + 2 << " ---> ";
             for(int ch = 0; ch < evenSentence[i].size(); ch++) std::cout << evenSentence[i][ch] << "  ";
             std::cout << std::endl;
 
@@ -328,8 +333,12 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
                     std::cout << "Using C++ Implementation" << std::endl;
                     T.train(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);
                 #endif
-                if (i == num_pairs - 1)
-                    std::cout << "              ---------------- To Next Pair Line --------------              " << std::endl;
+                std::cout << "---> Training complete for Pair " << i + 1 << "." << std::endl;
+
+                if(contextTrain == 1) {
+                    TOK.saveEmbeddings(TOK.path2token + "/_embeddings_only.csv", T.deEmbeddings.mapped_data);
+                    TOK.savedeEmbeddings(TOK.path2token + "/_deEmbeddings_only.csv", T.deEmbeddings.mapped_data);
+                }
             }
             else {
                 throw std::runtime_error("LOCAL CONTEXT LIMIT REACHED");

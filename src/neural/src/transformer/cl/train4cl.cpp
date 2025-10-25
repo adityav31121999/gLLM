@@ -74,9 +74,11 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
     predKernel = clcontext.kernels.at("kernelComputePredictionWithScores");
 
     try {
+        // for token prediction
         otok.clear(); otok.resize(d*x, 0.0f);
         pred.clear(); pred.resize(vocabsize, 0.0f);
         oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
+
         // --- set all tokens to tokenEmbed ---
         std::fill(tokenEmbed.mapped_data, tokenEmbed.mapped_data + totalTokenEmbedFloats, 0.0f);
         std::fill(positional.mapped_data, positional.mapped_data + totalTokenEmbedFloats, 0.0f);
@@ -355,7 +357,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     int tokInContext = currentTokenCount % CONTEXT_WIN;
                     cl::Buffer pEV = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err); CL_CHECK(cl_err);
                     // start from last token of previous local context
-                    size_t fromHereInTokenEmbed = static_cast<size_t>(CONTEXT_WIN) * (blockCount - 1) * sizeof(float);
+                    size_t fromHereInTokenEmbed = static_cast<size_t>((CONTEXT_WIN) * (blockCount - 1) - 1) * sizeof(float);
                     const float* host_src_ptr = embedPlusPos.mapped_data + (fromHereInTokenEmbed / sizeof(float));
                     CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, host_src_ptr));
 
@@ -461,11 +463,10 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 }
                 if(j == epochs - 1) {
                     std::cout << "Reached maximum epochs (" << epochs << ") for current token without correct prediction." << std::endl;
-                    std::cout << "Increasing Epochs by 15." << std::endl;
-                    epochs += 15;
+                    epochs += EPOCHS/2;
+                    std::cout << "Increasing Epochs by " << EPOCHS/2 << "." << std::endl;
                 }
 
-                learning = adaptiveLearningRateOnPlateau(current_error, prev_error, learning, 0.95, LEARNING_MAX, LEARNING_MIN, 1e-10, 5);
                 std::vector<float> gradEH(d * x, 0.0f);
                 clUpdateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
                 // get expected target for backprop
@@ -474,13 +475,12 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     for(int eidx = 0; eidx < EMBEDDING; ++eidx) {
                         float gradient = learning * (gradEH[(head_idx * EMBEDDING) + eidx]
                                                   + (lambda_L1 * embeddings(indexForToken, eidx))
-                                                  + (lambda_L2 * embeddings(indexForToken, eidx)));
+                                                  + (2.0f * lambda_L2 * embeddings(indexForToken, eidx)));
                         if (fabs(gradient) >= MAX_GRAD_CLIP) gradient = std::copysign(MAX_GRAD_CLIP, gradient);
                         targets_for_heads[head_idx][eidx] = otok[(head_idx * EMBEDDING) + eidx] - gradient;
                     }
                 }
-
-                // backpropagate
+                // backpropagate within block
                 clBackwardContext(targets_for_heads, current_block_idx);
                 // update embeddings which are in use
                 clUpdateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, 12454);
@@ -509,6 +509,8 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
                 blockShifted = 1;
+                tokenEmbed.addRow(sequence2[i], currentTokenCount - 1); // repeat last token to new block
+                positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
             } else {
                 blockShifted = 0;

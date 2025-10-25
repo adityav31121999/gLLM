@@ -17,18 +17,14 @@ void transformer::clForward(int& blockCount, int& currentTokenCount, int& sequen
         // Step 1: Compute KdotQ matrices
         // Step 2 & 3: Perform forward propagation for the relevant block using its OpenCL method
         if (blockCount == 1) {
-            for(int i = 0; i < x; ++i) {
-                clParallelKdotQs(sequence1Count, currentTokenCount, blockCount, i, isSelf, inTraining);
-            }
+            clKdotQ4Train(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
             blocks[0].clForprop(d, currentTokenCount, l);
         }
         else {
             if (static_cast<size_t>(blockCount - 1) >= blocks.size()) {
                 throw std::logic_error("clForward: Invalid blockCount logic: trying to access EV from non-existent previous block index " + std::to_string(blockCount - 1));
             }
-            for(int i = 0; i < x; ++i) {
-                clParallelKdotQs(sequence1Count, currentTokenCount, blockCount, i, isSelf, inTraining);
-            }
+            clKdotQ4Train(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
             blocks[blockCount-1].clForprop(blocks[blockCount - 1].EV, d, currentTokenCount, blockCount, l, n);
         }
     }
@@ -53,18 +49,14 @@ void transformer::clForward_ev(int& blockCount, int& currentTokenCount, int& seq
         // Step 1: Compute KdotQ matrices
         // Step 2 & 3: Perform forward propagation for the relevant block using its OpenCL method
         if (blockCount == 1) {
-            for(int i = 0; i < x; ++i) {
-                clParallelKdotQs(sequence1Count, currentTokenCount, blockCount, i, isSelf, inTraining);
-            }
+            clKdotQ4Train(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
             blocks[0].clForpropev(d, currentTokenCount, l);
         }
         else {
             if (static_cast<size_t>(blockCount - 1) >= blocks.size()) {
                 throw std::logic_error("clForward: Invalid blockCount logic: trying to access EV from non-existent previous block index " + std::to_string(blockCount - 1));
             }
-            for(int i = 0; i < x; ++i) {
-                clParallelKdotQs(sequence1Count, currentTokenCount, blockCount, i, isSelf, inTraining);
-            }
+            clKdotQ4Train(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
             blocks[blockCount-1].clForpropev(blocks[blockCount - 1].EV, d, currentTokenCount, blockCount, l, n);
         }
     }

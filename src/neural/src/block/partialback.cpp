@@ -63,7 +63,7 @@ void block::partialbackward(std::vector<std::vector<float>>& expectedH, int& in,
     }
 }
 
-void block::rpartialbackward1stBlock(std::vector<std::vector<float>> &expectedH, int &in, int &layers, int layno, float &learning)
+void block::rpartialbackward1stBlock(std::vector<std::vector<float>> &expectedH, int& in, int& layers, int layno, float &learning)
 {
 }
 

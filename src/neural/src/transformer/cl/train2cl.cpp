@@ -310,7 +310,6 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
             std::cout << "Training token " << i+1 << "/" << sequence2.size() << ": '" << expected_str << "'" << " at " << indexVec[i] << std::endl;
             std::cout << "current block: " << current_block_idx << " & current token count: " << currentTokenCount << " & eff. context size: " << effective_context_size <<std::endl;
             size_t currentBytes = static_cast<size_t>(EMBEDDING) * effective_context_size * sizeof(float);
-            CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, tokenEmbed.mapped_data));
 
             // --- Training Loop for sequence2 token i ---
             int j = 0;
@@ -344,8 +343,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 else {
                     int tokInContext = currentTokenCount % CONTEXT_WIN;
                     cl::Buffer pEV = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, embedding_bytes_loc, nullptr, &cl_err);
-                    // start from last token of previous local context
-                    size_t fromHereInTokenEmbed = static_cast<size_t>(CONTEXT_WIN) * (blockCount - 1) * sizeof(float);
+                    // continue in this context, previous token already stored in here 
+                    size_t fromHereInTokenEmbed = static_cast<size_t>((CONTEXT_WIN) * (blockCount - 1) - 1) * sizeof(float);
                     const float* host_src_ptr = embedPlusPos.mapped_data + (fromHereInTokenEmbed / sizeof(float));
                     CL_CHECK(clcontext.queue.enqueueWriteBuffer(d_tok_cl, CL_TRUE, 0, currentBytes, host_src_ptr));
 
@@ -440,24 +439,24 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
                 if (predicted_token_str == expected_str && predicted_token_str != "INVALID_INDEX") {
                     std::cout << "Token '" << expected_str << "' predicted correctly after " 
                               << j+1 << " epochs. Moving to next token." << std::endl;
-                    // learning = initial_learning_rate; // reset learning rate
+                    learning = initial_learning_rate; // reset learning rate
                     if(predicted_token_str != "</s>")
                         std::cout << "              -------------- To Next Token --------------              " << std::endl;
                     break;
                 }
                 if(j == epochs - 1) {
                     std::cout << "Reached maximum epochs (" << epochs << ") for current token without correct prediction." << std::endl;
-                    std::cout << "Increasing Epochs by " << EPOCHS/2 << "." << std::endl;
                     epochs += EPOCHS/2;
+                    std::cout << "Increasing Epochs by " << EPOCHS/2 << "." << std::endl;
                 }
 
-                learning = std::max<float>(1.5*LEARNING_MIN, std::min<float>(0.9*LEARNING_MAX, (del > 0) ? learning * 0.98f : learning * 1.15f));
                 clBackward(expected_vec, current_block_idx);
                 totalLearning += learning;
                 prev_error = current_error;
                 totalBCELoss += current_error;
                 totalBCEPerplexity += std::exp(current_error);
                 j++;
+                learning = initial_learning_rate; // reset learning rate for next epoch
             }
 
             // --- Update Host State ---
@@ -476,6 +475,8 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
                 blockShifted = 1;
+                tokenEmbed.addRow(sequence2[i], currentTokenCount - 1); // repeat last token to new block
+                positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
             } else {
                 blockShifted = 0;

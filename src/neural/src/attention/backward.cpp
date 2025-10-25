@@ -25,7 +25,7 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] = 2.0f * (EH[i] - expected[i]); // MSE gradient for EH
+        grad_EH[i] (EH[i] - expected[i]); // MSE gradient for EH
         grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation)
     }
 
@@ -224,7 +224,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
         for(int i = 0; i < EMBEDDING; i++) {
             if (i >= EV.col || i >= expectedV[j].size()) 
                 continue;
-            grad_EV_mat(j, i) = 2.0f * (EV(j, i) - expectedV[j][i]);
+            grad_EV_mat(j, i) (EV(j, i) - expectedV[j][i]);
             grad_EV_summed[i] += grad_EV_mat(j, i);
         }
     }
@@ -412,7 +412,7 @@ void attention::backwardContext(std::vector<float>& expected, int& in, int& laye
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] = 2.0f * (EH[i] - expected[i]); // MSE gradient for EH
+        grad_EH[i] (EH[i] - expected[i]); // MSE gradient for EH
         grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation)
     }
 

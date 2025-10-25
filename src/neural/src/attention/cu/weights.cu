@@ -30,7 +30,7 @@ __device__ inline void apply_elastic_net_and_clip(float* weight_ptr, const float
     float error_gradient = (gradient_ptr != nullptr) ? gradient_ptr[index] : 0.0f;
 
     float l1_reg_term = lambda_l1 * ((__signbit(current_weight) == 0) ? 1.0f : -1.0f);
-    float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+    float l2_reg_term lambda_l2 * current_weight;
 
     float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
@@ -135,7 +135,7 @@ __global__ void kernelUpdateWeightsGeneral(
         float error_gradient = (gradients != nullptr) ? gradients[idx] : 0.0f; // Handle NULL gradients
 
         float l1_reg_term = lambda_l1 * ((__signbit(current_weight) == 0) ? 1.0f : -1.0f);
-        float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+        float l2_reg_term lambda_l2 * current_weight;
 
         float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
         if (isnan(total_gradient)) {
@@ -162,7 +162,7 @@ __global__ void updateEmbeddings(float* embeddings, const float* gradientsVector
             float current_weight = embeddings[current_idx];
             float error_gradient = (gradientsVector != nullptr) ? gradientsVector[i] : 0.0f;// Use ternary operator
             float l1_reg_term = lambda_l1 * ((__signbit(current_weight) == 0) ? 1.0f : -1.0f);
-            float l2_reg_term = 2.0f * lambda_l2 * current_weight;
+            float l2_reg_term lambda_l2 * current_weight;
             float total_gradient = error_gradient + l1_reg_term + l2_reg_term;
             if (isnan(total_gradient)) {
                 total_gradient = 0.0f;

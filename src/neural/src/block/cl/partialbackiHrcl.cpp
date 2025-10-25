@@ -64,7 +64,7 @@ struct HeadDeviceSubBuffersirH {
  * @param lambda_l2 L2 regularization parameter
  * @param clip_norm Maximum L2 norm for gradient clipping (new parameter)
  */
-void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int &in_dim, int &layers_mlp, int& layno_col_idx,
+void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in_dim, int& layers_mlp, int& layno_col_idx,
     float& learning, float& lambda_l1, float& lambda_l2)
 {
     cl_int cl_err;
@@ -127,8 +127,6 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
         size_t g1 = ((dim1 + local_work_size_2d_arr[1] - 1) / local_work_size_2d_arr[1]) * local_work_size_2d_arr[1];
         return cl::NDRange(g0, g1);
     };
-
-    OpenCLContext& clcontext = this->clcontext;
 
     cl::Buffer d_tokenEmbed;
     cl::Buffer agg_d_expected_h, agg_d_EH, agg_d_EV;
@@ -449,7 +447,7 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
             CL_CHECK(current_stream.enqueueNDRangeKernel(k_grad_mlp_input, cl::NullRange, global_embed, local_1d));
 
             if (token_count > 0) {
-                cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
+/*                cl::Kernel k_lota = clcontext.kernels.at("clLOTA2dmasking"); 
                 CL_CHECK(k_lota.setArg(0, device_ptrs.d_KdotQ)); 
                 CL_CHECK(k_lota.setArg(1, device_ptrs.d_head)); 
                 CL_CHECK(k_lota.setArg(2, context_win)); // rows
@@ -458,6 +456,7 @@ void block::clrpartialbackward1stBlock(std::vector<std::vector<float>>& expected
                 cl_int cl_att_is_self_lota = att_is_self ? 1 : 0;
                 CL_CHECK(k_lota.setArg(5, cl_att_is_self_lota));
                 CL_CHECK(current_stream.enqueueNDRangeKernel(k_lota, cl::NullRange, global_head_2d, local_2d));
+*/
 
                 cl::Kernel k_pre_mh_mv = clcontext.kernels.at("kernelComputePreMH_MV"); 
                 CL_CHECK(k_pre_mh_mv.setArg(0, device_ptrs.d_head));
