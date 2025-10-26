@@ -343,8 +343,13 @@ __kernel void kernelUpdateWeights(__global const float* deltas,
 /**
  * @brief Updates weights and stores gradients for a layer (no regularization).
  */
-__kernel void kernelUpdateWeightsAndGradients(__global const float* deltas, __global const float* prev_activations,
-        __global float* weights, __global float* gweights, float learning_rate, int current_layer_size, int prev_layer_size)
+__kernel void kernelUpdateWeightsAndGradients(__global const float* deltas, 
+                                                __global const float* prev_activations,
+                                                __global float* weights, 
+                                                __global float* gweights,
+                                                float learning_rate,
+                                                int current_layer_size,
+                                                int prev_layer_size)
 {
     int j = get_global_id(0);
     int i = get_global_id(1);
@@ -359,9 +364,15 @@ __kernel void kernelUpdateWeightsAndGradients(__global const float* deltas, __gl
 }
 
 
-__kernel void kernelUpdateElasticNet(__global const float* deltas, __global const float* prev_activations,
-        __global float* weights, __global float* gweights, float learning_rate, float lambda_l1,
-        float lambda_l2, int current_layer_size, int prev_layer_size)
+__kernel void kernelUpdateElasticNet(__global const float* deltas, 
+                                     __global const float* prev_activations,
+                                     __global float* weights,
+                                     __global float* gweights, 
+                                     int current_layer_size, 
+                                     int prev_layer_size,
+                                     float learning_rate, 
+                                     float lambda_l1,
+                                     float lambda_l2)
 {
     // Consistent 2D indexing with other update kernels
     int i = get_global_id(0); // neuron index in previous layer ('col')
@@ -390,13 +401,54 @@ __kernel void kernelUpdateElasticNet(__global const float* deltas, __global cons
         }
 
         float l1_gradient = sign * lambda_l1;
-        
+
         // Total gradient
         float total_gradient = error_gradient + l2_gradient + l1_gradient;
-        
+
         if (gweights != NULL) { // Use NULL instead of nullptr and ensure check exists
             gweights[weight_idx] = total_gradient;
         }
+        weights[weight_idx] -= learning_rate * total_gradient;
+    }
+}
+
+__kernel void kernelUpdateElasticNetWithGrads(__global const float* deltas, 
+                                     __global float* weights,
+                                     __global float* gweights, 
+                                     int current_layer_size, 
+                                     int prev_layer_size,
+                                     float learning_rate, 
+                                     float lambda_l1,
+                                     float lambda_l2)
+{
+    // Consistent 2D indexing with other update kernels
+    int i = get_global_id(0); // neuron index in previous layer ('col')
+    int j = get_global_id(1); // neuron index in current layer ('row')
+
+    if (i < prev_layer_size && j < current_layer_size) {
+        int weight_idx = j * prev_layer_size + i;
+        
+        // Gradient of the L2 regularization term
+        float current_weight = weights[weight_idx];
+        float l2_gradient = lambda_l2 * current_weight;
+        
+        // Subgradient of the L1 regularization term
+        float sign;
+        if (current_weight < 0.0f) {
+            sign = -1.0f;
+        }
+        else if (current_weight > 0.0f) {
+            sign = 1.0f;
+        }
+        else {
+            sign = 0.0f; // Subgradient is 0 when weight is 0
+        }
+
+        float l1_gradient = sign * lambda_l1;
+
+        // Total gradient
+        float total_gradient = gweights[weight_idx] + l2_gradient + l1_gradient;
+
         weights[weight_idx] -= learning_rate * total_gradient;
     }
 }
