@@ -171,8 +171,8 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             cudaStream_t current_stream = streams[layer_idx];
 
             // Initialize accumulators on their respective streams
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes / sizeof(float)), 0, accum_bytes, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes / sizeof(float)), 0, accum_bytes, current_stream));
 
             // Per-head validation
             if (head_cpu.EH.size() != static_cast<size_t>(d_embedding) ||
@@ -194,20 +194,20 @@ void block::cu1parallelForprop(int& in, int& tokenCount, int i, int& layers)
             }
 
             // Setup device pointers for the current head by offsetting into aggregate buffers
-            current_head_pointers.d_K = agg_d_K + layer_idx * (k_bytes_ph / sizeof(float));
-            current_head_pointers.d_Q = agg_d_Q + layer_idx * (q_bytes_ph / sizeof(float));
-            current_head_pointers.d_KdotQ = agg_d_KdotQ + layer_idx * (kdotq_bytes_ph / sizeof(float));
-            current_head_pointers.d_head = agg_d_head_attention + layer_idx * (head_attention_bytes_ph / sizeof(float));
-            current_head_pointers.d_pre_MH = agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float));
-            current_head_pointers.d_pre_MV = agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float));
-            current_head_pointers.d_MH_a = agg_d_MH_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
-            current_head_pointers.d_MV_a = agg_d_MV_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
+            current_head_pointers.d_K = agg_d_K + layer_idx * (k_bytes / sizeof(float));
+            current_head_pointers.d_Q = agg_d_Q + layer_idx * (q_bytes / sizeof(float));
+            current_head_pointers.d_KdotQ = agg_d_KdotQ + layer_idx * (kdotq_bytes / sizeof(float));
+            current_head_pointers.d_head = agg_d_head_attention + layer_idx * (head_attention_bytes / sizeof(float));
+            current_head_pointers.d_pre_MH = agg_d_dh_accum + layer_idx * (accum_bytes / sizeof(float));
+            current_head_pointers.d_pre_MV = agg_d_dv_accum + layer_idx * (accum_bytes / sizeof(float));
+            current_head_pointers.d_MH_a = agg_d_MH_hxd + layer_idx * (proj_mat_bytes / sizeof(float));
+            current_head_pointers.d_MV_a = agg_d_MV_hxd + layer_idx * (proj_mat_bytes / sizeof(float));
             current_head_pointers.d_EH = agg_d_EH + layer_idx * (embed_bytes / sizeof(float));
-            current_head_pointers.d_EV = agg_d_EV_processed_data + layer_idx * (ev_processed_bytes_ph / sizeof(float));
+            current_head_pointers.d_EV = agg_d_EV_processed_data + layer_idx * (ev_processed_bytes / sizeof(float));
 
             // Local pointers for buffers not directly in HeadDevicePointers or for clarity
-            float* local_d_row_sums = agg_d_row_sums + layer_idx * (sums_bytes_ph / sizeof(float));
-            float* local_d_col_sums = agg_d_col_sums + layer_idx * (sums_bytes_ph / sizeof(float));
+            float* local_d_row_sums = agg_d_row_sums + layer_idx * (sums_bytes / sizeof(float));
+            float* local_d_col_sums = agg_d_col_sums + layer_idx * (sums_bytes / sizeof(float));
             float* local_d_dh = agg_d_dh + layer_idx * (embed_bytes / sizeof(float));
             float* local_d_dv = agg_d_dv + layer_idx * (embed_bytes / sizeof(float));
             float* local_d_ver_accumulated_ev = agg_d_ver_accumulated_ev + layer_idx * (embed_bytes / sizeof(float));
@@ -509,8 +509,8 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
             cudaStream_t current_stream = streams[layer_idx];
 
             // Initialize accumulators on their respective streams
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
-            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float)), 0, accum_bytes, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dh_accum + layer_idx * (accum_bytes / sizeof(float)), 0, accum_bytes, current_stream));
+            CUDA_CHECK(cudaMemsetAsync(agg_d_dv_accum + layer_idx * (accum_bytes / sizeof(float)), 0, accum_bytes, current_stream));
 
             if (count_tokens_this_block <= 0) {
                 std::fill(head_cpu.EH.begin(), head_cpu.EH.end(), 0.0f);
@@ -523,22 +523,22 @@ void block::cu1ParallelForprop(std::vector<std::vector<std::vector<float>>>& EVp
 
             // Setup device pointers for the current head (offsets into aggregate buffers)
             if (count_tokens_this_block > 0) {
-                current_head_pointers.d_K = agg_d_K + layer_idx * (k_bytes_ph / sizeof(float));
-                current_head_pointers.d_Q = agg_d_Q + layer_idx * (q_bytes_ph / sizeof(float));
-                current_head_pointers.d_KdotQ = agg_d_KdotQ + layer_idx * (kdotq_bytes_ph / sizeof(float));
-                current_head_pointers.d_head = agg_d_head_attention + layer_idx * (head_attention_bytes_ph / sizeof(float));
+                current_head_pointers.d_K = agg_d_K + layer_idx * (k_bytes / sizeof(float));
+                current_head_pointers.d_Q = agg_d_Q + layer_idx * (q_bytes / sizeof(float));
+                current_head_pointers.d_KdotQ = agg_d_KdotQ + layer_idx * (kdotq_bytes / sizeof(float));
+                current_head_pointers.d_head = agg_d_head_attention + layer_idx * (head_attention_bytes / sizeof(float));
             }
-            current_head_pointers.d_pre_MH = agg_d_dh_accum + layer_idx * (accum_bytes_ph / sizeof(float));
-            current_head_pointers.d_pre_MV = agg_d_dv_accum + layer_idx * (accum_bytes_ph / sizeof(float));
-            current_head_pointers.d_MH_a = agg_d_MH_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
-            current_head_pointers.d_MV_a = agg_d_MV_hxd + layer_idx * (proj_mat_bytes_ph / sizeof(float));
+            current_head_pointers.d_pre_MH = agg_d_dh_accum + layer_idx * (accum_bytes / sizeof(float));
+            current_head_pointers.d_pre_MV = agg_d_dv_accum + layer_idx * (accum_bytes / sizeof(float));
+            current_head_pointers.d_MH_a = agg_d_MH_hxd + layer_idx * (proj_mat_bytes / sizeof(float));
+            current_head_pointers.d_MV_a = agg_d_MV_hxd + layer_idx * (proj_mat_bytes / sizeof(float));
             current_head_pointers.d_EH = agg_d_EH + layer_idx * (embed_bytes / sizeof(float));
             // d_EV in HeadDevicePointers will point to the buffer holding EVp data for this head
-            current_head_pointers.d_EV = agg_d_EV_processed_data_from_prev_block + layer_idx * (ev_from_prev_block_bytes_ph / sizeof(float));
+            current_head_pointers.d_EV = agg_d_EV_processed_data_from_prev_block + layer_idx * (ev_from_prev_block_bytes / sizeof(float));
 
             // Local pointers for buffers not directly in HeadDevicePointers or for clarity
-            float* local_d_row_sums = (count_tokens_this_block > 0) ? (agg_d_row_sums + layer_idx * (sums_bytes_ph / sizeof(float))) : nullptr;
-            float* local_d_col_sums = (count_tokens_this_block > 0) ? (agg_d_col_sums + layer_idx * (sums_bytes_ph / sizeof(float))) : nullptr;
+            float* local_d_row_sums = (count_tokens_this_block > 0) ? (agg_d_row_sums + layer_idx * (sums_bytes / sizeof(float))) : nullptr;
+            float* local_d_col_sums = (count_tokens_this_block > 0) ? (agg_d_col_sums + layer_idx * (sums_bytes / sizeof(float))) : nullptr;
             // ... (Assign all other local_... pointers similarly to the first overload)
             float* local_d_dh = agg_d_dh + layer_idx * (embed_bytes / sizeof(float));
             // ...

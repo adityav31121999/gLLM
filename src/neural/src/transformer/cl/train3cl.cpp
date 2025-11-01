@@ -54,6 +54,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
     size_t indexBytes = sizeof(int);
 
     // allot buffers
+    d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes, deEmbeddings.mapped_data, &cl_err); CL_CHECK(cl_err);
     d_tokenEmbed = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes, nullptr, &cl_err); CL_CHECK(cl_err);
     d_expected_token = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, singleTokenBytes, nullptr, &cl_err); CL_CHECK(cl_err); // Buffer for the target token
     d_Q_cl = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, KQmatbytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -197,8 +198,6 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sentence, std:
 
                 // use kernelComputePredictionWithScores for scores and output prediction
                 {
-                    std::vector<float> flat_deEmbeddings = ::flatten(deEmbeddings);
-                    d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes, flat_deEmbeddings.data(), &cl_err); CL_CHECK(cl_err);
                     cl::Buffer d_otok_buffer, d_predictions, d_result_index_buffer;
                     try {
                         size_t otok_bytes = static_cast<size_t>(x) * d * sizeof(float);

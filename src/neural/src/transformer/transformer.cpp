@@ -26,18 +26,19 @@
 transformer::transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, 
     int l_param, unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, 
     bool attentionType_param, bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param) :
-    m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param), 
+    m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param),
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
-    learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), 
-    trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), tokenEmbed(n * m, d),
-    positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param), contextTrain(contextTrain_param)
+    learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS),
+    error(0.0f), trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param),
+    tokenEmbed(m_param * n_param, d_param), positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param),
+    contextTrain(contextTrain_param)
 {
     if(inTraining) {
        blocks.reserve(m); // Reserve space
         for (int i = 0; i < m; ++i) {
             std::cout << "-----------------------------------------------------------------------" << std::endl;
             std::cout << "                   Block " << i+1 << " constructed                     " << std::endl;
-           blocks.emplace_back(x, y, n, d, h, l, vocabsize, isSelf, inTraining, i+1, modelDir_param, learning);
+           blocks.emplace_back(x_param, y_param, n_param, d_param, h_param, l_param, vocabsize, isSelf, inTraining, i+1, modelDir_param, learning);
         }
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         // training
@@ -66,7 +67,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
        blocks.reserve(1); // m is 1 for inference
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "                      Block " << 1 << " constructed                    " << std::endl;
-       blocks.emplace_back(x, y, n, d, h, l, vocabsize, isSelf, inTraining, 1, modelDir_param, learning);
+       blocks.emplace_back(x_param, y_param, n_param, d_param, h_param, l_param, vocabsize, isSelf, inTraining, 1, modelDir_param, learning);
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "\nblock vector t initialised." << std::endl;
         if(contextTrain == 0) {
@@ -81,6 +82,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
         tokForBlock = mat(n, d);
+        embedQKed = mat(CONTEXT_WIN, d_param);
         currentTokenCount = 0;
         blockCount = 1;
         sequence1Count = 0;
@@ -121,16 +123,17 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
     bool attentionType_param, bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param) :
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param), 
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
-    learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), error(0.0f), 
-    trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), tokenEmbed(n * m, d),
-    positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param), contextTrain(contextTrain_param)
+    learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), 
+    error(0.0f), trainCount(0), epochCount(0), seqChat(nullptr), embeddings(vocab_param, d_param), 
+    tokenEmbed(m_param * n_param, d_param), positional(m_param * n_param, d_param), embedPlusPos(m_param * n_param, d_param),
+    contextTrain(contextTrain_param)
 {
     if(inTraining) {
        blocks.reserve(m); // Reserve space
         for (int i = 0; i < m; ++i) {
             std::cout << "-----------------------------------------------------------------------" << std::endl;
             std::cout << "                   Block " << i+1 << " constructed                     " << std::endl;
-           blocks.emplace_back(modelName, x, y, n, d, h, l, vocabsize, isSelf, inTraining, i+1, modelDir_param, learning);
+           blocks.emplace_back(modelName, x_param, y_param, n_param, d_param, h_param, l_param, vocabsize, isSelf, inTraining, i+1, modelDir_param, learning);
         }
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         // training
@@ -159,7 +162,7 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
        blocks.reserve(1); // m is 1 for inference
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "                      Block " << 1 << " constructed                    " << std::endl;
-       blocks.emplace_back(modelName, x, y, n, d, h, l, vocabsize, isSelf, inTraining, 1, modelDir_param, learning);
+       blocks.emplace_back(modelName, x_param, y_param, n_param, d_param, h_param, l_param, vocabsize, isSelf, inTraining, 1, modelDir_param, learning);
         std::cout << "-----------------------------------------------------------------------" << std::endl;
         std::cout << "\nblock vector t initialised." << std::endl;
         if(contextTrain == 0) {
@@ -174,6 +177,7 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
         tokForBlock = mat(n, d);
+        embedQKed = mat(CONTEXT_WIN, d_param);
         currentTokenCount = 0;
         blockCount = 1;
         sequence1Count = 0;
@@ -273,6 +277,7 @@ transformer::transformer(OpenCLContext& context_param, int m_param, int x_param,
             deEmbeddings = mat(vocabsize, d*x); // Initialize deEmbeddings for context training
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
+        embedQKed = mat(CONTEXT_WIN, d_param);
         tokForBlock = mat(n_param, d_param);
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
         currentTokenCount = 0;
@@ -369,6 +374,7 @@ transformer::transformer(OpenCLContext& context_param, const std::string& modelN
         }
         std::cout << "otok initialised. Size: " << otok.size() << std::endl;
         tokForBlock = mat(n_param, d_param);
+        embedQKed = mat(CONTEXT_WIN, d_param);
         EVuse.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n, std::vector<float>(d, 0))));
         currentTokenCount = 0;
         blockCount = 1;

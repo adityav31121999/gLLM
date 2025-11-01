@@ -60,10 +60,11 @@ public:
         float& learning);
 #elif USE_CUDA || USE_CPU
     block() = default;
-    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, 
-        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning);
-    block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, 
-        bool attentionType, bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning);
+    block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
+        bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning);
+    block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
+        unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
+        float& learning);
 #endif
 
     // assignment operator to copy block
@@ -150,15 +151,15 @@ public:
     // partial attention backward
     void partialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
-    void rpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
+    std::vector<std::vector<float>> rpartialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);
     // parallel partialbackward(i)
     void backward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning);
     void backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning);
-    void rbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning);
     void backward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning);
     void backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning);
+    std::vector<std::vector<float>> rbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning);
 
 #endif
 

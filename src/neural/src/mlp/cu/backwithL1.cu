@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
@@ -70,19 +70,15 @@ void mlp::cuBackwithL1(int in, int layers, float learning) {
             CUDA_CHECK(cudaMalloc(&d_weights, weight_matrix_bytes));
             CUDA_CHECK(cudaMalloc(&d_deltas, in * sizeof(float)));
             CUDA_CHECK(cudaMalloc(&d_prev_activations, in * sizeof(float)));
-            
-            CUDA_CHECK(cudaMemcpy(d_weights, current_weights_mat.mapped_data,
-                                 weight_matrix_bytes, cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_deltas, layer_deltas.data(), 
-                                 in * sizeof(float), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_prev_activations, prev_activations.data(), 
-                                 in * sizeof(float), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_weights, current_weights_mat.mapped_data, weight_matrix_bytes, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_deltas, layer_deltas.data(), in * sizeof(float), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_prev_activations, prev_activations.data(), in * sizeof(float), cudaMemcpyHostToDevice));
             
             // Update weights with L1 regularization
             dim3 blockDim(16, 16);
             dim3 gridDim((in + blockDim.x - 1) / blockDim.x, (in + blockDim.y - 1) / blockDim.y);
 
-           // updateWeightsL1Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, learning, lambda, in, in);
+            updateWeightsL1Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, learning, lambda, in, in);
             CUDA_CHECK(cudaGetLastError());
 
             // Copy updated weights back to host
@@ -112,3 +108,4 @@ void mlp::cuBackwithL1(int in, int layers, float learning) {
         throw;
     }
 }
+#endif

@@ -1,5 +1,6 @@
 #ifdef USE_CUDA
 #include <cuda_runtime.h>
+#include <cuda_fp16.h>
 #include <device_launch_parameters.h>
 #include "include/attention.hpp"
 #include <vector>
@@ -9,6 +10,25 @@
 #include <cmath>
 #include <maths.hpp>
 #include <string>
+
+/**------------------------------------KQ Calculation------------------------------------**/
+
+__global__ void kernelCompute_single_kq_vector(const float* d_token_embedding,  // Input: token vector (size: embedding_dim)
+                                            const float* d_projection_matrix, // Input: MQ or MK matrix (size: mat_heights x embedding_dim)
+                                            float* d_output_kq_vector,     // Output: K or Q vector (size: mat_heights)
+                                            int embedding_dim,
+                                            int mat_heights)
+{
+    // This kernel is intended to be launched with a single thread.
+    // It computes: d_output_kq_vector[i] = dot(d_token_embedding, d_projection_matrix_row_i)
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        for (int i = 0; i < mat_heights; ++i) {
+            const float* matrix_row_i = d_projection_matrix + i * embedding_dim;
+            float dot_product = cuComputeDot(d_token_embedding, matrix_row_i, embedding_dim);
+            d_output_kq_vector[i] = dot_product;
+        }
+    }
+}
 
 /**
  * @brief CUDA kernel to compute the product of a token matrix and a transposed weight matrix.
@@ -24,17 +44,27 @@
 __global__ void computeKQall(const float* tokenMatrix, const float* KQmatrix,
     float* KQoutputMatrix, int tokenCount, int dim, int height)
 {
-    // Global thread ID for the row of the output matrix (and tokenMatrix)
-    int token_idx = blockIdx.y * blockDim.y + threadIdx.y;
-    // Global thread ID for the column of the output matrix (and row of KQmatrix)
-    int kq_height_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // Global work-item ID corresponds to the row index in tokenMatrix (token_idx)
+    int token_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // Global work-item ID corresponds to the column index in KQoutputMatrix (kq_height_idx)
+    int kq_height_idx = blockIdx.y * blockDim.y + threadIdx.y;
 
-    // Boundary check
+    // Assume dim is a multiple of 4, checked on host side.
+    int dim_float4 = dim / 4;
+
+    // Check bounds for the current token and KQ matrix height
     if (token_idx < tokenCount && kq_height_idx < height) {
-        const float* token_vec = tokenMatrix + token_idx * dim;
-        const float* kq_matrix_row = KQmatrix + kq_height_idx * dim;
+        // Get the current token embedding vector
+        const float4* current_token_embedding_f4 = (const float4*)(tokenMatrix + token_idx * dim);
+        // Get the current row from the KQmatrix (projection matrix)
+        const float4* current_kq_matrix_row_f4 = (const float4*)(KQmatrix + kq_height_idx * dim);
 
-        float dot_product = cuComputeDot(token_vec, kq_matrix_row, dim);
+        // Calculate dot product: dot(current_token_embedding, current_kq_matrix_row)
+        float dot_product = 0.0f;
+        for (int j = 0; j < dim_float4; ++j) {
+            dot_product += current_token_embedding_f4[j].x * current_kq_matrix_row_f4[j].x + current_token_embedding_f4[j].y * current_kq_matrix_row_f4[j].y + current_token_embedding_f4[j].z * current_kq_matrix_row_f4[j].z + current_token_embedding_f4[j].w * current_kq_matrix_row_f4[j].w;
+        }
+
         KQoutputMatrix[token_idx * height + kq_height_idx] = dot_product;
     }
 }
@@ -253,4 +283,34 @@ __global__ void kernelKdotQ_BlockN_Crossi(float* d_kdotq, const float* d_tokForB
         d_kdotq[kdotq_index] = dot_product * inv_scaling;
     }
 }
+
+/// Lota derivatives
+
+__global__ void kernelComputeGradKdotQ_LOTA(const float* grad_head, const float* lota_derivative,
+                                          float* grad_kdotq, float scaling_factor, int size)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        grad_kdotq[idx] = (fabsf(scaling_factor) > 1e-15f) ? (grad_head[idx] * lota_derivative[idx] / scaling_factor) : 0.0f;
+    }
+}
+
+
+__global__ void kernelComputeSimpleLOTAder(const float* head, const float* row_sums,
+                                         float* lota_deriv_simple, int token_count)
+{
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (row < token_count && col < token_count) {
+        float sum = row_sums[row];
+        int idx = row * token_count + col;
+        if (fabsf(sum) > 1e-15f) {
+            lota_deriv_simple[idx] = (sum - head[idx]) / (sum * sum);
+        } else {
+            lota_deriv_simple[idx] = 0.0f;
+        }
+    }
+}
+
 #endif

@@ -98,9 +98,9 @@ public:
 #elif USE_CUDA || USE_CPU
     // Initialize bpe_progress in all constructors
     tokeniser() : bpe_progress(std::make_unique<ProgressData>()) {}
-    tokeniser(int d);
-    tokeniser(int d, int d_val);
-    explicit tokeniser(const std::string& path2data) noexcept;
+    tokeniser(int d, bool contextTok);
+    tokeniser(int d, int d_val, bool contextTok);
+    explicit tokeniser(const std::string& path2data, bool contextTok) noexcept;
 #endif
 
     // Copy Constructor

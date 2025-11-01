@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 // forprop.cu: CUDA implementations for forward propagation in MLP
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -169,3 +169,4 @@ void mlp::cuForward(int in, int layers) {
         throw;
     }
 }
+#endif

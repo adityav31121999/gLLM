@@ -184,13 +184,13 @@ inline mlp& mlp::operator=(const mlp& other) {
 void write2filefrommlp(const mlp&, const std::string&);
 
 // mlp-related functions (non-member)
-float getL1Penalty(const std::vector<mat>& weights); // Updated signature
-float getL2Penalty(const std::vector<mat>& weights); // Updated signature
+float getL1Penalty(const std::vector<mat>& weights);
+float getL2Penalty(const std::vector<mat>& weights);
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithElasticNet(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float lambda_l1, float lambda_l2);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
-std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated signature
+std::vector<float> flattenWeights(const std::vector<mat>& weights);
 
 #ifdef USE_CUDA
 
@@ -198,6 +198,7 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
 #include <cuda_runtime.h>
 
 // cuda implementation (kernels remain the same)
+
     __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
     __global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
     __global__ void l1PenaltyKernel(float* weights, float* result, int size);
@@ -205,26 +206,27 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights); // Updated s
     __global__ void absDiffKernel(float* outputs, float* targets, float* result, int size);
     __global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size);
     __global__ void cuMSEKernel(float* expected, float* output, float* mse, int size);
-    __global__ void kernelOutputDelta(const float* output, const float* expected, float* delta, int size); // Note: CUDA likely uses specific name like kernelOutputDeltaSigmoid
+    __global__ void kernelOutputDelta(const float* output, const float* expected, float* delta, int size);
     __global__ void hiddenDeltaKernel(float* next_layer_deltas, float* weights, float* activations,
-            float* deltas, int current_layer_size, int next_layer_size); // Note: CUDA likely uses specific name like kernelHiddenDeltaSigmoid
+                    float* deltas, int current_layer_size, int next_layer_size);
     __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
-            int current_layer_size, int input_size);
-    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size); // Note: CUDA likely uses specific name like kernelLastLayerDeltaSigmoid
+                    int current_layer_size, int input_size);
+    __global__ void kernelLastLayerDelta(const float* grad_output, const float* activations, float* deltas, int size);
     __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float learning_rate,
-            int current_layer_size, int prev_layer_size); // Note: CUDA likely uses specific name like kernelUpdateWeights
+                    int current_layer_size, int prev_layer_size);
     __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float* gradients,
-            float learning_rate, int current_layer_size, int prev_layer_size); // Note: CUDA likely uses specific name like kernelUpdateWeightsAndGradients
-    __global__ void updateWeightsL1Kernel(float* deltas, float* prev_activations, float* weights, float* gweights,
-            float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
+                    float learning_rate, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL1Kernel(float* weights, float* deltas, float* prev_activations, float learning_rate, 
+                    float lambda, int current_layer_size, int prev_layer_size);
     __global__ void updateWeightsL2Kernel(float* deltas, float* prev_activations, float* weights, float* gweights,
-            float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
-    __global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, float* delta_weights,
-            float eta_plus, float eta_minus, float delta_max, float delta_min, int size);
-    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size); // Note: CUDA likely uses specific name like kernelUpdateInputMLP
-    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size); // Note: CUDA likely uses specific name like kernelLayerForward
+                    float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
     __global__ void kernelUpdateElasticNet(float* deltas, float* prev_activations, float* weights, float* gweights, float learning_rate, float lambda_l1, 
                     float lambda_l2, int current_layer_size, int prev_layer_size);
+    __global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, float* delta_weights,
+                    float eta_plus, float eta_minus, float delta_max, float delta_min, int size);
+    __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size);
+    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size);
+
     float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cucomputeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);

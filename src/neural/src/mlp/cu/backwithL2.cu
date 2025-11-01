@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
@@ -25,83 +25,77 @@
  * @param learning Learning rate
  */
 void mlp::cuBackwithL2(int in, int layers, float learning) {
-    float lambda = 0.01f; // Regularization parameter
-    
-    // Perform standard backpropagation to compute gradients
-    cuBackprop(in, layers, learning);
-    
+    // L2 regularization parameter. Consider making this a member of the mlp class.
+    float lambda = this->lambda_l2; 
+
     // Device memory pointers
-    float *d_weights, *d_deltas, *d_prev_activations;
-    
+    float *d_weights = nullptr, *d_deltas = nullptr, *d_prev_activations = nullptr, *d_gweights = nullptr;
+
     try {
-        // Update weights with L2 regularization for all layers
-        for (int l = 0; l < layers; l++) {
+        // This function assumes cuBackprop has been called and gweights are populated.
+        // The original cuBackprop might perform weight updates. A better design
+        // would be for cuBackprop to only compute gradients (gweights).
+        // For this implementation, we will proceed assuming gweights are ready.
+
+        for (int l = num_layers - 2; l >= 0; --l) {
+            const unsigned int current_layer_size = layer_sizes[l + 1];
+            const unsigned int prev_layer_size = layer_sizes[l];
+
             // Determine previous layer activations (input for first layer)
             std::vector<float> prev_activations;
             if (l == 0) {
                 prev_activations = input;
+            } else {
+                prev_activations = activations[l - 1];
             }
-            else {
-                prev_activations = activations[l-1];
-            }
-            
-            // Access weights for current layer
-            // Assuming weights[l] is an 'in x in' matrix for this function's logic.
-            const mat& current_weights_mat = weights[l];
-            // Ensure mat dimensions are consistent with 'in' if this function is to be robust.
-            size_t weight_matrix_bytes = static_cast<size_t>(in) * in * sizeof(float);
 
-            // Calculate deltas for current layer using the specific formula from gweights
-            std::vector<float> layer_deltas(in);
-            const mat& current_gweights_mat = gweights[l];
-            // Ensure gweights mat dimensions are consistent with 'in'.
-            for (int i = 0; i < in; i++) {
-                // Accessing gweights[l].mapped_data[row * num_cols + col]
-                // Here, row = i, col = 0, num_cols = in (as per function's logic for gweights[l][i][0])
-                if (prev_activations[0] == 0.0f) { // Avoid division by zero
-                    layer_deltas[i] = 0.0f; // Or handle as an error/special case
-                } else {
-                    layer_deltas[i] = current_gweights_mat.mapped_data[i * in + 0] / prev_activations[0];
-                }
-            }
-            
+            // Access weights for current layer
+            const mat& current_weights_mat = weights[l];
+            mat& current_gweights_mat = gweights[l]; // Gradients will be updated
+
+            size_t weight_matrix_bytes = static_cast<size_t>(current_layer_size) * prev_layer_size * sizeof(float);
+            size_t prev_activations_bytes = static_cast<size_t>(prev_layer_size) * sizeof(float);
+
             // Allocate and copy data to device
             CUDA_CHECK(cudaMalloc(&d_weights, weight_matrix_bytes));
-            CUDA_CHECK(cudaMalloc(&d_deltas, in * sizeof(float)));
-            CUDA_CHECK(cudaMalloc(&d_prev_activations, in * sizeof(float)));
+            CUDA_CHECK(cudaMalloc(&d_gweights, weight_matrix_bytes));
+            CUDA_CHECK(cudaMalloc(&d_prev_activations, prev_activations_bytes));
+
             CUDA_CHECK(cudaMemcpy(d_weights, current_weights_mat.mapped_data, weight_matrix_bytes, cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_deltas, layer_deltas.data(), in * sizeof(float), cudaMemcpyHostToDevice));
-            CUDA_CHECK(cudaMemcpy(d_prev_activations, prev_activations.data(), in * sizeof(float), cudaMemcpyHostToDevice));
-            
+            CUDA_CHECK(cudaMemcpy(d_gweights, current_gweights_mat.mapped_data, weight_matrix_bytes, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(d_prev_activations, prev_activations.data(), prev_activations_bytes, cudaMemcpyHostToDevice));
+
             // Update weights with L2 regularization
             dim3 blockDim(16, 16);
-            dim3 gridDim((in + blockDim.x - 1) / blockDim.x, (in + blockDim.y - 1) / blockDim.y);
-            
-            // updateWeightsL2Kernel<<<gridDim, blockDim>>>(d_weights, d_deltas, d_prev_activations, learning, lambda, in, in);
+            dim3 gridDim((prev_layer_size + blockDim.x - 1) / blockDim.x, (current_layer_size + blockDim.y - 1) / blockDim.y);
+
+            updateWeightsL2Kernel<<<gridDim, blockDim>>>(nullptr, d_prev_activations, d_weights, d_gweights, learning, lambda, current_layer_size, prev_layer_size);
             CUDA_CHECK(cudaGetLastError());
-            
+
             // Copy updated weights back to host
-            // The mat object weights[l] will receive the updated flat data.
             CUDA_CHECK(cudaMemcpy(weights[l].mapped_data, d_weights, weight_matrix_bytes, cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(gweights[l].mapped_data, d_gweights, weight_matrix_bytes, cudaMemcpyDeviceToHost));
 
             // Free temporary memory
             CUDA_CHECK(cudaFree(d_weights));
-            CUDA_CHECK(cudaFree(d_deltas));
+            CUDA_CHECK(cudaFree(d_gweights));
             CUDA_CHECK(cudaFree(d_prev_activations));
+            d_weights = d_gweights = d_prev_activations = nullptr;
         }
-        
+
         // Compute loss with L2 penalty
         float loss = cucomputeLossWithL2(output, expected, *this, lambda);
         std::cout << "Loss with L2 penalty: " << loss << std::endl;
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "CUDA Exception in L2 regularization: " << e.what() << std::endl;
-        
+
         // Cleanup on error
         cudaFree(d_weights);
         cudaFree(d_deltas);
         cudaFree(d_prev_activations);
-        
+        cudaFree(d_gweights);
+
         throw;
     }
 }
+#endif

@@ -62,6 +62,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
     size_t predBytes = static_cast<size_t>(vocabsize) * sizeof(float);
 
     // allot buffers
+    d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes, deEmbeddings.mapped_data, &cl_err);
     d_tokenEmbed = cl::Buffer(clcontext.context, CL_MEM_READ_WRITE, tokenEmbedBytes, nullptr, &cl_err); CL_CHECK(cl_err);
     d_expected_token = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY, singleTokenBytes, nullptr, &cl_err); CL_CHECK(cl_err); // Buffer for the target token
     d_Q_cl = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, KQmatbytes, nullptr, &cl_err); CL_CHECK(cl_err);
@@ -418,8 +419,6 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                     int host_indexForToken = -1;
                     cl::Buffer d_otok_buffer, d_predictions, d_result_index_buffer;
                     try {
-                        d_deEmbeddings = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, deEmbeddingsBytes,
-                                                    deEmbeddings.mapped_data, &cl_err);
                         size_t otok_bytes = static_cast<size_t>(x) * d * sizeof(float);
                         d_otok_buffer = cl::Buffer(clcontext.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, otok_bytes, otok.data(), &cl_err);
                         d_predictions = cl::Buffer(clcontext.context, CL_MEM_WRITE_ONLY, predBytes, nullptr, &cl_err);

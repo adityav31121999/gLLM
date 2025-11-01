@@ -1,5 +1,4 @@
 #ifdef USE_CUDA
-
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "include/attention.hpp"
@@ -61,12 +60,20 @@ __device__ int computePrediction(const float* EH, const float* embeddings, int d
     if (voc <= 0 || embeddings == nullptr) {
         return -1; // Handle invalid input
     }
-    float max_dot_product = -FLT_MAX; // Initialize with the smallest possible float value
-    int predicted_index = 0; // Default to the first token
+    float max_dot_product = -FLT_MAX;
+    int predicted_index = 0;
+
+    // Assuming dim is a multiple of 4 for float4 operations
+    int dim_float4 = dim / 4;
+    const float4* EH_f4 = (const float4*)EH;
 
     for (int i = 0; i < voc; ++i) {
-        const float* current_embedding_row = embeddings + i * dim;
-        float current_dot_product = cuComputeDot(EH, current_embedding_row, dim);
+        const float4* current_embedding_row_f4 = (const float4*)(embeddings + i * dim);
+
+        float current_dot_product = 0.0f;
+        for (int k = 0; k < dim_float4; ++k) {
+            current_dot_product += EH_f4[k].x * current_embedding_row_f4[k].x + EH_f4[k].y * current_embedding_row_f4[k].y + EH_f4[k].z * current_embedding_row_f4[k].z + EH_f4[k].w * current_embedding_row_f4[k].w;
+        }
 
         if (current_dot_product > max_dot_product) {
             max_dot_product = current_dot_product;
@@ -108,12 +115,20 @@ __device__ int computePredictionWithScores(const float* EH, const float* embeddi
     if (voc <= 0 || embeddings == nullptr) {
         return -1; // Handle invalid input
     }
-    float max_dot_product = -FLT_MAX; // Initialize with the smallest possible float value
-    int predicted_index = 0; // Default to the first token
+    float max_dot_product = -FLT_MAX;
+    int predicted_index = 0;
+
+    // Assuming dim is a multiple of 4 for float4 operations
+    int dim_float4 = dim / 4;
+    const float4* EH_f4 = (const float4*)EH;
 
     for (int i = 0; i < voc; ++i) {
-        const float* current_embedding_row = embeddings + i * dim;
-        float current_dot_product = cuComputeDot(EH, current_embedding_row, dim);
+        const float4* current_embedding_row_f4 = (const float4*)(embeddings + i * dim);
+
+        float current_dot_product = 0.0f;
+        for (int k = 0; k < dim_float4; ++k) {
+            current_dot_product += EH_f4[k].x * current_embedding_row_f4[k].x + EH_f4[k].y * current_embedding_row_f4[k].y + EH_f4[k].z * current_embedding_row_f4[k].z + EH_f4[k].w * current_embedding_row_f4[k].w;
+        }
         predictionLogits[i] = current_dot_product;
 
         if (current_dot_product > max_dot_product) {
@@ -123,6 +138,41 @@ __device__ int computePredictionWithScores(const float* EH, const float* embeddi
     }
     return predicted_index;
 }
+
+__global__ void kernelVecDotVec(const float* vec1, const float* vec2, float* result, int dim)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        *result = cuComputeDot(vec1, vec2, dim);
+    }
+}
+
+__global__ void kernelDotvecmatvec(const float* vec1, const float* vec2, const float* matrix, float* result, int dim)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        *result = cuComputeDotvmv(vec1, vec2, matrix, dim);
+    }
+}
+
+__global__ void kernelComputeHeadSumsMaskedev(const float* d_head, float* d_col_sums,
+                                          int num_tokens, bool isSelfAttention)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x; // Parallelize over token index 'i'
+
+    if (i < num_tokens) {
+        float col_sum_l = 0.0f;
+
+        // Calculate column sum (l) for token i: sum head[j][i] for j < num_tokens, applying mask if needed
+        for (int j = 0; j < num_tokens; ++j) {
+            // Apply self-attention mask: only sum if j <= i
+            if (!isSelfAttention || j <= i) {
+                col_sum_l += d_head[j * num_tokens + i];
+            }
+        }
+
+        d_col_sums[i] = col_sum_l;
+    }
+}
+
 
 /**
  * @brief CUDA kernel to compute row sums and column sums of the attention head matrix,
@@ -145,26 +195,51 @@ __global__ void kernelComputeHeadSumsMasked(const float* d_head, float* d_row_su
         float row_sum_k = 0.0f;
         float col_sum_l = 0.0f;
 
-        int limit = isSelfAttention ? i + 1 : num_tokens; // If self-attention, limit is i+1 (sum j=0 to i)
-        if (limit > num_tokens) limit = num_tokens; // Ensure limit doesn't exceed bounds
-
-        // Calculate row sum (k) for token i: sum head[i][j] for j < limit
-        for (int j = 0; j < limit; ++j) {
+        // Calculate row sum (k) for token i: sum head[i][j] for j < num_tokens, applying mask if needed
+        for (int j = 0; j < num_tokens; ++j) {
             // Apply self-attention mask: only sum if j <= i
             if (!isSelfAttention || j <= i) {
-            row_sum_k += d_head[i * num_tokens + j];
+                row_sum_k += d_head[i * num_tokens + j];
             }
         }
 
-        // Calculate column sum (l) for token i: sum head[j][i] for j < limit
-        for (int j = 0; j < limit; ++j) {
-            col_sum_l += d_head[j * num_tokens + i];
+        // Calculate column sum (l) for token i: sum head[j][i] for j < num_tokens, applying mask if needed
+        for (int j = 0; j < num_tokens; ++j) {
+            // Apply self-attention mask: only sum if j <= i
+            if (!isSelfAttention || j <= i) {
+                col_sum_l += d_head[j * num_tokens + i];
+            }
         }
 
         d_row_sums[i] = row_sum_k;
         d_col_sums[i] = col_sum_l;
     }
 }
+
+__global__ void kernelAccumulateWeightedVectorsev(const float* d_row_sums, const float* d_col_sums,
+                                                const float* d_K, const float* d_Q,
+                                                float* d_dv_accum, int num_tokens, int h_dim)
+{
+    int h_idx = blockIdx.x * blockDim.x + threadIdx.x; // Parallelize over the h_dim dimension
+
+    if (h_idx < h_dim) {
+        float total_dv_for_h_idx = 0.0f;
+
+        // Iterate through each token i
+        for (int i = 0; i < num_tokens; ++i) {
+            // Access Q[i][h_idx] using row-major indexing
+            float q_i_h = d_Q[i * h_dim + h_idx];
+
+            // Accumulate dv contribution for this h_idx
+            total_dv_for_h_idx += d_col_sums[i] * q_i_h;
+        }
+
+        // Atomically add the computed sums for this h_idx to the global accumulators
+        atomicAdd(&d_dv_accum[h_idx], total_dv_for_h_idx);
+    }
+}
+
+
 
 
 /**
@@ -283,6 +358,80 @@ __global__ void updateEVRowsKernel(float* d_EV_rows, const float* d_vector_to_ad
 }
 
 /**------------------------------------BACKPROP------------------------------------**/
+
+__global__ void kernelComputeGradpred(const float* predNorm, const float* oneHot,
+                                    float* grad_pred, int vocab)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < vocab) {
+        float pNorm = predNorm[idx];
+        float label = oneHot[idx];
+        grad_pred[idx] = pNorm - label;
+    }
+}
+
+__global__ void KernelComputeGradDeEmbeddings(const float* d_delta,
+                                           const float4* otok,      // Read otok as float4
+                                           float4* grad,          // Write grad as float4
+                                           int vocab,
+                                           int dEmbedDim_div_4) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;  // Corresponds to vocab dimension
+    int col4 = blockIdx.x * blockDim.x + threadIdx.x; // Corresponds to dEmbedDim dimension (in float4 units)
+
+    if (row < vocab && col4 < dEmbedDim_div_4) {
+        const float delta_val = d_delta[row];
+        grad[row * dEmbedDim_div_4 + col4] = make_float4(delta_val * otok[col4].x,
+                                                        delta_val * otok[col4].y,
+                                                        delta_val * otok[col4].z,
+                                                        delta_val * otok[col4].w);
+    }
+}
+
+__global__ void kernelGradForAttentionOutput(const float* d_deEmbed,
+                                          const float* d_delta,
+                                          float* grad4EH,
+                                          int vocabSize, int dEmbedDim)
+{
+    int idx4 = (blockIdx.x * blockDim.x + threadIdx.x) * 4; // Each work item processes 4 elements
+    if (idx4 < dEmbedDim) {
+        float4 sum4 = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        const float4* d_deEmbed_f4 = (const float4*)d_deEmbed;
+        int dEmbedDim_f4 = dEmbedDim / 4;
+
+        for (int j = 0; j < vocabSize; ++j) {
+            float4 deEmbed = d_deEmbed_f4[j * dEmbedDim_f4 + (idx4/4)];
+            sum4.x += d_delta[j] * deEmbed.x;
+            sum4.y += d_delta[j] * deEmbed.y;
+            sum4.z += d_delta[j] * deEmbed.z;
+            sum4.w += d_delta[j] * deEmbed.w;
+        }
+        
+        grad4EH[idx4] = sum4.x;
+        grad4EH[idx4 + 1] = sum4.y;
+        grad4EH[idx4 + 2] = sum4.z;
+        grad4EH[idx4 + 3] = sum4.w;
+    }
+}
+
+__global__ void kernelComputeGradientsEH(const float* eh, const float* expected_h,
+                                       float* grad_eh, int embedding_dim)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < embedding_dim) {
+        grad_eh[idx] = eh[idx] - expected_h[idx];
+    }
+}
+
+__global__ void kernelComputeGradientsEHEVFromMSE(const float* eh, const float* expected_h,
+                                          float* grad_eh, float* grad_ev_scaled, int embedding_dim)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < embedding_dim) {
+        float grad = 2.0f * (eh[idx] - expected_h[idx]);
+        grad_eh[idx] = grad;
+        grad_ev_scaled[idx] = grad * 0.01f;
+    }
+}
 
 /**
  * @brief CUDA kernel to compute gradients w.r.t. MLP inputs (dh, dv) for the *first head* scenario.
@@ -504,27 +653,6 @@ __global__ void kernelComputeGradHead(const float* k, const float* q,
 
         // Store the total gradient for head[i][j]
         grad_head[i * token_count + j] = grad_dh_term_ij + grad_dv_term_ij;
-    }
-}
-
-
-/**
- * @brief CUDA kernel for Step 6 of `cuBackward(expected)`: Compute the gradient w.r.t. KdotQ (before scaling).
- *        Applies the derivative of the LOTA function element-wise.
- *        grad_kdotq = grad_head * lota_derivative / scaling_factor
- * @param[in] grad_head Device pointer to the gradient w.r.t. the attention head (size `size`).
- * @param[in] lota_derivative Device pointer to the precomputed derivative of the LOTA function (size `size`).
- * @param[out] grad_kdotq Device pointer to store the gradient w.r.t. KdotQ (size `size`).
- * @param[in] scaling_factor The scaling factor used in the forward pass (e.g., sqrt(embedding_dim)).
- * @param[in] size The total number of elements in the KdotQ/head matrices (token_count * token_count).
- */
-__global__ void kernelComputeGradKdotQ_LOTA(const float* grad_head, const float* lota_derivative,
-                                           float* grad_kdotq, float scaling_factor, int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < size) {
-        // Apply the chain rule: dL/dKdotQ = dL/dHead * dHead/dKdotQ
-        // dHead/dKdotQ includes the LOTA derivative and the inverse scaling factor
-        grad_kdotq[idx] = grad_head[idx] * lota_derivative[idx] / scaling_factor;
     }
 }
 
@@ -961,32 +1089,6 @@ __global__ void kernelUpdateWeights_EV_V(float* mv_a, float* mq_a, float* mk_a, 
     }
 }
 
-
-/**
- * @brief CUDA kernel to compute a simplified derivative for LOTA-like normalization (e.g., Softmax derivative approximation).
- *        lota_deriv_simple[i][j] = (sum_k(head[i][k]) - head[i][j]) / (sum_k(head[i][k]))^2
- * @param[in] head Device pointer to the attention head matrix (row-major, token_count x token_count).
- * @param[in] row_sums Device pointer to the precomputed row sums of the head matrix (size token_count).
- * @param[out] lota_deriv_simple Device pointer to store the computed simple derivative (row-major, token_count x token_count).
- * @param[in] token_count The number of tokens (dimension of the head matrix).
- */
-__global__ void kernelComputeSimpleLOTAder(const float* head, const float* row_sums, float* lota_deriv_simple, int token_count)
-{
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (row < token_count && col < token_count) {
-        float sum = row_sums[row]; // Get the precomputed sum for the current row
-        int idx = row * token_count + col;
-        if (sum > 1e-9f) { // Avoid division by zero or very small numbers
-            float val = head[idx];
-            lota_deriv_simple[idx] = (sum - val) / (sum * sum);
-        }
-        else {
-            lota_deriv_simple[idx] = 0.0f; // Assign zero derivative if sum is too small
-        }
-    }
-}
 
 /**
  * @brief Naive CUDA kernel for row-wise sum reduction of a matrix.

@@ -23,9 +23,8 @@
  * @param blockFilePath_param The base path for the block's data file.
  */
 block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
-    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning) : // Changed to pass by value
-    x(x_layers), y(y_heads), error(0.0f),
-    isSelfAttention(attentionType), inTraining(trainMode),
+    bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
+    x(x_layers), y(y_heads), error(0.0f), isSelfAttention(attentionType), inTraining(trainMode),
     blockFilePath([&blockFilePath_param, blockCount]() {
         std::string base = blockFilePath_param;
         // Ensure the directory path ends with a separator
@@ -37,7 +36,10 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
     blockOffset(0LL)
 {
     if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
-        throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
+        std::cout << "x: " << x << ", y: " << y << ", n_tokens: " << n_tokens 
+                  << ", d_embed: " << d_embed << ", h_internal: " << h_internal 
+                  << ", l_mlp: " << l_mlp << std::endl;
+        throw std::invalid_argument("Block dimensions must be positive in non-OpenCL constructor.");
     }
     b.resize(x, std::vector<attention>(y, attention(n_tokens, d_embed, h_internal, l_mlp, attentionType, trainMode, learning)));
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
@@ -133,10 +135,10 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
-    bool trainMode, int blockCount, const std::string blockFilePath_param, float& learning) : // Changed to pass by value
-    x(x_layers), y(y_heads), error(0.0f),
-    isSelfAttention(attentionType), inTraining(trainMode),
+block::block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal,
+    int l_mlp, unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, 
+    const std::string& blockFilePath_param, float& learning) :
+    x(x_layers), y(y_heads), error(0.0f), isSelfAttention(attentionType), inTraining(trainMode),
     blockFilePath([&blockFilePath_param, blockCount]() {
         std::string base = blockFilePath_param;
         // Ensure the directory path ends with a separator
@@ -148,7 +150,7 @@ block::block(const std::string& blockName, int x_layers, int y_heads, int n_toke
     blockOffset(0LL)
 {
     if (x <= 0 || y <= 0 || n_tokens <= 0 || d_embed <= 0 || h_internal <= 0 || l_mlp <= 0) {
-        throw std::invalid_argument("Block dimensions must be positive in OpenCL constructor.");
+        throw std::invalid_argument("Block dimensions must be positive in non-OpenCL constructor.");
     }
 
     EV.resize(x, std::vector<std::vector<std::vector<float>>>(y, std::vector<std::vector<float>>(n_tokens, std::vector<float>(d_embed, 0.0f))));
@@ -261,8 +263,7 @@ block::block(const std::string& blockName, int x_layers, int y_heads, int n_toke
  */
 block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
     bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
-    clcontext(context), x(x_layers), y(y_heads), error(0.0f),
-    isSelfAttention(attentionType), inTraining(trainMode),
+    clcontext(context), x(x_layers), y(y_heads), error(0.0f), isSelfAttention(attentionType), inTraining(trainMode),
         blockFilePath([&blockFilePath_param, blockCount]() {
         // Correctly construct path from directory
         std::string base = blockFilePath_param;
@@ -376,8 +377,7 @@ block::block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, in
  */
 block::block(OpenCLContext& context, const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
     bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
-    clcontext(context), x(x_layers), y(y_heads), error(0.0f),
-    isSelfAttention(attentionType), inTraining(trainMode),
+    clcontext(context), x(x_layers), y(y_heads), error(0.0f), isSelfAttention(attentionType), inTraining(trainMode),
         blockFilePath([&blockFilePath_param, blockCount]() {
         // Correctly construct path from directory
         std::string base = blockFilePath_param;

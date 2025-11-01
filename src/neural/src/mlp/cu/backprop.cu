@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 // backprop.cu: CUDA implementations for backward propagation in MLP
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -309,3 +309,4 @@ void mlp::cuBackprop2in(int in, int layers, float learning) {
         throw;
     }
 }
+#endif

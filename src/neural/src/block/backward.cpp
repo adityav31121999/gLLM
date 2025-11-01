@@ -11,6 +11,7 @@
  * @param expectedH expected EH for last head of each partial attention (common)
  * @param in dimension of embeddings
  * @param layers layers of MLPs
+ * @param learning learning rate
  */
 void block::backward1stBlock(std::vector<float>& expectedH, int& in, int& layers, float& learning)
 {
@@ -50,8 +51,10 @@ void block::backward1stBlock(std::vector<float>& expectedH, int& in, int& layers
  * @param expectedH expected EH for last head of each partial attention (common)
  * @param in dimension of embeddings
  * @param layers layers of MLPs
+ * @param learning learning rate
  */
-void block::backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, float& learning)
+void block::backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, 
+    float& learning)
 {
     // run partial backpropagation in parallel
     for(int i = y; i >= 1; i--) {
@@ -89,6 +92,8 @@ void block::backward1stBlock(std::vector<std::vector<float>>& expectedH, int& in
  * @param expectedH expected EH for last head of each partial attention (common)
  * @param in dimension of embeddings
  * @param layers layers of MLPs
+ * @param blockCount block count in transformer
+ * @param learning learning rate
  */
 void block::backward(std::vector<float>& expectedH, int& in, int& layers, int blockCount, float& learning) {
     // run partial backpropagation in parallel
@@ -127,8 +132,11 @@ void block::backward(std::vector<float>& expectedH, int& in, int& layers, int bl
  * @param expectedH expected EH for last head of each partial attention (common)
  * @param in dimension of embeddings
  * @param layers layers of MLPs
+ * @param blockCount block count in transformer
+ * @param learning learning rate
  */
-void block::backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, float& learning) {
+void block::backward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int blockCount, 
+    float& learning) {
     // run partial backpropagation in parallel
     for(int i = y; i >= 1; i--) {
         if(i == y) {
@@ -158,8 +166,46 @@ void block::backward(std::vector<std::vector<float>>& expectedH, int& in, int& l
     // serialise(blockFilePath);
 }
 
-void block::rbackward1stBlock(std::vector<std::vector<float>> &expectedH, int& in, int& layers, float &learning)
+/**
+ * @brief backward propagation for first block with gradents for embeddings
+ * @param expectedH expected token vector
+ * @param in dimension of embedding
+ * @param layers layers of MLP
+ * @param learning learning rate
+ * @return gradients for token embeddings
+ */
+std::vector<std::vector<float>> block::rbackward1stBlock(std::vector<std::vector<float>> &expectedH, int& in, 
+    int& layers, float &learning)
 {
+    std::vector<std::vector<float>> gradT(x, std::vector<float>(in, 0.0f));
+    // run partial backpropagation in parallel
+    for(int i = y; i >= 1; i--) {
+        if(i == y) {
+            // for last column
+            partialbackward1stBlock(expectedH[i-1], in, layers, i, learning);
+        }
+        else if(i < y and i > 1) {
+            std::vector<std::vector<float>> h2(x, std::vector<float>(in, 0.0f));
+            for(int j = 0; j < x; j++) {
+                h2[i] = b[j][i+1].EH;
+            }
+            // for last second to second column
+            partialbackward1stBlock(h2, in, layers, i, learning);
+        }
+        else if(i == 1) {
+            std::vector<std::vector<float>> h2(x, std::vector<float>(in, 0.0f));
+            for(int j = 0; j < x; j++) {
+                h2[i] = b[j][i+1].EH;
+            }
+            // for first column
+            gradT = rpartialbackward1stBlock(h2, in, layers, i, learning);
+        }
+        else {
+            throw std::runtime_error("invalid index in backward1stBlock (H2D)");
+        }
+    }
+    // serialise(blockFilePath);
+    return gradT;
 }
 
 #endif

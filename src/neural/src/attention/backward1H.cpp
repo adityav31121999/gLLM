@@ -270,7 +270,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
 
     for(int j = 0; j < CONTEXT_WIN; j++) {
         for(int i = 0; i < EMBEDDING; i++) {
-            grad_EV_mat(i, j) (EV(i, j) - expectedV[i][j]);
+            grad_EV_mat(i, j) = (EV(i, j) - expectedV[i][j]);
             grad_EV[i] += grad_EV_mat(i, j);
         }
     }
@@ -458,7 +458,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
  * @param headnumber Number of heads in the attention block
  * @param learning Learning rate for weight updates
  */
-void attention::backward1stHeadContext(std::vector<float>& expectedH, int& in, int& layers, int headnumber, float& learning)
+std::vector<float> attention::backward1stHeadContext(std::vector<float>& expectedH, int& in, int& layers, int headnumber, float& learning)
 {
     // Check dimensions before starting
     if (expectedH.size() != EMBEDDING || EH.size() != EMBEDDING) {
@@ -705,6 +705,7 @@ void attention::backward1stHeadContext(std::vector<float>& expectedH, int& in, i
     // dL/dT = dL/dT_Q + dL/dT_K + dL/dT_h + dL/dT_v
     std::vector<float> grad_T(EMBEDDING, 0.0f);
     grad_T = grad_T_Q + grad_T_K + grad_T_H + grad_T_V;
+    return grad_T;
 }
 
 #endif

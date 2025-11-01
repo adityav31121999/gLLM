@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 // loss.cu: CUDA implementations for calculating losses and penalties for MLP
 #include "include/mlp.hpp"
 #include <maths.hpp>
@@ -318,3 +318,4 @@ float cudropoutGeneralisation(const std::vector<float>& outputs, const std::vect
         throw;
     }
 }
+#endif

@@ -1,6 +1,5 @@
 #ifndef TRANSFORMER_HPP
 #define TRANSFORMER_HPP 1
-
 #include <string>
 #include <cmath>
 #include <vector>
@@ -77,10 +76,11 @@ public:
     mat tokenEmbed;                     // token embedding (sequence1 + sequence2) (Mapped, currentTokenCount x d)
     mat positional;                     // positional encodings (Mapped, currentTokenCount x d)
     mat embedPlusPos;                   // token embeddings + positional encodings (Mapped, currentTokenCount x d)
-    FILE* seqChat;                      // sequence1 and sequence2 text file
     // when model is in inference, hold EV of ith block here
+    mat embedQKed;                      // token embeddings after QK attention (Mapped, currentTokenCount x d)
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse; // Keeping as vector due to complexity
     mat tokForBlock;                    // token embeddings for local context for inference (Mapped, n x d)
+    FILE* seqChat;                      // sequence1 and sequence2 text file
 
 #ifdef USE_OPENCL
     OpenCLContext& clcontext;
@@ -105,6 +105,7 @@ public:
 // cuda implementation
     void cuParallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void cuForward(int& blockCount, int& currentTokenCount, int& sequence1Count);
+    void cuForward_ev(int& blockCount, int& currentTokenCount, int& sequence1Count);
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
     void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
@@ -147,12 +148,16 @@ public:
 #else
 
 // c++ implementation
-    void parallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
     void computeKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void forward(int& blockCount, int& currentTokenCount, int& sequence1Count);
+    void forward_ev(int& blockCount, int& currentTokenCount, int& sequence1Count);
+    void computePrediction();
     void backward(std::vector<float>& expectedH, int& blockCount);
     void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void backwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
+    void updateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
+    void updateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken, std::vector<float> one_hot_host,
+                            int indexForToken, float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
     void train(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
@@ -162,7 +167,7 @@ public:
     void run();
     void runContext();
     void runOnThreads();
-    void runOnThreadsContext();
+    void runContextOnThreads();
 
 #endif
 
@@ -190,12 +195,7 @@ public:
 std::string toLower(const std::string& str);
 
 // compute functions for dot, KdotQ and other values
-
-void computeOutput(std::vector<float>& output, std::vector<std::vector<float>>& embeddings, unsigned long long& voc, int& index);
-void computeOutput(const std::vector<float>& output, mat& embeddings, unsigned long long& voc, int& index);
-void computeKorQ(const std::vector<float>& tokenEmbed, const mat& m, std::vector<float>& KorQ);
-void computeDot(const std::vector<float>& Ti, const mat& M, const std::vector<float>& Tj, float& dot);
-void computeDot(std::vector<float>& T1, std::vector<float>& T2, std::vector<std::vector<float>>& M, float& dot);
+void computeDot(const std::vector<float>& vec1, const mat& M, const std::vector<float>& vec2, float& result);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
     int& currentTokenCount, int& sequence1Count, int& blockCount, bool& attentionType);
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& tokenEmbed, mat& M, int& currentTokenCount,

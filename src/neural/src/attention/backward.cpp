@@ -25,8 +25,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] (EH[i] - expected[i]); // MSE gradient for EH
-        grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation)
+        grad_EH[i] = (EH[i] - expected[i]); // MSE gradient for EH
+        grad_EV[i] = grad_EH[i] * 0.1f;     // EV gets a smaller portion of gradient (context preservation)
     }
 
     // Step 2: Backprop through MLPs (hor for EH, ver for EV)
@@ -224,7 +224,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
         for(int i = 0; i < EMBEDDING; i++) {
             if (i >= EV.col || i >= expectedV[j].size()) 
                 continue;
-            grad_EV_mat(j, i) (EV(j, i) - expectedV[j][i]);
+            grad_EV_mat(j, i) = (EV(j, i) - expectedV[j][i]);
             grad_EV_summed[i] += grad_EV_mat(j, i);
         }
     }
@@ -401,7 +401,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
  * @param headnumber 1-based index of position of head in local context
  * @param learning Learning rate
  */
-void attention::backwardContext(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
+std::vector<float> attention::backwardContext(std::vector<float>& expected, int& in, int& layers, int headnumber, float& learning)
 {
     // Ensure tokenCount is valid and matrices are mapped
     if (tokenCount <= 0 || K.mapped_data == nullptr || Q.mapped_data == nullptr || KdotQ.mapped_data == nullptr || EV.mapped_data == nullptr || MH.mapped_data == nullptr || MV.mapped_data == nullptr || MQ.mapped_data == nullptr || MK.mapped_data == nullptr) {
@@ -412,7 +412,7 @@ void attention::backwardContext(std::vector<float>& expected, int& in, int& laye
     std::vector<float> grad_EH(EMBEDDING, 0.0f);
     std::vector<float> grad_EV(EMBEDDING, 0.0f);
     for (int i = 0; i < EMBEDDING; i++) {
-        grad_EH[i] (EH[i] - expected[i]); // MSE gradient for EH
+        grad_EH[i] = (EH[i] - expected[i]); // MSE gradient for EH
         grad_EV[i] = grad_EH[i] * 0.1f; // EV gets a smaller portion of gradient (context preservation)
     }
 
@@ -606,6 +606,7 @@ void attention::backwardContext(std::vector<float>& expected, int& in, int& laye
     // dL/dT = dL/dT_K + dL/dT_h + dL/dT_v
     std::vector<float> grad_T(EMBEDDING, 0.0f);
     grad_T = grad_T_K + grad_T_H + grad_T_V;
+    return grad_T;
 }
 
 #endif

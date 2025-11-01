@@ -384,34 +384,22 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
             }
 
             // --- Step 9 & 10: Update Weights ---
-            if (is_first_head) {
-                // Use kernelUpdateWeights_1stHead_H (updates MH, MV, MQ, MK, EH)
-                bool update_eh_flag = (layno > 0) ? 1 : 0; // EH updated if not the very first column of the block
-                kernelUpdateWeights_1stHead_H<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(
-                    device_ptrs.d_MH_a, device_ptrs.d_MV_a, device_ptrs.d_MQ_a, device_ptrs.d_MK_a, device_ptrs.d_EH,
-                    device_ptrs.d_grad_MH, device_ptrs.d_grad_MV, device_ptrs.d_grad_MQ, device_ptrs.d_grad_MK, device_ptrs.d_grad_EH,
-                    learning_rate, update_eh_flag, 
-                    mat_heights, embedding_dim
-                );
-                CUDA_CHECK(cudaGetLastError());
-            }
-            else {
-                // Use simpler update (updates MH, MV, MQ, MK, EH, EV based on d_grad_dh/dv)
-                // Update MH, MV, MQ, MK
-                kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MH_a, device_ptrs.d_grad_MH, learning_rate, proj_mat_elements);
-                kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MV_a, device_ptrs.d_grad_MV, learning_rate, proj_mat_elements);
-                kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MQ_a, device_ptrs.d_grad_MQ, learning_rate, proj_mat_elements);
-                kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MK_a, device_ptrs.d_grad_MK, learning_rate, proj_mat_elements);
-                CUDA_CHECK(cudaGetLastError());
-                // For non-first heads in the first block, behave like attention::cuBackward
-                if (layno > 0) { // Corresponds to headnumber > 1 in attention::cuBackward
-                    kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_EH, learning_rate, embedding_dim);
-                    CUDA_CHECK(cudaGetLastError());
-                }
-                // Update EV using d_grad_EV_scaled (0.1f * d_grad_EH)
-                kernelUpdateEVBroadcasted<<< (context_win + threadsPerBlock1D -1) / threadsPerBlock1D, blockDim1D, 0, current_stream >>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_scaled, learning_rate, context_win, embedding_dim);
-                CUDA_CHECK(cudaGetLastError());
-            }
+            int update_eh_flag = 1; // Always update EH for the first block's backprop
+            int update_ev_flag = 1; // Always update EV for the first block's backprop
+            int blocksPerGridEV = (static_cast<int>(ev_single_head_elements) + threadsPerBlock1D - 1) / threadsPerBlock1D;
+            dim3 gridDimEV(blocksPerGridEV);
+
+            kernelUpdateWeightsHeadHVElastic<<<gridDimEV, blockDim1D, 0, current_stream>>>(
+                device_ptrs.d_MH_a, device_ptrs.d_MV_a, device_ptrs.d_MQ_a, device_ptrs.d_MK_a,
+                device_ptrs.d_EH, device_ptrs.d_EV,
+                device_ptrs.d_grad_MH, device_ptrs.d_grad_MV,
+                device_ptrs.d_grad_MQ, device_ptrs.d_grad_MK,
+                device_ptrs.d_grad_EH, device_ptrs.d_grad_EV_scaled,
+                learning_rate, update_eh_flag, update_ev_flag,
+                lambda_l1, lambda_l2, MAX_GRAD_CLIP,
+                mat_heights, embedding_dim, context_win
+            );
+            CUDA_CHECK(cudaGetLastError());
 
             // --- Data Transfer D->H (Async) ---
             // Copy updated MLP weights and gradients back
@@ -763,27 +751,21 @@ void block::cupartialbackward(std::vector<std::vector<float>>& expectedH, int& i
             }
 
             // --- Step 9 & 10: Update Weights (General Case) ---
-            kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MH_a, device_ptrs.d_grad_MH, learning_rate, proj_mat_elements);
-            kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MV_a, device_ptrs.d_grad_MV, learning_rate, proj_mat_elements);
-            kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MQ_a, device_ptrs.d_grad_MQ, learning_rate, proj_mat_elements);
-            kernelUpdateSimple<<<gridDimProjMat, blockDim1D, 0, current_stream>>>(device_ptrs.d_MK_a, device_ptrs.d_grad_MK, learning_rate, proj_mat_elements);
-            CUDA_CHECK(cudaGetLastError());
-            // Update EH using d_grad_EH (initial gradient 2*(EH-expectedH))
-            // Conditional on layno, similar to headnumber in attention::cuBackward
-            if (layno > 0) { // If layno is 0-indexed, this means not the very first column in a sequence of blocks.
-                             // This matches attention::cuBackward's headnumber > 1 condition.
-                kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_EH, learning_rate, embedding_dim);
-                CUDA_CHECK(cudaGetLastError());
-            }
-            // Update EH using d_grad_EH (initial gradient 2*(EH-expectedH))
-            // Conditional on layno, similar to headnumber in attention::cuBackward
-            if (layno > 0) { // If layno is 0-indexed, this means not the very first column in a sequence of blocks.
-                             // This matches attention::cuBackward's headnumber > 1 condition.
-                kernelUpdateSimple<<<gridDimEmbed, blockDim1D, 0, current_stream>>>(device_ptrs.d_EH, device_ptrs.d_grad_EH, learning_rate, embedding_dim);
-                CUDA_CHECK(cudaGetLastError());
-            }
-            // Update EV using d_grad_EV_scaled (0.1f * d_grad_EH)
-            kernelUpdateEVBroadcasted<<< (context_win + threadsPerBlock1D -1) / threadsPerBlock1D, blockDim1D, 0, current_stream >>>(device_ptrs.d_EV, device_ptrs.d_grad_EV_scaled, learning_rate, context_win, embedding_dim);
+            int update_eh_flag = (layno > 0) ? 1 : 0;
+            int update_ev_flag = 0; // EV is not updated in this path
+            int blocksPerGridEV = (static_cast<int>(ev_single_head_elements) + threadsPerBlock1D - 1) / threadsPerBlock1D;
+            dim3 gridDimEV(blocksPerGridEV);
+
+            kernelUpdateWeightsHeadHVElastic<<<gridDimEV, blockDim1D, 0, current_stream>>>(
+                device_ptrs.d_MH_a, device_ptrs.d_MV_a, device_ptrs.d_MQ_a, device_ptrs.d_MK_a,
+                device_ptrs.d_EH, device_ptrs.d_EV,
+                device_ptrs.d_grad_MH, device_ptrs.d_grad_MV,
+                device_ptrs.d_grad_MQ, device_ptrs.d_grad_MK,
+                device_ptrs.d_grad_EH, device_ptrs.d_grad_EV_scaled,
+                learning_rate, update_eh_flag, update_ev_flag,
+                lambda_l1, lambda_l2, MAX_GRAD_CLIP,
+                mat_heights, embedding_dim, context_win
+            );
             CUDA_CHECK(cudaGetLastError());
 
             // --- Data Transfer D->H (Async) ---

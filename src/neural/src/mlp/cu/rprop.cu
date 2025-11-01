@@ -1,4 +1,4 @@
-
+#ifdef USE_CUDA
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
@@ -144,3 +144,4 @@ void mlp::cuRprop(std::vector<std::vector<float>>& dataset, int layers_param, in
         }
     }
 }
+#endif

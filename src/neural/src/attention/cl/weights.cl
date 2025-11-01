@@ -46,9 +46,6 @@ inline void apply_elastic_net_and_clip(volatile __global float* weight_ptr, __gl
     // Apply element-wise gradient clipping
     // if (fabs(total_gradient) > max_grad_clip_value) { total_gradient = copysign(max_grad_clip_value, total_gradient); }
 
-    // Apply weight decay: w = w * (1 - lr * weight_decay) - lr * gradient
-    // weight_ptr[index] = current_weight * (1.0f - learning_rate * weight_decay) - learning_rate * total_gradient;
-
     weight_ptr[index] -= learning_rate * total_gradient;
 }
 
