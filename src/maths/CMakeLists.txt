@@ -22,6 +22,8 @@ add_library(maths STATIC
     src/mat/inverse.cpp
     src/mat/operators.cpp
     src/mat/matops.cpp
+    src/mat/mult.cpp
+    src/mat/hadamard.cpp
     src/mat/prop.cpp
     src/mat/write.cpp
     src/mat/flat.cpp

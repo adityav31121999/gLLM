@@ -21,7 +21,7 @@
 int create_or_resize_file(const char* filepath, size_t required_size);
 
 /**
- * @brief CLASS: Matrix class
+ * @brief Matrix class
  * @param r number of rows
  * @param c number of columns
  * Data is stored in a memory-mapped file.
@@ -58,17 +58,17 @@ public:
     mat& operator=(const mat& other);
     mat& operator=(mat&& other) noexcept;
     std::vector<float> operator=(int i);
-    mat& operator=(const std::vector<std::vector<float>>& b); // Needs file creation/mapping/copy
+    mat& operator=(const std::vector<std::vector<float>>& b);
 
     float& operator()(int i, int j);
     const float& operator()(int i, int j) const;
     std::vector<float> operator()(int i) const;
-    void addRow(const std::vector<float>& vec, int i);   // add row in ith location of matrix
-    void addCol(const std::vector<float>& vec, int j);   // add col in jth location of matrix
+    void addRow(const std::vector<float>& vec, int i);
+    void addCol(const std::vector<float>& vec, int j);
     void getCol(std::vector<float>& out_vec, int j) const;
     void getRow(std::vector<float>& out_vec, int i) const;
     std::vector<std::vector<float>> make2dVector();
-    std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col); // This was already here
+    std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col);
     std::vector<float> flatten();
     static std::vector<float> flatten(const mat& other);
 
@@ -90,9 +90,13 @@ public:
     mat& operator+=(const std::vector<std::vector<float>>& other); // Add-assign vector
     mat& operator-=(const std::vector<std::vector<float>>& other); // Subtract-assign vector
 
+    mat mult(const mat&) const;
+    mat mult(const mat&, const mat&);
+    mat mult(const std::vector<const mat*>&);
+    mat hadamard(const mat&) const;
+    mat hadamard(const mat&, const mat&);
+    mat hadamard(const std::vector<const mat*>&);
     mat gaussjordan() const;
-    void mult_A_Bt(const mat& a, const mat& b);
-    mat mult(const mat& a, const mat& b); // Static or friend? Needs update.
     float trace() const;
     void set(int i, int j, float val);  // set val to (i, j)th element
     bool ifsquare() const;              // check if matrix is square
@@ -156,10 +160,20 @@ void write2filefrommat(const mat& matrix, const std::string& locationWithFileNam
 std::vector<float> matmul(const mat& a, const std::vector<float>& b);
 mat covariance(const mat& a);
 
+// thread-based operators
+void mult(const mat&, const float scalar, mat& result);
+void mult(const std::vector<float>&, const mat&, std::vector<float>&);
+void mult(const mat&, const std::vector<float>&, std::vector<float>&);
+void mult(const mat& A, const mat& B, mat& result);
+void add(const mat& A, const float val, mat& result);
+void add(const mat& A, const mat& B, mat& result);
+void sub(const mat& A, const float val, mat& result);
+void sub(const mat& A, const mat& B, mat& result);
+
+
 // Activation function adapted for mat
 mat LOTA(const mat& y, int t, bool attentionType);
 mat LOTAder(const mat& y, int t, bool attentionType);
-
 
 #ifdef USE_CUDA
 // device

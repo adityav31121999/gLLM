@@ -128,7 +128,7 @@ void transformer::trainContext(std::vector<std::vector<float>>& sentence, std::v
                 }
 
                 // --- Prediction with Scores ---
-                computePredictionWithScores();
+                computePrediction();
                 pred = softmax(pred);
 
                 // --- Error Calculation & Logging ---
@@ -149,8 +149,25 @@ void transformer::trainContext(std::vector<std::vector<float>>& sentence, std::v
                     break;
                 }
 
-                // --- Backward Pass ---
-                backwardContext(oneHotEncode, current_block_idx, indexVec[i]);
+                // modify the de-embeddings and get gradients for backprop
+                std::vector<float> gradEH(d * x, 0.0f);
+                updateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
+                // get expected target for backprop
+                std::vector<std::vector<float>> targets_for_heads(x, std::vector<float>(EMBEDDING, 0.0f));
+                for(int head_idx = 0; head_idx < x; ++head_idx) {
+                    for(int eidx = 0; eidx < EMBEDDING; ++eidx) {
+                        float gradient = learning * (gradEH[(head_idx * EMBEDDING) + eidx]
+                                                  + (lambda_L1 * embeddings(indexForToken, eidx))
+                                                  + (2.0f * lambda_L2 * embeddings(indexForToken, eidx)));
+                        if (fabs(gradient) >= MAX_GRAD_CLIP) gradient = std::copysign(MAX_GRAD_CLIP, gradient);
+                        targets_for_heads[head_idx][eidx] = otok[(head_idx * EMBEDDING) + eidx] - gradient;
+                    }
+                }
+                // backpropagate block
+                backwardContext(targets_for_heads, current_block_idx);
+                // update embeddings which are in use
+                updateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, 12454);
+                updateEmbeddings(tokenEmbed, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, effective_context_size);
 
                 totalLearning += learning;
                 prev_error = current_error;
@@ -519,7 +536,7 @@ void transformer::trainContext(std::vector<std::vector<float>>& sequence1, std::
                 }
 
                 // --- Prediction with Scores ---
-                computePredictionWithScores();
+                computePrediction();
                 pred = softmax(pred);
 
                 // --- Error Calculation & Logging ---
@@ -540,8 +557,25 @@ void transformer::trainContext(std::vector<std::vector<float>>& sequence1, std::
                     break;
                 }
 
-                // --- Backward Pass ---
-                backwardContext(oneHotEncode, current_block_idx, indexVec[i]);
+                // modify the de-embeddings and get gradients for backprop
+                std::vector<float> gradEH(d * x, 0.0f);
+                updateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
+                // get expected target for backprop
+                std::vector<std::vector<float>> targets_for_heads(x, std::vector<float>(EMBEDDING, 0.0f));
+                for(int head_idx = 0; head_idx < x; ++head_idx) {
+                    for(int eidx = 0; eidx < EMBEDDING; ++eidx) {
+                        float gradient = learning * (gradEH[(head_idx * EMBEDDING) + eidx]
+                                                  + (lambda_L1 * embeddings(indexForToken, eidx))
+                                                  + (2.0f * lambda_L2 * embeddings(indexForToken, eidx)));
+                        if (fabs(gradient) >= MAX_GRAD_CLIP) gradient = std::copysign(MAX_GRAD_CLIP, gradient);
+                        targets_for_heads[head_idx][eidx] = otok[(head_idx * EMBEDDING) + eidx] - gradient;
+                    }
+                }
+                // backpropagate block
+                backwardContext(targets_for_heads, current_block_idx);
+                // update embeddings which are in use
+                updateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, 12454);
+                updateEmbeddings(tokenEmbed, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, effective_context_size);
 
                 j++;
             }

@@ -667,24 +667,3 @@ mat LOTAder(const mat& y, int t, bool attentionType) { // Pass t and attentionTy
 
     return result; // Return the derivative matrix
 }
-
-/**
- * @brief this is to calculate specifically the qkCache
- * @param a MQ matrix
- * @param b MK matrix
- */
-void mat::mult_A_Bt(const mat& a, const mat& b)
-{
-    // if number of rows of a == number of rows of b
-    if(a.row != b.row) {
-        throw std::runtime_error("Matrix multiplication of incompatible dimensions.\
-            This is for product of matrices with same number or rows, since other is transpose");
-    }
-    for(int i = 0; i < a.row; i++) {
-        for(int j = 0; j < b.row; j++) {
-            for(int k = 0; k < a.col; k++) {
-                (*this)(i,j) += a(i, k) * b(j, k);
-            }
-        }
-    }
-}

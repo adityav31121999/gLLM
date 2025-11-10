@@ -1,4 +1,3 @@
-
 # gLLM - AI/ML Library for creating LLMs
 
 ![alt text](gLLMicon.svg)
@@ -33,8 +32,18 @@
 ### src/maths
 - *basic.hpp*: Basic Mathematical Functions
 - *mat.hpp*: Mathematical Functions for Matrix Operations
-- *stats.hpp*: Mathematical Functions for Statistics
 - *maths.hpp*: Main Header
+```
+IMP:
+  - In all of my classes where I have used mat class for storing data, i have ended up creating certain mat variables whose size are not mathematically accurate or row and columns are interchanged.
+  - This is due to my fault in first assuming that embedding matrix will be used in calculation of Attention class, where i am actually using tokenEmbed, and also created tokenEmbed, both hold token related embedding and de-embedding row-wise.
+  - For example: when calculating prediction, otok is used to multiply embedding and de-embedding (based on static and contextualised training) and this is done by dot product of otok as row and columns of embedding and de-embedding.
+  - otok is considered row-vector (almost all single vectors here are considered row vector) and matrices are size of embedding or de-embedding x vocabise.
+  - But the csv files hold them as vocabsize x size of embedding or de-embedding.
+  - Hence the matrix formed is also same.
+  - So the scores are obtained by dot product of otok and rows of matrices.
+  - Also, tokenEmbed is also initialised in same manner, context window x embedding dimension, which makes it easy to access the embeddings for calculating K and Q in subsequent block training and inference. When they are emebdding dimension x context window, its hard to access them.
+```
 
 ### src/neural
 - *mlp.hpp*: Multi-Layer Perceptron

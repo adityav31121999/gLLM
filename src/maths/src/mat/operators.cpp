@@ -1,5 +1,3 @@
-
-// includes basic operations
 #include "include/mat.hpp" // Use relative path if appropriate for build system
 #include <algorithm>
 #include <numeric>
@@ -10,18 +8,6 @@
 #include "basic.hpp"
 #include "mat.hpp"
 
-
-/**
- * @brief index operator overload
- * @param i index of row
- * @param j index of column
- * @return reference to the element at position (i, j)
- */
-// float& mat::operator()(int i, int j) {
-//     // Definition should be in the header (mat.hpp) for inlining
-//     // return mapped_data[i * col + j]; // Direct access (less safe)
-//     // Or use the bounds-checked version from header
-// }
 
 // -------------------------------Mathematical Functions for Matrix Operations------------------------------- //
 
@@ -219,7 +205,6 @@ mat mat::operator-(const std::vector<std::vector<float>>& b) const {
  * @param b The scalar value to multiply the matrix with.
  * @return A new matrix where each element is the product of the corresponding element
  * in the input matrix and the scalar value.
- * @throws None.
  */
 mat mat::operator*(float b) const {
     // Create a new matrix with the same dimensions as the input matrix
@@ -235,13 +220,6 @@ mat mat::operator*(float b) const {
 }
 
 /**
- * @brief Overloaded operator for matrix division with a scalar.
- * This function takes a matrix and a scalar value as input and returns a new matrix
- * where each element of the input matrix is divided by the scalar.
- * @param b The scalar value to divide the matrix with.
- * @return A new matrix where each element is the division of the corresponding element
- * in the input matrix and the scalar value.
- * @throws None.
  * @brief Overloaded operator for matrix multiplication with another matrix.
  *      This function takes a matrix and another matrix as input and returns a new matrix
  *      It uses strassen's matrix multiplication method.
@@ -251,7 +229,8 @@ mat mat::operator*(float b) const {
 mat mat::operator*(const mat& a) const {
     // Check if dimensions are compatible for multiplication
     if (col != a.row) {
-        throw std::runtime_error("Matrix dimensions are incompatible for multiplication.");
+        throw std::runtime_error("Matrix dimensions are incompatible for multiplication." 
+            + std::to_string(row) + "x" + std::to_string(col) + " vs " + std::to_string(a.row) + "x" + std::to_string(a.col));
     }
 
     // Create the result matrix (allocates temp file and maps)
@@ -269,11 +248,6 @@ mat mat::operator*(const mat& a) const {
             c(i, j) = sum;
         }
     }
-
-    // Strassen implementation would require significant changes to work
-    // efficiently with memory-mapped files (e.g., mapping sub-regions
-    // or creating temporary mapped sub-matrices). Omitted for now.
-
     return c;
 }
 

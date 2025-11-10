@@ -10,10 +10,10 @@ add_library(neural STATIC
     src/mlp/weights.cpp
     src/mlp/writemlp.cpp
     # cpp
-        src/mlp/forprop.cpp
-        src/mlp/loss.cpp
-        src/mlp/backprop.cpp
-        src/mlp/train.cpp
+        src/mlp/cpp/forprop.cpp
+        src/mlp/cpp/loss.cpp
+        src/mlp/cpp/backprop.cpp
+        src/mlp/cpp/train.cpp
     # cuda
         src/mlp/cu/kernel.cu
         src/mlp/cu/forprop.cu
@@ -41,9 +41,10 @@ add_library(neural STATIC
     src/attention/attention.cpp
     src/attention/writeatt.cpp
     # cpp
-        src/attention/forward.cpp
-        src/attention/backward1H.cpp
-        src/attention/backward.cpp
+        src/attention/cpp/kdotq.cpp
+        src/attention/cpp/forward.cpp
+        src/attention/cpp/backward1H.cpp
+        src/attention/cpp/backward.cpp
     # cuda
         src/attention/cu/attention.cu
         src/attention/cu/kdotq.cu
@@ -57,9 +58,9 @@ add_library(neural STATIC
     src/block/block.cpp
     src/block/writeblock.cpp
     # cpp
-        src/block/forwardblock.cpp
-        src/block/partialback.cpp
-        src/block/backward.cpp
+        src/block/cpp/forwardblock.cpp
+        src/block/cpp/partialback.cpp
+        src/block/cpp/backward.cpp
     # cuda
         src/block/cu/forward.cu
         src/block/cu/partialbackH.cu
@@ -80,13 +81,13 @@ add_library(neural STATIC
     src/transformer/setVal.cpp
     src/transformer/tokens.cpp
     # cpp
-        src/transformer/compute.cpp
-        src/transformer/feedfor.cpp
-        src/transformer/backward.cpp
-        src/transformer/train1.cpp
-        src/transformer/train2.cpp
-        src/transformer/test.cpp
-        src/transformer/run.cpp
+        src/transformer/cpp/compute.cpp
+        src/transformer/cpp/feedfor.cpp
+        src/transformer/cpp/backward.cpp
+        src/transformer/cpp/train1.cpp
+        src/transformer/cpp/train2.cpp
+        src/transformer/cpp/test.cpp
+        src/transformer/cpp/run.cpp
     # cuda
         src/transformer/cu/compute.cu
         src/transformer/cu/feedfor.cu

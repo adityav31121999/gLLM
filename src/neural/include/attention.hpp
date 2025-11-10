@@ -61,11 +61,9 @@ public:
     mat KdotQ;                  // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar (Mapped)
     std::vector<float> EH;      // horizontal retention vector (Next Embedding in same block)
     mat EV;                     // vertical retention vectors (Context retention for next block)
-    std::vector<float> h;       // delta for EH: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
-    std::vector<float> v;       // delta for EV[i]: sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
+    std::vector<float> h;       // weighted product for horizontal retention: sum of (KdotQ[i][j] * Keys[i] * MH) (row wise)
+    std::vector<float> v;       // weighted product for vertical retention(i): sum of (KdotQ[j][i] * Keys[j] * MV) (column wise)
     float learning_rate;        // learning rate for attention
-    // float lambda_L1;            // L1 regularization strength
-    // float lambda_L2;            // L2 regularization strength
     unsigned long long params;          // parameters in each attention head
     unsigned long long attOffset;       // attention offset
 
@@ -105,6 +103,10 @@ public:
 #else
 
     // cpp functions for cpu
+    void getKeyQuery(const mat& tokenOrEV, const mat& KQweights);
+    void getKdotQ();
+    void getKdotQ(const mat& tokens);
+    void getKdotQ(const mat& tokens, const mat& EVfromPrevBlock);
     // forward propagation for both first and specific block's attention
     void forprop(int& in, int& layers, int& tokenCount);
     void forprop(const mat& EVp, int& in, int& layers, int& tokenCount, int& blockCount, int& n);
