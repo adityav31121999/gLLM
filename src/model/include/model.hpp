@@ -237,24 +237,22 @@ public:
     unsigned long long totalTokens;              // total tokens used for training, testing and validation
     unsigned long long totalTrainingCount;       // total training count obtained from epochs based on token training
 
-#ifdef USE_OPENCL
-    OpenCLContext& clcontext;
-#endif
     tokeniser TOK;          // tokeniser
     transformer T;          // transformer
 
     // default constructor
 #ifdef USE_OPENCL
+    OpenCLContext& clcontext;
     model(OpenCLContext& context, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
         int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
     model(OpenCLContext& context, const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
         int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
 #elif USE_CUDA || USE_CPU
     model() = default;
-    model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
-        float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
-    model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matHeightParam, int l, float learning, 
-        float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
+    model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
+        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
+    model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
+        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
 #endif
 
     void setLearning(float learning);

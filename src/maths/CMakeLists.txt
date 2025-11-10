@@ -9,6 +9,7 @@ add_library(maths STATIC
     src/basic/activations.cpp
     src/basic/vect.cpp
     src/basic/weights.cpp
+    src/basic/loss.cpp
 
     src/basic/cu/activations.cu
     src/basic/cu/vect.cu
@@ -20,6 +21,7 @@ add_library(maths STATIC
     src/mat/mat.cpp
     src/mat/inverse.cpp
     src/mat/operators.cpp
+    src/mat/matops.cpp
     src/mat/prop.cpp
     src/mat/write.cpp
     src/mat/flat.cpp
@@ -29,13 +31,6 @@ add_library(maths STATIC
     
     src/mat/cu/operators.cu
     src/mat/cu/inverse.cu
-
-    # stats files
-    src/stats/basic.cpp
-
-    src/stats/cl/basic.cl
-
-    src/stats/cu/basic.cu
 )
 
 target_link_libraries(maths

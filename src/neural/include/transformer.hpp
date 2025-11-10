@@ -92,12 +92,12 @@ public:
         bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param);
 #elif USE_CUDA || USE_CPU
     transformer() = default;
-    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, unsigned int vocab_param, 
-        float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
-        bool& contextTrain_param, const std::string& blockBinPath);
-    transformer(const std::string& ModelName, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, unsigned int vocab_param, 
-        float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param, 
-        bool& contextTrain_param, const std::string& blockBinPath);
+    transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
+        unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
+        bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param);
+    transformer(const std::string& ModelName, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
+        unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
+        bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param);
 #endif
 
 #ifdef USE_CUDA

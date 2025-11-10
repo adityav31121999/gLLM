@@ -183,3 +183,57 @@ mat mat::initHe(int row, int col, bool use_gain, float gain) {
     
     return result;
 }
+
+
+/**
+ * @brief write mapped data of mat and appened it to binary file
+ * @param matrix matrix to be written
+ * @param locationWithFileName location of file with its file name (Location/filename.bin)
+ */
+void write2filefrommat(const mat& matrix, const std::string& locationWithFileName) {
+    //
+    // Open the file in binary mode for output and append to it.
+    // If the file doesn't exist, it will be created.
+    std::ofstream outFile(locationWithFileName, std::ios::binary | std::ios::out | std::ios::app);
+
+    if (!outFile.is_open()) {
+        throw std::runtime_error("Failed to open file for appending: " + locationWithFileName);
+    }
+
+    // Serialize matrix dimensions (rows, cols)
+    // We use uint64_t for dimensions for robustness and consistent sizing.
+    uint64_t num_rows = static_cast<uint64_t>(matrix.row);
+    uint64_t num_cols = static_cast<uint64_t>(matrix.col);
+
+    // optional when dimension are kept same for all heads and blocks
+    // outFile.write(reinterpret_cast<const char*>(&num_rows), sizeof(num_rows));
+    // outFile.write(reinterpret_cast<const char*>(&num_cols), sizeof(num_cols));
+
+    if (!outFile) { // Check for errors after writing dimensions
+        outFile.close();
+        throw std::runtime_error("Error writing matrix dimensions to file: " + locationWithFileName);
+    }
+
+    // Serialize matrix data
+    size_t num_elements = static_cast<size_t>(num_rows) * static_cast<size_t>(num_cols);
+    if (num_elements > 0) {
+        const float* data_ptr = matrix.mapped_data;
+        if (data_ptr == nullptr && num_elements > 0) { // Should not happen for a valid matrix
+            outFile.close();
+            throw std::runtime_error("Matrix has non-zero size but data pointer is null. File: " + locationWithFileName);
+        }
+        size_t data_size_bytes = num_elements * sizeof(float);
+        outFile.write(reinterpret_cast<const char*>(data_ptr), data_size_bytes);
+        
+        if (!outFile) { // Check for errors after writing data
+            outFile.close();
+            throw std::runtime_error("Error writing matrix data to file: " + locationWithFileName);
+        }
+    }
+    // If num_elements is 0, only dimensions are written, which is fine.
+
+    outFile.close();
+    if (!outFile) { // Check for errors that might occur during close (e.g., buffer flush failure)
+        throw std::runtime_error("Error occurred while closing file (e.g., flush error): " + locationWithFileName);
+    }
+}

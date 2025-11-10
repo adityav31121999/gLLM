@@ -23,8 +23,8 @@
  * @param inTraining_param Reference to a boolean indicating if the model is in training (true) or inference (false) mode.
  * @param modelDir_param Base directory path for model files.
  */
-transformer::transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, 
-    int l_param, unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, 
+transformer::transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param,
+    int l_param, unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param,
     bool attentionType_param, bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param) :
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param),
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
@@ -118,9 +118,10 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
  * @param inTraining_param Reference to a boolean indicating if the model is in training (true) or inference (false) mode.
  * @param modelDir_param Base directory path for model files.
  */
-transformer::transformer(const std::string& modelName, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, 
-    int l_param, unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, 
-    bool attentionType_param, bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param) :
+transformer::transformer(const std::string& modelName, int m_param, int x_param, int y_param, int n_param,
+    int d_param, int h_param, int l_param, unsigned int vocab_param, float learning_rate_param,
+    float lambda_L1_param, float lambda_L2_param, bool attentionType_param, bool& inTraining_param,
+    bool& contextTrain_param, const std::string& modelDir_param) :
     m(inTraining_param ? (m_param > 0 ? m_param : 1) : 1), x(x_param), y(y_param), n(n_param), d(d_param), 
     h(h_param), l(l_param), vocabsize(vocab_param), isSelf(attentionType_param), inTraining(inTraining_param), 
     learning(learning_rate_param), lambda_L1(lambda_L1_param), lambda_L2(lambda_L2_param), epochs(EPOCHS), 

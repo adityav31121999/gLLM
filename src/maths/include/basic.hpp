@@ -185,7 +185,7 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)
     #define CL_HPP_ENABLE_EXCEPTIONS
-    #define CL_HPP_TARGET_OPENCL_VERSION 200
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
     // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
@@ -387,7 +387,20 @@ public:
 
         // --- Build Program ---
         std::stringstream options_ss;
-        options_ss << "-cl-std=CL2.0";
+        std::string device_version_str = device.getInfo<CL_DEVICE_VERSION>();
+        std::string cl_std_option = "-cl-std=CL1.2"; // Default to a safe, common version
+
+        // Find "OpenCL <version>"
+        size_t version_start = device_version_str.find("OpenCL ");
+        if (version_start != std::string::npos) {
+            version_start += 7; // Length of "OpenCL "
+            size_t version_end = device_version_str.find(' ', version_start);
+            if (version_end != std::string::npos) {
+                std::string version = device_version_str.substr(version_start, version_end - version_start);
+                cl_std_option = "-cl-std=CL" + version;
+            }
+        }
+        options_ss << cl_std_option;
         std::string options = options_ss.str();
         // Add any other necessary build options here
         std::cout << "CL standard: " << options << std::endl;

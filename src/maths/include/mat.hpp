@@ -63,8 +63,14 @@ public:
     float& operator()(int i, int j);
     const float& operator()(int i, int j) const;
     std::vector<float> operator()(int i) const;
-    void addRow(const std::vector<float>&, int i);   // add row in ith location of matrix
-    std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col);
+    void addRow(const std::vector<float>& vec, int i);   // add row in ith location of matrix
+    void addCol(const std::vector<float>& vec, int j);   // add col in jth location of matrix
+    void getCol(std::vector<float>& out_vec, int j) const;
+    void getRow(std::vector<float>& out_vec, int i) const;
+    std::vector<std::vector<float>> make2dVector();
+    std::vector<std::vector<float>> make2dVector(const mat& other, int row, int col); // This was already here
+    std::vector<float> flatten();
+    static std::vector<float> flatten(const mat& other);
 
     mat operator+(const mat& other) const;
     mat operator-(const mat& other) const;
@@ -139,12 +145,16 @@ public:
 };
 
 // Helper functions for row operations on mat
-std::vector<float> getRow(const mat& m, int row_idx);
-void setRow(mat& m, int row_idx, const std::vector<float>& data);
+std::vector<float> getRow(const mat& m, int row_idx); // This was in mat.cpp, now in matops.cpp
+std::vector<float> getCol(const mat& m, int col_idx);
+void setRow(mat& m, int row_idx, const std::vector<float>& data); // This was in mat.cpp, now in matops.cpp
+void setCol(mat& m, int col_idx, const std::vector<float>& data);
 std::vector<float> dot(const mat& a, const std::vector<float>& b);
 std::vector<float> dot(const std::vector<float>& a, const mat& b);
 void swap(mat& first, mat& second) noexcept;
 void write2filefrommat(const mat& matrix, const std::string& locationWithFileName);
+std::vector<float> matmul(const mat& a, const std::vector<float>& b);
+mat covariance(const mat& a);
 
 // Activation function adapted for mat
 mat LOTA(const mat& y, int t, bool attentionType);

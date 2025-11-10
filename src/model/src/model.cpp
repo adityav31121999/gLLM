@@ -158,9 +158,9 @@ void printCudaDeviceName() {
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d,
-    int matHeightParam, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
-    bool contextTrainModel) :
+model::model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, 
+    int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
+    bool toTrainModel, bool contextTrainModel) :
     baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), matheight(matheight), l(l), 
     learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n), isSelf(isSelfAttention), toTrain(toTrainModel),
     metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain), vocabsize(TOK.getVocabularySize()),
@@ -203,9 +203,9 @@ model::model(const std::string& baseDirectory, const std::string& tokenDirectory
  * @param l layers of mlp
  * @param learning learning rate for MLPs
  */
-model::model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, 
-    int n, int d, int matHeightParam, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, 
-    bool contextTrainModel) :
+model::model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, 
+    int m, int x, int y, int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
+    bool toTrainModel, bool contextTrainModel) :
     baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), matheight(matheight), l(l), 
     learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n), isSelf(isSelfAttention), toTrain(toTrainModel),
     metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain), vocabsize(TOK.getVocabularySize()),

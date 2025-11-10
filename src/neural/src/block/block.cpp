@@ -22,8 +22,8 @@
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab, bool attentionType, 
-    bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
+block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
+    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
     x(x_layers), y(y_heads), error(0.0f), isSelfAttention(attentionType), inTraining(trainMode),
     blockFilePath([&blockFilePath_param, blockCount]() {
         std::string base = blockFilePath_param;
@@ -135,9 +135,8 @@ block::block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_interna
  * @param blockCount The index of this block, used for unique file naming.
  * @param blockFilePath_param The base path for the block's data file.
  */
-block::block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal,
-    int l_mlp, unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, 
-    const std::string& blockFilePath_param, float& learning) :
+block::block(const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, unsigned long long vocab,
+    bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param, float& learning) :
     x(x_layers), y(y_heads), error(0.0f), isSelfAttention(attentionType), inTraining(trainMode),
     blockFilePath([&blockFilePath_param, blockCount]() {
         std::string base = blockFilePath_param;

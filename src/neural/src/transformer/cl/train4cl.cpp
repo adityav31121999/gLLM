@@ -416,7 +416,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
 
                 // use kernelComputePredictionWithScores for output prediction
                 {
-                    int host_indexForToken = -1;
+                    unsigned int host_indexForToken = -1;
                     cl::Buffer d_otok_buffer, d_predictions, d_result_index_buffer;
                     try {
                         size_t otok_bytes = static_cast<size_t>(x) * d * sizeof(float);
