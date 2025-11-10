@@ -3,7 +3,6 @@
 #include <numeric>
 #include <stdexcept>
 
-// --- Non-OpenCL Constructors ---
 #ifndef USE_OPENCL
 
 /**
@@ -18,14 +17,13 @@
 attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
     isSelfAttention(isSelf), inTraining(trainMode),
     tokenCount(0), EV(n, d), KdotQ(n, n), h(d, 0.0f), v(d, 0.0f), EH(d, 0),
-    ver(std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
-    hor(std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
-    // Conditionally initialize matrices based on training mode
-    MQ(trainMode ? h : 0, trainMode ? d : 0), // Only needed in training? Check logic. Assuming yes for now.
+    ver(std::vector<unsigned int>(l, d), EPOCHS, learning),
+    hor(std::vector<unsigned int>(l, d), EPOCHS, learning),
+    MQ(trainMode ? h : 0, trainMode ? d : 0),
     MK(trainMode ? h : 0, trainMode ? d : 0),
     MV(trainMode ? d : 0, trainMode ? h : 0),
     MH(trainMode ? d : 0, trainMode ? h : 0),
-    qkCache(trainMode ? 0 : d, trainMode ? 0 : d), // Only needed in inference
+    qkCache(trainMode ? 0 : d, trainMode ? 0 : d),
     qvCache(trainMode ? 0 : d, trainMode ? 0 : d),
     khCache(trainMode ? 0 : d, trainMode ? 0 : d)
 {
@@ -36,18 +34,18 @@ attention::attention(int n, int d, int h, int l, bool isSelf, bool trainMode, fl
     if (trainMode == 1) {
         K = mat(n, h);
         Q = mat(n, h);
-        if (MQ.row == 0) MQ = mat(h, d);
-        if (MK.row == 0) MK = mat(h, d);
-        if (MV.row == 0) MV = mat(d, h);
-        if (MH.row == 0) MH = mat(d, h);
+        if (MQ.row == 0) MQ = mat(h, d);        // as per maths this should be d x h
+        if (MK.row == 0) MK = mat(h, d);        // as per maths this should be d x h
+        if (MV.row == 0) MV = mat(d, h);        // as per maths this should be h x d
+        if (MH.row == 0) MH = mat(d, h);        // as per maths this should be h x d
         params = hor.params + ver.params + 
                  // Mat                       eh        Kdotq                       tokforblock                     
                  (4*static_cast<size_t>(h)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
     }
     else {
-        if (qkCache.row == 0) qkCache = mat(d, d);
-        if (khCache.row == 0) khCache = mat(d, d);
-        if (qvCache.row == 0) qvCache = mat(d, d);
+        if (qkCache.row == 0) qkCache = mat(d, d);      // as per maths this is MQ x MK^T, but here it would be MQ^T x MK
+        if (khCache.row == 0) khCache = mat(d, d);      // as per maths this is MK x MH, but here it would be MK^T x MH^T
+        if (qvCache.row == 0) qvCache = mat(d, d);      // as per maths this is MQ x MV, but here it would be MQ^T x MV^T
         params = hor.params + ver.params + (3*static_cast<size_t>(d)*d) + d + (static_cast<size_t>(n)*n) + (static_cast<size_t>(n)*d);
     }
     // std::cout << "ATTENTION constructed." << std::endl;
@@ -110,9 +108,8 @@ attention::attention(const std::string& inAtt, int n, int d, int h, int l, bool 
 attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool isSelf, bool trainMode, float& learning) :
     clcontext(context), isSelfAttention(isSelf), inTraining(trainMode),
     tokenCount(0), EV(n, d), KdotQ(n, n), h(d, 0.0f), v(d, 0.0f), EH(d, 0),
-    ver(context, std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
-    hor(context, std::vector<unsigned int>(l, d), EPOCHS, learning), // Correct MLP initialization
-    // Conditionally initialize matrices based on training mode
+    ver(context, std::vector<unsigned int>(l, d), EPOCHS, learning),
+    hor(context, std::vector<unsigned int>(l, d), EPOCHS, learning),
     MQ(trainMode ? h : 0, trainMode ? d : 0), MK(trainMode ? h : 0, trainMode ? d : 0),
     MV(trainMode ? d : 0, trainMode ? h : 0), MH(trainMode ? d : 0, trainMode ? h : 0),
     qkCache(trainMode ? 0 : d, trainMode ? 0 : d), qvCache(trainMode ? 0 : d, trainMode ? 0 : d),
@@ -132,18 +129,18 @@ attention::attention(OpenCLContext& context, int n, int d, int h, int l, bool is
     if (trainMode == 1) {
         K = mat(n, h);
         Q = mat(n, h);
-        if (MQ.row == 0) MQ = mat(h, d);    // h row x d col
-        if (MK.row == 0) MK = mat(h, d);    // h row x d col
-        if (MV.row == 0) MV = mat(d, h);    // d row x h col
-        if (MH.row == 0) MH = mat(d, h);    // d row x h col
+        if (MQ.row == 0) MQ = mat(h, d);        // as per maths this should be d x h
+        if (MK.row == 0) MK = mat(h, d);        // as per maths this should be d x h
+        if (MV.row == 0) MV = mat(d, h);        // as per maths this should be h x d
+        if (MH.row == 0) MH = mat(d, h);        // as per maths this should be h x d
         params = hor.params + ver.params + 
                  (4*static_cast<size_t>(h)*d) + d + (static_cast<size_t>(n)*n) 
                  + (static_cast<size_t>(n)*d) + (2*static_cast<size_t>(n)*h);
     }
     else {
-        if (qkCache.row == 0) qkCache = mat(d, d);
-        if (khCache.row == 0) khCache = mat(d, d);
-        if (qvCache.row == 0) qvCache = mat(d, d);
+        if (qkCache.row == 0) qkCache = mat(d, d);      // as per maths this is MQ x MK^T, but here it would be MQ^T x MK
+        if (khCache.row == 0) khCache = mat(d, d);      // as per maths this is MK x MH, but here it would be MK^T x MH^T
+        if (qvCache.row == 0) qvCache = mat(d, d);      // as per maths this is MQ x MV, but here it would be MQ^T x MV^T
         params = hor.params + ver.params + (3*d*d) + d + (n*n) + (n*d);
     }
     // std::cout << "ATTENTION constructed with OpenCL -> " << params << std::endl;

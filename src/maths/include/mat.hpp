@@ -1,8 +1,6 @@
-
-// matrix.hpp : header source of matrix library
 #ifndef MAT_HPP
 #define MAT_HPP 1
-
+// matrix.hpp : header source of matrix library
 #include <vector>
 #include <string>
 #include <stdexcept> 
@@ -92,10 +90,8 @@ public:
 
     mat mult(const mat&) const;
     mat mult(const mat&, const mat&);
-    mat mult(const std::vector<const mat*>&);
     mat hadamard(const mat&) const;
     mat hadamard(const mat&, const mat&);
-    mat hadamard(const std::vector<const mat*>&);
     mat gaussjordan() const;
     float trace() const;
     void set(int i, int j, float val);  // set val to (i, j)th element
@@ -159,17 +155,6 @@ void swap(mat& first, mat& second) noexcept;
 void write2filefrommat(const mat& matrix, const std::string& locationWithFileName);
 std::vector<float> matmul(const mat& a, const std::vector<float>& b);
 mat covariance(const mat& a);
-
-// thread-based operators
-void mult(const mat&, const float scalar, mat& result);
-void mult(const std::vector<float>&, const mat&, std::vector<float>&);
-void mult(const mat&, const std::vector<float>&, std::vector<float>&);
-void mult(const mat& A, const mat& B, mat& result);
-void add(const mat& A, const float val, mat& result);
-void add(const mat& A, const mat& B, mat& result);
-void sub(const mat& A, const float val, mat& result);
-void sub(const mat& A, const mat& B, mat& result);
-
 
 // Activation function adapted for mat
 mat LOTA(const mat& y, int t, bool attentionType);

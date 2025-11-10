@@ -91,11 +91,7 @@ void attention::deserialise(int offset, const std::string& locationofbinfile) {
  */
 void attention::computeCache()
 {
-    mat cache(EMBEDDING, EMBEDDING);
-    // qkCache
-    cache.mult_A_Bt(MQ, MK);
-    // khCache
-    cache = MK * MH;
-    // qvCache
-    cache = MQ * MV;
+    qkCache = MQ.transpose() * MK;
+    qvCache = MQ.transpose() * MV.transpose();
+    khCache = MK.transpose() * MH.transpose();
 }

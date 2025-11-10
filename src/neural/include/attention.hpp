@@ -53,9 +53,9 @@ public:
     mat MH;                     // horizontal retention matrix
     mlp ver;                    // vertical propagation and next block transfer
     mlp hor;                    // horizontal transfer to next head
-    mat qkCache;                // QK' cache = MQ x MK' -> inference only
-    mat qvCache;                // QH' cache = MQ x MV' -> inference only
-    mat khCache;                // KV' cache = MK x MH' -> inference only
+    mat qkCache;                // QK cache = MQ x MK^T -> inference only
+    mat qvCache;                // QH cache = MQ x MV -> inference only
+    mat khCache;                // KV cache = MK x MH -> inference only
     mat K;                      // keys = Tokens x MK (Mapped)
     mat Q;                      // Querys = Tokens x MQ (Mapped)
     mat KdotQ;                  // attention head matrix -> Keys x Querys -> [K(i).Q(j)] <- scalar (Mapped)
@@ -103,7 +103,7 @@ public:
 #else
 
     // cpp functions for cpu
-    void getKeyQuery(const mat& tokenOrEV, const mat& KQweights);
+    void getKeyQuery(const mat& tokenOrEV, const mat& KQweights, bool kqtype);
     void getKdotQ();
     void getKdotQ(const mat& tokens);
     void getKdotQ(const mat& tokens, const mat& EVfromPrevBlock);

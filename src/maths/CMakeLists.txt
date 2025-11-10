@@ -10,10 +10,10 @@ add_library(maths STATIC
     src/basic/vect.cpp
     src/basic/weights.cpp
     src/basic/loss.cpp
-
+    # cuda
     src/basic/cu/activations.cu
     src/basic/cu/vect.cu
-
+    #cl
     src/basic/cl/activations.cl
     src/basic/cl/vect.cl
 
@@ -23,14 +23,13 @@ add_library(maths STATIC
     src/mat/operators.cpp
     src/mat/matops.cpp
     src/mat/mult.cpp
-    src/mat/hadamard.cpp
     src/mat/prop.cpp
     src/mat/write.cpp
     src/mat/flat.cpp
-
+    # cl
     src/mat/cl/operators.cl
     src/mat/cl/inverse.cl
-    
+    # cuda
     src/mat/cu/operators.cu
     src/mat/cu/inverse.cu
 )
