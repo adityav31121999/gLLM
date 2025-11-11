@@ -229,8 +229,9 @@ mat mat::operator*(float b) const {
 mat mat::operator*(const mat& a) const {
     // Check if dimensions are compatible for multiplication
     if (col != a.row) {
-        throw std::runtime_error("Matrix dimensions are incompatible for multiplication." 
-            + std::to_string(row) + "x" + std::to_string(col) + " vs " + std::to_string(a.row) + "x" + std::to_string(a.col));
+        throw std::runtime_error("Matrix dimensions are incompatible for multiplication: " 
+            + std::to_string(row) + "x" + std::to_string(col) 
+            + " vs " + std::to_string(a.row) + "x" + std::to_string(a.col));
     }
 
     // Create the result matrix (allocates temp file and maps)

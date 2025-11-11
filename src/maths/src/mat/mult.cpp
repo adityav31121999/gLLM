@@ -5,7 +5,7 @@
 
 /**
  * @brief Computes the Hadamard product for a specified range of rows.
- * @details This is a helper function designed to be called by a thread to parallelize
+ * This is a helper function designed to be called by a thread to parallelize
  * the element-wise multiplication of two matrices.
  * @param a The first input matrix.
  * @param b The second input matrix.
@@ -44,7 +44,9 @@ void hadamard_range(const mat& a, const mat& b, mat& result, int a_row, int a_co
  */
 void matrix_mult_range(const mat& a, const mat& b, mat& result, int a_col, int b_row, int b_col, int start_row, int end_row) {
     if (a_col != b_row) {
-        throw std::runtime_error("Matrix dimensions are incompatible for multiplication.");
+        throw std::runtime_error("Matrix dimensions are incompatible for multiplication: " 
+            + std::to_string(a_col) + "x" + std::to_string(b_row) 
+            + " vs " + std::to_string(a_col) + "x" + std::to_string(b_col));
     }
 
     for (int i = start_row; i < end_row; ++i) {
@@ -123,7 +125,9 @@ mat mat::hadamard(const mat& a, const mat& b) {
  */
 mat mat::mult(const mat& other) const {
     if (col != other.row) {
-        throw std::runtime_error("Matrix dimensions are incompatible for multiplication.");
+        throw std::runtime_error("Matrix dimensions are incompatible for multiplication: "
+            + std::to_string(row) + "x" + std::to_string(col) 
+            + " vs " + std::to_string(other.row) + "x" + std::to_string(other.col));
     }
 
     mat result(row, other.col);

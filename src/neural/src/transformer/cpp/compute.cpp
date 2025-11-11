@@ -3,6 +3,9 @@
 #include <numeric>
 #include <stdexcept>
 #include <algorithm>
+#include <thread>
+#include <chrono>
+#include <mutex>
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
@@ -33,48 +36,25 @@ void transformer::computePrediction()
 void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vector<float>>& K, std::vector<std::vector<float>>& Q, 
     int& currentTokenCount, int& sequence1Count, int& blockCount, bool& attentionType)
 {
-    // for first block
-    if(blockCount == 1) {
-        // first sequence1
-        if(currentTokenCount == 0) {
-            for(int i = 0; i < sequence1Count; i++) {
-                for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
-                    KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
-                }
-            }
-            currentTokenCount += sequence1Count;
-        }
-        // new sequence1 within first block
-        else if (currentTokenCount > 0){
-            for(int i = 0; i < sequence1Count; i++) {
-                KdotQ[i][i] = std::inner_product(Q[i].begin(), Q[i].end(), K[i].begin(), 0.0f) / SCALING;
-                for(int j = 0; j < currentTokenCount; j++) {
-                    KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
-                }
-                if(attentionType == 0) {
-                    for(int j = 0; j < currentTokenCount; j++) {
-                        KdotQ[j][i] = std::inner_product(Q[j].begin(), Q[j].end(), K[i].begin(), 0.0f) / SCALING;
+    int numThreads = std::thread::hardware_concurrency();
+    if(numThreads == 0) {
+        numThreads = 1;
+    }
+
+    if(numThreads > 0 && numThreads <= 4) {
+        // for first block
+        if(blockCount == 1) {
+            // first sequence1
+            if(currentTokenCount == 0) {
+                for(int i = 0; i < sequence1Count; i++) {
+                    for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
+                        KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
                     }
                 }
-                currentTokenCount += 1;
+                currentTokenCount += sequence1Count;
             }
-        }
-        // first block ended
-    }
-    // for 2nd to last block
-    else {
-        if(currentTokenCount%CONTEXT_WIN == 0 && sequence1Count > 0) {
-            for(int i = 0; i < sequence1Count; i++) {
-                for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
-                    KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
-                }
-            }
-            currentTokenCount += sequence1Count;
-        }
-        else {
-            // when sequence1 in nth block
-            if(currentTokenCount%CONTEXT_WIN != 0 && sequence1Count > 0) {
-                int c = currentTokenCount - (blockCount - 1)*CONTEXT_WIN;
+            // new sequence1 within first block
+            else if (currentTokenCount > 0){
                 for(int i = 0; i < sequence1Count; i++) {
                     KdotQ[i][i] = std::inner_product(Q[i].begin(), Q[i].end(), K[i].begin(), 0.0f) / SCALING;
                     for(int j = 0; j < currentTokenCount; j++) {
@@ -85,11 +65,47 @@ void computeKdotQ(std::vector<std::vector<float>>& KdotQ, std::vector<std::vecto
                             KdotQ[j][i] = std::inner_product(Q[j].begin(), Q[j].end(), K[i].begin(), 0.0f) / SCALING;
                         }
                     }
-                    c += 1;
+                    currentTokenCount += 1;
+                }
+            }
+            // first block ended
+        }
+        // for 2nd to last block
+        else {
+            if(currentTokenCount%CONTEXT_WIN == 0 && sequence1Count > 0) {
+                for(int i = 0; i < sequence1Count; i++) {
+                    for(int j = 0; j < (attentionType ? i : sequence1Count); j++) {
+                        KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
+                    }
                 }
                 currentTokenCount += sequence1Count;
             }
+            else {
+                // when sequence1 in nth block
+                if(currentTokenCount%CONTEXT_WIN != 0 && sequence1Count > 0) {
+                    int c = currentTokenCount - (blockCount - 1)*CONTEXT_WIN;
+                    for(int i = 0; i < sequence1Count; i++) {
+                        KdotQ[i][i] = std::inner_product(Q[i].begin(), Q[i].end(), K[i].begin(), 0.0f) / SCALING;
+                        for(int j = 0; j < currentTokenCount; j++) {
+                            KdotQ[i][j] = std::inner_product(Q[i].begin(), Q[i].end(), K[j].begin(), 0.0f) / SCALING;
+                        }
+                        if(attentionType == 0) {
+                            for(int j = 0; j < currentTokenCount; j++) {
+                                KdotQ[j][i] = std::inner_product(Q[j].begin(), Q[j].end(), K[i].begin(), 0.0f) / SCALING;
+                            }
+                        }
+                        c += 1;
+                    }
+                    currentTokenCount += sequence1Count;
+                }
+            }
         }
+    }
+    else if (numThreads > 4) {
+        //
+    }
+    else {
+        throw std::runtime_error("Invalid thread count: " + std::to_string(numThreads) + ".");
     }
 }
 

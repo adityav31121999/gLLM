@@ -83,10 +83,14 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
                 // --- K/Q Calculation ---
                 embedPlusPos = tokenEmbed + positional;
                 if(current_block_idx == 1) {
+                    mat partialEP(CONTEXT_WIN, EMBEDDING);
+                    const float* host_src_ptr = embedPlusPos.mapped_data;
+                    std::copy(host_src_ptr, host_src_ptr + currentBytes/sizeof(float), partialEP.mapped_data);
                     for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
                         for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
-                            blocks[0].b[layer_idx][parallel_idx].Q = embedPlusPos * blocks[0].b[layer_idx][parallel_idx].MQ;
-                            blocks[0].b[layer_idx][parallel_idx].K = embedPlusPos * blocks[0].b[layer_idx][parallel_idx].MK;
+                            blocks[0].b[layer_idx][parallel_idx].getKeyQuery(partialEP, blocks[0].b[layer_idx][parallel_idx].MK, 1);
+                            blocks[0].b[layer_idx][parallel_idx].getKeyQuery(partialEP, blocks[0].b[layer_idx][parallel_idx].MQ, 0);
+                            blocks[0].b[layer_idx][parallel_idx].getKdotQ();
                         }
                     }
                 }
@@ -96,14 +100,12 @@ void transformer::train(std::vector<std::vector<float>>& sentence, std::vector<s
                     size_t fromHereInTokenEmbed = static_cast<size_t>((CONTEXT_WIN) * (blockCount - 1) - 1) * d;
                     const float* host_src_ptr = embedPlusPos.mapped_data + fromHereInTokenEmbed;
                     std::copy(host_src_ptr, host_src_ptr + currentBytes/sizeof(float), currentTokens.mapped_data);
-
                     for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
                         for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
-                            auto& prevEV = blocks[blockCount - 2].b[layer_idx][parallel_idx].EV;
-                            std::copy(prevEV.mapped_data, prevEV.mapped_data + currentBytes/sizeof(float), prevEVs.mapped_data);
-
-                            blocks[blockCount - 1].b[layer_idx][parallel_idx].Q = prevEVs * blocks[blockCount - 1].b[layer_idx][parallel_idx].MQ;
-                            blocks[blockCount - 1].b[layer_idx][parallel_idx].K = currentTokens * blocks[blockCount - 1].b[layer_idx][parallel_idx].MK;
+                            blocks[blockCount - 1].b[layer_idx][parallel_idx].getKeyQuery(blocks[blockCount - 2].b[layer_idx][parallel_idx].EV,
+                                                                                          blocks[blockCount - 1].b[layer_idx][parallel_idx].MK, 1);
+                            blocks[blockCount - 1].b[layer_idx][parallel_idx].getKeyQuery(currentTokens, blocks[blockCount - 1].b[layer_idx][parallel_idx].MQ, 1);
+                            blocks[blockCount - 1].b[layer_idx][parallel_idx].getKdotQ();
                         }
                     }
                 }
@@ -472,13 +474,19 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
                 // --- K/Q Calculation ---
                 embedPlusPos = tokenEmbed + positional;
                 if(current_block_idx == 1) {
+                    mat partialEP(CONTEXT_WIN, EMBEDDING);
+                    const float* host_src_ptr = embedPlusPos.mapped_data;
+                    std::copy(host_src_ptr, host_src_ptr + currentBytes/sizeof(float), partialEP.mapped_data);
                     for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
                         for (int parallel_idx = 0; parallel_idx < y; ++parallel_idx) {
-                            blocks[0].b[layer_idx][parallel_idx].Q = embedPlusPos * blocks[0].b[layer_idx][parallel_idx].MQ;
-                            blocks[0].b[layer_idx][parallel_idx].K = embedPlusPos * blocks[0].b[layer_idx][parallel_idx].MK;
+                            blocks[0].b[layer_idx][parallel_idx].getKeyQuery(partialEP, blocks[0].b[layer_idx][parallel_idx].MK, 1);
+                            blocks[0].b[layer_idx][parallel_idx].getKeyQuery(partialEP, blocks[0].b[layer_idx][parallel_idx].MQ, 0);
+                            blocks[0].b[layer_idx][parallel_idx].getKdotQ();
                         }
                     }
-                } else { // Subsequent blocks
+                }
+                else {
+                    // Subsequent blocks
                     mat prevEVs(CONTEXT_WIN, d);
                     mat currentTokens(CONTEXT_WIN, d);
                     size_t fromHereInTokenEmbed = static_cast<size_t>((CONTEXT_WIN) * (blockCount - 1) - 1) * d;
@@ -490,8 +498,9 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
                             auto& prevEV = blocks[blockCount - 2].b[layer_idx][parallel_idx].EV;
                             std::copy(prevEV.mapped_data, prevEV.mapped_data + currentBytes/sizeof(float), prevEVs.mapped_data);
 
-                            blocks[blockCount - 1].b[layer_idx][parallel_idx].Q = prevEVs * blocks[blockCount - 1].b[layer_idx][parallel_idx].MQ;
-                            blocks[blockCount - 1].b[layer_idx][parallel_idx].K = currentTokens * blocks[blockCount - 1].b[layer_idx][parallel_idx].MK;
+                            blocks[blockCount - 1].b[layer_idx][parallel_idx].getKeyQuery(prevEVs, blocks[blockCount - 1].b[layer_idx][parallel_idx].MK, 1);
+                            blocks[blockCount - 1].b[layer_idx][parallel_idx].getKeyQuery(currentTokens, blocks[blockCount - 1].b[layer_idx][parallel_idx].MQ, 0);
+                            blocks[blockCount - 1].b[layer_idx][parallel_idx].getKdotQ();
                         }
                     }
                 }

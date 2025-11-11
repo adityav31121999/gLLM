@@ -293,9 +293,6 @@ inline attention& attention::operator=(const attention& other) {
         int embedding_dim);
     __global__ void kernelComputeGradMKCorrection(const float* grad_mq, const float* q, const float* k, float* grad_mk_correction,
         int token_count, int mat_heights, int embedding_dim);
-    __global__ void kernelUpdateWeights_EV_V(float* mv_a, float* mq_a, float* mk_a, float* ev, const float* grad_mv, const float* grad_mq,
-        const float* grad_mk_correction, const float* grad_ev_full, float learning_rate, int mat_heights, int embedding_dim, 
-        int context_win);    
     __global__ void kernelComputeGradMK_MQ_Simplified(const float* grad_k, const float* grad_q, const float* k_embed, const float* q_embed,
         float* grad_mk, float* grad_mq, int token_count, int mat_heights, int embedding_dim);
 

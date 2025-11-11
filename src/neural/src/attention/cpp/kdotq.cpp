@@ -20,12 +20,8 @@ void attention::getKeyQuery(const mat& tokenOrEV, const mat& KQweights, bool KQt
     // KQweights: CONTEXT_WIN x EMBEDDING
     // K/Q: CONTEXT_WIN x CONTEXT_WIN
     // K/Q[i][j] = dot(i-th row of tokenOrEV, j-th row of KQweights)
-
-    // Determine the number of threads to use.
-    // For demonstration, let's use hardware concurrency, but in a real application,
-    // this might be a configurable parameter or dynamically adjusted.
     unsigned int num_of_threads = std::thread::hardware_concurrency();
-    if (num_of_threads == 0) { // Fallback if hardware_concurrency returns 0
+    if (num_of_threads == 0) {
         num_of_threads = 1;
     }
 
@@ -38,7 +34,8 @@ void attention::getKeyQuery(const mat& tokenOrEV, const mat& KQweights, bool KQt
                 }
                 if (KQtype == 1) {
                     K(i, j) = scalar;
-                } else {
+                }
+                else {
                     Q(i, j) = scalar;
                 }
             }
@@ -69,7 +66,8 @@ void attention::getKeyQuery(const mat& tokenOrEV, const mat& KQweights, bool KQt
                         // Each thread writes to distinct (i, j) locations, so no explicit mutex is needed for K/Q access.
                         if (KQtype == 1) {
                             K(i, j) = scalar;
-                        } else {
+                        }
+                        else {
                             Q(i, j) = scalar;
                         }
                     }

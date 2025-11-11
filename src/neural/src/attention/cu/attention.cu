@@ -31,22 +31,6 @@ __global__ void kernelElementwiseMultiply(float* target_and_output, const float*
 }
 
 /**
- * @brief CUDA kernel wrapper to launch the computePredictionWithScores device function.
- *        This kernel is intended to be launched with a single thread.
- * @param[in] EH Device pointer to the input vector (size dim).
- * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
- * @param[out] predictionLogits Device pointer to store the dot products for all tokens (size voc).
- * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
- * @param[in] dim The embedding dimension.
- * @param[in] voc The vocabulary size.
- */
-__global__ void kernelComputePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits, int* result_index, int dim, int voc)
-{
-    // This kernel is launched with a single thread, which calls the device function.
-    *result_index = computePredictionWithScores(EH, embeddings, predictionLogits, dim, voc);
-}
-
-/**
  * @brief CUDA device function to compute the predicted token index by finding the highest dot product
  *        between a vector (EH) and rows of an embedding matrix.
  * @param[in] EH Device pointer to the horizontal retention vector (size dim).
@@ -81,20 +65,6 @@ __device__ int computePrediction(const float* EH, const float* embeddings, int d
         }
     }
     return predicted_index;
-}
-
-/**
- * @brief CUDA kernel wrapper to launch the computePrediction device function.
- *        This kernel is intended to be launched with a single thread.
- * @param[in] EH Device pointer to the horizontal retention vector (size dim).
- * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
- * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
- * @param[in] dim The embedding dimension.
- * @param[in] voc The vocabulary size.
- */
-__global__ void kernelComputePrediction(const float* EH, const float* embeddings, int* result_index, int dim, int voc) {
-    // This kernel is launched with a single thread, which calls the device function.
-    *result_index = computePrediction(EH, embeddings, dim, voc);
 }
 
 /**
@@ -139,6 +109,37 @@ __device__ int computePredictionWithScores(const float* EH, const float* embeddi
     return predicted_index;
 }
 
+/**
+ * @brief CUDA kernel wrapper to launch the computePrediction device function.
+ *        This kernel is intended to be launched with a single thread.
+ * @param[in] EH Device pointer to the horizontal retention vector (size dim).
+ * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
+ * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
+ * @param[in] dim The embedding dimension.
+ * @param[in] voc The vocabulary size.
+ */
+__global__ void kernelComputePrediction(const float* EH, const float* embeddings, int* result_index, int dim, int voc) {
+    // This kernel is launched with a single thread, which calls the device function.
+    *result_index = computePrediction(EH, embeddings, dim, voc);
+}
+
+/**
+ * @brief CUDA kernel wrapper to launch the computePredictionWithScores device function.
+ *        This kernel is intended to be launched with a single thread.
+ * @param[in] EH Device pointer to the input vector (size dim).
+ * @param[in] embeddings Device pointer to the token embeddings matrix (row-major: voc x dim).
+ * @param[out] predictionLogits Device pointer to store the dot products for all tokens (size voc).
+ * @param[out] result_index Device pointer to an integer where the predicted token index will be stored.
+ * @param[in] dim The embedding dimension.
+ * @param[in] voc The vocabulary size.
+ */
+__global__ void kernelComputePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits, 
+    int* result_index, int dim, int voc)
+{
+    // This kernel is launched with a single thread, which calls the device function.
+    *result_index = computePredictionWithScores(EH, embeddings, predictionLogits, dim, voc);
+}
+
 __global__ void kernelVecDotVec(const float* vec1, const float* vec2, float* result, int dim)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
@@ -172,7 +173,6 @@ __global__ void kernelComputeHeadSumsMaskedev(const float* d_head, float* d_col_
         d_col_sums[i] = col_sum_l;
     }
 }
-
 
 /**
  * @brief CUDA kernel to compute row sums and column sums of the attention head matrix,
@@ -238,9 +238,6 @@ __global__ void kernelAccumulateWeightedVectorsev(const float* d_row_sums, const
         atomicAdd(&d_dv_accum[h_idx], total_dv_for_h_idx);
     }
 }
-
-
-
 
 /**
  * @brief CUDA kernel to accumulate weighted Key and Query vectors based on head row/column sums.
@@ -328,7 +325,6 @@ __global__ void kernelAccumulateWeightedVectors(const float* d_row_sums, const f
         atomicAdd(&d_dv_accum[h_idx], total_dv_for_h_idx);
     }
 }
-
 
 // Kernel to accumulate the first num_rows of d_EV into d_output
 // d_EV is num_rows x col_size (conceptually, row-major)
@@ -488,9 +484,6 @@ __global__ void kernelComputeGradientsEH_EV(const float* eh, const float* expect
         float pred = eh[idx];          // predicted probability (sigmoid output)
         float label = expected_h[idx]; // true label (0 or 1)
 
-        // The gradient of BCE loss w.r.t. the logits (pre-sigmoid input) is simply (prediction - label).
-        // This is numerically stable and avoids the division by (pred * (1-pred)), which explodes when pred is near 0 or 1.
-        // The result, grad_eh, now represents the initial 'delta' for backpropagation into the final MLP layer.
         float grad = pred - label;
  
         grad_eh[idx] = grad;
@@ -746,62 +739,6 @@ __global__ void kernelComputeGradMK_MQ(const float* grad_k, const float* grad_q,
     }
 }
 
-
-/**
- * @brief CUDA kernel for Steps 9 & 10 of `cuBackward(expected)`: Update attention weight matrices (MH, MV, MQ, MK) and embeddings (EH, EV).
- *        Applies gradients using a simple gradient descent step: weight -= learning_rate * gradient.
- *        EV update uses the scaled gradient `grad_ev_scaled` applied uniformly across the context window dimension.
- * @param[in,out] mh_a Device pointer to the MH matrix (row-major, mat_heights x embedding_dim). Updated in place.
- * @param[in,out] mv_a Device pointer to the MV matrix (row-major, mat_heights x embedding_dim). Updated in place.
- * @param[in,out] mq_a Device pointer to the MQ matrix (row-major, mat_heights x embedding_dim). Updated in place.
- * @param[in,out] mk_a Device pointer to the MK matrix (row-major, mat_heights x embedding_dim). Updated in place.
- * @param[in,out] eh Device pointer to the EH vector (size embedding_dim). Updated in place.
- * @param[in,out] ev Device pointer to the EV matrix (row-major, context_win x embedding_dim). Updated in place.
- * @param[in] grad_mh Device pointer to the gradient w.r.t. MH.
- * @param[in] grad_mv Device pointer to the gradient w.r.t. MV.
- * @param[in] grad_mq Device pointer to the gradient w.r.t. MQ.
- * @param[in] grad_mk Device pointer to the gradient w.r.t. MK.
- * @param[in] grad_eh Device pointer to the gradient w.r.t. EH.
- * @param[in] grad_ev_scaled Device pointer to the scaled gradient for EV update (size embedding_dim).
- * @param[in] learning_rate The learning rate for the gradient descent update.
- * @param[in] mat_heights The height dimension of the attention matrices.
- * @param[in] embedding_dim The embedding dimension.
- * @param[in] context_win The context window size (number of rows in EV).
- */
-__global__ void kernelUpdateWeights_EH_EV(float* mh_a, float* mv_a, float* mq_a, float* mk_a,
-                                          float* eh, float* ev,
-                                          const float* grad_mh, const float* grad_mv,
-                                          const float* grad_mq, const float* grad_mk,
-                                          const float* grad_eh, const float* grad_ev_scaled,
-                                          float learning_rate,
-                                          int mat_heights, int embedding_dim, int context_win) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Global index for parallelization
-
-    // Update MH, MV, MQ, MK matrices (Size: mat_heights * embedding_dim)
-    int matrix_size = mat_heights * embedding_dim;
-    if (idx < matrix_size) {
-        mh_a[idx] -= learning_rate * grad_mh[idx];
-        mv_a[idx] -= learning_rate * grad_mv[idx];
-        mq_a[idx] -= learning_rate * grad_mq[idx];
-        mk_a[idx] -= learning_rate * grad_mk[idx];
-    }
-
-    // Update EH vector (Size: embedding_dim)
-    // Ensure this update only happens if idx is within the embedding_dim range
-    // This might be inefficient if matrix_size >> embedding_dim. Consider separate kernels or grid sizes.
-    if (idx < embedding_dim) {
-        eh[idx] -= learning_rate * grad_eh[idx];
-    }
-
-    // Update EV matrix (Size: context_win * embedding_dim)
-    // Apply the single scaled gradient vector grad_ev_scaled based on the column (embedding dim) index.
-    int ev_size = context_win * embedding_dim;
-     if (idx < ev_size) {
-         int embed_idx = idx % embedding_dim; // Get the column index (0 to embedding_dim-1)
-         ev[idx] -= learning_rate * grad_ev_scaled[embed_idx]; // Apply the corresponding scaled gradient
-     }
-}
-
 // --- Kernels specific to second cuBackward overload (`cuBackward(expectedV)`) ---
 
 /**
@@ -1046,50 +983,6 @@ __global__ void kernelComputeGradMKCorrection(const float* grad_mq, const float*
     }
 }
 
-
-/**
- * @brief CUDA kernel for Steps 9 & 10 of `cuBackward(expectedV)`: Update attention weight matrices (MV, MQ, MK) and the EV matrix.
- *        Applies gradients using a simple gradient descent step. MK is updated using the correction term.
- *        EV is updated using the full, unscaled gradient `grad_ev_full`.
- * @param[in,out] mv_a Device pointer to the MV matrix (row-major, mat_heights x embedding_dim). Updated in place.
- * @param[in,out] mq_a Device pointer to the MQ matrix (row-major, mat_heights x embedding_dim). Updated in place.
- * @param[in,out] mk_a Device pointer to the MK matrix (row-major, mat_heights x embedding_dim). Updated in place using correction.
- * @param[in,out] ev Device pointer to the EV matrix (row-major, context_win x embedding_dim). Updated in place.
- * @param[in] grad_mv Device pointer to the gradient w.r.t. MV.
- * @param[in] grad_mq Device pointer to the gradient w.r.t. MQ.
- * @param[in] grad_mk_correction Device pointer to the correction term for the MK gradient.
- * @param[in] grad_ev_full Device pointer to the full gradient w.r.t. EV (size context_win * embedding_dim).
- * @param[in] learning_rate The learning rate for the gradient descent update.
- * @param[in] mat_heights The height dimension of the attention matrices.
- * @param[in] embedding_dim The embedding dimension.
- * @param[in] context_win The context window size (number of rows in EV).
- */
-__global__ void kernelUpdateWeights_EV_V(float* mv_a, float* mq_a, float* mk_a, float* ev,
-                                         const float* grad_mv, const float* grad_mq,
-                                         const float* grad_mk_correction,
-                                         const float* grad_ev_full,
-                                         float learning_rate,
-                                         int mat_heights, int embedding_dim, int context_win) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Global index for parallelization
-
-    // Update MV, MQ, MK matrices (Size: mat_heights * embedding_dim)
-    int matrix_size = mat_heights * embedding_dim;
-    if (idx < matrix_size) {
-        mv_a[idx] -= learning_rate * grad_mv[idx];
-        mq_a[idx] -= learning_rate * grad_mq[idx];
-        mk_a[idx] -= learning_rate * grad_mk_correction[idx]; // Apply correction gradient to MK
-    }
-
-    // Update EV matrix (Size: context_win * embedding_dim) using the full gradient
-    int ev_size = context_win * embedding_dim;
-    // Ensure this update only happens if idx is within the EV size range.
-    // Might be inefficient if matrix_size is very different from ev_size.
-    if (idx < ev_size) {
-        ev[idx] -= learning_rate * grad_ev_full[idx];
-    }
-}
-
-
 /**
  * @brief Naive CUDA kernel for row-wise sum reduction of a matrix.
  * @param[in] matrix Device pointer to the input matrix (row-major, rows x cols).
@@ -1111,7 +1004,6 @@ __global__ void kernelRowSum(const float* matrix, float* sums, int rows, int col
         sums[row] = current_sum;
     }
 }
-
 
 /**
  * @brief CUDA kernel for Step 8 (Simplified): Compute gradients w.r.t. MK and MQ using embedding vectors.
@@ -1157,24 +1049,6 @@ __global__ void kernelComputeGradMK_MQ_Simplified(const float* grad_k, const flo
         grad_mq[h * embedding_dim + d] = sum_mq_hd;
     }
 }
-
-/**
- * @brief Simple CUDA kernel to update weights using gradient descent.
- *        weights_to_update -= learning_rate * gradients
- * @param[in,out] weights_to_update Device pointer to the weights/parameters to be updated.
- * @param[in] gradients Device pointer to the corresponding gradients.
- * @param[in] lr The learning rate.
- * @param[in] n_elements The total number of elements in the weights/gradients arrays.
- */
-__global__ void kernelUpdateSimple(float* weights_to_update, const float* gradients, float lr, size_t n_elements)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n_elements) {
-        if (gradients != nullptr) { // Check if gradient exists
-             weights_to_update[idx] -= lr * gradients[idx];
-        }
-    }
-};
 
 /**
  * @brief CUDA kernel to update the EV matrix by broadcasting a scaled gradient vector.
