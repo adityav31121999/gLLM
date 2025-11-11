@@ -109,8 +109,8 @@ public:
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
     void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
-    void cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken, std::vector<float> one_hot_host,
-                            int indexForToken, float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+    void cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
+                              float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
     void cuBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
@@ -132,8 +132,8 @@ public:
     void clBackward(std::vector<float>& expectedH, int& blockCount);
     void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
-    void clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken, std::vector<float> one_hot_host,
-                            int indexForToken, float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+    void clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
+                            float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
     void clBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
@@ -156,18 +156,15 @@ public:
     void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void backwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void updateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
-    void updateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken, std::vector<float> one_hot_host,
-                            int indexForToken, float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+    void updateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
+                            float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
     void train(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void test(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void testOnThreads(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void run();
     void runContext();
-    void runOnThreads();
-    void runContextOnThreads();
 
 #endif
 

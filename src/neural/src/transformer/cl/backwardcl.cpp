@@ -113,15 +113,15 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
  * @param gradForEh Host-side vector to store gradients for the EH vector (dL/dEH). Size: d*x.
  *        This will be filled with the error to propagate back to the block.
  */
-void transformer::clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> otok, std::vector<float> prediction,
-            std::vector<float> oneHotEncode, int indexForToken, float learning, float lambda_L1, float lambda_L2,
+void transformer::clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> prediction,
+            std::vector<float> oneHotEncode, float learning, float lambda_L1, float lambda_L2,
             std::vector<float> &gradForEh)
 {
     try {
         cl_int cl_err;
         cl::CommandQueue& queue = clcontext.queue;
         cl::Context context = clcontext.context;
-        int vocab_size = vocabsize;
+        int vocab_size = this->vocabsize;
         int p_dim = d * x;
 
         // --- 0. Validate sizes and prepare host vectors ---

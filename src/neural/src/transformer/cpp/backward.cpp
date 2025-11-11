@@ -4,14 +4,6 @@
 #include "include/block.hpp"
 #include "include/transformer.hpp"
 
-
-void transformer::updateEmbeddings(mat tokenEmbedding, std::vector<float> &gradForEh, float learning, float lambda_L1,
-    float lambda_L2, int rows)
-{
-    // 
-}
-
-
 /**
  * @brief backward propagation for kth to first block, Expected EVs are not known
  *          (common expected EH for kth block)
@@ -120,13 +112,56 @@ void transformer::backwardContext(std::vector<std::vector<float>>& expected, int
 
 
 /**
- * @brief 
+ * @brief update de-embeddings
+ * @param deEmbeddings de-embedding matrix
+ * @param logit pre-norm prediction
+ * @param one_hot_host one hot encoding for correct output
+ * @param indexForToken  
  */
-void transformer::updateDeEmbeddings(mat &deEmbeddings, std::vector<float> logit, std::vector<float> calculatedToken, 
-    std::vector<float> one_hot_host, int indexForToken, float learning, float lambda_L1, float lambda_L2, 
-    std::vector<float> &gradForEh)
+void transformer::updateDeEmbeddings(mat &deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host, 
+    float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh)
 {
-    // 
+    // error
+    std::vector<float> predNorm = softmax(logit);
+    std::vector<float> err = one_hot_host - predNorm;
+
+    // gradient = otok x error
+    std::vector<std::vector<float>> gradient(deEmbeddings.row, std::vector<float>(deEmbeddings.col, 0.0f));
+    for (int i = 0; i < deEmbeddings.row; i++) {
+        for (int j = 0; j < deEmbeddings.col; j++) {
+            gradient[i][j] = otok[j] * err[i];
+        }
+    }
+
+    // gradForEh = err x deEmbeddings
+    for(int i = 0; i < deEmbeddings.col; i++) {
+        for(int j = 0; j < deEmbeddings.row; j++) {
+            gradForEh[i] += err[j] * deEmbeddings(j, i);
+        }
+    }
+
+    // update deEmbedding
+    for(int i = 0; i < deEmbeddings.row; i++) {
+        for(int j = 0; j < deEmbeddings.col; j++) {
+            deEmbeddings(i, j) -= learning * (gradient[i][j] + (lambda_L1 * std::copysignf(1.0f, deEmbeddings(i, j))) 
+                                              + (2.0f * lambda_L2 * deEmbeddings(i, j)));
+        }
+    }
+}
+
+
+/**
+ * @brief update embeddings
+ */
+void transformer::updateEmbeddings(mat tokenEmbedding, std::vector<float> &gradForEh, float learning, float lambda_L1,
+    float lambda_L2, int rows)
+{
+    for(int i = 0; i < rows; i ++) {
+        for(int j = 0; j < gradForEh.size(); j++) {
+            tokenEmbedding(i, j) -= learning * (gradForEh[j] + (lambda_L1 * std::copysignf(1.0f, tokenEmbedding(i, j))) 
+                                                + (2.0f * lambda_L2 * tokenEmbedding(i, j)));
+        }
+    }
 }
 
 #endif

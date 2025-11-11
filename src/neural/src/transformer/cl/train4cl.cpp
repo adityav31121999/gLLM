@@ -467,7 +467,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 }
 
                 std::vector<float> gradEH(d * x, 0.0f);
-                clUpdateDeEmbeddings(deEmbeddings, otok, pred, oneHotEncode, indexForToken, learning, lambda_L1, lambda_L2, gradEH);
+                clUpdateDeEmbeddings(deEmbeddings, pred, oneHotEncode, learning, lambda_L1, lambda_L2, gradEH);
                 // get expected target for backprop
                 std::vector<std::vector<float>> targets_for_heads(x, std::vector<float>(EMBEDDING, 0.0f));
                 for(int head_idx = 0; head_idx < x; ++head_idx) {

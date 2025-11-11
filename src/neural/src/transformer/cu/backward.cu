@@ -156,9 +156,8 @@ void transformer::cuBackwardContext(std::vector<std::vector<float>>& expectedH, 
  * @param lambda_L2 L2 regularization parameter.
  * @param gradForEh Host-side vector to store gradients for the EH vector (dL/dEH).
  */
-void transformer::cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> otok, std::vector<float> prediction,
-                                     std::vector<float> oneHotEncode, int indexForToken, float learning, float lambda_L1, float lambda_L2,
-                                     std::vector<float>& gradForEh)
+void transformer::cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> prediction, std::vector<float> oneHotEncode,
+                                     float learning, float lambda_L1, float lambda_L2, std::vector<float>& gradForEh)
 {
     int vocab_size = vocabsize;
     int p_dim = d * x;
@@ -210,33 +209,34 @@ void transformer::cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> oto
     CUDA_CHECK(cudaDeviceSynchronize());
 
     // --- 2. Categorical Cross-Entropy backward pass (dL/dz) ---
-    // Assuming a kernel `kernelComputeGradpred` exists.
-    // kernelComputeGradpred<<<blocks_per_grid_1d, threads_per_block_1d>>>(d_predNorm, d_oneHotEncode, d_delta, vocab_size);
-    // CUDA_CHECK(cudaGetLastError());
-    // CUDA_CHECK(cudaDeviceSynchronize());
+    // This kernel computes: prediction - label
+    kernelComputeGradpred<<<blocks_per_grid_1d, threads_per_block_1d>>>(d_predNorm, d_oneHotEncode, d_delta, vocab_size);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // --- 3. Compute gradients for deEmbeddings (outer product) ---
-    // Assuming a kernel `KernelComputeGradDeEmbeddings` exists.
-    // dim3 threads_2d(8, 8);
-    // dim3 blocks_2d((p_dim / 4 + threads_2d.x - 1) / threads_2d.x, (vocab_size + threads_2d.y - 1) / threads_2d.y);
-    // KernelComputeGradDeEmbeddings<<<blocks_2d, threads_2d>>>(d_delta, d_final_hidden_state_input, d_gdeEmbed, vocab_size, p_dim / 4);
-    // CUDA_CHECK(cudaGetLastError());
-    // CUDA_CHECK(cudaDeviceSynchronize());
+    // This is an outer product: grad[i,j] = delta[i] * otok[j].
+    dim3 threads_2d(8, 8);
+    dim3 blocks_2d((p_dim / 4 + threads_2d.x - 1) / threads_2d.x, (vocab_size + threads_2d.y - 1) / threads_2d.y);
+    KernelComputeGradDeEmbeddings<<<blocks_2d, threads_2d>>>
+        (d_delta, (const float4*)d_final_hidden_state_input, (float4*)d_gdeEmbed, vocab_size, p_dim / 4);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // --- 4. Update deEmbeddings weights ---
-    // Assuming a kernel `kernelUpdateWeightsGeneral_f4` exists.
-    // int totalElements = vocab_size * p_dim;
-    // int blocks_update = (totalElements + threads_per_block_1d - 1) / threads_per_block_1d;
-    // kernelUpdateWeightsGeneral_f4<<<blocks_update, threads_per_block_1d>>>(d_deEmbed, d_gdeEmbed, learning, lambda_L1, lambda_L2, totalElements);
-    // CUDA_CHECK(cudaGetLastError());
-    // CUDA_CHECK(cudaDeviceSynchronize());
+    // Update weights with gradients and elastic net regularization
+    int totalElements = vocab_size * p_dim;
+    int blocks_update = (totalElements / 4 + threads_per_block_1d - 1) / threads_per_block_1d;
+    kernelUpdateWeightsGeneral_f4<<<blocks_update, threads_per_block_1d>>>(d_deEmbed, d_gdeEmbed, learning, lambda_L1, lambda_L2, totalElements / 4);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // --- 5. Propagate error back to hidden state (dL/dEH) ---
-    // Assuming a kernel `kernelGradForAttentionOutput` exists.
-    // int blocks_propagate = (p_dim + threads_per_block_1d - 1) / threads_per_block_1d;
-    // kernelGradForAttentionOutput<<<blocks_propagate, threads_per_block_1d>>>(d_deEmbed, d_delta, d_gradForEh_device, vocab_size, p_dim);
-    // CUDA_CHECK(cudaGetLastError());
-    // CUDA_CHECK(cudaDeviceSynchronize());
+    // gradForEh = delta * deEmbeddings
+    int blocks_propagate = (p_dim / 4 + threads_per_block_1d - 1) / threads_per_block_1d;
+    kernelGradForAttentionOutput<<<blocks_propagate, threads_per_block_1d>>>(d_deEmbed, d_delta, d_gradForEh_device, vocab_size, p_dim);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // --- Transfer results back to host ---
     CUDA_CHECK(cudaMemcpy(deEmbeddings.mapped_data, d_deEmbed, deEmbed_size_bytes, cudaMemcpyDeviceToHost));
@@ -275,11 +275,10 @@ void transformer::cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gra
     // --- Kernel launch ---
     int threads_per_block = 256;
     int blocks_per_grid = (dim + threads_per_block - 1) / threads_per_block;
-    // Assuming a kernel `updateEmbeddings` exists.
-    // updateEmbeddings<<<blocks_per_grid, threads_per_block>>>(d_embed, d_gEmbed, learning, lambda_L1, lambda_L2, vocabsize, dim);
-    // CUDA_CHECK(cudaGetLastError());
-    // CUDA_CHECK(cudaDeviceSynchronize());
-
+    updateEmbeddings<<<blocks_per_grid, threads_per_block>>>(d_embed, d_gEmbed, learning, lambda_L1, lambda_L2, rows, dim);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+    
     // --- Free memory ---
     cudaFree(d_embed);
     cudaFree(d_gEmbed);
