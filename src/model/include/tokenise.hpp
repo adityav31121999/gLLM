@@ -85,17 +85,17 @@ public:
     int totalCorpusWordCount;               // corpus word count
     std::unique_ptr<ProgressData> bpe_progress;
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
     OpenCLContext ocl;
 #endif
 
 // constructors
     // default constructors
-#ifdef USE_OPENCL
+#ifdef USE_CL
     tokeniser(int d, bool contextTok, OpenCLContext& context); // You'd need to initialize bpe_progress here too
     tokeniser(int d, int d_val, bool contextTok, OpenCLContext& context); // And here
     explicit tokeniser(const std::string& path2data, bool contextTok, OpenCLContext& context) noexcept; // And here
-#elif USE_CUDA || USE_CPU
+#elif USE_CU || USE_CPU
     // Initialize bpe_progress in all constructors
     tokeniser() : bpe_progress(std::make_unique<ProgressData>()) {}
     tokeniser(int d, bool contextTok);
@@ -120,7 +120,7 @@ public:
           num_threads(other.num_threads),
           totalCorpusWordCount(other.totalCorpusWordCount),
           bpe_progress(std::make_unique<ProgressData>()) // Create a NEW, independent ProgressData object
-#ifdef USE_OPENCL
+#ifdef USE_CL
           , ocl(other.ocl)
 #endif
     {}
@@ -142,7 +142,7 @@ public:
           num_threads(other.num_threads),
           totalCorpusWordCount(other.totalCorpusWordCount),
           bpe_progress(std::move(other.bpe_progress)) // std::unique_ptr handles the move
-#ifdef USE_OPENCL
+#ifdef USE_CL
           , ocl(std::move(other.ocl))
 #endif
     {}
@@ -169,7 +169,7 @@ public:
         totalCorpusWordCount = other.totalCorpusWordCount;
         bpe_progress = std::make_unique<ProgressData>(); // Create a new ProgressData object
 
-        #ifdef USE_OPENCL
+        #ifdef USE_CL
             ocl = other.ocl;
         #endif
         return *this;
@@ -199,7 +199,7 @@ public:
         // Move the unique_ptr
         bpe_progress = std::move(other.bpe_progress);
 
-        #ifdef USE_OPENCL
+        #ifdef USE_CL
             ocl = std::move(other.ocl);
         #endif
 
@@ -251,11 +251,11 @@ public:
     void savedeEmbeddings(const std::string& outputPath, const std::vector<std::vector<float>>& deEmebdding);
     void savedeEmbeddings(const std::string& outputPath, const float* deEmebdding);
 
-    #ifdef USE_CUDA
+    #ifdef USE_CU
         void cuEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
         void cudeEmbeddingFormula(std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
         void cuVectorInverse(std::vector<std::vector<float>>& deEmbedding, const std::vector<std::vector<float>>& embedding, int& d, int& vocSize);
-    #elif USE_OPENCL
+    #elif USE_CL
         void clEmbeddingFormula(OpenCLContext& ocl, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
         void cldeEmbeddingFormula(OpenCLContext& ocl, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds, int& d, int& vocSize, float r1, float r2);
         void clVectorInverse(OpenCLContext& ocl, std::vector<std::vector<float>>& deEmbedding, const std::vector<std::vector<float>>& embedding, int& d, int& vocSize);
@@ -346,7 +346,7 @@ std::vector<std::vector<float>> readCsvTo2DVector(const std::string& filename);
 std::unordered_map<std::string, int> readUnorderedMap(const std::string& filename);
 std::unordered_map<std::string, std::vector<float>> readMappedEmbeddings(const std::string& filename);
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 #include <cuda.h>
 #include <cuda_runtime.h>

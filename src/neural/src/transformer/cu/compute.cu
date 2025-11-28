@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 // compute kernels and functions
 #include "include/attention.hpp"    // EMBEDDING, SCALING and CONTEXT_WIN, etc.
 #include "include/block.hpp"

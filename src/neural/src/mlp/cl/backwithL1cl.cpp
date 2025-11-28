@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/mlp.hpp" // Includes basic.hpp where OpenCLContext is defined
 #include <maths.hpp>       // Includes basic utilities like flatten, unflatten
 #include <vector>
@@ -161,4 +161,4 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

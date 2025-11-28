@@ -67,16 +67,16 @@ public:
     unsigned long long params;          // parameters in each attention head
     unsigned long long attOffset;       // attention offset
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.
     OpenCLContext& clcontext;
     attention(OpenCLContext& context, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
     attention(OpenCLContext& context, const std::string& inAtt, int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
-#elif USE_CUDA || USE_CPU
+#elif USE_CU || USE_CPU
     attention() = default;
     attention(int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
     attention(const std::string& inAtt,int n, int d, int h, int l, bool attentionType, bool inTraining, float& learning);
-#endif // USE_OPENCL
+#endif // USE_CL
 
     // Explicitly define copy constructor and copy assignment operator
     attention(const attention& other);
@@ -85,12 +85,12 @@ public:
     void serialise(int offset, const std::string& locationWithFilename);
     void deserialise(int offset, const std::string& locationWithFilename);
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
     float* d_EV; // Device pointer for Vertical Retention
     float* getDeviceEVPointer();
 
-#elif USE_OPENCL
+#elif USE_CL
 
     cl::Buffer d_EV; // Device buffer for Vertical Retention
     cl::Buffer& getDeviceEVBuffer() {
@@ -133,10 +133,10 @@ public:
 
 // Inline implementations for copy constructor and copy assignment operator
 inline attention::attention(const attention& other) :
-#ifdef USE_OPENCL
+#ifdef USE_CL
     clcontext(other.clcontext),
     d_EV(other.d_EV),
-#elif USE_CUDA
+#elif USE_CU
     d_EV(other.d_EV),
 #endif
     // Initialize common members
@@ -167,10 +167,10 @@ inline attention& attention::operator=(const attention& other) {
         return *this; // Self-assignment check
     }
 
-    #ifdef USE_OPENCL
+    #ifdef USE_CL
         clcontext = other.clcontext;
         d_EV = other.d_EV;
-    #elif USE_CUDA
+    #elif USE_CU
         d_EV = other.d_EV;
     #endif
 
@@ -199,7 +199,7 @@ inline attention& attention::operator=(const attention& other) {
     return *this;
 }
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 #include <cuda.h>
 #include <cuda_runtime.h>

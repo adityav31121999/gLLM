@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "include/block.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -471,4 +471,4 @@ void block::curpartialbackward1stBlock(std::vector<std::vector<float>>& expected
     cudaFree(agg_d_hor_deltas_storage); cudaFree(agg_d_ver_deltas_storage);
 }
 
-#endif  // USE_CUDA
+#endif  // USE_CU

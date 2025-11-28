@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "include/transformer.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -266,4 +266,4 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
     CUDA_CHECK(cudaFree(d_result_index));
 }
 
-#endif  // USE_CUDA
+#endif  // USE_CU

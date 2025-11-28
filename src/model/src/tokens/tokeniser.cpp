@@ -7,7 +7,7 @@
 #include <iostream>
 #include <filesystem>
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
 
 /**
  * @brief constructor for tokeniser (use dimensions directly)
@@ -45,7 +45,7 @@ tokeniser::tokeniser(const std::string& path2data, bool contextTok, OpenCLContex
 }
 
 
-#elif USE_CUDA || USE_CPU
+#elif USE_CU || USE_CPU
 
 /**
  * @brief constructor for tokeniser (use dimensions directly)

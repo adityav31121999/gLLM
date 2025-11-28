@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 // forprop.cu: CUDA implementations for forward propagation in MLP
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>

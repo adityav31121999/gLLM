@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/transformer.hpp"
 #include <stdexcept>
 #include <iostream>
@@ -66,4 +66,4 @@ void transformer::clForward_ev(int& blockCount, int& currentTokenCount, int& seq
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

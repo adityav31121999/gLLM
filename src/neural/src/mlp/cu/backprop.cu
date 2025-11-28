@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 // backprop.cu: CUDA implementations for backward propagation in MLP
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>

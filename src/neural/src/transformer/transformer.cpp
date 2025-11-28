@@ -1,12 +1,12 @@
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include "include/transformer.hpp"
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include <cuda_runtime.h>
 #endif
 #include <cstring>
 
-#ifndef USE_OPENCL
+#ifndef USE_CL
 
 /**
  * @brief constructor for transformer when case is defined
@@ -90,7 +90,7 @@ transformer::transformer(int m_param, int x_param, int y_param, int n_param, int
         params = blocks[0].params + d + (vocabsize * d) + (n*m)*d + (x * y * n * d) + n*d;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
-    #ifdef USE_CUDA
+    #ifdef USE_CU
         int deviceId;
         cudaGetDevice(&deviceId);
         cudaDeviceProp props;
@@ -186,7 +186,7 @@ transformer::transformer(const std::string& modelName, int m_param, int x_param,
         params = blocks[0].params + d + (vocabsize * d) + (n*m)*d + (x * y * n * d) + n*d;
         std::cout << "TRANSFORMER constructed. TOTAL PARAMETERS: " << params << std::endl;
     }
-    #ifdef USE_CUDA
+    #ifdef USE_CU
         int deviceId;
         cudaGetDevice(&deviceId);
         cudaDeviceProp props;

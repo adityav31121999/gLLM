@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "include/transformer.hpp"
 #include "include/mlp.hpp"
 #include "include/attention.hpp"

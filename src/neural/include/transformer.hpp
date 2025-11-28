@@ -82,7 +82,7 @@ public:
     mat tokForBlock;                    // token embeddings for local context for inference (Mapped, n x d)
     FILE* seqChat;                      // sequence1 and sequence2 text file
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
     OpenCLContext& clcontext;
     transformer(OpenCLContext& context, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
         unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
@@ -90,7 +90,7 @@ public:
     transformer(OpenCLContext& context, const std::string& ModelName, int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
         unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
         bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param);
-#elif USE_CUDA || USE_CPU
+#elif USE_CU || USE_CPU
     transformer() = default;
     transformer(int m_param, int x_param, int y_param, int n_param, int d_param, int h_param, int l_param, 
         unsigned int vocab_param, float learning_rate_param, float lambda_L1_param, float lambda_L2_param, bool attentionType_param, 
@@ -100,7 +100,7 @@ public:
         bool& inTraining_param, bool& contextTrain_param, const std::string& modelDir_param);
 #endif
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 // cuda implementation
     void cuParallelKdotQs(int& sequence1Count, int& currentTokenCount, int& blockCount, int& column, bool& isSelf, bool& inTraining);
@@ -122,7 +122,7 @@ public:
     void cuBufferRun();
     void cuBufferRunContext();
 
-#elif USE_OPENCL
+#elif USE_CL
 
 // opencl implementation
     void clKdotQ4Train(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);

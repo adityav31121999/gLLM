@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 // activations and its derivative functions
 #include "include/basic.hpp"
@@ -52,7 +52,7 @@ __global__ void cuSoftmax(const float* __restrict__ x, float* __restrict__ out, 
     int tid = threadIdx.x;
 
     // Load values into shared memory with numerical stability
-    float max_val = -FLT_MAX;
+    float max_val = -MAXFLOAT;
     if (tid < size) {
         float val = x[tid];
         shmem[tid] = val;
@@ -110,7 +110,7 @@ __global__ void cuSoftmax(const float* __restrict__ x, float* __restrict__ out, 
     __syncthreads();
 
     // Step 2: Compute max for numerical stability (single thread, or parallel reduce if needed)
-    float max_val = -FLT_MAX;
+    float max_val = -MAXFLOAT;
     if (row < rows && tid < cols) {
         max_val = row_vals[tid];
         for (int i = 0; i < cols; ++i) {
@@ -313,7 +313,7 @@ __global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool
    int size = rows * cols;
 
    if (tid == 0) {
-       float min_val = FLT_MAX;
+       float min_val = MAXFLOAT;
        float sum = 0.0f;
 
        // Iterate only up to the limit
@@ -327,7 +327,7 @@ __global__ void cuLOTA(float* y, float* out, int rows, int cols, int limit, bool
            }
        }
 
-       if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries found
+       if (min_val == MAXFLOAT) min_val = 0.0f; // No valid entries found
 
        // Iterate only up to the limit
        for (int row = 0; row <= limit; ++row) {
@@ -399,7 +399,7 @@ __global__ void cuSoftmaxder(const float* x, float* out, float temp, int size) {
     extern __shared__ float shmem[];
     int tid = threadIdx.x;
 
-    float max_val = -FLT_MAX;
+    float max_val = -MAXFLOAT;
     if (tid < size) {
         shmem[tid] = x[tid];
         max_val = fmaxf(max_val, x[tid]);
@@ -449,7 +449,7 @@ __global__ void cuSoftmaxder(const float* x, float* out, float temp, int rows, i
     }
     __syncthreads();
 
-    float max_val = -FLT_MAX;
+    float max_val = -MAXFLOAT;
     for (int i = 0; i < cols; ++i)
         max_val = fmaxf(max_val, row_vals[i]);
     
@@ -591,7 +591,7 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, b
     int size = rows * cols;
 
     if (tid == 0) {
-        float min_val = FLT_MAX;
+        float min_val = MAXFLOAT;
         float sum = 0.0f;
 
         for (int row = 0; row <= limit; ++row) {
@@ -604,7 +604,7 @@ __global__ void cuLOTAder(float* y, float* out, int rows, int cols, int limit, b
             }
        }
 
-        if (min_val == FLT_MAX) min_val = 0.0f; // No valid entries
+        if (min_val == MAXFLOAT) min_val = 0.0f; // No valid entries
 
         for (int row = 0; row <= limit; ++row) {
             for (int col = 0; col <= limit; ++col) {

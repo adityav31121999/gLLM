@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>

@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "include/attention.hpp"
 #include "include/block.hpp"
 #include <cuda_runtime.h>

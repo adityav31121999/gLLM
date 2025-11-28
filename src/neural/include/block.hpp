@@ -50,7 +50,7 @@ public:
     unsigned long long params;              // parameters in block
     unsigned long long blockOffset;         // offset for block in training bin file
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
     OpenCLContext& clcontext;
     block(OpenCLContext& context, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
         unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
@@ -58,7 +58,7 @@ public:
     block(OpenCLContext& context, const std::string& blockName, int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
         unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
         float& learning);
-#elif USE_CUDA || USE_CPU
+#elif USE_CU || USE_CPU
     block() = default;
     block(int x_layers, int y_heads, int n_tokens, int d_embed, int h_internal, int l_mlp, 
         unsigned long long vocab, bool attentionType, bool trainMode, int blockCount, const std::string& blockFilePath_param,
@@ -83,13 +83,13 @@ public:
         blockFilePath = other.blockFilePath;
         params = other.params;
         blockOffset = other.blockOffset;
-    #ifdef USE_OPENCL
+    #ifdef USE_CL
         clcontext = other.clcontext;
     #endif
         return *this;
     }
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
     // for single parallel
     void cu1parallelForprop(int& in, int& tokenCount, int i, int& layers);
@@ -112,7 +112,7 @@ public:
     void cubackward(std::vector<float>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
     void cubackward(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int& blockCount, float& learning, float& lambda_l1, float& lambda_l2);
 
-#elif USE_OPENCL
+#elif USE_CL
 
     // for single parallel
     void cl1parallelForprop(int& in, int& tokenCount, int i, int& layers);

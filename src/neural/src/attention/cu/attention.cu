@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "include/attention.hpp"
@@ -44,7 +44,7 @@ __device__ int computePrediction(const float* EH, const float* embeddings, int d
     if (voc <= 0 || embeddings == nullptr) {
         return -1; // Handle invalid input
     }
-    float max_dot_product = -FLT_MAX;
+    float max_dot_product = -MAXFLOAT;
     int predicted_index = 0;
 
     // Assuming dim is a multiple of 4 for float4 operations
@@ -77,7 +77,7 @@ __device__ int computePrediction(const float* EH, const float* embeddings, int d
  * @param[in] voc The vocabulary size (number of rows in embeddings).
  * @return The index of the token embedding with the highest dot product. Returns -1 if voc <= 0 or embeddings is null.
  * @note Assumes that the case of "all dot products being exactly equal" is handled implicitly by returning the first max index found.
- * @note Assumes FLT_MAX is available (usually via <cfloat> or CUDA includes).
+ * @note Assumes MAXFLOAT is available (usually via <cfloat> or CUDA includes).
  */
 __device__ int computePredictionWithScores(const float* EH, const float* embeddings, float* predictionLogits,
          int dim, int voc) 
@@ -85,7 +85,7 @@ __device__ int computePredictionWithScores(const float* EH, const float* embeddi
     if (voc <= 0 || embeddings == nullptr) {
         return -1; // Handle invalid input
     }
-    float max_dot_product = -FLT_MAX;
+    float max_dot_product = -MAXFLOAT;
     int predicted_index = 0;
 
     // Assuming dim is a multiple of 4 for float4 operations

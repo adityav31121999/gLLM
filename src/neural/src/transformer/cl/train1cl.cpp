@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <vector>
@@ -284,4 +284,4 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
     predKernel = cl::Kernel();
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

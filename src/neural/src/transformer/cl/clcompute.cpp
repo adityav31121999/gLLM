@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <vector>
@@ -299,4 +299,4 @@ void transformer::clKdotQ4Infer(int& sequence1Count, int& currentTokenCount, int
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

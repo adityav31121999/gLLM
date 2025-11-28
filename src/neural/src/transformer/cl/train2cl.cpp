@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <vector>
@@ -490,4 +490,4 @@ void transformer::clTrain(std::vector<std::vector<float>>& sequence1, std::vecto
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

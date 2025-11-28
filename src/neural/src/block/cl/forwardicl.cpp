@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #if defined(_WIN64) 
     #include <CL/cl.hpp>
 #elif defined(__linux__)
@@ -926,4 +926,4 @@ void block::clForpropev(std::vector<std::vector<std::vector<std::vector<float>>>
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

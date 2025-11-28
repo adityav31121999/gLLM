@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/mlp.hpp"
 #include <maths.hpp>
 #include <vector>
@@ -382,4 +382,4 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #if defined(_WIN64)
     #include <CL/cl.hpp>
 #elif defined(__linux__)

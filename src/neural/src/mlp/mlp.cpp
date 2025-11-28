@@ -7,7 +7,7 @@
 #include <cstring>
 
 // --- Non-OpenCL Constructor ---
-#ifndef USE_OPENCL
+#ifndef USE_CL
 
 /**
  * @brief Constructor used when OpenCL is NOT enabled.
@@ -249,7 +249,7 @@ mlp::mlp(OpenCLContext& context, const std::string& inAtt, const std::vector<uns
     // std::cout << "MLP constructed with OpenCL -> " << params << std::endl;
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL
 
 
 // clear all values

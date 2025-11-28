@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 #include "include/mlp.hpp"
 #include <iostream>

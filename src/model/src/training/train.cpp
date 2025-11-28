@@ -116,13 +116,13 @@ void model::trainSequence(const std::string& txtFileLocation, int context_window
         // train the first block
         if(tok < context_window)
         {
-            #ifdef USE_CUDA
+            #ifdef USE_CU
                 std::cout << "Using CUDA Implementation" << std::endl;
                 if(contextTrain == 1)
                     T.cuTrainContext(sentenceEmbeddings, tokensOfLine);
                 else
                     T.cuTrain(sentenceEmbeddings, tokensOfLine);
-            #elif USE_OPENCL
+            #elif USE_CL
                 std::cout << "Using OpenCL Implementation" << std::endl;
                 if(contextTrain == 1)
                     T.clTrainContext(sentenceEmbeddings, tokensOfLine);
@@ -317,13 +317,13 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
             // train the first block
             if(tok < context_window)
             {
-                #ifdef USE_CUDA
+                #ifdef USE_CU
                     std::cout << "Using CUDA Implementation" << std::endl;
                     if(contextTrain == 0)
                         T.cuTrain(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);
                     else
                         T.cuTrainContext(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);
-                #elif USE_OPENCL
+                #elif USE_CL
                     std::cout << "Using OpenCL Implementation" << std::endl;
                     if(contextTrain == 0)
                         T.clTrain(sequence1Embeddings, sequence2Embeddings, sequence2Tokens);

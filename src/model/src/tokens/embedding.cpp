@@ -51,10 +51,10 @@ void tokeniser::generateAndSaveEmbeddings(const std::string& embeddingCSVpath, f
     std::string csvEmbeddingOnly = embeddingCSVpath + "/_embeddings_only.csv";
     embeddings.resize(vocSize, std::vector<float>(d));
     
-    #ifdef USE_CUDA
+    #ifdef USE_CU
         // Call the CUDA kernel wrapper
         cuEmbeddingFormula(embeddings, seeds, d, vocSize, r1, r2);
-    #elif USE_OPENCL
+    #elif USE_CL
         // Call the OpenCL kernel wrapper
         clEmbeddingFormula(ocl, embeddings, seeds, d, vocSize, r1, r2);
     #else
@@ -128,10 +128,10 @@ void tokeniser::generateAndSavedeEmbeddings(const std::string& embeddingCSVpath,
     std::string csvEmbeddingOnly = embeddingCSVpath + "/_embeddings_only.csv";
     embeddings.resize(vocSize, std::vector<float>(d));
     
-    #ifdef USE_CUDA
+    #ifdef USE_CU
         // Call the CUDA kernel wrapper
         cudeEmbeddingFormula(embeddings, seeds, d, vocSize, r1, r2);
-    #elif USE_OPENCL
+    #elif USE_CL
         // Call the OpenCL kernel wrapper
         cldeEmbeddingFormula(ocl, embeddings, seeds, d, vocSize, r1, r2);
     #else

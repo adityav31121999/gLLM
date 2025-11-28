@@ -8,7 +8,7 @@
 #include <locale> // for isspace
 #include <sys/stat.h> // For stat to check file existence (alternative to std::filesystem::exists)
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
 
 /**
  * @brief Constructor for single transformer model with learning rate
@@ -96,7 +96,7 @@ model::model(OpenCLContext& context, const std::string& modelName, const std::st
 
 #else
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include <cuda.h>
 #include <cuda_runtime.h>
 
@@ -184,7 +184,7 @@ model::model(const std::string& baseDirectory, const std::string& tokenDirectory
     info.attentionType = isSelf;
     info.totalContext = m * n;
     calculateAndSetLayout();
-    #ifdef USE_CUDA
+    #ifdef USE_CU
     std::cout << "Model Created. "; printCudaDeviceName();
     #elif USE_CPU
     std::cout << "Model Created using CPU" << std::endl;
@@ -229,7 +229,7 @@ model::model(const std::string& modelName, const std::string& baseDirectory, con
     info.attentionType = isSelf;
     info.totalContext = m * n;
     calculateAndSetLayout();
-    #ifdef USE_CUDA
+    #ifdef USE_CU
     std::cout << "Model Created. "; printCudaDeviceName();
     #elif USE_CPU
     std::cout << "Model Created using CPU" << std::endl;

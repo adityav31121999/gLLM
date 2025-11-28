@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 // vector operations in cuda programs
 #include "include/basic.hpp"
 #include <cuda.h>
@@ -18,7 +18,7 @@ __global__ void someKernelWithReduction(const float* input, float* output_scalar
     if (i < N) {
         sdata[tid] = input[i];
     } else {
-        sdata[tid] = 0; // Neutral element for sum (or FLT_MAX for min, -FLT_MAX for max)
+        sdata[tid] = 0; // Neutral element for sum (or MAXFLOAT for min, -MAXFLOAT for max)
     }
     // Handle cases where N is not a multiple of blockDim.x if loading more than one element per thread
 

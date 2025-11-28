@@ -41,7 +41,7 @@ inline void apply_elastic_net_and_clip(volatile __global float* weight_ptr, __gl
         total_gradient = 0.0f;
     }
     else if (isinf(total_gradient)) {
-        total_gradient = copysign(FLT_MAX, total_gradient);
+        total_gradient = copysign(MAXFLOAT, total_gradient);
     }
     // Apply element-wise gradient clipping
     // if (fabs(total_gradient) > max_grad_clip_value) { total_gradient = copysign(max_grad_clip_value, total_gradient); }
@@ -165,7 +165,7 @@ __kernel void kernelUpdateSimple_Elastic(__global float* weights_to_update, __gl
             if (isnan(total_gradient)) {
                 total_gradient = 0.0f;
             } else if (isinf(total_gradient)) {
-                total_gradient = copysign(FLT_MAX, total_gradient);
+                total_gradient = copysign(MAXFLOAT, total_gradient);
             }
             if (fabs(total_gradient) > max_grad_clip_value) {
                 total_gradient = copysign(max_grad_clip_value, total_gradient);
@@ -220,7 +220,7 @@ __kernel void kernelUpdateWeightsGeneral(__global float* weights, __global const
         if (isnan(total_gradient)) {
             total_gradient = 0.0f;
         } else if (isinf(total_gradient)) {
-            total_gradient = copysign(FLT_MAX, total_gradient);
+            total_gradient = copysign(MAXFLOAT, total_gradient);
         }
 
         // Apply weight decay: w = w * (1 - lr * weight_decay) - lr * gradient
@@ -249,10 +249,10 @@ __kernel void kernelUpdateWeightsGeneral_f4(__global float* weights, __global co
         float4 total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
         // Handle NaNs and Infs for each component
-        total_gradient.x = isnan(total_gradient.x) ? 0.0f : (isinf(total_gradient.x) ? copysign(FLT_MAX, total_gradient.x) : total_gradient.x);
-        total_gradient.y = isnan(total_gradient.y) ? 0.0f : (isinf(total_gradient.y) ? copysign(FLT_MAX, total_gradient.y) : total_gradient.y);
-        total_gradient.z = isnan(total_gradient.z) ? 0.0f : (isinf(total_gradient.z) ? copysign(FLT_MAX, total_gradient.z) : total_gradient.z);
-        total_gradient.w = isnan(total_gradient.w) ? 0.0f : (isinf(total_gradient.w) ? copysign(FLT_MAX, total_gradient.w) : total_gradient.w);
+        total_gradient.x = isnan(total_gradient.x) ? 0.0f : (isinf(total_gradient.x) ? copysign(MAXFLOAT, total_gradient.x) : total_gradient.x);
+        total_gradient.y = isnan(total_gradient.y) ? 0.0f : (isinf(total_gradient.y) ? copysign(MAXFLOAT, total_gradient.y) : total_gradient.y);
+        total_gradient.z = isnan(total_gradient.z) ? 0.0f : (isinf(total_gradient.z) ? copysign(MAXFLOAT, total_gradient.z) : total_gradient.z);
+        total_gradient.w = isnan(total_gradient.w) ? 0.0f : (isinf(total_gradient.w) ? copysign(MAXFLOAT, total_gradient.w) : total_gradient.w);
 
         weights_f4[idx] -= learning_rate * total_gradient;
     }
@@ -268,7 +268,7 @@ __kernel void kernelUpdateWeightsGeneral_f4(__global float* weights, __global co
             if (isnan(total_gradient)) {
                 total_gradient = 0.0f;
             } else if (isinf(total_gradient)) {
-                total_gradient = copysign(FLT_MAX, total_gradient);
+                total_gradient = copysign(MAXFLOAT, total_gradient);
             }
 
             // Apply weight decay: w = w * (1 - lr * weight_decay) - lr * gradient
@@ -307,10 +307,10 @@ __kernel void updateEmbeddings(__global float* embeddings, __global const float*
             float4 total_gradient = error_gradient + l1_reg_term + l2_reg_term;
 
             // Handle NaNs and Infs for each component
-            total_gradient.x = isnan(total_gradient.x) ? 0.0f : (isinf(total_gradient.x) ? copysign(FLT_MAX, total_gradient.x) : total_gradient.x);
-            total_gradient.y = isnan(total_gradient.y) ? 0.0f : (isinf(total_gradient.y) ? copysign(FLT_MAX, total_gradient.y) : total_gradient.y);
-            total_gradient.z = isnan(total_gradient.z) ? 0.0f : (isinf(total_gradient.z) ? copysign(FLT_MAX, total_gradient.z) : total_gradient.z);
-            total_gradient.w = isnan(total_gradient.w) ? 0.0f : (isinf(total_gradient.w) ? copysign(FLT_MAX, total_gradient.w) : total_gradient.w);
+            total_gradient.x = isnan(total_gradient.x) ? 0.0f : (isinf(total_gradient.x) ? copysign(MAXFLOAT, total_gradient.x) : total_gradient.x);
+            total_gradient.y = isnan(total_gradient.y) ? 0.0f : (isinf(total_gradient.y) ? copysign(MAXFLOAT, total_gradient.y) : total_gradient.y);
+            total_gradient.z = isnan(total_gradient.z) ? 0.0f : (isinf(total_gradient.z) ? copysign(MAXFLOAT, total_gradient.z) : total_gradient.z);
+            total_gradient.w = isnan(total_gradient.w) ? 0.0f : (isinf(total_gradient.w) ? copysign(MAXFLOAT, total_gradient.w) : total_gradient.w);
 
             embeddings_f4[current_f4_idx] -= learning_rate * total_gradient;
         }
@@ -326,7 +326,7 @@ __kernel void updateEmbeddings(__global float* embeddings, __global const float*
             if (isnan(total_gradient)) {
                 total_gradient = 0.0f;
             } else if (isinf(total_gradient)) {
-                total_gradient = copysign(FLT_MAX, total_gradient);
+                total_gradient = copysign(MAXFLOAT, total_gradient);
             }
             embeddings[current_idx] -= learning_rate * total_gradient;
         }

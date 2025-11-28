@@ -41,13 +41,13 @@ public:
     int params;                    // parameters in mlp
 
     // Constructor(s) modified to accept OpenCLContext when needed
-#ifdef USE_OPENCL
+#ifdef USE_CL
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
     mlp() = default;
     mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
     mlp(OpenCLContext& context, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-#elif USE_CUDA || USE_CPU
+#elif USE_CU || USE_CPU
     mlp() = default;
     // Constructor when OpenCL is disabled
     mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
@@ -58,7 +58,7 @@ public:
     mlp(const mlp& other);
     mlp& operator=(const mlp& other);
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 // cuda implementation for mlp
     void cuForward(int in, int layers);
@@ -72,7 +72,7 @@ public:
     void cuTrain(float& mse, int in, int layers, float learning);
     void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
 
-#elif USE_OPENCL
+#elif USE_CL
 
 // opencl implementation for mlp methods (will use clContext member)
     void clForward(int in, int layers);
@@ -135,7 +135,7 @@ public:
 
 // Inline implementations for copy constructor and copy assignment operator
 inline mlp::mlp(const mlp& other) :
-#ifdef USE_OPENCL
+#ifdef USE_CL
     clContext(other.clContext), // Initialize OpenCL context reference
 #endif
     status(other.status),
@@ -158,7 +158,7 @@ inline mlp& mlp::operator=(const mlp& other) {
         return *this; // Self-assignment check
     }
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
     // Assign to the OpenCLContext object clContext refers to.
     // This requires OpenCLContext to be assignable (which we made it).
     clContext = other.clContext;
@@ -192,7 +192,7 @@ float computeLossWithElasticNet(std::vector<float>& outputs, std::vector<float>&
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
 std::vector<float> flattenWeights(const std::vector<mat>& weights);
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 #include <cuda.h>
 #include <cuda_runtime.h>

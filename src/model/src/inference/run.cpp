@@ -39,10 +39,10 @@ void model::runModel(const std::string& binDirectory)
                 setRow( T.tokenEmbed, T.currentTokenCount+i, pValues);
             }
             T.sequence1Count = tinput.size();
-            #ifdef USE_CUDA
+            #ifdef USE_CU
             // use cuda run function from transformer
                 T.cuRun();
-            #elif USE_OPENCL
+            #elif USE_CL
             // use cl run function from transformer
                 T.clRun();
             #elif USE_CPU

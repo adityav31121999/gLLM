@@ -1,21 +1,26 @@
-
 #include <iostream>
 #include <vector>
 #include <string>
 #include "gllm.h"
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
+
+    #ifdef __linux__
+        std::string path2Folder = "/home/adi23444/code/";
+    #else
+        std::string path2Folder = "D:/";
+    #endif
 
     // Source files - Paths relative to this header file's location
     std::vector<std::string> kernelSourceFiles = {
-        "d:/gLLM/src/maths/src/basic/cl/activations.cl",
-        "d:/gLLM/src/maths/src/basic/cl/vect.cl",
-        "d:/gLLM/src/maths/src/mat/cl/operators.cl",
-        "d:/gLLM/src/neural/src/mlp/cl/mlp.cl",
-        "d:/gLLM/src/neural/src/attention/cl/attention.cl",
-        "d:/gLLM/src/neural/src/attention/cl/kdotq.cl",
-        "d:/gLLM/src/neural/src/attention/cl/weights.cl",
-        "d:/gLLM/src/model/src/tokens/token.cl"
+        path2Folder + "gLLM/src/maths/src/basic/cl/activations.cl",
+        path2Folder + "gLLM/src/maths/src/basic/cl/vect.cl",
+        path2Folder + "gLLM/src/maths/src/mat/cl/operators.cl",
+        path2Folder + "gLLM/src/neural/src/mlp/cl/mlp.cl",
+        path2Folder + "gLLM/src/neural/src/attention/cl/attention.cl",
+        path2Folder + "gLLM/src/neural/src/attention/cl/kdotq.cl",
+        path2Folder + "gLLM/src/neural/src/attention/cl/weights.cl",
+        path2Folder + "gLLM/src/model/src/tokens/token.cl"
     };
 
     // Kernel names - Must be unique across ALL source files loaded into the context
@@ -127,19 +132,3 @@
     };
 
 #endif
-
-/*
-                if(current_error < prev_error) {
-                    if(j <= 6)   
-                        learning *= 1.1;
-                    else if (j % 6 == 0)
-                        learning *= (1.05 + (j/6)*0.15);
-                }
-                else {
-                    if(j <= 6)   
-                        learning *= 0.95;
-                    else if (j % 6 == 0)
-                        learning *= (0.95 - (j/6)*0.01);
-                }
-
-*/

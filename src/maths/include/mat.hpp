@@ -160,7 +160,7 @@ mat covariance(const mat& a);
 mat LOTA(const mat& y, int t, bool attentionType);
 mat LOTAder(const mat& y, int t, bool attentionType);
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 // device
     __device__ void swap_rows_gj(float* matA, float* matB, int row1, int row2, int n);      // row swap in matrix
 // global

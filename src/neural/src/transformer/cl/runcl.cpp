@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/transformer.hpp"
 #include <maths.hpp>
 #include <vector>
@@ -607,4 +607,4 @@ void transformer::clRunContext()
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

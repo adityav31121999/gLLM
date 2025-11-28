@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/mlp.hpp" // Includes OpenCL headers, OpenCLContext, etc.
 #include <maths.hpp>
 #include <vector>
@@ -265,4 +265,4 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
     mse = average_epoch_mse;
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

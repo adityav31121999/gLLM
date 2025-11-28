@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 // loss.cu: CUDA implementations for calculating losses and penalties for MLP
 #include "include/mlp.hpp"
 #include <maths.hpp>

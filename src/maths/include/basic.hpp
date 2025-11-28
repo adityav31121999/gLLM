@@ -95,7 +95,7 @@ void ijbasedwbs(std::vector<std::vector<float>>);
 void Random(std::vector<std::vector<float>>);
 
 
-#ifdef USE_CUDA
+#ifdef USE_CU
 
 #include <cuda_runtime.h>
 
@@ -180,17 +180,15 @@ __global__ void vectorAddKernel(const float* A, const float* B, float* C, int le
 
 #endif
 
-#ifdef USE_OPENCL
+#ifdef USE_CL
 
 // Conditional inclusion of OpenCL C++ header based on OS
 #if defined(_WIN64)
     #define CL_HPP_ENABLE_EXCEPTIONS
     #define CL_HPP_TARGET_OPENCL_VERSION 300
-    // For Windows, use the older/common cl.hpp
     #include <CL/cl.hpp>
 #elif defined(__linux__)
-    #define CL_HPP_TARGET_OPENCL_VERSION 220
-    #define CL_TARGET_OPENCL_VERSION 220 // Inform C headers to target OpenCL 2.2
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
     #include <CL/opencl.hpp>
 #endif
 #include <sstream>

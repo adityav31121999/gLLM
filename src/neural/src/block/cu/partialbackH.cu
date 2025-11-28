@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_CU
 #include "include/mlp.hpp"
 #include "include/attention.hpp" // Includes constants like EMBEDDING, CONTEXT_WIN, etc.
 #include "include/block.hpp"

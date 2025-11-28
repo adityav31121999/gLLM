@@ -1,5 +1,13 @@
-#ifdef USE_OPENCL
-#include <CL/cl.hpp>
+#ifdef USE_CL
+#if defined(_WIN64)
+    #define CL_HPP_ENABLE_EXCEPTIONS
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #define CL_HPP_TARGET_OPENCL_VERSION 300
+    #define CL_TARGET_OPENCL_VERSION 300
+    #include <CL/opencl.hpp>
+#endif
 #include "include/mlp.hpp"
 /**
  * @brief Helper function to perform gradient clipping on a single OpenCL buffer.

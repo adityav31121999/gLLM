@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/mlp.hpp" // Includes basic.hpp where OpenCLContext is defined
 #include <vector>
 #include <stdexcept>
@@ -191,4 +191,4 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

@@ -1,7 +1,12 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
+#if defined(_WIN64)
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #include <CL/opencl.hpp>
+#endif
 #include <chrono>
 #include "include/tokenise.hpp"
-#include <CL/cl.hpp>
+
 
 void tokeniser::clEmbeddingFormula(OpenCLContext& ocl_context, std::vector<std::vector<float>>& embedding, const std::vector<float>& seeds_ignored, int& d_dim, 
     int& vocSize_val, float r1, float r2)

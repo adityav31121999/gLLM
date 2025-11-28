@@ -3,7 +3,7 @@
 #include <numeric>
 #include <stdexcept>
 
-#ifndef USE_OPENCL
+#ifndef USE_CL
 
 /**
  * @brief Constructor for incomplete attention - NO OpenCL
@@ -91,9 +91,13 @@ attention::attention(const std::string& inAtt, int n, int d, int h, int l, bool 
     // std::cout << "ATTENTION with filename " << inAtt << " constructed." << std::endl;
 }
 
-#else // USE_OPENCL is defined
+#else // USE_CL is defined
 
-#include <CL/cl.hpp>
+#if defined(_WIN64)
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #include <CL/opencl.hpp>
+#endif
 
 /**
  * @brief Constructor for incomplete attention - WITH OpenCL
@@ -203,7 +207,7 @@ attention::attention(OpenCLContext& context, const std::string& inAtt, int n, in
     // std::cout << "ATTENTION with filename " << inAtt << " constructed with OpenCL -> " << params << std::endl;
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL
 
 // --- Common Member Functions ---
 

@@ -1,4 +1,4 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
 #include "include/mlp.hpp" // This now includes basic.hpp where OpenCLContext is defined
 #include <maths.hpp>       // Includes basic utilities like flatten
 #include <vector>
@@ -135,4 +135,4 @@ void mlp::clForward(int in_param, int layers_param) {
     }
 }
 
-#endif // USE_OPENCL
+#endif // USE_CL

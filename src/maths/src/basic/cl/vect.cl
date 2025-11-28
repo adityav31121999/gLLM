@@ -41,7 +41,7 @@ int compute_prediction(__global const float* EH, __global const float* embedding
         return -1;
     }
     // Initialize with the smallest possible float value
-    float max_dot_product = -FLT_MAX;
+    float max_dot_product = -MAXFLOAT;
     int predicted_index = 0;
     for (int i = 0; i < voc; ++i) {
         // pointer to ith token embedding row

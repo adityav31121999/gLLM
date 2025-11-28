@@ -1,4 +1,3 @@
-
 #include "include/block.hpp"
 #include <stdexcept>
 #include <string> // Required for std::to_string and string manipulations
@@ -6,7 +5,7 @@
 #include <fstream>
 #include <filesystem>
 
-#ifndef USE_OPENCL
+#ifndef USE_CL
 
 /**
  * @brief Constructor for complete attention block - NO OpenCL
@@ -243,7 +242,11 @@ block::block(const std::string& blockName, int x_layers, int y_heads, int n_toke
 
 #else
 
-#include <CL/cl.hpp>
+#if defined(_WIN64)
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #include <CL/opencl.hpp>
+#endif
 
 /**
  * @brief Constructor for complete attention block - WITH OpenCL

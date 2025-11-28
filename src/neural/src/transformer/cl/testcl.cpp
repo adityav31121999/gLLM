@@ -1,6 +1,10 @@
-#ifdef USE_OPENCL
+#ifdef USE_CL
+#if defined(_WIN64)
+    #include <CL/cl.hpp>
+#elif defined(__linux__)
+    #include <CL/opencl.hpp>
+#endif
 #include "include/transformer.hpp"
-#include <CL/cl.hpp>
 #include <iomanip>
 
 /**
