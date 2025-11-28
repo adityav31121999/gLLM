@@ -83,7 +83,7 @@ std::vector<float> tokeniser::getEmbeddingForToken(const std::string& token) con
  * @return The integer index of the token if it exists in the vocabulary.
  *         Returns -1 if the token is not found.
  */
-const int tokeniser::getIndexOfToken(const std::string &token) const
+int tokeniser::getIndexOfToken(const std::string &token) const
 {
     auto it = token_to_idx.find(token);
     if (it != token_to_idx.end()) {

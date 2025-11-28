@@ -48,7 +48,7 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sequence1, std
     float current_error = 0.0f;
     float prev_error = 0.0f;
     float initialLearning = learning;
-    bool blockShifted = 0;
+    // bool blockShifted = 0;
     int initial_epochs = epochs;
     int effective_context_size = 0;
     int resCount = 0;
@@ -430,11 +430,12 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sequence1, std
 
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
-                blockShifted = true;
+                // blockShifted = true;
                 effective_context_size = 0; // Reset for new block
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
-            } else {
-                blockShifted = false;
+            }
+            else {
+                // blockShifted = false;
             }
         }
         

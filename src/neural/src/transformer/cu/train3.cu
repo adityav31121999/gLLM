@@ -48,7 +48,7 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sentence, std:
     float current_error = 0.0f;
     float prev_error = 0.0f;
     int initial_epochs = epochs;
-    bool blockShifted = false;
+    // bool blockShifted = false;
     int effective_context_size = 0;
 
     // --- Device Buffer Allocation & H->D Transfer ---
@@ -146,7 +146,8 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sentence, std:
                             CUDA_CHECK(cudaMemcpy(blocks[0].b[layer_idx][parallel_idx].K.mapped_data, d_K, KQmatbytes, cudaMemcpyDeviceToHost));
                         }
                     }
-                } else { // Subsequent blocks
+                }
+                else { // Subsequent blocks
                     size_t fromHereInTokenEmbed = static_cast<size_t>((CONTEXT_WIN) * (blockCount - 1) - 1) * d;
                     const float* host_src_ptr = embedPlusPos.mapped_data + fromHereInTokenEmbed;
                     CUDA_CHECK(cudaMemcpy(d_tok, host_src_ptr, currentBytes, cudaMemcpyHostToDevice));
@@ -258,12 +259,13 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sentence, std:
 
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
-                blockShifted = true;
+                // blockShifted = true;
                 tokenEmbed.addRow(sentence[i], currentTokenCount - 1);
                 positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
-            } else {
-                blockShifted = false;
+            }
+            else {
+                // blockShifted = false;
             }
         }
         learning = initial_learning_rate;

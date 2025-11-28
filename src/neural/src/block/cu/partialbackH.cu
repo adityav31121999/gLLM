@@ -251,8 +251,6 @@ void block::cupartialbackward1stBlock(std::vector<float>& expectedH, int& in, in
             int blocksPerGridHead = (static_cast<int>(active_head_elements) + threadsPerBlock1D - 1) / threadsPerBlock1D;
             dim3 gridDimHead(blocksPerGridHead);
 
-            bool is_first_head = (i == 0 && layno == 0);
-
             // --- Data Transfer H->D (Async Attention) ---
             if (!head_obj.EV.mapped_data || !head_obj.K.mapped_data || !head_obj.Q.mapped_data || !head_obj.KdotQ.mapped_data ||
                 !head_obj.MH.mapped_data || !head_obj.MV.mapped_data || !head_obj.MQ.mapped_data || !head_obj.MK.mapped_data) {

@@ -1,7 +1,7 @@
 # root CMakeLists.txt
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(gLLM)
-set(VERSION 0.1.4.1)
+set(VERSION 0.1.5.0)
 message("> Project Name: ${PROJECT_NAME} | Version: ${VERSION}")
 message("> DCA Experimental Project for structure and logic verification")
 

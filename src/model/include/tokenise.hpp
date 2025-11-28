@@ -230,7 +230,7 @@ public:
     std::vector<float> getEmbeddingForToken(const std::string& token) const;
     const std::vector<std::string>& getTokens() const { return tokens; }
     const std::vector<std::string>& getVocab() const { return vocab_tokens; }
-    const int getIndexOfToken(const std::string& token) const;
+    int getIndexOfToken(const std::string& token) const;
     const std::vector<std::vector<float>>& getEmbeddings() const { return embeddings; }
     const std::vector<std::vector<float>>& getDeEmbeddings() const { return deEmbeddings; }
     float getEmbedding(int i, int j) { return embeddings[i][j]; }
