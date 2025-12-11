@@ -25,7 +25,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
 # turn off both opencl and cuda macro to turn on USE_CPU macro
 set(USE_CL OFF)
-set(USE_CU ON)
+set(USE_CU OFF)
 
 # language settings
 set(LANGUAGES C CXX
@@ -45,7 +45,7 @@ if(USE_CU)
     find_package(CUDAToolkit REQUIRED)
     message(STATUS "Found CUDA version ${CUDAToolkit_VERSION}")
     message(STATUS "Using CUDA for compilation.")
-    message(STATUS "Using CUDA for better operations on CUDA-based GPUs:)")
+    message(STATUS "Using CUDA for better operations on Nvidia GPUs:)")
     enable_language(CUDA)
     if(LINUX)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
@@ -56,6 +56,17 @@ if(USE_CU)
     set(CMAKE_CUDA_ARCHITECTURES ${MY_CUDA_ARCH})
     add_compile_definitions(USE_CU)
     include_directories(${CUDAToolkit_INCLUDE_DIRS})
+
+    # Find nvidia-smi and print GPU names
+    find_program(NVIDIA_SMI_EXECUTABLE nvidia-smi)
+    if(NVIDIA_SMI_EXECUTABLE)
+        execute_process(
+            COMMAND ${NVIDIA_SMI_EXECUTABLE} --query-gpu=name --format=csv,noheader
+            OUTPUT_VARIABLE GPU_NAMES
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        message(STATUS "Detected GPUs: ${GPU_NAMES}")
+    endif()
+
     if(MSVC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()
@@ -65,12 +76,45 @@ elseif(USE_CL)
     find_package(OpenCL REQUIRED)
     message(STATUS "Found OpenCL version ${OpenCL_CL_VERSION}")
     message(STATUS "Using OpenCL for compilation.")
-    message(STATUS "Using OpenCL for better flexibility on non-Nvidia CL-conformant and Nvidia GPUs:)")
+    message(STATUS "Using OpenCL for GPUs with OpenCL support:)")
     include_directories(${OpenCL_INCLUDE_DIRS})
+
+    # Create a temporary executable to get the OpenCL device name
+    set(GET_CL_DEVICE_SRC "${CMAKE_BINARY_DIR}/get_cl_device_name.cpp")
+    file(WRITE ${GET_CL_DEVICE_SRC}
+        "#include <iostream>\n"
+        "#include <vector>\n"
+        "#define CL_TARGET_OPENCL_VERSION 300\n"
+        "#if defined(_WIN64)\n"
+            "#include <CL/cl.hpp>\n"
+        "#elif defined(__linux__)\n"
+            "#include <CL/opencl.hpp>\n"
+        "#endif\n"
+        "int main() {\n"
+        "    cl_platform_id platform;\n"
+        "    if (clGetPlatformIDs(1, &platform, NULL) != CL_SUCCESS) return 1;\n"
+        "    cl_device_id device;\n"
+        "    if (clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL) != CL_SUCCESS) return 1;\n"
+        "    char name[1024];\n"
+        "    clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);\n"
+        "    std::cout << name;\n"
+        "    return 0;\n"
+        "}\n"
+    )
+    try_run(RUN_RESULT COMPILE_RESULT
+        ${CMAKE_BINARY_DIR}
+        ${GET_CL_DEVICE_SRC}
+        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${OpenCL_INCLUDE_DIRS}" "-DLINK_LIBRARIES=${OpenCL_LIBRARIES}"
+        RUN_OUTPUT_VARIABLE OPENCL_GPU_NAME)
+    message(STATUS "Detected OpenCL GPU: ${OPENCL_GPU_NAME}")
+
     add_compile_definitions(USE_CL)
 else()
     message(STATUS "OpenCL and CUDA not found or not using:(")
     message(STATUS "Using C++ on CPU for operations:)")
+    message(STATUS "CPU: ${CMAKE_SYSTEM_PROCESSOR}")
+    message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
+    message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
     add_compile_definitions(USE_CPU)
 endif()
 

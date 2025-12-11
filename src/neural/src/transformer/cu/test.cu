@@ -32,8 +32,7 @@ do {                                                                         \
  * @param sequence2 Sequence2 token embeddings (on host).
  * @param rString Tokens of the sequence2 (on host).
  */
-void transformer::cuTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2,
-    std::vector<std::string>& rString)
+void transformer::cuTest(std::vector<std::vector<float>>& sequence1, std::vector<std::string>& rString)
 {
 }
 

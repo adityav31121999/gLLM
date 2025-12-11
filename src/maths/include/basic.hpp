@@ -1,7 +1,6 @@
 // basic.hpp: header source of basic library
 #ifndef BASIC_HPP
 #define BASIC_HPP 1
-
 #include <iostream>
 #include <cmath>
 #include <vector>

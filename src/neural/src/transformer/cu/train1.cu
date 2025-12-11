@@ -44,10 +44,11 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
 
     // --- Variable Initialization ---
     float initial_learning_rate = learning; // Store initial learning rate
-    float current_error = 0.0            otok.clear(); otok.resize(d * x, 0.0f);
-            pred.clear(); pred.resize(vocabsize, 0.0f);
-            oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
-f;
+    float current_error = 0.0;
+    otok.clear(); otok.resize(d * x, 0.0f);
+    pred.clear(); pred.resize(vocabsize, 0.0f);
+    oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
+
     float prev_error = 0.0f;
     int initial_epochs = epochs;
     bool blockShifted = 0;

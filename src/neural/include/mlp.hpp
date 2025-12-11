@@ -168,15 +168,15 @@ public:
     mlp2d(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
     mlp2d(OpenCLContext& context, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #elif USE_CU || USE_CPU
-    mlp() = default;
+    mlp2d() = default;
     // Constructor when OpenCL is disabled
-    mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp(const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator
-    mlp2d(const mlp& other);
-    mlp2d& operator=(const mlp& other);
+    mlp2d(const mlp2d& other);
+    mlp2d& operator=(const mlp2d& other);
 
 #ifdef USE_CU
 
