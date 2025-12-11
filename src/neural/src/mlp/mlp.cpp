@@ -1,4 +1,3 @@
-
 #include "include/mlp.hpp"
 #include <stdexcept>
 #include <fstream>

@@ -319,9 +319,6 @@ public:
             throw std::runtime_error("OpenCL Error: No kernel names provided.");
         }
 
-        // The main try-catch for std::runtime_error can be kept if you want a general catch-all
-        // for other runtime errors, but cl::Error specific catches must be removed.
-        // try {
         // --- Platform and Device Selection (No changes needed) ---
         std::vector<cl::Platform> platforms;
         // Add retry logic for platform discovery, as it can fail with CL_OUT_OF_HOST_MEMORY
@@ -333,11 +330,12 @@ public:
                 std::cerr << "Warning: OpenCL cl::Platform::get failed with CL_OUT_OF_HOST_MEMORY. Retrying in 1 second..." << std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 retries--;
-            } else {
-                CL_CHECK(err); // Throw for any other error
+            }
+            else {
+                CL_CHECK(err);
             }
         }
-        CL_CHECK(err); // Check final status after retries
+        CL_CHECK(err); 
         if (platforms.empty()) {
             throw std::runtime_error("OpenCL Error: No platforms found.");
         }
@@ -451,8 +449,8 @@ public:
     }
 
     // Disable copy constructor and assignment operator (Good practice)
-    OpenCLContext(const OpenCLContext&) = default; // Now enabled
-    OpenCLContext& operator=(const OpenCLContext&) = default; // Now enabled
+    OpenCLContext(const OpenCLContext&) = default;
+    OpenCLContext& operator=(const OpenCLContext&) = default;
     // Allow move constructor and assignment (Good practice)
     OpenCLContext(OpenCLContext&&) = default; // Remains enabled
     OpenCLContext& operator=(OpenCLContext&&) = default;
@@ -487,5 +485,4 @@ public:
 };
 
 #endif
-
 #endif

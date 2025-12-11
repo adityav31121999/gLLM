@@ -10,10 +10,10 @@
 - **VERSION**: 0.1.1.1 (Memory mapped matrices)
 - **LICENSE**: MIT License
 - **PROGRAMMING LANGUAGES**: C, C++, OpenCL, CUDA
-  - *C VERSION*: 17
-  - *C++ VERSION*: 20
-  - *OpenCL VERSION*: 300
-  - *CUDA*: 12.6
+  - $C$ : 17
+  - $C++$ : 20
+  - $OpenCL$ : 300
+  - $CUDA$ : *Former*: 12.6, *Current*: 13.0
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
   - Attention Mechanism: Retention Mechanism

@@ -30,9 +30,8 @@ add_library(model STATIC
     src/token.cpp
 
     # training, testing, inference
-    src/training/train.cpp
-    src/testing/testpr.cpp
-    src/testing/testsent.cpp
+    src/train.cpp
+    src/test.cpp
     src/inference/chat.cpp
     src/inference/run.cpp
 )

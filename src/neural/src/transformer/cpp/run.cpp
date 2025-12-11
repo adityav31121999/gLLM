@@ -9,7 +9,7 @@
  * @brief run transformer for sequence1's sequence2
  * @param sequence1 sequence1 to get sequence2
  */
-void transformer::run() {
+void transformer::run(bool context) {
     if(currentTokenCount+sequence1Count >= FULL_CONTEXT) {
         throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT! SORRY -_-");
     }

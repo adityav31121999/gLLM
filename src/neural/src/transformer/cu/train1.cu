@@ -21,7 +21,7 @@ do {                                                                         \
 } while (0)
 
 /**
- * @brief (CUDA) Train the transformer on sentences or paragraphs
+ * @brief (CUDA) Train the transformer on sentences or paragraphs with embeddings only
  * @param sentence token embedding of sentence (on host)
  * @param rString sentence tokens (on host)
  */
@@ -44,10 +44,13 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
 
     // --- Variable Initialization ---
     float initial_learning_rate = learning; // Store initial learning rate
-    float current_error = 0.0f;
+    float current_error = 0.0            otok.clear(); otok.resize(d * x, 0.0f);
+            pred.clear(); pred.resize(vocabsize, 0.0f);
+            oneHotEncode.clear(); oneHotEncode.resize(vocabsize, 0.0f);
+f;
     float prev_error = 0.0f;
     int initial_epochs = epochs;
-    // bool blockShifted = 0;
+    bool blockShifted = 0;
     int effective_context_size = 0;
 
     // --- Device Buffer Allocation & H->D Transfer ---
@@ -238,12 +241,12 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
             effective_context_size++;
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
-                // blockShifted = true;
+                blockShifted = true;
                 tokenEmbed.addRow(sentence[i], currentTokenCount - 1); // repeat last token to new block
                 positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
             } else {
-                // blockShifted = false;
+                blockShifted = false;
             }
         }
     }

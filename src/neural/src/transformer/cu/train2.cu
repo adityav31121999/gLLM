@@ -52,7 +52,8 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sequence1, std::vecto
     float current_error = 0.0f;
     float prev_error = 0.0f;
     int initial_epochs = epochs;
-    // bool blockShifted = false;
+    int initial_token_count = currentTokenCount;
+    bool blockShifted = false;
     int effective_context_size = 0;
     int resCount = 0;
     int sequence1Count = 0;
@@ -421,12 +422,12 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sequence1, std::vecto
 
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
-                // blockShifted = true;
+                blockShifted = true;
                 tokenEmbed.addRow(sequence2[i], currentTokenCount - 1); // repeat last token to new block
                 positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
             } else {
-                // blockShifted = false;
+                blockShifted = false;
             }
         }
     }

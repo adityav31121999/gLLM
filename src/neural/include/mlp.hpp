@@ -133,6 +133,130 @@ public:
     ~mlp() = default; // Default destructor is fine
 };
 
+
+/**
+ * @brief Multi-layer Perceptron class (with No BIASES) with 2D input-output 
+ *  specifically designed for LLMs
+ */
+class mlp2d {
+public:
+// member variables
+    bool status;                // 1 if completely trained, 0 otherwise
+    unsigned int num_layers;    // Total number of layers (including input and output)
+    std::vector<unsigned int> layer_sizes;      // Number of neurons in each layer
+    unsigned int epochs;        // Training epochs
+    float learning_rate;        // Learning rate
+    float lambda_l1;            // L1 regularization parameter
+    float lambda_l2;            // L2 regularization parameter
+    unsigned int t;             // Time step for Adam (number of updates), initialized to 0
+
+// member containers
+    std::vector<std::vector<float>> input;      // input vector
+    std::vector<std::vector<float>> output;     // output vector
+    std::vector<std::vector<float>> expected;   // expected output vectors
+    std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
+    std::vector<std::vector<std::vector<float>>> hlayers;       // hidden layers (intermediate, might stay in RAM)
+    std::vector<std::vector<std::vector<float>>> activations;   // activations for each layer
+    std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
+    int params;                    // parameters in mlp
+
+    // Constructor(s) modified to accept OpenCLContext when needed
+#ifdef USE_CL
+    OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
+    // Constructor when OpenCL is enabled
+    mlp2d() = default;
+    mlp2d(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(OpenCLContext& context, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+#elif USE_CU || USE_CPU
+    mlp() = default;
+    // Constructor when OpenCL is disabled
+    mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp(const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+#endif
+
+    // Explicitly define copy constructor and copy assignment operator
+    mlp2d(const mlp& other);
+    mlp2d& operator=(const mlp& other);
+
+#ifdef USE_CU
+
+// cuda implementation for mlp
+    void cuForward(int in, int layers);
+    void cuBackward(int layers, int in, float learning);
+    void cuBackprop(int layers, int in, float learning);
+    void cuBackwithL1(int layers, int in, float learning);
+    void cuBackwithL2(int layers, int in, float learning);
+    void cuBackwithELasticNet(int layers, int in, float learning);
+    void cuBackprop2in(int layers, int in, float learning);
+    void cuRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
+    void cuTrain(float& mse, int in, int layers, float learning);
+    void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+
+#elif USE_CL
+
+// opencl implementation for mlp methods (will use clContext member)
+    void clForward(int in, int layers);
+    void clBackward(int layers, int in, float learning);
+    void clBackprop(int layers, int in, float learning);
+    void clBackwithL1(int layers, int in, float learning);
+    void clBackwithL2(int layers, int in, float learning);
+    void clBackwithElasticNet(int layers, int in, float learning);
+    void clBackprop2in(int layers, int in, float learning);
+    void clRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
+    void clTrain(float& mse, int in, int layers, float learning);
+    void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+
+#else
+
+    void forward(int in, int layers);
+    void backward(int layers, int in, float learning);
+    void backprop(int layers, int in, float learning);
+    void backwithL1(int layers, int in, float learning);
+    void backwithL2(int layers, int in, float learning);
+    void backwithElastic(int in, int layers, float learning);
+    void backprop2in(int layers, int in, float learning);
+    void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
+    void train(float& mse, int in, int layers, float learning);
+    void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+
+#endif
+    void initializeWeights();
+
+    // New method for initializing weights from a shared map region
+    void initializeWeightsFromSharedMap(
+        MappedFile* shared_handle, float* shared_base_ptr,
+        const std::string& path_to_shared_file,
+        size_t& current_byte_offset_in_shared_map, // Pass offset by reference to update it
+        bool training_mode_for_mlp) { 
+
+        weights.clear(); // Clear any existing weights
+        if (training_mode_for_mlp) gweights.clear();
+
+        for (size_t i = 0; i < num_layers - 1; ++i) {
+            unsigned int rows = layer_sizes[i + 1];
+            unsigned int cols = layer_sizes[i];
+            
+            weights.emplace_back(); // Add a default-constructed mat
+            weights.back().assign_shared_segment(shared_handle, shared_base_ptr,
+                                               current_byte_offset_in_shared_map,
+                                               rows, cols, path_to_shared_file);
+            current_byte_offset_in_shared_map += static_cast<size_t>(rows) * cols * sizeof(float);
+        }
+    }
+
+    void clearValues();
+    void serialise(unsigned long long offset, const std::string& locationWithFilename);
+    void deserialise(unsigned long long offset, const std::string& locationWithFilename);
+    void serialise4train(const std::string& locationWithFileName);
+    void serialise4use(const std::string& locationWithFileName);
+    
+    ~mlp2d() = default; // Default destructor is fine
+};
+
+// -------------------------------
+//          definitions
+// -------------------------------
+
 // Inline implementations for copy constructor and copy assignment operator
 inline mlp::mlp(const mlp& other) :
 #ifdef USE_CL
@@ -180,6 +304,10 @@ inline mlp& mlp::operator=(const mlp& other) {
 
     return *this;
 }
+
+// -------------------------------
+//          declarations
+// -------------------------------
 
 void write2filefrommlp(const mlp&, const std::string&);
 

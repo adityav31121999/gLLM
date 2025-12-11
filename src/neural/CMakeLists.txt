@@ -98,7 +98,6 @@ add_library(neural STATIC
         src/transformer/cu/train4.cu
         src/transformer/cu/test.cu
         src/transformer/cu/run.cu
-        src/transformer/cu/runbuffer.cu
     # opencl
         src/transformer/cl/clcompute.cpp
         src/transformer/cl/feedforcl.cpp
@@ -109,7 +108,6 @@ add_library(neural STATIC
         src/transformer/cl/train4cl.cpp
         src/transformer/cl/testcl.cpp
         src/transformer/cl/runcl.cpp
-        src/transformer/cl/runclbuffer.cpp
 )
 
 target_link_libraries(neural

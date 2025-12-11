@@ -27,7 +27,7 @@
  * @brief run transformer for single transformer
  * @param sequence1 sequence1 to be used for sequence2
  */
-void transformer::cuRun() {
+void transformer::cuRun(bool context) {
     // Set for inference
     inTraining = 0; 
     if (blocks.empty()) {

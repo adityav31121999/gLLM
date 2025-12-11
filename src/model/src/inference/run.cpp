@@ -13,6 +13,34 @@ void model::runModel(const std::string& binDirectory)
     std::cout << "You are now running the model " << info.modelName << std::endl;
     bool savechat;      // 1 to save chat
     bool newchat;       // 1 for new chat, 0 for endchat
+    bool contextChat;   // 0 for static and 1 for contextualised chat
+    std::cout << "TYPE OF CHAT STATIC(0) or CONTEXT(1): ";
+    std::cin >> contextChat;
+    if (contextChat == 0) {
+        std::cout << " -> Chat is static, using embedding matrix for predictions.";
+        if(!T.deEmbeddings.mapped_data) {
+            throw std::runtime_error ("Embedding matrix not available or loaded for static chat!");
+        }
+    }
+    else {
+        std::cout << " -> Chat is contextualised, using deEmbedding matrix for predictions.";
+        if(!T.deEmbeddings.mapped_data) {
+            std::cout << "De-embedding matrix not available or loaded for contextualised chat..." << std::endl;
+            bool shift;
+            std::cout << "Should we shift to static chat (0) or end the chat (1): ";
+            std::cin >> shift;
+            if (shift == 1) {
+                std::cout << "Ending chat..." << std::endl;
+                endChat();
+                throw std::runtime_error("De-embedding matrix not loaded or available, hence ended chat, try again.");
+            }
+            else {
+                std::cout << "Shifting to static chat " << std::endl;
+                contextChat = 0;
+            }
+        }
+    }
+
     // take input
     T.currentTokenCount = 0;
     // Construct file paths once, as 'dir' is constant here.
@@ -41,13 +69,13 @@ void model::runModel(const std::string& binDirectory)
             T.sequence1Count = tinput.size();
             #ifdef USE_CU
             // use cuda run function from transformer
-                T.cuRun();
+                T.cuRun(contextChat);
             #elif USE_CL
             // use cl run function from transformer
-                T.clRun();
+                T.clRun(contextChat);
             #elif USE_CPU
             // use cpp run function from transformer
-                T.run();
+                T.run(contextChat);
             #endif
             if (chat != nullptr) {
                 // Check if the file pointer is valid

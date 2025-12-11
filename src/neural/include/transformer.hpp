@@ -116,11 +116,8 @@ public:
     void cuTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void cuTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void cuTest(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void cuRun();
-    void cuRunContext();
-    void cuBufferRun();
-    void cuBufferRunContext();
+    void cuTest(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
+    void cuRun(bool context);
 
 #elif USE_CL
 
@@ -140,10 +137,7 @@ public:
     void clTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
-    void clRun();
-    void clRunContext();
-    void clRunBuffer();
-    void clRunBufferContext();
+    void clRun(bool context);
 
 #else
 
@@ -162,9 +156,8 @@ public:
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void test(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void run();
-    void runContext();
+    void test(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
+    void run(bool context);
 
 #endif
 

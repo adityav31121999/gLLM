@@ -23,7 +23,7 @@ do {                                                                         \
 
 
 /**
- * @brief (CUDA) Train the transformer on sentences or paragraphs
+ * @brief (CUDA) Train the transformer on sentences or paragraphs with embeddings and de-embeddings
  * @param sentence token embedding of sentence (on host)
  * @param rString sentence tokens (on host)
  */
@@ -48,7 +48,7 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sentence, std:
     float current_error = 0.0f;
     float prev_error = 0.0f;
     int initial_epochs = epochs;
-    // bool blockShifted = false;
+    bool blockShifted = false;
     int effective_context_size = 0;
 
     // --- Device Buffer Allocation & H->D Transfer ---
@@ -259,13 +259,13 @@ void transformer::cuTrainContext(std::vector<std::vector<float>>& sentence, std:
 
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
-                // blockShifted = true;
+                blockShifted = true;
                 tokenEmbed.addRow(sentence[i], currentTokenCount - 1);
                 positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
             }
             else {
-                // blockShifted = false;
+                blockShifted = false;
             }
         }
         learning = initial_learning_rate;

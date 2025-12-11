@@ -83,7 +83,8 @@ void transformer::clTest(std::vector<std::vector<float>> &sequence1, std::vector
             }
             currentTokenCount = sequence1.size();
             effective_context_size = currentTokenCount;
-        } else {
+        }
+        else {
             // Simplified logic for testing: assume prompt fits in the current block
             if ( (currentTokenCount % CONTEXT_WIN) + sequence1.size() > CONTEXT_WIN) {
                 throw std::runtime_error("clTest: Prompt does not fit in the current block. This scenario is not handled in test function.");
@@ -141,7 +142,8 @@ void transformer::clTest(std::vector<std::vector<float>> &sequence1, std::vector
                         otok[(j * d) + k] = blocks[blockCount - 1].b[j][y - 1].EH[k];
                     }
                 }
-            } else {
+            }
+            else {
                 otok.assign(d, 0.0f);
                 for (int j = 0; j < x; ++j) {
                     for (int k = 0; k < d; ++k) {
@@ -166,7 +168,8 @@ void transformer::clTest(std::vector<std::vector<float>> &sequence1, std::vector
                     CL_CHECK(predKernel.setArg(3, d_result_index_buffer));
                     CL_CHECK(predKernel.setArg(4, static_cast<cl_int>(d * x)));
                     CL_CHECK(predKernel.setArg(5, static_cast<cl_int>(vocabsize)));
-                } else {
+                }
+                else {
                     CL_CHECK(predKernel.setArg(1, d_embeddings));
                     CL_CHECK(predKernel.setArg(2, d_result_index_buffer));
                     CL_CHECK(predKernel.setArg(3, static_cast<cl_int>(d)));
