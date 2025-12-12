@@ -1,4 +1,3 @@
-
 // tokens and their splitting for training
 #include "include/transformer.hpp"
 #include <sstream>

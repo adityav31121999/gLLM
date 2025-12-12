@@ -18,10 +18,10 @@ float sigmoid(const float& x) {
     // The sigmoid function is defined as 1 / (1 + exp(-x)).
     // Use std::exp for clarity and standard library usage
     if (x >= 0.0f) {
-        float exp_neg_x = std::expf(-x);
+        float exp_neg_x = std::exp(-x);
         return 1.0f / (1.0f + exp_neg_x);
     } else {
-        float exp_x = std::expf(x);
+        float exp_x = std::exp(x);
         return exp_x / (1.0f + exp_x);
     }
 }

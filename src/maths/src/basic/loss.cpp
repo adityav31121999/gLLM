@@ -1,6 +1,7 @@
 #include "include/basic.hpp"
 #include <stdexcept>
 #include <string>
+#include <cmath>
 
 /**
  * @brief Calculate the error between two vectors
@@ -137,7 +138,7 @@ float crossEntropy(std::vector<float>& y_true, std::vector<float>& y_pred) {
     }
 
     // Compute loss for the one-hot index
-    loss = -std::logf(y_pred_softmax[one_hot_index] + epsilon);
+    loss = -std::log(y_pred_softmax[one_hot_index] + epsilon);
     return loss;
 }
 

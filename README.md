@@ -3,7 +3,22 @@
 ![alt text](gLLMicon.svg)
 
 - This idea is inspired by the need to train an AI Model on gaming gpu or sigle gpu without causing heavy burden on VRAM and GPU computes.
-- This library is an experimental implementation of DCA.
+- This library is an experimental implementation of DCA as explained in ![alt text](docs/DCA%20paper%201.pdf) and ![alt](docs/gLLM_idea.pdf).
+- Later, I generalised the idea for increasing the context of LLMs.
+
+## Mechanism
+- This mechanism is a modification to Attention Mechanism defined in paper "Attention Is All You Need" by VASWANI et. al. (2017).
+- Also, I would direct all the readers to 3BLUE1BROWN YouTube channel where the Deep Learning Playlist is available and the main inspiration about the idea came from there.
+- This modification provides retention of context via horizontal flow using EH and vertical flow using EV.
+- The losses are decreased through multiple iterations of EV for maximum retention. While EH keeps updating Head by Head, EV is processed and updated at every head and all its rows get ReLUed MLP output.
+
+### Main IDEA:
+- The main idea is to break long context into various small equal parts (Context Window) and introduce two new matrices for Horizontal and Vertical retention in place of Value matrix, having horizontal retention vector for token prediction and vertical retention vectors for context retention in next block.
+- These two new matrices are taken from value matrix as V = Up_projection x Down_projection (refer to playlist) and this V is replaced by MH and MV with two MLPs for forward propagation in horizontal direction and forward propagation in vertical direction.
+- The new mechanism has structure three main components as head, block and transformer.
+- Head is the primary attention mechanism. Block is the 2d vector of Heads with each row being termed as partial attention and each column as parallel. Transformer is the vector of such blocks. So, the structure is 3d vector of heads, with head being a primary unit where majority of process takes place.
+- Head is referred as incomplete attention, rows of head as partial attention and Block as complete attention due to the nature of final prediction being obtained by summing up the partial attentions.
+- Transformer is referred as FULL context since it comprises of all blocks with equal context window.
 
 ## INTRO
 - Library for LLMs
@@ -58,20 +73,6 @@ IMP:
 
 ### bin
 - Output directory for compiled binaries: .lib (static) and .dll (dynamic)
-
-## Mechanism
-- This mechanism is a modification to Attention Mechanism defined in paper "Attention Is All You Need" by VASWANI et. al. (2017).
-- Also, I would direct all the readers to 3BLUE1BROWN YouTube channel where the Deep Learning Playlist is available and the main inspiration about the idea came from there.
-- This modification provides retention of context via horizontal flow using EH and vertical flow using EV.
-- The losses are decreased through multiple iterations of EV for maximum retention. While EH keeps updating Head by Head, EV is processed and updated at every head and all its rows get ReLUed MLP output.
-
-### Main IDEA:
-- The main idea is to break long context into various small equal parts (Context Window) and introduce two new matrices for Horizontal and Vertical retention in place of Value matrix, having horizontal retention vector for token prediction and vertical retention vectors for context retention in next block.
-- These two new matrices are taken from value matrix as V = Up_projection x Down_projection (refer to playlist) and this V is replaced by MH and MV with two MLPs for forward propagation in horizontal direction and forward propagation in vertical direction.
-- The new mechanism has structure three main components as head, block and transformer.
-- Head is the primary attention mechanism. Block is the 2d vector of Heads with each row being termed as partial attention and each column as parallel. Transformer is the vector of such blocks. So, the structure is 3d vector of heads, with head being a primary unit where majority of process takes place.
-- Head is referred as incomplete attention, rows of head as partial attention and Block as complete attention due to the nature of final prediction being obtained by summing up the partial attentions.
-- Transformer is referred as FULL context since it comprises of all blocks with equal context window.
 
 ### Components
 **MLP**:

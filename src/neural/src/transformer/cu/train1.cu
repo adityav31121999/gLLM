@@ -51,7 +51,6 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
 
     float prev_error = 0.0f;
     int initial_epochs = epochs;
-    bool blockShifted = 0;
     int effective_context_size = 0;
 
     // --- Device Buffer Allocation & H->D Transfer ---
@@ -242,12 +241,9 @@ void transformer::cuTrain(std::vector<std::vector<float>>& sentence, std::vector
             effective_context_size++;
             if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
                 blockCount += 1;
-                blockShifted = true;
                 tokenEmbed.addRow(sentence[i], currentTokenCount - 1); // repeat last token to new block
                 positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
                 std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
-            } else {
-                blockShifted = false;
             }
         }
     }
