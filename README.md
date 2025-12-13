@@ -3,7 +3,7 @@
 ![alt text](gLLMicon.svg)
 
 - This idea is inspired by the need to train an AI Model on gaming gpu or sigle gpu without causing heavy burden on VRAM and GPU computes.
-- This library is an experimental implementation of DCA as explained in ![alt text](docs/DCA%20paper%201.pdf) and ![alt](docs/gLLM_idea.pdf).
+- This library is an experimental implementation of DCA as explained in **![DCA paper 1.pdf](docs/DCA%20paper%201.pdf)** and **![gLLM_idea.pdf](docs/gLLM_idea.pdf)**.
 - Later, I generalised the idea for increasing the context of LLMs.
 
 ## Mechanism
