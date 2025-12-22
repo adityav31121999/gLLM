@@ -9,11 +9,11 @@
 #include <map>
 
 #define LAYERS_MLP 4                        // layers of mlp
-#define EPOCHS 100                          // number of epochs for training of token
 #define LEARNING_MAX 0.01f                  // maximum learning rate allowable
 #define LEARNING_MIN 0.0001f                // minimum learning rate allowable
 #define LR_PATIENCE 10                      // for learning rate adaptability by plateau
 #define MAX_GRAD_CLIP 0.5f                  // maximum gradient clipping
+#define EPOCHS 100                          // number of epochs for training of token
 
 /**
  * @brief Multi-layer Perceptron class (with No BIASES) specifically designed for LLMs
@@ -47,7 +47,7 @@ public:
     mlp() = default;
     mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
     mlp(OpenCLContext& context, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-#elif USE_CU || USE_CPU
+#else
     mlp() = default;
     // Constructor when OpenCL is disabled
     mlp(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
@@ -100,6 +100,7 @@ public:
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
 
 #endif
+
     void initializeWeights();
 
     // New method for initializing weights from a shared map region
@@ -142,8 +143,11 @@ class mlp2d {
 public:
 // member variables
     bool status;                // 1 if completely trained, 0 otherwise
+    int inHeight;               // input height
+    int inWidth;                // input width
     unsigned int num_layers;    // Total number of layers (including input and output)
     std::vector<unsigned int> layer_sizes;      // Number of neurons in each layer
+    int outWidth;               // output width
     unsigned int epochs;        // Training epochs
     float learning_rate;        // Learning rate
     float lambda_l1;            // L1 regularization parameter
@@ -165,13 +169,13 @@ public:
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
     mlp2d() = default;
-    mlp2d(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp2d(OpenCLContext& context, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-#elif USE_CU || USE_CPU
+    mlp2d(OpenCLContext& context, const int inH, const inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(OpenCLContext& context, const int inH, const inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+#else
     mlp2d() = default;
     // Constructor when OpenCL is disabled
-    mlp2d(const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp2d(const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(const int inH, const int inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(const int inH, const int inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator
@@ -220,6 +224,7 @@ public:
     void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
 
 #endif
+
     void initializeWeights();
 
     // New method for initializing weights from a shared map region

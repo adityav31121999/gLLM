@@ -84,14 +84,14 @@ void transformer::forward_ev(int &blockCount, int &currentTokenCount, int &seque
     // compute the KdotQ
     // computeKdotQs(sequence1Count, currentTokenCount, blockCount, isSelf, inTraining);
     if(blockCount == 0) {
-        blocks[0].forprop(d, currentTokenCount, l, 1);
+        blocks[0].forpropev(d, currentTokenCount, l, 1);
         // computeOutput(otok, tokenEmbed, vocabsize, indexForToken);
     }
     else {
         if (blockCount > 0 && static_cast<size_t>(blockCount-1) < blocks.size() && 
             (blockCount == 1 || static_cast<size_t>(blockCount-2) < blocks.size())) 
         {
-            blocks[blockCount-1].forprop((blockCount > 1 ? blocks[blockCount-2].EV : EVuse), d, currentTokenCount, blockCount, l, n);
+            blocks[blockCount-1].forpropev((blockCount > 1 ? blocks[blockCount-2].EV : EVuse), d, currentTokenCount, blockCount, l, n);
         } 
         else if (blockCount < 0 || blockCount > m) {
             throw std::runtime_error("transformer::forward: Invalid block indices for forprop in else branch.");

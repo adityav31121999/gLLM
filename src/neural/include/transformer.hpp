@@ -7,13 +7,14 @@
 #include <fstream>
 #include <map>
 #include <maths.hpp>
+#include "mlp.hpp"
 #include "attention.hpp"
 #include "block.hpp"
 
 /**
  * @brief Transformer (FULL CONTEXT) class for token/chunk prediction and context 
- * retention. This can be single or multi-block architecture based on use case i.e.,
- * single block for operation or application or use and multi-block for training.
+ * retention. This can be single or multi-block architecture based on use case
+ * i.e., single block for operation or application or use and multi-block for training.
  */
 class transformer {
 public:
@@ -181,6 +182,7 @@ public:
 
     ~transformer() = default;
 };
+
 
 std::string toLower(const std::string& str);
 

@@ -1,5 +1,4 @@
 #ifdef USE_CPU
-
 // backward propagation for blocks
 #include "include/attention.hpp"
 #include "include/block.hpp"

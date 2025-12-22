@@ -1,29 +1,21 @@
-
+#ifdef USE_CPU
 #include "include/transformer.hpp"
 #include <chrono>
 #include <iostream>
 
-#ifdef USE_CPU
-
 /**
- * @brief run transformer for sequence1's sequence2
- * @param sequence1 sequence1 to get sequence2
+ * @brief run transformer for prompt
+ * @param sequence1 prompt by user as input
  */
 void transformer::run(bool context) {
     if(currentTokenCount+sequence1Count >= FULL_CONTEXT) {
-        throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT! SORRY -_-");
+        throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT! FURTHER PROCESS CANNOT TAKE PLACE -_-");
     }
-    int c = std::abs(currentTokenCount - (blockCount-1)*CONTEXT_WIN);
+
+    int c = std::abs(currentTokenCount - (blockCount - 1) * CONTEXT_WIN);
     // under local context
     if(c + sequence1Count <= CONTEXT_WIN) {
         // when first block, tokenEmbed is directly utilised
-        if(blockCount > 1) {
-            for(int k = 0; k < sequence1Count; k++) {
-                for(int i = 0; i < EMBEDDING; i++) {
-                    tokForBlock(c + k, i) = tokenEmbed(currentTokenCount + k, i);
-                }
-            }
-        }
         for(int i = 0; i < x; i++) {
             for(int j = 0; j < y; j++) {
                 for(int k = 0; k < sequence1Count; k++) {
@@ -33,9 +25,17 @@ void transformer::run(bool context) {
                 }
             }
         }
+        // when second to last blocks, use tokForBlock for KdotQ calculations and other purposes
+        if(blockCount > 1) {
+            for(int k = 0; k < sequence1Count; k++) {
+                for(int i = 0; i < EMBEDDING; i++) {
+                    tokForBlock(c + k, i) = tokenEmbed(currentTokenCount + k, i);
+                }
+            }
+        }
     }
-    // if it goes over context window, increment to next block
-    if(c + sequence1Count > CONTEXT_WIN) {
+    // if it goes over local context, shift to next block
+    else if(c + sequence1Count > CONTEXT_WIN) {
         int m1 = c + sequence1Count - CONTEXT_WIN;     // part of sequence1 in next block
         int m2 = CONTEXT_WIN - c;   // available space in this block
         // add sequence1 to EVs and tokforblock
@@ -75,7 +75,8 @@ void transformer::run(bool context) {
         currentTokenCount += m2;
         blockCount += 1;
     }
-    // caculate sequence2
+
+    // caculate for sequence2
     int rCount = 0;
     auto start_time = std::chrono::high_resolution_clock::now();
     while (1) { // Removed int k, l; declaration, will use specific float variables for sums

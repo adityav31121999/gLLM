@@ -143,12 +143,14 @@ public:
     void parallelKdotQ(int& columnNumber, int& tokenCount);
     // partial attention forprop
     void partialforprop(int& in, int& tokenCount, int i, int& layers);
-    void partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, 
-                int& n);
+    void partialforprop(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
+    void partialforpropev(int& in, int& tokenCount, int i, int& layers);
+    void partialforpropev(std::vector<std::vector<std::vector<float>>>& EVp, int& in, int& tokenCount, int& blockCount, int i, int& layers, int& n);
     // parallel partialforprop(i)
     void forprop(int& in, int& tokenCount, int& layers, int blockCount);
-    void forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, 
-                int& n);
+    void forprop(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
+    void forpropev(int& in, int& tokenCount, int& layers, int blockCount);
+    void forpropev(std::vector<std::vector<std::vector<std::vector<float>>>>& EVp, int& in, int& tokenCount, int& blockCount, int& layers, int& n);
     // partial attention backward
     void partialbackward1stBlock(std::vector<float>& expectedH, int& in, int& layers, int layno, float& learning);
     void partialbackward1stBlock(std::vector<std::vector<float>>& expectedH, int& in, int& layers, int layno, float& learning);

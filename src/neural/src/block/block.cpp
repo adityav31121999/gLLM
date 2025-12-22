@@ -485,7 +485,6 @@ block::block(OpenCLContext& context, const std::string& blockName, int x_layers,
                                         << static_cast<float>(params * sizeof(float)) / (1024 * 1024) << " MBs)" << std::endl;
 }
 
-
 #endif
 
 // --- Common Member Functions ---
