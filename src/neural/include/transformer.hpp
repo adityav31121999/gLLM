@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <maths.hpp>
@@ -115,8 +116,12 @@ public:
     void cuBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void cuTrainBatch(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void cuTrainBatch(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void cuTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void cuTrainBatchContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void cuTrainBatchContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void cuTest(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
     void cuRun(bool context);
 
@@ -135,8 +140,12 @@ public:
     void clBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void clTrainBatch(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void clTrainBatch(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void clTrainBatchContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void clTrainBatchContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTest(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
     void clRun(bool context);
 
@@ -155,8 +164,12 @@ public:
                             float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
     void train(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void trainBatch(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void trainBatch(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void trainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+    void trainBatchContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void trainBatchContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void test(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
     void run(bool context);
 

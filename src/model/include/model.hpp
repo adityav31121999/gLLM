@@ -61,6 +61,7 @@ public:
 // paths
     std::string baseDir;            // Base directory for model files (e.g., D:/train)
     std::string currentChatLogPath; // Stores the path of the currently open chat log file
+    std::string allFiles;           // csv of all training .txt files
 
 // using these strings, embeddings are provided to the transformer t (for training and application)
     std::string userSequence1;                 // user sequence1
@@ -116,7 +117,8 @@ public:
     // train seq2seq and sequence with context in consideration
     void trainSeq2Seq(const std::string& txtFileLocation, int context_window, bool contextTrain);
     void trainSequence(const std::string& txtFileLocation, int context_window, bool contextTrain);
-    void test(const std::string& txtFileLocation, int context_window, bool contextTrain);
+    void train(const std::string& path2txtDir, int context_window, bool contextTrain, bool trainType);
+    void test(const std::string& path2txtDir, int context_window, bool contextTrain);
 
     // get offsets for layout and components
     void calculateAndSetLayout();

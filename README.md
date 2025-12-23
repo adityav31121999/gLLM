@@ -1,10 +1,9 @@
 # gLLM - AI/ML Library for creating LLMs
 
-![alt text](gLLMicon.svg)
+<p align="center"><img src="gLLMicon.svg" alt="alt text" width="50%"></p>
 
 - This idea is inspired by the need to train an AI Model on gaming gpu or sigle gpu without causing heavy burden on VRAM and GPU computes.
-- This library is an experimental implementation of DCA as explained in **![DCA paper 1.pdf](docs/DCA%20paper%201.pdf)** and **![gLLM_idea.pdf](docs/gLLM_idea.pdf)**.
-- Later, I generalised the idea for increasing the context of LLMs.
+- This library is an experimental implementation of DCA.
 
 ## Mechanism
 - This mechanism is a modification to Attention Mechanism defined in paper "Attention Is All You Need" by VASWANI et. al. (2017).
@@ -20,9 +19,8 @@
 - Head is referred as incomplete attention, rows of head as partial attention and Block as complete attention due to the nature of final prediction being obtained by summing up the partial attentions.
 - Transformer is referred as FULL context since it comprises of all blocks with equal context window.
 
-## INTRO
+## PROJECT
 - Library for LLMs
-- **VERSION**: 0.1.1.1 (Memory mapped matrices)
 - **LICENSE**: MIT License
 - **PROGRAMMING LANGUAGES**: C, C++, OpenCL, CUDA
   - $C$ : 17
@@ -34,6 +32,23 @@
   - Attention Mechanism: Retention Mechanism
   - Transformer Architecture: Divided context
   - Neural Connections: Dense
+
+### PROJECT VERSIONS
+- **0.0.0.1**: This is to test the library, yet to be production ready
+- **0.1.0.1**: pre-release of gLLM
+- **0.1.1.1**:
+  - Polished Version
+  - Inference, Testing and Validation not ready yet
+  - Many functions cleaned and certain removed
+- **0.1.2.1**:
+  - new tokenisation (bpe-based) process for better vocabulary
+  - robust training with adaptive learning rate
+- **0.1.3.1**:
+  - training with all backends now works better
+  - adaptive learning is good
+  - fast convergence
+- **0.1.5.1**:
+  - Contextualised training works better for all backends
 
 ## Project Structure
 - **memorymap**: Memory Mapping for large objects like mat and mlp
@@ -188,7 +203,7 @@ IMP:
   - Caches: QK.bin, QV.bin, KH.bin (For Use only)
 - To access them head offset and block offset must be known
 - This table gives the total values, dimension, single offset and block offset of each file
---------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 | NAME | DIM1 | DIM2 | DIM3 | SINGLE OFFSET | BLOCK OFFSET | QUANTITY | TOTAL PARAMETERS |
 |------|------|------|------|---------------|--------------|----------|------------------|
 | MQ   | h    | d    | 1    | h*d           | h.d.x.y      | x.y.m    | h.d.x.y.m        |
@@ -200,7 +215,7 @@ IMP:
 | QK   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
 | QV   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
 | KH   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
---------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 - Here single offset refers to total number of values in single object i.e., Matrix, MLP or cache
 - Block Offset refers to total number of values of specific object in the single block i.e., number of object (matrix or mlp or cache) * single offset = x * y * single offset
 - In the table: `h` refers to `MATHEIGHTS` (e.g., 1024), `d` refers to `EMBEDDING` dimension (e.g., 64), and `l` refers to the number of weight matrices in an MLP (e.g., `LAYERS_MLP - 1`).
@@ -241,4 +256,5 @@ Q[m][x][y] = --------------------------------------------------------------
     - COPILOT
 
 ## Refernce
+
 -  Vaswani, Ashish, Shazeer, Noam, Parmar, Niki, Uszkoreit, Jakob, Jones, Llion, Gomez, Aidan N., Kaiser, Lukasz, and Polosukhin, Illia Attention is all you need. 2017. https://doi.org/10.48550/arXiv.1706.03762

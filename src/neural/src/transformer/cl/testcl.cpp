@@ -192,7 +192,7 @@ void transformer::clTest(std::vector<std::vector<float>> &sequence1, std::vector
             // --- Update state for next iteration ---
             std::vector<float> next_token_embed = embeddings(predicted_idx);
             tokenEmbed.addRow(next_token_embed + positionalEmbeddings(currentTokenCount, d), currentTokenCount);
-            
+
             currentTokenCount++;
             effective_context_size++;
 

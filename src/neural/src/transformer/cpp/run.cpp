@@ -12,6 +12,10 @@ void transformer::run(bool context) {
         throw std::runtime_error("TOKEN LIMIT REACHED AT FULL CONTEXT! FURTHER PROCESS CANNOT TAKE PLACE -_-");
     }
 
+    if(sequence1Count == 0) {
+        throw std::runtime_error("run: Prompt cannot be empty.");
+    }
+
     int c = std::abs(currentTokenCount - (blockCount - 1) * CONTEXT_WIN);
     // under local context
     if(c + sequence1Count <= CONTEXT_WIN) {

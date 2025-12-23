@@ -7,6 +7,7 @@
 
 /**
  * @brief run model for conversation
+ * @param binDirectory path to binary files directory
  */
 void model::runModel(const std::string& binDirectory)
 {
@@ -63,8 +64,8 @@ void model::runModel(const std::string& binDirectory)
             std::vector<float> pValues(EMBEDDING, 0.0f);
             for(int i = 0; i < tinput.size(); i++) {
                 // get embeddings for tokens
-                pValues = TOK.getEmbeddingForToken(tinput[i]);
-                setRow( T.tokenEmbed, T.currentTokenCount+i, pValues);
+                pValues = TOK.getEmbeddingForToken(tinput[i]) + T.positionalEmbeddings(T.currentTokenCount+i, EMBEDDING);
+                setRow(T.tokenEmbed, T.currentTokenCount+i, pValues);
             }
             T.sequence1Count = tinput.size();
             #ifdef USE_CU

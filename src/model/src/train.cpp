@@ -6,6 +6,8 @@
 #include <neural.hpp>
 #include <maths.hpp>
 #include <chrono>
+#include <map>
+#include <algorithm>
 
 /// -------------- single continuous sequence training -------------- ///
 
@@ -372,4 +374,81 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "Total training time for file " << txtFileLocation << ": " << duration.count() << " ms" << std::endl;
     std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
+}
+
+
+/**
+ * @brief wrapper train function for both seq2seq and sequence training. This function checks which which
+ *  file have been used for training in previous sessions and from where to start.
+ * @param path2txtDir path to directory of all text files
+ * @param context_window context of window of block (local context)
+ * @param trainType trainType = 1 for seq2seq else 0 for sequence.
+ */
+void model::train(const std::string &path2txtDir, int context_window, bool contextTrain, bool trainType)
+{
+    if (path2txtDir.empty()) {
+        throw std::runtime_error("Training data directory path cannot be empty!");
+    }
+    if (!std::filesystem::exists(path2txtDir) || !std::filesystem::is_directory(path2txtDir)) {
+        throw std::runtime_error("Training data directory not found or is not a directory: " + path2txtDir);
+    }
+
+    // Use allFiles member if set, otherwise default to a file in the directory
+    if (allFiles.empty()) {
+        allFiles = (std::filesystem::path(path2txtDir) / "training_status.csv").string();
+    }
+
+    // Load existing status
+    std::map<std::string, int> fileStatus;
+    if (std::filesystem::exists(allFiles)) {
+        std::ifstream infile(allFiles);
+        std::string line;
+        while (std::getline(infile, line)) {
+            if (line.empty()) continue;
+            std::stringstream ss(line);
+            std::string fname, statusStr;
+            if (std::getline(ss, fname, ',') && std::getline(ss, statusStr)) {
+                try {
+                    fileStatus[fname] = std::stoi(statusStr);
+                } catch (...) {}
+            }
+        }
+    }
+
+    std::vector<std::string> filesPaths;
+    for (const auto& entry : std::filesystem::directory_iterator(path2txtDir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".txt") {
+            filesPaths.push_back(entry.path().string());
+        }
+    }
+    std::sort(filesPaths.begin(), filesPaths.end());
+
+    for(const auto& filePath : filesPaths) {
+        std::string fileName = std::filesystem::path(filePath).filename().string();
+
+        // check which files on which training has been done from csv
+        // skip files who has 1 in their next column and start from files with 0 in their column
+        if (fileStatus.count(fileName) && fileStatus[fileName] == 1) {
+            std::cout << "Skipping processed file: " << fileName << std::endl;
+            continue;
+        }
+
+        std::cout << "Processing file: " << fileName << std::endl;
+
+        if (trainType == 1) {
+            trainSeq2Seq(filePath, context_window, contextTrain);
+        }
+        else {
+            trainSequence(filePath, context_window, contextTrain);
+        }
+
+        // Mark as done and save
+        fileStatus[fileName] = 1;
+        std::ofstream outfile(allFiles);
+        if (outfile.is_open()) {
+            for (const auto& pair : fileStatus) {
+                outfile << pair.first << "," << pair.second << "\n";
+            }
+        }
+    }
 }
