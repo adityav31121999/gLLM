@@ -169,8 +169,8 @@ public:
     OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
     // Constructor when OpenCL is enabled
     mlp2d() = default;
-    mlp2d(OpenCLContext& context, const int inH, const inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp2d(OpenCLContext& context, const int inH, const inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(OpenCLContext& context, const int inH, const int inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(OpenCLContext& context, const int inH, const int inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #else
     mlp2d() = default;
     // Constructor when OpenCL is disabled

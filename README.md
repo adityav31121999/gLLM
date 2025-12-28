@@ -1,6 +1,6 @@
 # gLLM - AI/ML Library for creating LLMs
 
-<p align="center"><img src="gLLMicon.svg" alt="alt text" width="50%"></p>
+![alt text](gLLMicon.svg)
 
 - This idea is inspired by the need to train an AI Model on gaming gpu or sigle gpu without causing heavy burden on VRAM and GPU computes.
 - This library is an experimental implementation of DCA.
@@ -29,7 +29,7 @@
   - $CUDA$ : *Former*: 12.6, *Current*: 13.0
 - **PROJECT BUILD SYSTEM**: CMake
 - **Model Architecture**:
-  - Attention Mechanism: Retention Mechanism
+  - Attention Mechanism: Retention-based Mechanism
   - Transformer Architecture: Divided context
   - Neural Connections: Dense
 
@@ -47,8 +47,10 @@
   - training with all backends now works better
   - adaptive learning is good
   - fast convergence
+- **0.1.4.1**: Contextualised Training
 - **0.1.5.1**:
   - Contextualised training works better for all backends
+  - Inference and Testing functions for all backends
 
 ## Project Structure
 - **memorymap**: Memory Mapping for large objects like mat and mlp
@@ -203,7 +205,7 @@ IMP:
   - Caches: QK.bin, QV.bin, KH.bin (For Use only)
 - To access them head offset and block offset must be known
 - This table gives the total values, dimension, single offset and block offset of each file
-------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------
 | NAME | DIM1 | DIM2 | DIM3 | SINGLE OFFSET | BLOCK OFFSET | QUANTITY | TOTAL PARAMETERS |
 |------|------|------|------|---------------|--------------|----------|------------------|
 | MQ   | h    | d    | 1    | h*d           | h.d.x.y      | x.y.m    | h.d.x.y.m        |
@@ -215,7 +217,7 @@ IMP:
 | QK   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
 | QV   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
 | KH   | d    | d    | 1    | d*d           | d.d.x.y      | x.y.m    | d.d.x.y.m        |
-------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------
 - Here single offset refers to total number of values in single object i.e., Matrix, MLP or cache
 - Block Offset refers to total number of values of specific object in the single block i.e., number of object (matrix or mlp or cache) * single offset = x * y * single offset
 - In the table: `h` refers to `MATHEIGHTS` (e.g., 1024), `d` refers to `EMBEDDING` dimension (e.g., 64), and `l` refers to the number of weight matrices in an MLP (e.g., `LAYERS_MLP - 1`).
@@ -256,5 +258,4 @@ Q[m][x][y] = --------------------------------------------------------------
     - COPILOT
 
 ## Refernce
-
 -  Vaswani, Ashish, Shazeer, Noam, Parmar, Niki, Uszkoreit, Jakob, Jones, Llion, Gomez, Aidan N., Kaiser, Lukasz, and Polosukhin, Illia Attention is all you need. 2017. https://doi.org/10.48550/arXiv.1706.03762
