@@ -8,19 +8,21 @@
     #ifdef __linux__
         std::string path2Folder = "/home/adi23444/code/";
     #else
-        std::string path2Folder = "D:/";
+        std::string path2Folder = "D:/gLLMo";
     #endif
 
     // Source files - Paths relative to this header file's location
     std::vector<std::string> kernelSourceFiles = {
-        path2Folder + "gLLM/src/maths/src/basic/cl/activations.cl",
-        path2Folder + "gLLM/src/maths/src/basic/cl/vect.cl",
-        path2Folder + "gLLM/src/maths/src/mat/cl/operators.cl",
-        path2Folder + "gLLM/src/neural/src/mlp/cl/mlp.cl",
-        path2Folder + "gLLM/src/neural/src/attention/cl/attention.cl",
-        path2Folder + "gLLM/src/neural/src/attention/cl/kdotq.cl",
-        path2Folder + "gLLM/src/neural/src/attention/cl/weights.cl",
-        path2Folder + "gLLM/src/model/src/tokens/token.cl"
+        path2Folder + "/src/maths/src/basic/cl/activations.cl",
+        path2Folder + "/src/maths/src/basic/cl/vect.cl",
+        path2Folder + "/src/maths/src/mat/cl/operators.cl",
+        path2Folder + "/src/neural/src/mlp/cl/utils.cl",
+        path2Folder + "/src/neural/src/mlp/cl/mlp.cl",
+        path2Folder + "/src/neural/src/mlp/cl/mlp2d.cl",
+        path2Folder + "/src/neural/src/attention/cl/attention.cl",
+        path2Folder + "/src/neural/src/attention/cl/kdotq.cl",
+        path2Folder + "/src/neural/src/attention/cl/weights.cl",
+        path2Folder + "/src/model/src/tokens/token.cl"
     };
 
     // Kernel names - Must be unique across ALL source files loaded into the context

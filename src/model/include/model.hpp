@@ -86,16 +86,20 @@ public:
     // default constructor
 #ifdef USE_CL
     OpenCLContext& clcontext;
-    model(OpenCLContext& context, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
-    model(OpenCLContext& context, const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
+    model(OpenCLContext& context, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n,
+        int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
+        bool contextTrainModel, bool batchTraining);
+    model(OpenCLContext& context, const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, 
+        int m, int x, int y, int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, 
+        bool isSelfAttention, bool toTrainModel, bool contextTrainModel, bool batchTraining);
 #elif USE_CU || USE_CPU
     model() = default;
     model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
-    model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, int n, int d, int matheight, 
-        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel);
+        int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel, bool contextTrainModel,
+        bool batchTraining);
+    model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y,
+        int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, bool toTrainModel,
+        bool contextTrainModel, bool batchTraining);
 #endif
 
     void setLearning(float learning);

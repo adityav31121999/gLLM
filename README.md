@@ -48,9 +48,13 @@
   - adaptive learning is good
   - fast convergence
 - **0.1.4.1**: Contextualised Training
-- **0.1.5.1**:
+- **0.1.5.0**:
   - Contextualised training works better for all backends
   - Inference and Testing functions for all backends
+  - Fast training
+- **0.2.0.1**:
+  - Batch Training Implementation
+  - Vision Support
 
 ## Project Structure
 - **memorymap**: Memory Mapping for large objects like mat and mlp

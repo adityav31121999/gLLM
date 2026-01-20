@@ -10,7 +10,7 @@
 
 #define LAYERS_MLP 4                        // layers of mlp
 #define LEARNING_MAX 0.01f                  // maximum learning rate allowable
-#define LEARNING_MIN 0.0001f                // minimum learning rate allowable
+#define LEARNING_MIN 0.00001f               // minimum learning rate allowable
 #define LR_PATIENCE 10                      // for learning rate adaptability by plateau
 #define MAX_GRAD_CLIP 0.5f                  // maximum gradient clipping
 #define EPOCHS 100                          // number of epochs for training of token
@@ -30,19 +30,28 @@ public:
     float lambda_l2;            // L2 regularization parameter
     unsigned int t;             // Time step for Adam (number of updates), initialized to 0
 
+    std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
+
 // member containers
     std::vector<float> input;      // input vector
     std::vector<float> output;     // output vector
     std::vector<float> expected;   // expected output vectors
-    std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
     std::vector<std::vector<float>> hlayers;       // hidden layers (intermediate, might stay in RAM)
     std::vector<std::vector<float>> activations;   // activations for each layer
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
 
+    // member containers
+    std::vector<std::vector<float>> inBatch;        // input vector
+    std::vector<std::vector<float>> outBatch;       // output vector
+    std::vector<std::vector<float>> expBatch;       // expected output vectors
+    std::vector<std::vector<std::vector<float>>> hBatch;    // hidden layers (intermediate, might stay in RAM)
+    std::vector<std::vector<std::vector<float>>> actBatch;  // activations for each layer
+    std::vector<std::vector<mat>> gwBatch;          // Gradient matrices corresponding to weights (using memory-mapped mat)
+
     // Constructor(s) modified to accept OpenCLContext when needed
 #ifdef USE_CL
-    OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
+    OpenCLContext& clContext;
     // Constructor when OpenCL is enabled
     mlp() = default;
     mlp(OpenCLContext& context, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
@@ -154,28 +163,37 @@ public:
     float lambda_l2;            // L2 regularization parameter
     unsigned int t;             // Time step for Adam (number of updates), initialized to 0
 
+    std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
+
 // member containers
     std::vector<std::vector<float>> input;      // input vector
     std::vector<std::vector<float>> output;     // output vector
     std::vector<std::vector<float>> expected;   // expected output vectors
-    std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
     std::vector<std::vector<std::vector<float>>> hlayers;       // hidden layers (intermediate, might stay in RAM)
     std::vector<std::vector<std::vector<float>>> activations;   // activations for each layer
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
 
-    // Constructor(s) modified to accept OpenCLContext when needed
+    std::vector<std::vector<std::vector<float>>> inBatch;       // input vector
+    std::vector<std::vector<std::vector<float>>> outBatch;      // output vector
+    std::vector<std::vector<std::vector<float>>> expBatch;      // expected output vectors
+    std::vector<std::vector<std::vector<std::vector<float>>>> hBatch;       // hidden layers (intermediate, might stay in RAM)
+    std::vector<std::vector<std::vector<std::vector<float>>>> actBatch;     // activations for each layer
+    std::vector<std::vector<mat>> gwBatch;                      // Gradient matrices corresponding to weights (using memory-mapped mat)
+
 #ifdef USE_CL
-    OpenCLContext& clContext; // <-- THIS CALL TRIGGERS THE PROCESS
-    // Constructor when OpenCL is enabled
+    OpenCLContext& clContext;
     mlp2d() = default;
-    mlp2d(OpenCLContext& context, const int inH, const int inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp2d(OpenCLContext& context, const int inH, const int inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(OpenCLContext& context, const int inH, const int inW, const int outWidth, const std::vector<unsigned int>& layerSizes,
+        unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(OpenCLContext& context, const int inH, const int inW, const int outWidth, const std::string& inBlock,
+        const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
 #else
     mlp2d() = default;
-    // Constructor when OpenCL is disabled
-    mlp2d(const int inH, const int inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
-    mlp2d(const int inH, const int inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10, float learning = 0.01);
+    mlp2d(const int inH, const int inW, const int outWidth, const std::vector<unsigned int>& layerSizes, unsigned int epochs = 10,
+        float learning = 0.01);
+    mlp2d(const int inH, const int inW, const int outWidth, const std::string& inBlock, const std::vector<unsigned int>& layerSizes,
+        unsigned int epochs = 10, float learning = 0.01);
 #endif
 
     // Explicitly define copy constructor and copy assignment operator
@@ -206,9 +224,9 @@ public:
     void clBackwithL2(int layers, int in, float learning);
     void clBackwithElasticNet(int layers, int in, float learning);
     void clBackprop2in(int layers, int in, float learning);
-    void clRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
+    void clRprop(std::vector<std::vector<std::vector<std::vector<float>>>>&, int layers, int in, float learning, int epochs);
     void clTrain(float& mse, int in, int layers, float learning);
-    void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+    void clTrain(std::vector<std::vector<std::vector<std::vector<float>>>>&, float& mse, int in, int layers, float learning);
 
 #else
 
@@ -310,20 +328,77 @@ inline mlp& mlp::operator=(const mlp& other) {
     return *this;
 }
 
+
+// Inline implementations for copy constructor and copy assignment operator
+inline mlp2d::mlp2d(const mlp2d& other) :
+#ifdef USE_CL
+    clContext(other.clContext), // Initialize OpenCL context reference
+#endif
+    status(other.status),
+    num_layers(other.num_layers),
+    layer_sizes(other.layer_sizes),
+    epochs(other.epochs),
+    learning_rate(other.learning_rate),
+    input(other.input),
+    output(other.output),
+    expected(other.expected),
+    weights(other.weights),         // Relies on mat's copy constructor and std::vector's copy constructor
+    hlayers(other.hlayers),         // std::vector copy constructor
+    activations(other.activations), // std::vector copy constructor
+    gweights(other.gweights),       // Relies on mat's copy constructor and std::vector's copy constructor
+    params(other.params)
+{}
+
+inline mlp2d& mlp2d::operator=(const mlp2d& other) {
+    if (this == &other) {
+        return *this; // Self-assignment check
+    }
+
+#ifdef USE_CL
+    // Assign to the OpenCLContext object clContext refers to.
+    // This requires OpenCLContext to be assignable (which we made it).
+    clContext = other.clContext;
+#endif
+
+    status = other.status;
+    num_layers = other.num_layers;
+    layer_sizes = other.layer_sizes;
+    epochs = other.epochs;
+    learning_rate = other.learning_rate;
+    input = other.input;
+    output = other.output;
+    expected = other.expected;
+    weights = other.weights;         // Relies on mat's assignment operator and std::vector's assignment
+    hlayers = other.hlayers;         // std::vector assignment
+    activations = other.activations; // std::vector assignment
+    gweights = other.gweights;       // Relies on mat's assignment operator and std::vector's assignment
+    params = other.params;
+
+    return *this;
+}
+
 // -------------------------------
 //          declarations
 // -------------------------------
 
-void write2filefrommlp(const mlp&, const std::string&);
-
 // mlp-related functions (non-member)
+
+std::vector<float> flattenWeights(const std::vector<mat>& weights);
+void write2filefrommlp(const mlp&, const std::string&);
+void write2filefrommlp(const mlp2d&, const std::string&);
+
 float getL1Penalty(const std::vector<mat>& weights);
 float getL2Penalty(const std::vector<mat>& weights);
+
 float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp&, float);
 float computeLossWithElasticNet(std::vector<float>& outputs, std::vector<float>& targets, mlp& network, float lambda_l1, float lambda_l2);
 float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp&, float);
-std::vector<float> flattenWeights(const std::vector<mat>& weights);
+
+float computeLossWithL1(std::vector<float>&, std::vector<float>&, mlp2d&, float);
+float computeLossWithL2(std::vector<float>&, std::vector<float>&, mlp2d&, float);
+float computeLossWithElasticNet(std::vector<float>& outputs, std::vector<float>& targets, mlp2d& network, float lambda_l1, float lambda_l2);
+float dropoutGeneralisation(std::vector<float>&, std::vector<float>&, mlp2d&, float);
 
 #ifdef USE_CU
 
@@ -332,14 +407,18 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights);
 
 // cuda implementation (kernels remain the same)
 
-    __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
     __global__ void vectorAddKernel(const float* A, const float* B, float* C, int len);
+    __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C, int rowsA, int colsA, int colsB);
+    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size);
+    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int inrow, int incol, int put_size);
+
     __global__ void l1PenaltyKernel(float* weights, float* result, int size);
     __global__ void l2PenaltyKernel(float* weights, float* result, int size);
     __global__ void absDiffKernel(float* outputs, float* targets, float* result, int size);
     __global__ void squaredDiffKernel(float* outputs, float* targets, float* result, int size);
     __global__ void cuMSEKernel(float* expected, float* output, float* mse, int size);
     __global__ void kernelOutputDelta(const float* output, const float* expected, float* delta, int size);
+
     __global__ void hiddenDeltaKernel(float* next_layer_deltas, float* weights, float* activations,
                     float* deltas, int current_layer_size, int next_layer_size);
     __global__ void kernelComputeGradMLPInput(const float* deltas, const float* weights, float* grad_input,
@@ -358,7 +437,26 @@ std::vector<float> flattenWeights(const std::vector<mat>& weights);
     __global__ void rpropUpdateKernel(float* weights, float* gradients, float* prev_gradients, float* delta_weights,
                     float eta_plus, float eta_minus, float delta_max, float delta_min, int size);
     __global__ void updateInputVectorKernel(float* input, float* weights, float* deltas, float learning_rate, int size);
-    __global__ void layerForwardKernel(float* inputs, float* weights, float* outputs,  int input_size, int output_size);
+
+
+    __global__ void hiddenDeltaKernel2d(float* next_layer_deltas, float* weights, float* activations,
+                    float* deltas, int current_layer_size, int next_layer_size);
+    __global__ void kernelComputeGradMLPInput2d(const float* deltas, const float* weights, float* grad_input,
+                    int current_layer_size, int input_size);
+    __global__ void kernelLastLayerDelta2d(const float* grad_output, const float* activations, float* deltas, int size);
+    __global__ void updateWeightsKernel(float* deltas, float* prev_activations, float* weights, float learning_rate,
+                    int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsKernel2d(float* deltas, float* prev_activations, float* weights, float* gradients,
+                    float learning_rate, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL1Kernel2d(float* weights, float* deltas, float* prev_activations, float learning_rate, 
+                    float lambda, int current_layer_size, int prev_layer_size);
+    __global__ void updateWeightsL2Kernel2d(float* deltas, float* prev_activations, float* weights, float* gweights,
+                    float learning_rate, float lambda, int current_layer_size, int prev_layer_size);
+    __global__ void kernelUpdateElasticNet2d(float* deltas, float* prev_activations, float* weights, float* gweights,
+                    float learning_rate, float lambda_l1, float lambda_l2, int current_layer_size, int prev_layer_size);
+    __global__ void rpropUpdateKernel2d(float* weights, float* gradients, float* prev_gradients, float* delta_weights,
+                    float eta_plus, float eta_minus, float delta_max, float delta_min, int size);
+    __global__ void updateInputVectorKernel2d(float* input, float* weights, float* deltas, float learning_rate, int size);
 
     float cugetL1Penalty(std::vector<std::vector<std::vector<float>>>&);
     float cugetL2Penalty(std::vector<std::vector<std::vector<float>>>&);

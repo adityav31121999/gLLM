@@ -25,8 +25,8 @@
 
 // macros for models
 #define NUMBER_OF_PA 8                      // number of Partial Attentions in one Block
-#define NUMBER_OF_HEADS 8                   // number of heads in each layer (partial attention)
-#define NUMBER_OF_BLOCKS 4                  // number of blocks in transformer
+#define NUMBER_OF_HEADS 4                   // number of heads in each layer (partial attention)
+#define NUMBER_OF_BLOCKS 2                  // number of blocks in transformer
 #define EMBEDDING 128                       // embedding dimension for each token
 #define CONTEXT_WIN 1024                    // context window or number of tokens for each head (or number of PA * embedding)
 #define PROMPT_THRESHOLD CONTEXT_WIN/4                          // token limit for sequence1
@@ -34,7 +34,7 @@
 #define CHAT_CONTEXT (FULL_CONTEXT - NUMBER_OF_BLOCKS + 1)      // maximum tokens for chat
 #define DEEMBEDDING (EMBEDDING*NUMBER_OF_PA)                    // embedding dimension for each token
 #define SCALING std::sqrt(static_cast<float>(EMBEDDING))        // SCALING FACTOR for ATTENTION HEAD
-
+#define MINI_BATCH 4                        // Mini-batch Size
 
 /**
  * @brief ATTENTION CLASS for calculating attention head and Embeddings.

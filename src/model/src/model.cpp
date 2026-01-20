@@ -25,11 +25,11 @@
  */
 model::model(OpenCLContext& context, const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, 
     int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
-    bool toTrainModel, bool contextTrainModel) :
+    bool toTrainModel, bool contextTrainModel, bool batchTraining) :
     clcontext(context), baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), 
     matheight(matheight), l(l), learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n),
     isSelf(isSelfAttention), toTrain(toTrainModel), metadata(nullptr), chat(nullptr), currentChatLogPath(""),
-    contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain, clcontext), vocabsize(0),
+    contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrainModel, context), vocabsize(0),
     T(context, m, x, y, n, d, matheight, l, TOK.getVocabularySize(), learning, lambda_L1, lambda_L2, 
         isSelfAttention, toTrainModel, contextTrainModel, baseDirectory)
 {
@@ -86,11 +86,11 @@ model::model(OpenCLContext& context, const std::string& baseDirectory, const std
  */
 model::model(OpenCLContext& context, const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, 
     int m, int x, int y, int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
-    bool toTrainModel, bool contextTrainModel) :
+    bool toTrainModel, bool contextTrainModel, bool batchTraining) :
     clcontext(context), baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), 
     matheight(matheight), l(l), learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n),
     isSelf(isSelfAttention), toTrain(toTrainModel), metadata(nullptr), chat(nullptr), currentChatLogPath(""),
-    contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain, clcontext), vocabsize(0),
+    contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrainModel, context), vocabsize(0),
     T(context, modelName + "_", m, x, y, n, d, matheight, l, TOK.getVocabularySize(), learning, lambda_L1, lambda_L2, 
         isSelfAttention, toTrainModel, contextTrainModel, baseDirectory)
 {
@@ -201,7 +201,7 @@ model::model(OpenCLContext& context, const std::string& modelName, const std::st
  */
 model::model(const std::string& baseDirectory, const std::string& tokenDirectory, int m, int x, int y, 
     int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
-    bool toTrainModel, bool contextTrainModel) :
+    bool toTrainModel, bool contextTrainModel, bool batchTraining) :
     baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), matheight(matheight), l(l), 
     learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n), isSelf(isSelfAttention), toTrain(toTrainModel),
     metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain), vocabsize(0),
@@ -266,7 +266,7 @@ model::model(const std::string& baseDirectory, const std::string& tokenDirectory
  */
 model::model(const std::string& modelName, const std::string& baseDirectory, const std::string& tokenDirectory, 
     int m, int x, int y, int n, int d, int matheight, int l, float learning, float lambda_L1, float lambda_L2, bool isSelfAttention, 
-    bool toTrainModel, bool contextTrainModel) :
+    bool toTrainModel, bool contextTrainModel, bool batchTraining) :
     baseDir(baseDirectory), m(toTrainModel ? m : 1), x(x), y(y), n(n), d(d), matheight(matheight), l(l), 
     learning(learning), lambda_L1(lambda_L1), lambda_L2(lambda_L2), total(m * n), isSelf(isSelfAttention), toTrain(toTrainModel),
     metadata(nullptr), chat(nullptr), currentChatLogPath(""), contextTrain(contextTrainModel), TOK(tokenDirectory, contextTrain), vocabsize(0),

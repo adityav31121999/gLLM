@@ -222,10 +222,9 @@ mat mat::operator*(float b) const {
 /**
  * @brief Overloaded operator for matrix multiplication with another matrix.
  *      This function takes a matrix and another matrix as input and returns a new matrix
- *      It uses strassen's matrix multiplication method.
+ *      It uses strassen's matrix multiplication method. (slower i-j-k version)
  * @param a The matrix to multiply the current matrix with.
  * @return Product of two matrix
- */
 mat mat::operator*(const mat& a) const {
     // Check if dimensions are compatible for multiplication
     if (col != a.row) {
@@ -249,6 +248,50 @@ mat mat::operator*(const mat& a) const {
             c(i, j) = sum;
         }
     }
+    return c;
+}
+ */
+
+/**
+ * @brief Overloaded operator for matrix multiplication.
+ *      Performs standard matrix multiplication with O(N^3) complexity.
+ *      Optimized for cache locality using i, k, j loop ordering.
+ * @param a The matrix to multiply the current matrix with.
+ * @return Product of two matrices.
+ */
+mat mat::operator*(const mat& a) const {
+    // 1. Dimension validation
+    if (this->col != a.row) {
+        throw std::runtime_error("Matrix dimensions incompatible for multiplication: " 
+            + std::to_string(row) + "x" + std::to_string(col) 
+            + " vs " + std::to_string(a.row) + "x" + std::to_string(a.col));
+    }
+
+    // 2. Create the result matrix (allocates temp file and maps memory)
+    mat c(this->row, a.col);
+    
+    // 3. Initialize memory with zeros
+    // It is faster to use memset or std::fill on the raw pointer
+    if (c.mapped_data) {
+        std::fill_n(c.mapped_data, static_cast<size_t>(c.row) * c.col, 0.0f);
+    }
+
+    // 4. Optimized Matrix Multiplication (i, k, j order)
+    for (int i = 0; i < this->row; ++i) {
+        for (int k = 0; k < this->col; ++k) {
+            // Cache the value from the first matrix to avoid repeated lookups
+            float val = (*this)(i, k);
+            
+            // If the value is 0, we can skip the entire j loop (sparse optimization)
+            if (val == 0.0f) continue;
+
+            for (int j = 0; j < a.col; ++j) {
+                // Sequential access on a(k, j) and c(i, j)
+                c(i, j) += val * a(k, j);
+            }
+        }
+    }
+
     return c;
 }
 

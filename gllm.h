@@ -1,4 +1,3 @@
-// genmod.h: header for main.cpp
 #ifndef GLLM_H
 #define GLLM_H 1
 
@@ -9,8 +8,12 @@
 #include <neural.hpp>           // LLM related classes
 #include <model.hpp>            // model related operations
 
-#ifdef USE_OPENCL
-#include <CL/cl.hpp> // Required for OpenCL C++ bindings, e.g., cl::BuildError
+#ifdef USE_CL
+    #if defined(_WIN64)
+        #include <CL/cl.hpp>
+    #elif defined(__linux__)
+        #include <CL/opencl.hpp>
+    #endif
     extern std::vector<std::string> kernelSourceFiles;
     extern std::vector<std::string> kernelNames;
 #endif

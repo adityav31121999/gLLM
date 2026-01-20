@@ -4,14 +4,13 @@
 #include <thread>
 #include <mutex>
 
-
 /**
  * @brief train the transformer for sequence1 and sequence2 (single sequence1 and sequence2)
  * @param sequence1 sequence1 token embeddings
  * @param sequence2 sequence2 token embeddings
  * @param rString tokens of sequence2
  */
-void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, 
+void transformer::trainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, 
     std::vector<std::string>& rString) 
 {
     // --- Basic validation ---
@@ -31,9 +30,9 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
     if (currentTokenCount + sequence1.size() + sequence2.size() > FULL_CONTEXT) {
         throw std::runtime_error("clTrain(sequence1-sequence2): Adding sequence1 and sequence2 exceeds FULL_CONTEXT limit.");
     }
-    if (contextTrain == 0 && otok.size() != static_cast<size_t>(d)) {
+    if (contextTrain != 0 && otok.size() != static_cast<size_t>(d * x)) {
         otok.clear();
-        otok.resize(d, 0.0f); // ensure otok is correctly sized
+        otok.resize(d * x, 0.0f); // ensure otok is correctly sized
     }
 
     float initial_learning_rate = learning;                     // Store initial learning rate
@@ -60,7 +59,7 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
     std::cout << "Current Token Count: " << currentTokenCount << " | Sequence 1: " << sequence1.size() << " | Sequence 2: " << sequence2.size() << std::endl;
 
     try {
-        // --- Context Setup (Process sequence1) ---
+        // start training from first
         if(currentTokenCount == 0) {
             // set tokenEmbed
             blockCount = 1;
@@ -290,6 +289,9 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
 
             // --- Training Loop for sequence2 token i ---
             int j = 0;
+            std::fill(oneHotEncode.begin(), oneHotEncode.end(), 0.0f);
+            oneHotEncode[indexVec[i]] = 1.0f;
+
             while (j < epochs) {
                 // --- K/Q Calculation ---
                 embedPlusPos = tokenEmbed + positional;
@@ -329,27 +331,28 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
                 int current_prompt_count_in_block = effective_context_size % CONTEXT_WIN == 0 ? CONTEXT_WIN : effective_context_size % CONTEXT_WIN;
                 forward(current_block_idx, effective_context_size, current_prompt_count_in_block);
 
-                // --- Get EH output ---
+                // --- Get EH output from all layers ---
                 std::fill(otok.begin(), otok.end(), 0.0f);
                 if (y > 0) {
                     for (int layer_idx = 0; layer_idx < x; ++layer_idx) {
                         for (int k = 0; k < d; ++k) {
-                            otok[k] += blocks[blockCount-1].b[layer_idx][y - 1].EH[k];
+                            otok[(layer_idx * d) + k] = blocks[blockCount-1].b[layer_idx][y - 1].EH[k];
                         }
                     }
                 }
-                for(size_t k_dim = 0; k_dim < static_cast<size_t>(d); k_dim++) {
+                for(size_t k_dim = 0; k_dim < otok.size(); k_dim++) {
                     if (std::isnan(otok[k_dim])) { otok[k_dim] = 0.0f; }
-                    else if (std::isinf(otok[k_dim])) { otok[k_dim] = -1.0f; }
+                    else if (std::isinf(otok[k_dim])) { otok[k_dim] = std::copysign((std::numeric_limits<float>::max)(), otok[k_dim]); }
                 }
 
-                // --- Prediction ---
+                // --- Prediction with Scores ---
                 computePrediction();
+                pred = softmax(pred);
 
                 // --- Error Calculation & Logging ---
-                current_error = binaryCrossEntropy(expected_vec, otok);
+                current_error = -std::log(pred[indexVec[i]] + 1e-15f);
                 float del = current_error - prev_error;
-                std::string predicted_token_str = (indexForToken >= 0 && indexForToken < static_cast<unsigned long long>(tokens.size()))
+                std::string predicted_token_str = (indexForToken >= 0 && indexForToken < static_cast<unsigned int>(tokens.size()))
                                                   ? tokens[indexForToken] : "INVALID_INDEX";
 
                 std::cout << predicted_token_str << " ( " << indexForToken << " ) \t: "
@@ -364,9 +367,44 @@ void transformer::train(std::vector<std::vector<float>>& sequence1, std::vector<
                     break;
                 }
 
-                // --- Backward Pass ---
-                backward(expected_vec, current_block_idx);
+                // modify the de-embeddings and get gradients for backprop
+                std::vector<float> gradEH(d * x, 0.0f);
+                updateDeEmbeddings(deEmbeddings, pred, oneHotEncode, learning, lambda_L1, lambda_L2, gradEH);
+                // get expected target for backprop
+                std::vector<std::vector<float>> targets_for_heads(x, std::vector<float>(EMBEDDING, 0.0f));
+                for(int head_idx = 0; head_idx < x; ++head_idx) {
+                    for(int eidx = 0; eidx < EMBEDDING; ++eidx) {
+                        float gradient = learning * (gradEH[(head_idx * EMBEDDING) + eidx]
+                                                  + (lambda_L1 * embeddings(indexForToken, eidx))
+                                                  + (2.0f * lambda_L2 * embeddings(indexForToken, eidx)));
+                        if (fabs(gradient) >= MAX_GRAD_CLIP) gradient = std::copysign(MAX_GRAD_CLIP, gradient);
+                        targets_for_heads[head_idx][eidx] = otok[(head_idx * EMBEDDING) + eidx] - gradient;
+                    }
+                }
+                // backpropagate block
+                backwardContext(targets_for_heads, current_block_idx);
+                // update embeddings which are in use
+                updateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, vocabsize);
+                updateEmbeddings(tokenEmbed, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, effective_context_size);
+
                 j++;
+            }
+            // --- Update Host State ---
+            trainCount++;
+            epochCount += j;
+            resCount++;
+            tokenEmbed.addRow(sequence2[i], currentTokenCount);
+            currentTokenCount++;
+            effective_context_size++;
+
+            if(currentTokenCount > 0 && currentTokenCount % CONTEXT_WIN == 0) {
+                blockCount += 1;
+                blockShifted = 1;
+                tokenEmbed.addRow(sequence2[i], currentTokenCount - 1); // repeat last token to new block
+                positional.addRow(positionalEmbeddings(currentTokenCount - 1, d), currentTokenCount - 1);
+                std::cout << "----> Going to Next block in model -> " << blockCount - 1 << " to " << blockCount << std::endl;
+            } else {
+                blockShifted = 0;
             }
         }
     }

@@ -1,380 +1,475 @@
 #ifdef USE_CPU
-
-// backprop.cpp: backward propagation functions for mlp
 #include "include/mlp.hpp"
 #include <iostream>
 #include <vector>
-#include <maths.hpp>
+#include <cmath>
+#include <algorithm>
 
-
-/**
- * @brief The backward propagation function. This function performs the
- * backward propagation and calculates the error.
- * @param in dimension of input, output and size of weight layers
- * @param layers_param number of weight layers (Note: This parameter is now unused, logic relies on class members)
- * @param learning learning rate for mlp
- */
-void mlp::backward(int in_param, int layers_param, float learning) {
-    // Parameters in_param and layers_param are ignored in favor of class members
-    // num_layers and layer_sizes for robustness and consistency.
-
-    if (num_layers < 2) return;
-
-    // Initialize deltas for each layer
-    std::vector<std::vector<float>> layer_deltas(num_layers);
-    for(size_t i = 0; i < num_layers; ++i) {
-        layer_deltas[i].resize(layer_sizes[i], 0.0f);
-    }
-
-    // Calculate deltas for the output layer
-    // Delta = (output - expected) * f'(output_activation)
-    size_t output_layer_idx = num_layers - 1;
-    for (unsigned int i = 0; i < layer_sizes[output_layer_idx]; ++i) {
-        // Assuming output[i] is the activated value from the output layer
-        // and sigmoidder(activated_value) computes activated_value * (1 - activated_value)
-        layer_deltas[output_layer_idx][i] = (output[i] - expected[i]) * sigmoidder(activations[output_layer_idx][i]);
-    }
-
-    // Calculate deltas for hidden layers (from right to left)
-    for (int l = num_layers - 2; l >= 1; --l) { // Iterate from the second to last layer down to the first hidden layer
-        size_t current_layer_size = layer_sizes[l];
-        size_t next_layer_size = layer_sizes[l+1];
-        const mat& weights_to_next_layer = weights[l]; // weights[l] connects layer l to l+1
-        const std::vector<float>& current_hidden_layer_activations = activations[l];
-
-        for (unsigned int i = 0; i < current_layer_size; ++i) { // For each neuron 'i' in current hidden layer 'l'
-            float error_sum = 0.0;
-            for (unsigned int k = 0; k < next_layer_size; ++k) { // For each neuron 'k' in next layer 'l+1'
-                error_sum += layer_deltas[l + 1][k] * weights_to_next_layer(k, i);
-            }
-            layer_deltas[l][i] = error_sum * sigmoidder(current_hidden_layer_activations[i]);
-        }
-    }
-
-    // Update weights for all layers
-    for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        size_t to_layer_size = layer_sizes[l+1];   // Number of neurons in the layer weights[l] projects TO (layer l+1)
-        size_t from_layer_size = layer_sizes[l]; // Number of neurons in the layer weights[l] projects FROM (layer l)
-        mat& current_weights = weights[l];
-        const std::vector<float>& from_layer_activations = activations[l]; // Activations of layer 'l'
-
-        for (unsigned int i = 0; i < to_layer_size; ++i) { // Neuron 'i' in layer 'l+1'
-            for (unsigned int j = 0; j < from_layer_size; ++j) { // Neuron 'j' in layer 'l'
-                // Weight W_ij connects neuron j (from_layer) to neuron i (to_layer)
-                current_weights(i, j) -= learning * layer_deltas[l + 1][i] * from_layer_activations[j];
-            }
-        }
-    }
-}
-
+// ---------------------- MLP ----------------------
 
 /**
- * @brief Backward propagation with gradients, uses gradients to update weights.
- * @param in dimension of input and output vectors, size of each square layer
- * @param layers number of activation layers
- * @param learning learning rate for mlp
+ * @brief Standard backpropagation: calculates gradients and updates weights.
  */
 void mlp::backprop(int in, int layers, float learning) {
-    if (num_layers < 2) 
-        return; // Need at least input and output layer
+    if (num_layers < 2) return;
 
-    // --- Initialize deltas for each layer ---
+    // 1. Initialize deltas
     std::vector<std::vector<float>> layer_deltas(num_layers);
     for(size_t i = 0; i < num_layers; ++i) {
         layer_deltas[i].resize(layer_sizes[i], 0.0f);
     }
 
-    // --- Calculate deltas for the output layer ---
-    // Delta = (output - expected) * f'(output_activation)
-    // Assuming f'(x) = x * (1-x) for sigmoid, where x is the activated output.
-    size_t output_layer_idx = num_layers - 1;
-    size_t output_size = layer_sizes[output_layer_idx];
-    for (unsigned int i = 0; i < output_size; ++i) {
-        // 'output' contains the final activations of the output layer
-        // and 'expected' contains the target values.
-        // The derivative of sigmoid (if output is sigmoid activated) is output * (1 - output)
-        layer_deltas[output_layer_idx][i] = (output[i] - expected[i]) * activations[output_layer_idx][i] * (1.0f - activations[output_layer_idx][i]);
+    // 2. Output Layer Delta: (actual - expected) * f'(h)
+    size_t L = num_layers - 1;
+    for (unsigned int i = 0; i < layer_sizes[L]; ++i) {
+        // activations[L] is the output layer
+        layer_deltas[L][i] = (activations[L][i] - expected[i]) * activations[L][i] * (1.0f - activations[L][i]);
     }
 
-    // --- Calculate deltas for hidden layers (from right to left) ---
-    for (int l = num_layers - 2; l >= 1; --l) {
-        // 'l' is the index of the current hidden layer
-        size_t current_layer_size = layer_sizes[l];
-        size_t next_layer_size = layer_sizes[l+1];
-        const mat& weights_to_next_layer = weights[l]; // weights[l] connects layer l to l+1
-        const std::vector<float>& current_hidden_layer_activations = activations[l]; // Activations of the current hidden layer 'l'
-
-        for (unsigned int i = 0; i < current_layer_size; ++i) {
-            float error_sum = 0.0;
-            // Sum of (delta_of_neuron_k_in_next_layer * weight_from_neuron_i_to_neuron_k)
-            for (unsigned int k = 0; k < next_layer_size; ++k) { // Neuron 'k' in next layer 'l+1'
-                error_sum += layer_deltas[l + 1][k] * weights_to_next_layer(k, i);
+    // 3. Hidden Layer Deltas (Backwards from L-1 to 1)
+    for (int l = L - 1; l >= 1; --l) {
+        for (unsigned int i = 0; i < layer_sizes[l]; ++i) {
+            float error_sum = 0.0f;
+            // Weights[l] connects layer l to l+1
+            for (unsigned int k = 0; k < layer_sizes[l+1]; ++k) {
+                error_sum += layer_deltas[l + 1][k] * weights[l](k, i);
             }
-            // Delta = error_sum * f'(activation_of_neuron_i_in_current_layer)
-            layer_deltas[l][i] = error_sum * (current_hidden_layer_activations[i] * (1.0f - current_hidden_layer_activations[i]));
+            layer_deltas[l][i] = error_sum * activations[l][i] * (1.0f - activations[l][i]);
         }
     }
 
-    // --- Update weights and calculate gradients for gweights ---
+    // 4. Update weights and store gradients in gweights
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        // 'l' is the index of the "from" layer for weights[l].
-        // weights[l] connects layer 'l' to layer 'l+1'.
-        size_t current_layer_size = layer_sizes[l+1]; 
-        size_t prev_layer_size = layer_sizes[l];
-        mat& current_weights = weights[l];
-        mat& current_gweights = gweights[l];
+        mat& W = weights[l];
+        mat& dW = gweights[l];
+        const std::vector<float>& act_prev = activations[l];
 
-        // Activations of the layer that is input to weights[l]
-        const std::vector<float>& prev_layer_output_activations = activations[l];
-
-        for (unsigned int i = 0; i < current_layer_size; ++i) {
-            for (unsigned int j = 0; j < prev_layer_size; ++j) {
-                // Gradient of loss w.r.t weight(i,j) = delta_of_neuron_i_in_layer(l+1) * activation_of_neuron_j_in_layer(l)
-                current_gweights(i, j) = layer_deltas[l + 1][i] * prev_layer_output_activations[j];
-                current_weights(i, j) -= learning * current_gweights(i, j);
+        for (unsigned int i = 0; i < layer_sizes[l+1]; ++i) {
+            for (unsigned int j = 0; j < layer_sizes[l]; ++j) {
+                float gradient = layer_deltas[l + 1][i] * act_prev[j];
+                dW(i, j) = gradient;
+                W(i, j) -= learning * gradient;
             }
         }
     }
 }
 
+/**
+ * @brief Simple backward wrapper (legacy logic)
+ */
+void mlp::backward(int in_param, int layers_param, float learning) {
+    backprop(0, 0, learning);
+}
 
 /**
- * @brief Compute backpropagation with L1 regularization
+ * @brief Backpropagation with L1 regularization
  */
 void mlp::backwithL1(int in, int layers, float learning) {
-    float lambda = 0.01;
-    backprop(in, layers, learning);
-    float l1_penalty = 0.0;
+    backprop(in, layers, learning); // Standard update first
+    
+    float lambda = 0.01f;
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        mat& current_weights = weights[l];
-        size_t rows = current_weights.row;
-        size_t cols = current_weights.col;
-        for (unsigned int i = 0; i < rows; ++i) {
-            for (unsigned int j = 0; j < cols; ++j) {
-                float w_val = current_weights(i, j);
-                float sign_w = (w_val > 0.0f) ? 1.0f : ((w_val < 0.0f) ? -1.0f : 0.0f);
-                current_weights(i, j) -= learning * lambda * sign_w;
+        mat& W = weights[l];
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                float sign_w = (W(i, j) > 0.0f) ? 1.0f : ((W(i, j) < 0.0f) ? -1.0f : 0.0f);
+                W(i, j) -= learning * lambda * sign_w;
             }
         }
     }
-
-    float loss = computeLossWithL1(output, expected, *this, lambda);
-    std::cout << "Loss with L1 penalty: " << loss << std::endl;
 }
 
-
 /**
- * @brief Compute backpropagation with L2 regularization
+ * @brief Backpropagation with L2 regularization
  */
 void mlp::backwithL2(int in, int layers, float learning) {
-    float lambda = 0.01; // Regularization parameter
-
-    backprop(in, layers, learning);
-    float l2_penalty = 0.0;
+    backprop(in, layers, learning); // Standard update first
+    
+    float lambda = 0.01f;
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        mat& current_weights = weights[l];
-        size_t rows = current_weights.row;
-        size_t cols = current_weights.col;
-        for (unsigned int i = 0; i < rows; ++i) {
-            for (unsigned int j = 0; j < cols; ++j) {
-                current_weights(i, j) -= learning * lambda * current_weights(i, j);
+        mat& W = weights[l];
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                W(i, j) -= learning * lambda * W(i, j);
             }
         }
     }
-
-    float loss = computeLossWithL2(output, expected, *this, lambda);
-    std::cout << "Loss with L2 penalty: " << loss << std::endl;
 }
 
-
 /**
- * @brief Compute backpropagation with Elastic Net regularization (combines L1 and L2).
- *        Updates weights directly.
- *        Should be used with standard SGD `train` method if regularization is desired without Adam.
+ * @brief Elastic Net regularization (L1 + L2)
  */
 void mlp::backwithElastic(int in, int layers, float learning) {
-    backprop(in, layers, learning); // Calculate gradients
+    backprop(in, layers, learning); // Standard update first
 
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        mat& current_weights = weights[l];
-        mat& current_gweights = gweights[l];
-        size_t rows = current_weights.row;
-        size_t cols = current_weights.col;
-
-        for (unsigned int i = 0; i < rows; ++i) {
-            for (unsigned int j = 0; j < cols; ++j) {
-                float w_val = current_weights(i, j);
+        mat& W = weights[l];
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                float w_val = W(i, j);
                 float sign_w = (w_val > 0.0f) ? 1.0f : ((w_val < 0.0f) ? -1.0f : 0.0f);
-
-                // Combined gradient with regularization: grad_total = grad_from_backprop + lambda_l1 * sign(W) + lambda_l2 * W
-                float regularized_gradient = current_gweights(i, j) + (lambda_l1 * sign_w) + (lambda_l2 * current_weights(i, j));
-
-                // Update rule: W = W - learning_rate * grad_total
-                current_weights(i, j) -= learning * regularized_gradient;
+                
+                // Penalty gradient = lambda_l1 * sign(w) + lambda_l2 * w
+                float penalty = (lambda_l1 * sign_w) + (lambda_l2 * w_val);
+                W(i, j) -= learning * penalty;
             }
         }
     }
 }
 
+/**
+ * @brief Backpropagation that propagates error back to the input vector
+ */
+void mlp::backprop2in(int in, int layers, float learning) {
+    if (num_layers < 2) return;
+
+    // 1. Calculate deltas for all layers (same as backprop)
+    std::vector<std::vector<float>> layer_deltas(num_layers);
+    for(size_t i = 0; i < num_layers; ++i) layer_deltas[i].resize(layer_sizes[i]);
+
+    size_t L = num_layers - 1;
+    for (unsigned int i = 0; i < layer_sizes[L]; ++i) {
+        layer_deltas[L][i] = (activations[L][i] - expected[i]) * activations[L][i] * (1.0f - activations[L][i]);
+    }
+
+    for (int l = L - 1; l >= 1; --l) {
+        for (unsigned int i = 0; i < layer_sizes[l]; ++i) {
+            float sum = 0.0f;
+            for (unsigned int k = 0; k < layer_sizes[l+1]; ++k) {
+                sum += layer_deltas[l + 1][k] * weights[l](k, i);
+            }
+            layer_deltas[l][i] = sum * activations[l][i] * (1.0f - activations[l][i]);
+        }
+    }
+
+    // 2. Update Weights
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        for (unsigned int i = 0; i < layer_sizes[l+1]; ++i) {
+            for (unsigned int j = 0; j < layer_sizes[l]; ++j) {
+                weights[l](i, j) -= learning * layer_deltas[l + 1][i] * activations[l][j];
+            }
+        }
+    }
+
+    // 3. Update Input Vector (Layer 0)
+    // Grad_input = Weights[0]^T * Delta[1]
+    for (unsigned int j = 0; j < layer_sizes[0]; ++j) {
+        float input_grad = 0.0f;
+        for (unsigned int i = 0; i < layer_sizes[1]; ++i) {
+            input_grad += layer_deltas[1][i] * weights[0](i, j);
+        }
+        input[j] -= learning * input_grad;
+    }
+}
 
 /**
- * @brief Rprop algorithm for MLP
- * @param dataset Input dataset
- * @note This version only updates the weights and doesn't update the bias
+ * @brief Rprop implementation
  */
 void mlp::rprop(std::vector<std::vector<float>>& dataset, int layers, int in, float learning, int epochs) {
     if (num_layers < 2) return;
 
-    const float etaPlus = 1.2;
-    const float etaMinus = 0.5;
-    const float deltaMax = 50.0;
-    const float deltaMin = 1e-6;
+    const float etaPlus = 1.2f, etaMinus = 0.5f;
+    const float deltaMax = 50.0f, deltaMin = 1e-6f;
 
-    std::vector<mat> prev_gradients;
-    std::vector<mat> update_values;
-    prev_gradients.reserve(num_layers - 1);
-    update_values.reserve(num_layers - 1);
-
+    std::vector<mat> prev_grads, update_values;
     for(size_t l=0; l < num_layers - 1; ++l) {
-        size_t rows = layer_sizes[l+1];
-        size_t cols = layer_sizes[l];
-        prev_gradients.emplace_back(static_cast<int>(rows), static_cast<int>(cols));
-        update_values.emplace_back(static_cast<int>(rows), static_cast<int>(cols));
-
-        float* update_ptr = update_values[l].mapped_data;
-        float* prev_grad_ptr = prev_gradients[l].mapped_data;
-        size_t num_elements = rows * cols;
-        if (update_ptr) {
-            std::fill_n(update_ptr, num_elements, deltaMin);
-        }
-        if (prev_grad_ptr) {
-             std::fill_n(prev_grad_ptr, num_elements, 0.0f);
-        }
+        prev_grads.emplace_back(layer_sizes[l+1], layer_sizes[l]);
+        update_values.emplace_back(layer_sizes[l+1], layer_sizes[l]);
+        // Initialize update values to deltaMin
+        std::fill_n(update_values[l].mapped_data, update_values[l].row * update_values[l].col, 0.1f);
+        std::fill_n(prev_grads[l].mapped_data, prev_grads[l].row * prev_grads[l].col, 0.0f);
     }
 
     for (unsigned int epoch = 0; epoch < epochs; ++epoch) {
         float totalError = 0.0;
-
         for (const auto& data : dataset) {
             input = data;
             forward(0, 0);
-            backprop(0, 0, 0.0f);
+            
+            // Standard gradient calculation via backprop logic (don't update weights yet)
+            // For Rprop we actually need the gradient of the TOTAL error over the batch, 
+            // but this implementation updates per-sample (Stochastic Rprop).
+            backprop(0, 0, 0.0f); 
 
-            // Compute mean square error
-            float error = 0.0;
-            size_t output_size = layer_sizes.back();
-            for (unsigned int i = 0; i < output_size; ++i) {
-                error += std::pow(expected[i] - output[i], 2);
-            }
-            error /= output_size;
-            totalError += error;
-
-            // Update weights using Rprop
             for (unsigned int l = 0; l < num_layers - 1; ++l) {
-                mat& current_weights = weights[l];
-                const mat& current_gweights = gweights[l];
-                mat& current_prev_grads = prev_gradients[l];
-                mat& current_update_vals = update_values[l];
-                size_t rows = current_weights.row;
-                size_t cols = current_weights.col;
+                mat& W = weights[l];
+                mat& dW = gweights[l];
+                mat& pG = prev_grads[l];
+                mat& uV = update_values[l];
 
-                for (unsigned int i = 0; i < rows; ++i) {
-                    for (unsigned int j = 0; j < cols; ++j) {
-                        float grad = current_gweights(i, j);
-                        float prev_grad = current_prev_grads(i, j);
-                        float& update_val = current_update_vals(i, j);
+                for (int i = 0; i < W.row; ++i) {
+                    for (int j = 0; j < W.col; ++j) {
+                        float change = dW(i, j) * pG(i, j);
+                        if (change > 0) {
+                            uV(i, j) = std::min(uV(i, j) * etaPlus, deltaMax);
+                            W(i, j) -= std::copysign(uV(i, j), dW(i, j));
+                            pG(i, j) = dW(i, j);
+                        } else if (change < 0) {
+                            uV(i, j) = std::max(uV(i, j) * etaMinus, deltaMin);
+                            pG(i, j) = 0; 
+                        } else {
+                            W(i, j) -= std::copysign(uV(i, j), dW(i, j));
+                            pG(i, j) = dW(i, j);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
-                        // Apply Rprop update rule
-                        float sign_change = grad * prev_grad;
+// --------------------- MLP2D ---------------------
+
+/**
+ * @brief Standard Backpropagation for MLP2D.
+ * Computes gradients by averaging the error across the 'height' (rows) of the 2D input.
+ */
+void mlp2d::backprop(int layers, int in, float learning) {
+    if (num_layers < 2 || input.empty()) return;
+
+    size_t height = input.size();
+    size_t L = num_layers - 1;
+
+    // 1. Calculate Deltas for the Output Layer [Height x layer_sizes[L]]
+    mat D_out(height, layer_sizes[L]);
+    for (size_t r = 0; r < height; ++r) {
+        for (unsigned int c = 0; c < layer_sizes[L]; ++c) {
+            float act = activations[L][r][c];
+            // derivative of sigmoid: act * (1 - act)
+            // Error = (activation - expected)
+            D_out(r, c) = (act - expected[r][c]) * act * (1.0f - act);
+        }
+    }
+
+    std::vector<mat> layer_deltas(num_layers);
+    layer_deltas[L] = std::move(D_out);
+
+    // 2. Backpropagate Deltas through Hidden Layers (Right to Left)
+    for (int l = L - 1; l >= 1; --l) {
+        // Delta_l = (Delta_{l+1} * Weights_l) * f'(Activations_l)
+        // [height x next] * [next x curr] -> [height x curr]
+        mat error_prop = layer_deltas[l+1] * weights[l];
+        
+        layer_deltas[l] = mat(height, layer_sizes[l]);
+        for (size_t r = 0; r < height; ++r) {
+            for (unsigned int c = 0; c < layer_sizes[l]; ++c) {
+                float act = activations[l][r][c];
+                layer_deltas[l](r, c) = error_prop(r, c) * act * (1.0f - act);
+            }
+        }
+    }
+
+    // 3. Update Weights and Calculate Gradients
+    float inv_height = 1.0f / static_cast<float>(height);
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        // Gradient = Delta_{l+1}^T * Activations_l
+        // [Next x height] * [height x Curr] = [Next x Curr]
+        mat A_l(activations[l]);
+        mat grad_total = layer_deltas[l+1].transpose() * A_l;
+
+        mat& W = weights[l];
+        mat& dW = gweights[l];
+
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                // Average gradient over the height dimension
+                float avg_grad = grad_total(i, j) * inv_height;
+                dW(i, j) = avg_grad;
+                W(i, j) -= learning * avg_grad;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Backpropagation with L1 regularization for MLP2D.
+ */
+void mlp2d::backwithL1(int layers, int in, float learning) {
+    backprop(layers, in, learning); // Update weights with gradients first
+
+    float lambda = 0.01f;
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        mat& W = weights[l];
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                float sign_w = (W(i, j) > 0.0f) ? 1.0f : ((W(i, j) < 0.0f) ? -1.0f : 0.0f);
+                W(i, j) -= learning * lambda * sign_w;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Backpropagation with L2 regularization for MLP2D.
+ */
+void mlp2d::backwithL2(int layers, int in, float learning) {
+    backprop(layers, in, learning); // Update weights with gradients first
+
+    float lambda = 0.01f;
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        mat& W = weights[l];
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                W(i, j) -= learning * lambda * W(i, j);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Backpropagation with Elastic Net regularization for MLP2D.
+ */
+void mlp2d::backwithElastic(int in, int layers, float learning) {
+    backprop(layers, in, learning);
+
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        mat& W = weights[l];
+        for (int i = 0; i < W.row; ++i) {
+            for (int j = 0; j < W.col; ++j) {
+                float w_val = W(i, j);
+                float sign_w = (w_val > 0.0f) ? 1.0f : ((w_val < 0.0f) ? -1.0f : 0.0f);
+                float penalty = (lambda_l1 * sign_w) + (lambda_l2 * w_val);
+                W(i, j) -= learning * penalty;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Updates the input matrix by propagating error all the way back.
+ */
+void mlp2d::backprop2in(int layers, int in, float learning) {
+    if (num_layers < 2 || input.empty()) return;
+    size_t height = input.size();
+
+    // 1. Calculate all layer deltas (logic same as backprop)
+    std::vector<mat> layer_deltas(num_layers);
+    size_t L = num_layers - 1;
+    
+    layer_deltas[L] = mat(height, layer_sizes[L]);
+    for (size_t r = 0; r < height; ++r) {
+        for (unsigned int c = 0; c < layer_sizes[L]; ++c) {
+            float act = activations[L][r][c];
+            layer_deltas[L](r, c) = (act - expected[r][c]) * act * (1.0f - act);
+        }
+    }
+
+    for (int l = L - 1; l >= 1; --l) {
+        mat error_prop = layer_deltas[l+1] * weights[l];
+        layer_deltas[l] = mat(height, layer_sizes[l]);
+        for (size_t r = 0; r < height; ++r) {
+            for (unsigned int c = 0; c < layer_sizes[l]; ++c) {
+                float act = activations[l][r][c];
+                layer_deltas[l](r, c) = error_prop(r, c) * act * (1.0f - act);
+            }
+        }
+    }
+
+    // 2. Update Weights
+    float inv_height = 1.0f / static_cast<float>(height);
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        mat A_l(activations[l]);
+        mat grad = layer_deltas[l+1].transpose() * A_l;
+        for (int i = 0; i < weights[l].row; ++i) {
+            for (int j = 0; j < weights[l].col; ++j) {
+                weights[l](i, j) -= learning * (grad(i, j) * inv_height);
+            }
+        }
+    }
+
+    // 3. Update the input matrix [Height x InWidth]
+    // Grad_input = Delta_1 * Weights_0
+    // [Height x Hidden1] * [Hidden1 x InWidth] = [Height x InWidth]
+    mat grad_input = layer_deltas[1] * weights[0];
+    for (size_t r = 0; r < height; ++r) {
+        for (unsigned int c = 0; c < layer_sizes[0]; ++c) {
+            input[r][c] -= learning * grad_input(r, c);
+        }
+    }
+}
+
+/**
+ * @brief Rprop algorithm for MLP2D.
+ * Updates weights based on the sign of the average gradient across the 2D height.
+ */
+void mlp2d::rprop(std::vector<std::vector<std::vector<float>>>& dataset, int layers, int in, float learning, int epochs) {
+    if (num_layers < 2) return;
+
+    const float etaPlus = 1.2f;
+    const float etaMinus = 0.5f;
+    const float deltaMax = 50.0f;
+    const float deltaMin = 1e-6f;
+
+    // Persistent matrices to store state across epochs/samples
+    std::vector<mat> prev_gradients;
+    std::vector<mat> update_values;
+
+    for(size_t l=0; l < num_layers - 1; ++l) {
+        prev_gradients.emplace_back(layer_sizes[l+1], layer_sizes[l]);
+        update_values.emplace_back(layer_sizes[l+1], layer_sizes[l]);
+
+        // Initialize update values (deltas) to a small positive constant
+        std::fill_n(update_values[l].mapped_data, (size_t)update_values[l].row * update_values[l].col, 0.1f);
+        std::fill_n(prev_gradients[l].mapped_data, (size_t)prev_gradients[l].row * prev_gradients[l].col, 0.0f);
+    }
+
+    for (unsigned int epoch = 0; epoch < epochs; ++epoch) {
+        float totalMse = 0.0f;
+
+        for (const auto& data_2d : dataset) {
+            // data_2d is [Height x Width]
+            input = data_2d;
+            forward(0, 0);
+
+            // 1. Compute Gradients via backprop logic. 
+            // Note: We pass learning=0.0 because Rprop handles its own weight updates.
+            // backprop() will populate this->gweights with the average gradient across the height.
+            backprop(0, 0, 0.0f); 
+
+            // 2. Compute MSE for reporting
+            size_t height = input.size();
+            size_t out_dim = layer_sizes.back();
+            float sample_error = 0.0f;
+            for (size_t r = 0; r < height; ++r) {
+                for (size_t c = 0; c < out_dim; ++c) {
+                    sample_error += std::pow(expected[r][c] - output[r][c], 2);
+                }
+            }
+            totalMse += (sample_error / (height * out_dim));
+
+            // 3. Apply Rprop Update Rule to each weight layer
+            for (unsigned int l = 0; l < num_layers - 1; ++l) {
+                mat& W = weights[l];
+                mat& G = gweights[l]; // Average gradient from backprop()
+                mat& pG = prev_gradients[l];
+                mat& delta = update_values[l];
+
+                for (int i = 0; i < W.row; ++i) {
+                    for (int j = 0; j < W.col; ++j) {
+                        float sign_change = G(i, j) * pG(i, j);
 
                         if (sign_change > 0) {
-                            update_val = std::min(update_val * etaPlus, deltaMax);
-                            float delta_w = -std::copysign(update_val, grad);
-                            current_weights(i, j) += delta_w;
-                            current_prev_grads(i, j) = grad;
-                        }
+                            // Gradients have the same sign: speed up
+                            delta(i, j) = std::min(delta(i, j) * etaPlus, deltaMax);
+                            W(i, j) -= std::copysign(delta(i, j), G(i, j));
+                            pG(i, j) = G(i, j);
+                        } 
                         else if (sign_change < 0) {
-                            update_val = std::max(update_val * etaMinus, deltaMin);
-                            current_prev_grads(i, j) = 0; // Set previous gradient to zero
-                        }
+                            // Gradients have opposite signs: slow down and skip update
+                            delta(i, j) = std::max(delta(i, j) * etaMinus, deltaMin);
+                            pG(i, j) = 0; // Force sign_change = 0 in next iteration
+                        } 
                         else {
-                            float delta_w = -std::copysign(update_val, grad);
-                            current_weights(i, j) += delta_w;
-                            current_prev_grads(i, j) = grad;
+                            // One gradient is zero or sign just reset
+                            W(i, j) -= std::copysign(delta(i, j), G(i, j));
+                            pG(i, j) = G(i, j);
                         }
                     }
                 }
             }
         }
 
-        totalError /= dataset.size();
-        std::cout << "Epoch " << epoch + 1 << "/" << epochs << " - Mean Squared Error: " << totalError << std::endl;
-
-        if (totalError < 0.01) {
-            status = true;
-            break;
-        }
-    }
-}
-
-
-/**
- * @brief Backpropagation till input vector
- */
-void mlp::backprop2in(int in, int layers, float learning) {
-    if (num_layers < 2) return;
-
-    std::vector<std::vector<float>> layer_deltas(num_layers);
-    for(size_t i = 0; i < num_layers; ++i) {
-        layer_deltas[i].resize(layer_sizes[i], 0.0f);
-    }
-
-    size_t output_layer_idx = num_layers - 1;
-    size_t output_size = layer_sizes[output_layer_idx];
-    for (unsigned int i = 0; i < output_size; ++i) {
-        layer_deltas[output_layer_idx][i] = (output[i] - expected[i]) * (output[i] * (1.0f - output[i]));
-    }
-
-    for (int l = num_layers - 2; l >= 1; --l) {
-        size_t current_layer_size = layer_sizes[l];
-        size_t next_layer_size = layer_sizes[l+1];
-        const mat& next_weights = weights[l];
-        const std::vector<float>& current_activations = activations[l-1];
-
-        for (unsigned int i = 0; i < current_layer_size; ++i) {
-            float error_sum = 0.0;
-            for (unsigned int k = 0; k < next_layer_size; ++k) {
-                error_sum += layer_deltas[l + 1][k] * next_weights(k, i);
-            }
-            layer_deltas[l][i] = error_sum * (current_activations[i] * (1.0f - current_activations[i]));
-        }
-    }
-
-    for (unsigned int l = 0; l < num_layers - 1; ++l) {
-        size_t current_layer_size = layer_sizes[l+1];
-        size_t prev_layer_size = layer_sizes[l];
-        mat& current_weights = weights[l]; 
-        mat& current_gweights = gweights[l];
-        const std::vector<float>& prev_activations = activations[l]; // Use activations[l] as it includes input at index 0
-
-        for (unsigned int i = 0; i < current_layer_size; ++i) {
-            for (unsigned int j = 0; j < prev_layer_size; ++j) {
-                current_gweights(i, j) = layer_deltas[l + 1][i] * prev_activations[j];
-                current_weights(i, j) -= learning * current_gweights(i, j);
-            }
-        }
-    }
-
-    const mat& first_weights = weights[0]; 
-    size_t input_size = layer_sizes[0];
-    size_t first_hidden_size = layer_sizes[1];
-
-    for (unsigned int j = 0; j < input_size; ++j) {
-        float input_grad_sum = 0.0;
-        for (unsigned int i = 0; i < first_hidden_size; ++i) {
-            input_grad_sum += layer_deltas[1][i] * first_weights(i, j);
-        }
-        input[j] -= learning * input_grad_sum;
+        std::cout << "Epoch " << epoch + 1 << " MSE: " << (totalMse / dataset.size()) << std::endl;
     }
 }
 

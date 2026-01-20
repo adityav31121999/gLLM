@@ -1,11 +1,9 @@
-
+#ifdef USE_CPU
 // train.cpp: Training, Validation and Testing Functions for MLP
 #include "include/mlp.hpp"
 #include <iostream>
 #include <vector>
 #include <maths.hpp>
-
-#ifdef USE_CPU
 
 /**
  * @brief Training fucntion for MLP (error threshold: 10^-6)

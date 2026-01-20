@@ -1,80 +1,87 @@
-
-// forprop.cpp: forward propagation functions for mlp
+#ifdef USE_CPU
 #include "include/mlp.hpp"
 #include <numeric>
 #include <maths.hpp>
 
-#ifdef USE_CPU
+// --- MLP (1D Vector Version) ---
+void mlp::forward(int in, int layers) {
+    if (num_layers < 2) return;
+
+    // 1. Set input layer activations
+    if (input.size() != layer_sizes[0]) {
+        throw std::runtime_error("MLP Forward: Input size mismatch.");
+    }
+    activations[0] = input;
+
+    // 2. Propagate through layers
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        const mat& W = weights[l]; // Shape: [NextSize x CurrSize]
+        const std::vector<float>& prev_act = activations[l];
+        std::vector<float>& curr_h = hlayers[l];
+        std::vector<float>& curr_act = activations[l+1];
+
+        // Ensure resizing
+        if (curr_h.size() != layer_sizes[l+1]) curr_h.resize(layer_sizes[l+1]);
+        if (curr_act.size() != layer_sizes[l+1]) curr_act.resize(layer_sizes[l+1]);
+
+        // Compute: H = W * prev_act
+        for (unsigned int i = 0; i < layer_sizes[l+1]; ++i) {
+            float sum = 0.0f;
+            for (unsigned int j = 0; j < layer_sizes[l]; ++j) {
+                sum += W(i, j) * prev_act[j];
+            }
+            curr_h[i] = sum;
+            curr_act[i] = sigmoid(sum);
+        }
+    }
+
+    // 3. Set final output
+    output = activations.back();
+}
 
 /**
- * @brief The forward propagation function. This function performs the
- * forward propagation and calculates the activations of each layer.
+ * @brief Forward propagation for 2D MLP.
+ * Processes an [inHeight x inWidth] matrix through the network.
  */
-void mlp::forward(int in, int layers) {
-    if (num_layers < 2) {
-        if (num_layers == 1 && !input.empty()) {
-            output = input; // Or apply activation if input layer has one
-        }
-        return;
-    }
+void mlp2d::forward(int in, int layers) {
+    if (num_layers < 2 || input.empty()) return;
 
-    // Ensure input is copied to activations[0]
-    if (activations[0].size() != layer_sizes[0]) {
-        activations[0].resize(layer_sizes[0]);
-    }
-    if (input.size() == layer_sizes[0]) {
-        activations[0] = input;
-    } 
-    else {
-        throw std::runtime_error("MLP forward: Input vector size mismatch with input layer size.");
-    }
+    // input is std::vector<std::vector<float>> [inHeight x inWidth]
+    size_t rows = input.size();
 
-    // Iterate through weight matrices: weights[0] to weights[num_layers - 2]
-    // `l_idx` is the index for the weight matrix, hlayer, and the *previous* activation layer.
-    for (unsigned int l_idx = 0; l_idx < num_layers - 1; ++l_idx) {
-        const mat& current_weights = weights[l_idx]; // Connects layer l_idx to l_idx+1
-                                                       // Dimensions: (layer_sizes[l_idx+1], layer_sizes[l_idx])
-        const std::vector<float>& prev_layer_activations = activations[l_idx];
-        std::vector<float>& current_hlayer_values = hlayers[l_idx]; // For layer l_idx+1
-        std::vector<float>& current_output_activations = activations[l_idx+1]; // For layer l_idx+1
+    // 1. Initialize/Copy input to first activation layer
+    activations[0] = input;
 
-        if (!current_weights.mapped_data) {
-            throw std::runtime_error("Weights[" + std::to_string(l_idx) + "] not mapped.");
-        }
+    // 2. Propagate through layers
+    for (unsigned int l = 0; l < num_layers - 1; ++l) {
+        // Current activations A: [rows x layer_sizes[l]]
+        // Current weights W: [layer_sizes[l+1] x layer_sizes[l]]
+        
+        mat A_mat(activations[l]); 
+        mat W_T = weights[l].transpose(); // W_T is [layer_sizes[l] x layer_sizes[l+1]]
+        
+        // H = A * W^T results in [rows x layer_sizes[l+1]]
+        mat H_mat = A_mat * W_T;
 
-        // Ensure hlayers and activations for the current output layer are correctly sized
-        if (current_hlayer_values.size() != layer_sizes[l_idx+1]) {
-            current_hlayer_values.resize(layer_sizes[l_idx+1]);
-        }
-        if (current_output_activations.size() != layer_sizes[l_idx+1]) {
-            current_output_activations.resize(layer_sizes[l_idx+1]);
-        }
+        // Store pre-activation values in hlayers
+        hlayers[l] = H_mat.make2dVector();
 
-        // For each neuron 'j' in the current output layer (layer l_idx+1)
-        for (unsigned int j = 0; j < layer_sizes[l_idx+1]; ++j) {
-            float sum = 0.0f;
-            // For each neuron 'k' in the previous layer (layer l_idx)
-            for (unsigned int k = 0; k < layer_sizes[l_idx]; ++k) {
-                // Weight from neuron k (prev layer) to neuron j (current output layer)
-                // is weightsl_idx
-                // Access: current_weights.mapped_data[j * current_weights.col + k]
-                // current_weights.col is layer_sizes[l_idx]
-                size_t weight_index = static_cast<size_t>(j) * current_weights.col + k;
-                if (weight_index >= current_weights.mapped_size / sizeof(float)) {
-                    throw std::out_of_range("Weight index out of range for weights[" + std::to_string(l_idx) + "]. Accessing index " + std::to_string(weight_index) + " with size " + std::to_string(current_weights.mapped_size / sizeof(float)));
-                }
-                sum += prev_layer_activations[k] * current_weights.mapped_data[weight_index];
+        // Apply activation for the next layer
+        size_t next_layer_width = layer_sizes[l+1];
+        if (activations[l+1].size() != rows) activations[l+1].resize(rows);
+
+        for (size_t r = 0; r < rows; ++r) {
+            if (activations[l+1][r].size() != next_layer_width) 
+                activations[l+1][r].resize(next_layer_width);
+                
+            for (size_t c = 0; c < next_layer_width; ++c) {
+                activations[l+1][r][c] = sigmoid(hlayers[l][r][c]);
             }
-            current_hlayer_values[j] = sum;
-            current_output_activations[j] = sigmoid(sum);
         }
     }
 
-    // The final output is in activations[num_layers - 1]
-    if (output.size() != layer_sizes.back()) {
-        output.resize(layer_sizes.back());
-    }
-    output = activations[num_layers - 1];
+    // 3. Final output matrix [inHeight x outWidth]
+    output = activations.back();
 }
 
 #endif
