@@ -86,6 +86,7 @@ add_library(neural STATIC
         src/transformer/cpp/backward.cpp
         src/transformer/cpp/train1.cpp
         src/transformer/cpp/train2.cpp
+        src/transformer/cpp/train3.cpp
         src/transformer/cpp/test.cpp
         src/transformer/cpp/run.cpp
     # cuda
