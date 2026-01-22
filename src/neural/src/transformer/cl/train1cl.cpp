@@ -238,6 +238,7 @@ void transformer::clTrain(std::vector<std::vector<float>>& sentence, std::vector
                 }
 
                 clBackward(expected_vec, current_block_idx);
+                if (j > 0) learning = softsignLearning(del, learning);
                 totalLearning += learning;
                 prev_error = current_error;
                 totalBCELoss += current_error;

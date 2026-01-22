@@ -1,7 +1,7 @@
 #ifdef USE_CU
 
 // activations and its derivative functions
-#include "include/basic.hpp"
+#include "include/cppsup.hpp"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <math.h>

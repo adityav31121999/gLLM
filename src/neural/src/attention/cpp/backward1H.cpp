@@ -44,8 +44,8 @@ void attention::backward1stHead(std::vector<float>& expected, int& in, int& laye
     // Set MLP for backprop
     hor.expected = grad_hor_input;
     ver.output = grad_ver_input;
-    hor.backwithL2(in, layers, learning);
-    ver.backwithL2(in, layers, learning);
+    hor.backwithL2(learning);
+    ver.backwithL2(learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dh(EMBEDDING, 0.0f);
@@ -286,7 +286,7 @@ void attention::backward1stHead(std::vector<std::vector<float>>& expectedV, int&
 
     // Set MLP inputs for backprop
     ver.output = grad_ver_input;
-    ver.backwithL2(in, layers, learning);
+    ver.backwithL2(learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dv(EMBEDDING, 0.0f);
@@ -488,8 +488,8 @@ std::vector<float> attention::backward1stHeadContext(std::vector<float>& expecte
     // Set MLP for backprop
     hor.expected = grad_hor_input;
     ver.output = grad_ver_input;
-    hor.backwithL2(in, layers, learning);
-    ver.backwithL2(in, layers, learning);
+    hor.backwithL2(learning);
+    ver.backwithL2(learning);
 
     // Step 3: Compute gradients w.r.t. dh and dv
     std::vector<float> grad_dh(EMBEDDING, 0.0f);

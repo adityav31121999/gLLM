@@ -11,8 +11,16 @@
 #include <cstring>
 #include <random>
 #include <cmath>
-#include "include/basic.hpp"
+#include "include/cppsup.hpp"
 #include <memory_map.h>
+
+#ifdef USE_CU
+#include <cuda_runtime.h>
+#include "include/cppsup.hpp"
+#elif USE_CL
+#include <CL/cl.h>
+#include "include/clsup.hpp"
+#endif
 
 // Conceptual helper function - implement this elsewhere (e.g., memory_map.c or utils)
 // Ensures file exists and has at least required_size bytes. Returns 0 on success.
@@ -145,20 +153,27 @@ public:
 };
 
 // Helper functions for row operations on mat
+
+std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
+std::vector<float> flatten(const mat&);
 std::vector<float> getRow(const mat& m, int row_idx); // This was in mat.cpp, now in matops.cpp
 std::vector<float> getCol(const mat& m, int col_idx);
-void setRow(mat& m, int row_idx, const std::vector<float>& data); // This was in mat.cpp, now in matops.cpp
-void setCol(mat& m, int col_idx, const std::vector<float>& data);
 std::vector<float> dot(const mat& a, const std::vector<float>& b);
 std::vector<float> dot(const std::vector<float>& a, const mat& b);
+std::vector<float> matmul(const mat& a, const std::vector<float>& b);
+void setRow(mat& m, int row_idx, const std::vector<float>& data); // This was in mat.cpp, now in matops.cpp
+void setCol(mat& m, int col_idx, const std::vector<float>& data);
 void swap(mat& first, mat& second) noexcept;
 void write2filefrommat(const mat& matrix, const std::string& locationWithFileName);
-std::vector<float> matmul(const mat& a, const std::vector<float>& b);
-mat covariance(const mat& a);
 
-// Activation function adapted for mat
+mat covariance(const mat& a);
 mat LOTA(const mat& y, int t, bool attentionType);
 mat LOTAder(const mat& y, int t, bool attentionType);
+
+void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
+void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols);
+void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat);
+void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
 
 #ifdef USE_CU
 // device
@@ -179,11 +194,10 @@ mat LOTAder(const mat& y, int t, bool attentionType);
     float host_dot(const std::vector<float>& h_vec1, const mat& input_mat, const std::vector<float>& h_vec2); // Vector-Matrix-Vector
 #endif
 
-std::vector<float> flatten(const std::vector<std::vector<float>>& vec2d);
-std::vector<float> flatten(const mat&);
-void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
-void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols);
-void transposeMatToFlatVector(const mat& m, std::vector<float>& output_flat);
-void transposeFlattenMatrix(const std::vector<std::vector<float>>& input, std::vector<float>& output_flat, int rows, int cols);
+// layer normalisation
+
+std::vector<float> affineTransform(std::vector<float>&, std::vector<float>&, std::vector<float>&);
+mat affineTransform(mat&, mat&, mat&);
+
 
 #endif

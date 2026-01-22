@@ -1,5 +1,5 @@
 // activation functions
-#include "include/basic.hpp"
+#include "include/cppsup.hpp"
 #include <vector>       // Ensure vector is included
 #include <cmath>        // For std::exp, std::max, std::pow, std::abs
 #include <numeric>      // For std::accumulate, std::inner_product

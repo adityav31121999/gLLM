@@ -14,23 +14,23 @@
  * @param layers Number of hidden layers (total weight matrices = layers + 1)
  * @param learning Learning rate
  */
-void mlp::clBackwithL1(int in, int layers, float learning) {
+void mlp::clBackwithL1(float learning) {
     float lambda = 0.01f; // L1 regularization parameter (hardcoded or pass as argument)
 
     // --- Basic Sanity Checks ---
     if (output.size() != static_cast<size_t>(in) || expected.size() != static_cast<size_t>(in)) {
         throw std::invalid_argument("MLP clBackwithL1: Output/Expected vector size mismatch.");
     }
-    if (weights.empty() || weights.size() != static_cast<size_t>(layers + 1)) {
+    if (weights.empty() || weights.size() != static_cast<size_t>(num_layers + 1)) {
          throw std::runtime_error("MLP clBackwithL1: Weights vector size mismatch.");
     }
-     if (layers > 0 && (activations.empty() || activations.size() != static_cast<size_t>(layers))) {
+    if (num_layers > 0 && (activations.empty() || activations.size() != static_cast<size_t>(num_layers))) {
         throw std::runtime_error("MLP clBackwithL1: Activations vector size mismatch.");
     }
     if (input.size() != static_cast<size_t>(in)) {
         throw std::runtime_error("MLP clBackwithL1: Input vector size mismatch.");
     }
-    for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
+    for (size_t l = 0; l <= static_cast<size_t>(num_layers); ++l) {
         // Check if mat dimensions are consistent with 'in'
         if (weights[l].row != in || weights[l].col != in) {
              // This indicates a mismatch between 'in' and actual mat dimensions.
@@ -39,8 +39,8 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
                        << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
-     if (layers > 0) {
-        for (size_t l = 0; l < static_cast<size_t>(layers); ++l) {
+     if (num_layers > 0) {
+        for (size_t l = 0; l < static_cast<size_t>(num_layers); ++l) {
             if (activations[l].empty() || activations[l].size() != static_cast<size_t>(in)) {
                 throw std::runtime_error("MLP clBackwithL1: Activation dimensions error at layer " + std::to_string(l));
             }
@@ -71,18 +71,18 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         CL_CHECK(err);
         cl::Buffer d_expected(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
         CL_CHECK(err);
-        std::vector<cl::Buffer> d_activations(layers); // Hidden layer activations
+        std::vector<cl::Buffer> d_activations(num_layers); // Hidden layer activations
 
         // Buffers for weights and deltas (one per layer, including output)
-        std::vector<cl::Buffer> d_weights(layers + 1);
-        std::vector<cl::Buffer> d_layer_deltas(layers + 1);
-        for (int l = 0; l <= layers; ++l) {
+        std::vector<cl::Buffer> d_weights(num_layers + 1);
+        std::vector<cl::Buffer> d_layer_deltas(num_layers + 1);
+        for (int l = 0; l <= num_layers; ++l) {
             d_weights[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, weights_size_bytes, nullptr, &err); // Weights are updated
             CL_CHECK(err);
             d_layer_deltas[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, layer_size_bytes, nullptr, &err); // Deltas are calculated
             CL_CHECK(err);
         }
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
              d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
              CL_CHECK(err);
         }
@@ -91,10 +91,10 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_input, CL_TRUE, 0, layer_size_bytes, input.data()));
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_output_activations, CL_TRUE, 0, layer_size_bytes, output.data()));
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, layer_size_bytes, expected.data()));
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data()));
         }
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             // Use mapped_data directly
             const mat& weights_l_mat = weights[l];
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights_l_mat.mapped_data));
@@ -115,12 +115,12 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         // 1. Calculate Output Layer Deltas (Layer index 'layers')
         CL_CHECK(kernelOutDelta.setArg(0, d_output_activations));
         CL_CHECK(kernelOutDelta.setArg(1, d_expected));
-        CL_CHECK(kernelOutDelta.setArg(2, d_layer_deltas[layers]));
+        CL_CHECK(kernelOutDelta.setArg(2, d_layer_deltas[num_layers]));
         CL_CHECK(kernelOutDelta.setArg(3, cl_in));
         CL_CHECK(context_obj.queue.enqueueNDRangeKernel(kernelOutDelta, cl::NullRange, global_1d, local_1d));
 
         // 2. Calculate Hidden Layer Deltas (Propagate backwards from layers-1 down to 0)
-        for (int l = layers - 1; l >= 0; --l) {
+        for (int l = num_layers - 1; l >= 0; --l) {
             CL_CHECK(kernelHiddenDelta.setArg(0, d_layer_deltas[l + 1]));
             CL_CHECK(kernelHiddenDelta.setArg(1, d_weights[l + 1]));      // Weights W[l+1]
             CL_CHECK(kernelHiddenDelta.setArg(2, d_activations[l]));      // Activations A[l]
@@ -131,7 +131,7 @@ void mlp::clBackwithL1(int in, int layers, float learning) {
         }
 
         // 3. Update Weights using L1 Kernel (Iterate through layers 0 to layers)
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             cl::Buffer& d_prev_activations_buffer = (l == 0) ? d_input : d_activations[l - 1];
 
             CL_CHECK(kernelUpdateWL1.setArg(0, d_weights[l]));              // Weights W[l] (read/write)

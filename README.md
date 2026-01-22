@@ -99,7 +99,7 @@ IMP:
 **MLP**:
 - Multilayer Perceptron defined in mlp.hpp
 - `status`: Boolean, 1 if completely trained, 0 otherwise.
-- `num_layers`: Total number of layers (input, hidden, output).
+- `layers`: Total number of layers (input, hidden, output).
 - `layer_sizes`: Vector storing the number of neurons in each layer.
 - `epochs`: Number of training epochs.
 - `learning_rate`: Learning rate for training.

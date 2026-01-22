@@ -118,8 +118,8 @@ void transformer::backwardContext(std::vector<std::vector<float>>& expected, int
  * @param one_hot_host one hot encoding for correct output
  * @param indexForToken  
  */
-void transformer::updateDeEmbeddings(mat &deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host, 
-    float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh)
+void transformer::updateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
+                            float learning, std::vector<float> &gradForEh)
 {
     // error
     std::vector<float> predNorm = softmax(logit);
@@ -153,8 +153,7 @@ void transformer::updateDeEmbeddings(mat &deEmbeddings, std::vector<float> logit
 /**
  * @brief update embeddings
  */
-void transformer::updateEmbeddings(mat tokenEmbedding, std::vector<float> &gradForEh, float learning, float lambda_L1,
-    float lambda_L2, int rows)
+void transformer::updateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, int rows)
 {
     for(int i = 0; i < rows; i ++) {
         for(int j = 0; j < gradForEh.size(); j++) {

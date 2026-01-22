@@ -1,6 +1,6 @@
 #ifdef USE_CU
 // vector operations in cuda programs
-#include "include/basic.hpp"
+#include "include/cppsup.hpp"
 #include <cuda.h>
 #include <cuda_runtime.h>
 

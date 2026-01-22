@@ -7,6 +7,14 @@
 #include <maths.hpp>
 #include "mlp.hpp"
 
+#ifdef USE_CU
+#include <cuda_runtime.h>
+#include "include/cppsup.hpp"
+#elif USE_CL
+#include <CL/cl.h>
+#include "include/clsup.hpp"
+#endif
+
 /**
  * Attention Mechanism for SHADY ATTENTION ARCHITECTURE
  * ---------------------------------------------------------------------

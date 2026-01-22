@@ -40,8 +40,8 @@ void attention::backward(std::vector<float>& expected, int& in, int& layers, int
     // Set MLP inputs for backprop
     hor.expected = grad_hor_output;
     ver.expected = grad_ver_output;
-    hor.backwithL2(in, layers, learning);
-    ver.backwithL2(in, layers, learning);
+    hor.backwithL2(learning);
+    ver.backwithL2(learning);
 
     if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || 
         ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
@@ -239,7 +239,7 @@ void attention::backward(std::vector<std::vector<float>>& expectedV, int& layers
     }
 
     ver.expected = grad_ver_input;
-    ver.backwithL2(layers, EMBEDDING, learning); 
+    ver.backwithL2(learning); 
 
     // Ensure MLP gradients are available
     if (ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {
@@ -427,8 +427,8 @@ std::vector<float> attention::backwardContext(std::vector<float>& expected, int&
     // Set MLP inputs for backprop
     hor.expected = grad_hor_output;
     ver.expected = grad_ver_output;
-    hor.backwithL2(in, layers, learning);
-    ver.backwithL2(in, layers, learning);
+    hor.backwithL2(learning);
+    ver.backwithL2(learning);
 
     if (hor.gweights.empty() || hor.gweights[0].mapped_data == nullptr || 
         ver.gweights.empty() || ver.gweights[0].mapped_data == nullptr) {

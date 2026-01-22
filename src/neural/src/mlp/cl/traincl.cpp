@@ -114,7 +114,7 @@ static float calculateMseOpenCL(OpenCLContext& context_obj, const std::vector<fl
  * @param layers Number of hidden layers.
  * @param learning The learning rate.
  */
-void mlp::clTrain(float& mse, int in, int layers, float learning) {
+void mlp::clTrain(float& mse, float learning) {
     unsigned int e = 0;
 
     const unsigned int max_epochs = 10000; // Add a max epoch limit to prevent infinite loops
@@ -129,7 +129,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
     while (e < max_epochs) {
         try {
             // 1. Forward Pass (Uses shared context internally)
-            clForward(in, layers); // Updates output
+            clForward(); // Updates output
 
             // 2. Calculate MSE using OpenCL helper function (Pass shared context)
             mse = calculateMseOpenCL(clContext, expected, output, in);
@@ -147,12 +147,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
 
 
             // 4. Backward Pass (Uses shared context internally)
-            // Choose the appropriate backward function based on desired method
-            // clBackward(layers, in, learning); // Simple update
-            clBackprop(layers, in, learning); // Update with gradient calculation
-            // clBackwithL1(layers, in, learning); // L1 regularization
-            // clBackwithL2(layers, in, learning); // L2 regularization
-            // clBackprop2in(layers, in, learning); // Update input too
+            clBackprop(learning); // Update with gradient calculation
 
             e++;
 
@@ -168,7 +163,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
 
     // Perform a final forward pass to ensure 'output' reflects the trained weights
     try {
-        clForward(in, layers);
+        clForward();
     } catch (const std::exception& final_fwd_ex) { // Catch standard exception too
         std::cerr << "Warning: Error during final forward pass after training: " << final_fwd_ex.what() << std::endl;
         // Decide how to handle this - maybe the last calculated MSE is sufficient
@@ -185,7 +180,7 @@ void mlp::clTrain(float& mse, int in, int layers, float learning) {
  * @param layers Number of hidden layers.
  * @param learning The learning rate.
  */
-void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, int layers, float learning) {
+void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, float learning) {
     unsigned int e = 0;
     float average_epoch_mse = 0.0;
     const unsigned int max_epochs = 1000; // Add a max epoch limit
@@ -216,19 +211,14 @@ void mlp::clTrain(std::vector<std::vector<float>>& dataset, float& mse, int in, 
 
 
                 // 1. Forward Pass (Uses shared context internally)
-                clForward(in, layers); // Updates output
+                clForward(); // Updates output
 
                 // 2. Calculate MSE for this sample using OpenCL helper (Pass shared context)
                 float current_sample_mse = calculateMseOpenCL(clContext, expected, output, in);
                 total_epoch_squared_error += current_sample_mse * static_cast<float>(in); // Add total squared error for the sample
 
                 // 3. Backward Pass for this sample (Uses shared context internally)
-                // Choose the appropriate backward function
-                // clBackward(layers, in, learning);
-                clBackprop(layers, in, learning);
-                // clBackwithL1(layers, in, learning);
-                // clBackwithL2(layers, in, learning);
-                // clBackprop2in(layers, in, learning);
+                clBackprop(learning);
 
             } // End loop over dataset samples
 

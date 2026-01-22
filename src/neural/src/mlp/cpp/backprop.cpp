@@ -10,7 +10,7 @@
 /**
  * @brief Standard backpropagation: calculates gradients and updates weights.
  */
-void mlp::backprop(int in, int layers, float learning) {
+void mlp::backprop(float learning) {
     if (num_layers < 2) return;
 
     // 1. Initialize deltas
@@ -57,15 +57,15 @@ void mlp::backprop(int in, int layers, float learning) {
 /**
  * @brief Simple backward wrapper (legacy logic)
  */
-void mlp::backward(int in_param, int layers_param, float learning) {
-    backprop(0, 0, learning);
+void mlp::backward(float learning) {
+    backprop(learning);
 }
 
 /**
  * @brief Backpropagation with L1 regularization
  */
-void mlp::backwithL1(int in, int layers, float learning) {
-    backprop(in, layers, learning); // Standard update first
+void mlp::backwithL1(float learning) {
+    backprop(learning); // Standard update first
     
     float lambda = 0.01f;
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
@@ -82,8 +82,8 @@ void mlp::backwithL1(int in, int layers, float learning) {
 /**
  * @brief Backpropagation with L2 regularization
  */
-void mlp::backwithL2(int in, int layers, float learning) {
-    backprop(in, layers, learning); // Standard update first
+void mlp::backwithL2(float learning) {
+    backprop(learning); // Standard update first
     
     float lambda = 0.01f;
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
@@ -99,8 +99,8 @@ void mlp::backwithL2(int in, int layers, float learning) {
 /**
  * @brief Elastic Net regularization (L1 + L2)
  */
-void mlp::backwithElastic(int in, int layers, float learning) {
-    backprop(in, layers, learning); // Standard update first
+void mlp::backwithElastic(float learning) {
+    backprop(learning); // Standard update first
 
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
         mat& W = weights[l];
@@ -120,7 +120,7 @@ void mlp::backwithElastic(int in, int layers, float learning) {
 /**
  * @brief Backpropagation that propagates error back to the input vector
  */
-void mlp::backprop2in(int in, int layers, float learning) {
+void mlp::backprop2in(float learning) {
     if (num_layers < 2) return;
 
     // 1. Calculate deltas for all layers (same as backprop)
@@ -165,7 +165,7 @@ void mlp::backprop2in(int in, int layers, float learning) {
 /**
  * @brief Rprop implementation
  */
-void mlp::rprop(std::vector<std::vector<float>>& dataset, int layers, int in, float learning, int epochs) {
+void mlp::rprop(std::vector<std::vector<float>>& dataset, float learning, int epochs) {
     if (num_layers < 2) return;
 
     const float etaPlus = 1.2f, etaMinus = 0.5f;
@@ -184,12 +184,12 @@ void mlp::rprop(std::vector<std::vector<float>>& dataset, int layers, int in, fl
         float totalError = 0.0;
         for (const auto& data : dataset) {
             input = data;
-            forward(0, 0);
+            forward();
             
             // Standard gradient calculation via backprop logic (don't update weights yet)
             // For Rprop we actually need the gradient of the TOTAL error over the batch, 
             // but this implementation updates per-sample (Stochastic Rprop).
-            backprop(0, 0, 0.0f); 
+            backprop(0.0f); 
 
             for (unsigned int l = 0; l < num_layers - 1; ++l) {
                 mat& W = weights[l];
@@ -224,7 +224,7 @@ void mlp::rprop(std::vector<std::vector<float>>& dataset, int layers, int in, fl
  * @brief Standard Backpropagation for MLP2D.
  * Computes gradients by averaging the error across the 'height' (rows) of the 2D input.
  */
-void mlp2d::backprop(int layers, int in, float learning) {
+void mlp2d::backprop(float learning) {
     if (num_layers < 2 || input.empty()) return;
 
     size_t height = input.size();
@@ -284,8 +284,8 @@ void mlp2d::backprop(int layers, int in, float learning) {
 /**
  * @brief Backpropagation with L1 regularization for MLP2D.
  */
-void mlp2d::backwithL1(int layers, int in, float learning) {
-    backprop(layers, in, learning); // Update weights with gradients first
+void mlp2d::backwithL1(float learning) {
+    backprop(learning); // Update weights with gradients first
 
     float lambda = 0.01f;
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
@@ -302,8 +302,8 @@ void mlp2d::backwithL1(int layers, int in, float learning) {
 /**
  * @brief Backpropagation with L2 regularization for MLP2D.
  */
-void mlp2d::backwithL2(int layers, int in, float learning) {
-    backprop(layers, in, learning); // Update weights with gradients first
+void mlp2d::backwithL2(float learning) {
+    backprop(learning); // Update weights with gradients first
 
     float lambda = 0.01f;
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
@@ -319,8 +319,8 @@ void mlp2d::backwithL2(int layers, int in, float learning) {
 /**
  * @brief Backpropagation with Elastic Net regularization for MLP2D.
  */
-void mlp2d::backwithElastic(int in, int layers, float learning) {
-    backprop(layers, in, learning);
+void mlp2d::backwithElastic(float learning) {
+    backprop(learning);
 
     for (unsigned int l = 0; l < num_layers - 1; ++l) {
         mat& W = weights[l];
@@ -338,7 +338,7 @@ void mlp2d::backwithElastic(int in, int layers, float learning) {
 /**
  * @brief Updates the input matrix by propagating error all the way back.
  */
-void mlp2d::backprop2in(int layers, int in, float learning) {
+void mlp2d::backprop2in(float learning) {
     if (num_layers < 2 || input.empty()) return;
     size_t height = input.size();
 
@@ -392,7 +392,7 @@ void mlp2d::backprop2in(int layers, int in, float learning) {
  * @brief Rprop algorithm for MLP2D.
  * Updates weights based on the sign of the average gradient across the 2D height.
  */
-void mlp2d::rprop(std::vector<std::vector<std::vector<float>>>& dataset, int layers, int in, float learning, int epochs) {
+void mlp2d::rprop(std::vector<std::vector<std::vector<float>>>& dataset, float learning, int epochs) {
     if (num_layers < 2) return;
 
     const float etaPlus = 1.2f;
@@ -419,12 +419,12 @@ void mlp2d::rprop(std::vector<std::vector<std::vector<float>>>& dataset, int lay
         for (const auto& data_2d : dataset) {
             // data_2d is [Height x Width]
             input = data_2d;
-            forward(0, 0);
+            forward();
 
             // 1. Compute Gradients via backprop logic. 
             // Note: We pass learning=0.0 because Rprop handles its own weight updates.
             // backprop() will populate this->gweights with the average gradient across the height.
-            backprop(0, 0, 0.0f); 
+            backprop(0.0f); 
 
             // 2. Compute MSE for reporting
             size_t height = input.size();

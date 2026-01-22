@@ -78,6 +78,7 @@ public:
     mat tokenEmbed;                     // token embedding (sequence1 + sequence2) (Mapped, currentTokenCount x d)
     mat positional;                     // positional encodings (Mapped, currentTokenCount x d)
     mat embedPlusPos;                   // token embeddings + positional encodings (Mapped, currentTokenCount x d)
+
     // when model is in inference, hold EV of ith block here
     mat embedQKed;                      // token embeddings after QK attention (Mapped, currentTokenCount x d)
     std::vector<std::vector<std::vector<std::vector<float>>>> EVuse; // Keeping as vector due to complexity
@@ -110,9 +111,9 @@ public:
     void cuForward_ev(int& blockCount, int& currentTokenCount, int& sequence1Count);
     void cuBackward(std::vector<float>& expectedH, int& blockCount);
     void cuBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
+    void cuUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, int rows);
     void cuUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
-                              float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+                              float learning, std::vector<float> &gradForEh);
     void cuBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void cuTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void cuTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
@@ -130,22 +131,28 @@ public:
 // opencl implementation
     void clKdotQ4Train(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
     void clKdotQ4Infer(int& sequence1Count, int& currentTokenCount, int& blockCount, bool& isSelf, bool& inTraining);
+
     void clForward(int& blockCount, int& currentTokenCount, int& sequence1Count);
     void clForward_ev(int& blockCount, int& currentTokenCount, int& sequence1Count);
+
     void clBackward(std::vector<float>& expectedH, int& blockCount);
     void clBackward(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
+
+    void clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, int rows);
     void clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
-                            float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+                            float learning, std::vector<float> &gradForEh);
     void clBackwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
+
     void clTrain(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrain(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
-    void clTrainBatch(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
-    void clTrainBatch(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrainContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+
+    void clTrainBatch(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
+    void clTrainBatch(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void clTrainBatchContext(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void clTrainBatchContext(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
+
     void clTest(std::vector<std::vector<float>> &sequence1, std::vector<std::string> &rString);
     void clRun(bool context);
 
@@ -159,9 +166,9 @@ public:
     void backward(std::vector<float>& expectedH, int& blockCount);
     void backward(std::vector<std::vector<float>>& expectedH, int& blockCount);
     void backwardContext(std::vector<std::vector<float>>& expectedH, int& blockCount);
-    void updateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, float lambda_L1, float lambda_L2, int rows);
+    void updateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, int rows);
     void updateDeEmbeddings(mat& deEmbeddings, std::vector<float> logit, std::vector<float> one_hot_host,
-                            float learning, float lambda_L1, float lambda_L2, std::vector<float> &gradForEh);
+                            float learning, std::vector<float> &gradForEh);
     void train(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
     void train(std::vector<std::vector<float>>& sequence1, std::vector<std::vector<float>>& sequence2, std::vector<std::string>& rString);
     void trainBatch(std::vector<std::vector<float>>& sentence, std::vector<std::string>& rString);
@@ -188,7 +195,7 @@ public:
     float cosineAnnealingLR(int current_epoch, int total_epochs, float max_lr, float min_lr);
     float adaptiveLearningRateOnPlateau(float current_error, float previous_error, float& learning_rate, 
                                         float factor, float max_lr, float min_lr, float epsilon, int patience);
-    float softsignLearning(float error_del, float currentLearning);
+    float softsignLearning(float errordif, float currentLearning);
     float errorGradLearning(const std::vector<float>& pred, const std::vector<float>& exp, const float del, float currentLearning);
 
     std::vector<float> positionalEmbeddings(int position, int embeddingDimension);

@@ -142,8 +142,8 @@ void transformer::run(bool context) {
                 }
                 blocks[0].b[i][j].ver.input += blocks[0].b[i][j].v; // Add delta_v
 
-                blocks[0].b[i][j].hor.forward(d, l); // Use class members for EMBEDDING and MLP_LAYERS
-                blocks[0].b[i][j].ver.forward(d, l);
+                blocks[0].b[i][j].hor.forward(); // Use class members for EMBEDDING and MLP_LAYERS
+                blocks[0].b[i][j].ver.forward();
 
                 // AND gate for the final output
                 blocks[0].b[i][j].EH += ReLU(blocks[0].b[i][j].hor.output);

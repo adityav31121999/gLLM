@@ -8,6 +8,14 @@
 #include <fstream>
 #include <map>
 
+#ifdef USE_CU
+#include <cuda_runtime.h>
+#include "include/cppsup.hpp"
+#elif USE_CL
+#include <CL/cl.h>
+#include "include/clsup.hpp"
+#endif
+
 #define LAYERS_MLP 4                        // layers of mlp
 #define LEARNING_MAX 0.01f                  // maximum learning rate allowable
 #define LEARNING_MIN 0.00001f               // minimum learning rate allowable
@@ -22,13 +30,15 @@ class mlp {
 public:
 // member variables
     bool status;                // 1 if completely trained, 0 otherwise
+    unsigned int in;            // input size
+    unsigned int out;           // output size
     unsigned int num_layers;    // Total number of layers (including input and output)
     std::vector<unsigned int> layer_sizes;      // Number of neurons in each layer
     unsigned int epochs;        // Training epochs
+
     float learning_rate;        // Learning rate
-    float lambda_l1;            // L1 regularization parameter
-    float lambda_l2;            // L2 regularization parameter
-    unsigned int t;             // Time step for Adam (number of updates), initialized to 0
+    float lambda_l1;            // lambda for lasso
+    float lambda_l2;            // lambda for ridge
 
     std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
 
@@ -70,43 +80,43 @@ public:
 #ifdef USE_CU
 
 // cuda implementation for mlp
-    void cuForward(int in, int layers);
-    void cuBackward(int layers, int in, float learning);
-    void cuBackprop(int layers, int in, float learning);
-    void cuBackwithL1(int layers, int in, float learning);
-    void cuBackwithL2(int layers, int in, float learning);
-    void cuBackwithELasticNet(int layers, int in, float learning);
-    void cuBackprop2in(int layers, int in, float learning);
-    void cuRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
-    void cuTrain(float& mse, int in, int layers, float learning);
-    void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+    void cuForward();
+    void cuBackward(float learning);
+    void cuBackprop(float learning);
+    void cuBackwithL1(float learning);
+    void cuBackwithL2(float learning);
+    void cuBackwithELasticNet(float learning);
+    void cuBackprop2in(float learning);
+    void cuRprop(std::vector<std::vector<float>>&, float learning, int epochs);
+    void cuTrain(float& mse,float learning);
+    void cuTrain(std::vector<std::vector<float>>&, float& mse, float learning);
 
 #elif USE_CL
 
 // opencl implementation for mlp methods (will use clContext member)
-    void clForward(int in, int layers);
-    void clBackward(int layers, int in, float learning);
-    void clBackprop(int layers, int in, float learning);
-    void clBackwithL1(int layers, int in, float learning);
-    void clBackwithL2(int layers, int in, float learning);
-    void clBackwithElasticNet(int layers, int in, float learning);
-    void clBackprop2in(int layers, int in, float learning);
-    void clRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
-    void clTrain(float& mse, int in, int layers, float learning);
-    void clTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+    void clForward();
+    void clBackward(float learning);
+    void clBackprop(float learning);
+    void clBackwithL1(float learning);
+    void clBackwithL2(float learning);
+    void clBackwithElasticNet(float learning);
+    void clBackprop2in(float learning);
+    void clRprop(std::vector<std::vector<float>>&, float learning, int epochs);
+    void clTrain(float& mse, float learning);
+    void clTrain(std::vector<std::vector<float>>&, float& mse, float learning);
 
 #else
 
-    void forward(int in, int layers);
-    void backward(int layers, int in, float learning);
-    void backprop(int layers, int in, float learning);
-    void backwithL1(int layers, int in, float learning);
-    void backwithL2(int layers, int in, float learning);
-    void backwithElastic(int in, int layers, float learning);
-    void backprop2in(int layers, int in, float learning);
-    void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
-    void train(float& mse, int in, int layers, float learning);
-    void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+    void forward();
+    void backward(float learning);
+    void backprop(float learning);
+    void backwithL1(float learning);
+    void backwithL2(float learning);
+    void backwithElastic(float learning);
+    void backprop2in(float learning);
+    void rprop(std::vector<std::vector<float>>&, float learning, int epochs);
+    void train(float& mse, float learning);
+    void train(std::vector<std::vector<float>>&, float& mse, float learning);
 
 #endif
 
@@ -203,43 +213,43 @@ public:
 #ifdef USE_CU
 
 // cuda implementation for mlp
-    void cuForward(int in, int layers);
-    void cuBackward(int layers, int in, float learning);
-    void cuBackprop(int layers, int in, float learning);
-    void cuBackwithL1(int layers, int in, float learning);
-    void cuBackwithL2(int layers, int in, float learning);
-    void cuBackwithELasticNet(int layers, int in, float learning);
-    void cuBackprop2in(int layers, int in, float learning);
-    void cuRprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
-    void cuTrain(float& mse, int in, int layers, float learning);
-    void cuTrain(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+    void cuForward();
+    void cuBackward(float learning);
+    void cuBackprop(float learning);
+    void cuBackwithL1(float learning);
+    void cuBackwithL2(float learning);
+    void cuBackwithELasticNet(float learning);
+    void cuBackprop2in(float learning);
+    void cuRprop(std::vector<std::vector<float>>&, float learning, int epochs);
+    void cuTrain(float& mse, float learning);
+    void cuTrain(std::vector<std::vector<float>>&, float& mse, float learning);
 
 #elif USE_CL
 
 // opencl implementation for mlp methods (will use clContext member)
-    void clForward(int in, int layers);
-    void clBackward(int layers, int in, float learning);
-    void clBackprop(int layers, int in, float learning);
-    void clBackwithL1(int layers, int in, float learning);
-    void clBackwithL2(int layers, int in, float learning);
-    void clBackwithElasticNet(int layers, int in, float learning);
-    void clBackprop2in(int layers, int in, float learning);
-    void clRprop(std::vector<std::vector<std::vector<std::vector<float>>>>&, int layers, int in, float learning, int epochs);
-    void clTrain(float& mse, int in, int layers, float learning);
-    void clTrain(std::vector<std::vector<std::vector<std::vector<float>>>>&, float& mse, int in, int layers, float learning);
+    void clForward();
+    void clBackward(float learning);
+    void clBackprop(float learning);
+    void clBackwithL1(float learning);
+    void clBackwithL2(float learning);
+    void clBackwithElasticNet(float learning);
+    void clBackprop2in(float learning);
+    void clRprop(std::vector<std::vector<std::vector<std::vector<float>>>>&, float learning, int epochs);
+    void clTrain(float& mse, float learning);
+    void clTrain(std::vector<std::vector<std::vector<std::vector<float>>>>&, float& mse, float learning);
 
 #else
 
-    void forward(int in, int layers);
-    void backward(int layers, int in, float learning);
-    void backprop(int layers, int in, float learning);
-    void backwithL1(int layers, int in, float learning);
-    void backwithL2(int layers, int in, float learning);
-    void backwithElastic(int in, int layers, float learning);
-    void backprop2in(int layers, int in, float learning);
-    void rprop(std::vector<std::vector<float>>&, int layers, int in, float learning, int epochs);
-    void train(float& mse, int in, int layers, float learning);
-    void train(std::vector<std::vector<float>>&, float& mse, int in, int layers, float learning);
+    void forward();
+    void backward(float learning);
+    void backprop(float learning);
+    void backwithL1(float learning);
+    void backwithL2(float learning);
+    void backwithElastic(float learning);
+    void backprop2in(float learning);
+    void rprop(std::vector<std::vector<std::vector<float>>>&, float learning, int epochs);
+    void train(float& mse, float learning);
+    void train(std::vector<std::vector<std::vector<float>>>&, float& mse, float learning);
 
 #endif
 

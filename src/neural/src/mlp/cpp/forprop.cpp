@@ -4,7 +4,7 @@
 #include <maths.hpp>
 
 // --- MLP (1D Vector Version) ---
-void mlp::forward(int in, int layers) {
+void mlp::forward() {
     if (num_layers < 2) return;
 
     // 1. Set input layer activations
@@ -43,7 +43,7 @@ void mlp::forward(int in, int layers) {
  * @brief Forward propagation for 2D MLP.
  * Processes an [inHeight x inWidth] matrix through the network.
  */
-void mlp2d::forward(int in, int layers) {
+void mlp2d::forward() {
     if (num_layers < 2 || input.empty()) return;
 
     // input is std::vector<std::vector<float>> [inHeight x inWidth]

@@ -14,23 +14,23 @@
  * @param layers number of hidden layers (total weight matrices = layers + 1)
  * @param learning learning rate for mlp
  */
-void mlp::clBackward(int in, int layers, float learning) {
+void mlp::clBackward(float learning) {
     // --- Basic Sanity Checks & Initialization ---
     if (output.size() != static_cast<size_t>(in) || expected.size() != static_cast<size_t>(in)) {
         throw std::invalid_argument("MLP clBackward: Output/Expected vector size mismatch. Expected: " + std::to_string(in));
     }
-    if (weights.empty() || weights.size() != static_cast<size_t>(layers + 1)) {
-         throw std::runtime_error("MLP clBackward: Weights vector size mismatch. Expected: " + std::to_string(layers + 1) + ", Got: " + std::to_string(weights.size()));
+    if (weights.empty() || weights.size() != static_cast<size_t>(num_layers + 1)) {
+         throw std::runtime_error("MLP clBackward: Weights vector size mismatch. Expected: " + std::to_string(num_layers + 1) + ", Got: " + std::to_string(weights.size()));
     }
     // Need activations for hidden delta calculation and weight updates
-    if (layers > 0 && (activations.empty() || activations.size() != static_cast<size_t>(layers))) {
-        throw std::runtime_error("MLP clBackward: Activations vector size mismatch. Expected: " + std::to_string(layers));
+    if (num_layers > 0 && (activations.empty() || activations.size() != static_cast<size_t>(num_layers))) {
+        throw std::runtime_error("MLP clBackward: Activations vector size mismatch. Expected: " + std::to_string(num_layers));
     }
     if (input.size() != static_cast<size_t>(in)) {
         throw std::runtime_error("MLP clBackward: Input vector size mismatch.");
     }
     // Check dimensions
-    for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
+    for (size_t l = 0; l <= static_cast<size_t>(num_layers); ++l) {
         // Check if mat dimensions are consistent with 'in'
         if (weights[l].row != in || weights[l].col != in) {
              // This indicates a mismatch between 'in' and actual mat dimensions.
@@ -39,8 +39,8 @@ void mlp::clBackward(int in, int layers, float learning) {
                        << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
-    if (layers > 0) {
-        for (size_t l = 0; l < static_cast<size_t>(layers); ++l) {
+    if (num_layers > 0) {
+        for (size_t l = 0; l < static_cast<size_t>(num_layers); ++l) {
             if (activations[l].empty() || activations[l].size() != static_cast<size_t>(in)) {
                 throw std::runtime_error("MLP clBackward: Activation dimensions error at layer " + std::to_string(l));
             }
@@ -67,7 +67,7 @@ void mlp::clBackward(int in, int layers, float learning) {
         CL_CHECK(err);
         cl::Buffer d_expected(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
         CL_CHECK(err);
-        std::vector<cl::Buffer> d_activations(layers); // Hidden layer activations
+        std::vector<cl::Buffer> d_activations(num_layers); // Hidden layer activations
         cl::Buffer d_weights_next(context_obj.context, CL_MEM_READ_ONLY, weights_size_bytes, nullptr, &err); // W[l+1]
         CL_CHECK(err);
 
@@ -92,10 +92,10 @@ void mlp::clBackward(int in, int layers, float learning) {
         // Ensure d_all_deltas can hold cl::Buffer objects.
         // If d_all_deltas[l] = *d_delta_curr; is used, d_all_deltas should be std::vector<cl::Buffer>
         // and the buffers pointed to by d_delta_curr must remain valid.
-        std::vector<cl::Buffer> d_all_deltas(layers + 1); // Will store copies of the delta buffers
+        std::vector<cl::Buffer> d_all_deltas(num_layers + 1); // Will store copies of the delta buffers
 
         // Allocate hidden activation buffers
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
              d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
              CL_CHECK(err);
         }
@@ -114,7 +114,7 @@ void mlp::clBackward(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_output_activations, CL_TRUE, 0, layer_size_bytes, output.data()));
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, layer_size_bytes, expected.data()));
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_input_buffer, CL_TRUE, 0, layer_size_bytes, input.data()));
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data()));
         }
 
@@ -126,10 +126,10 @@ void mlp::clBackward(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.enqueueNDRangeKernel(kernelOutDelta, cl::NullRange, global_1d, local_1d));
 
         // Store the output delta buffer (index 'layers')
-        d_all_deltas[layers] = *d_delta_next; // This copies the cl::Buffer object
+        d_all_deltas[num_layers] = *d_delta_next; // This copies the cl::Buffer object
 
         // === 2. Backpropagate Deltas through Hidden Layers ===
-        for (int l = layers - 1; l >= 0; --l) {
+        for (int l = num_layers - 1; l >= 0; --l) {
             // Use mapped_data directly for weights[l+1]
             const mat& weights_l_plus_1_mat = weights[l + 1];
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights_next, CL_TRUE, 0, weights_size_bytes, weights_l_plus_1_mat.mapped_data));
@@ -151,7 +151,7 @@ void mlp::clBackward(int in, int layers, float learning) {
         }
 
         // === 3. Update Weights ===
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             // Get previous layer's activations buffer
             cl::Buffer& d_prev_activations_buffer = (l == 0) ? d_input_buffer : d_activations[l - 1];
 

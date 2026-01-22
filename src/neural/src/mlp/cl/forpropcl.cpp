@@ -9,13 +9,8 @@
 /**
  * @brief Performs forward propagation using OpenCL kernels.
  *        Calculates weighted sums and applies sigmoid activation for each layer.
- * @param in_param (DEPRECATED/IGNORED) Kept for signature compatibility if strictly needed, but logic now uses class members.
- * @param layers_param (DEPRECATED/IGNORED) Kept for signature compatibility if strictly needed, but logic now uses class members.
  */
-void mlp::clForward(int in_param, int layers_param) {
-    // Parameters in_param and layers_param are largely ignored in favor of class members
-    // for a more general MLP implementation.
-
+void mlp::clForward() {
     if (input.empty() || weights.empty() || num_layers < 2) {
         throw std::runtime_error("MLP not properly initialized for clForward.");
     }
@@ -23,9 +18,9 @@ void mlp::clForward(int in_param, int layers_param) {
          throw std::runtime_error("Mismatch between num_layers and weights size in clForward.");
     }
     
-    hlayers.resize(layers_param, std::vector<float>(in_param, 0.0f));
-    activations.resize(layers_param, std::vector<float>(in_param, 0.0f));
-    output.resize(in_param, 0.0f); // Resize host output vector
+    hlayers.resize(num_layers, std::vector<float>(in, 0.0f));
+    activations.resize(num_layers, std::vector<float>(in, 0.0f));
+    output.resize(in, 0.0f); // Resize host output vector
 
     try {
         cl_int err; // For OpenCL error codes

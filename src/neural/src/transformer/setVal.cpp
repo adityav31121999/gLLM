@@ -129,20 +129,27 @@ float transformer::cosineAnnealingLR(int current_epoch, int total_epochs, float 
 
 /**
  * @brief Softsign-based adaptive learning rate function
- * @param error_del current and previous epochs error difference.
+ * @param errordif current and previous epochs error difference.
  * @param currentLearning Current epoch's learning rate.
  * @return New adapted learning rate, bounded by LEARNING_MIN and LEARNING_MAX.
  */
-float transformer::softsignLearning(float error_del, float currentLearning) {
-if(currentLearning <= LEARNING_MIN) return 1.50f * LEARNING_MIN;
-    if(currentLearning >= LEARNING_MAX) return 0.90f * LEARNING_MAX;
-    if(error_del == 0) return currentLearning;
-    // --- Softsign Adjustment ---
-    float new_learning = 0.0f;
-    new_learning = currentLearning * (1.0f - (softsign(error_del) * ((error_del > 0.001) ? ((error_del > 0.25 ) ? 0.05 : 1) : 50)));
-    return std::min<float>(LEARNING_MAX, std::max<float>(new_learning, LEARNING_MIN));
-}
+float transformer::softsignLearning(float errordif, float currentLearning) {
+    // for extremes
+    if(currentLearning < LEARNING_MIN) return LEARNING_MIN*10.0f;
+    if(currentLearning > LEARNING_MAX) return LEARNING_MAX*0.9f;
 
+    // Compute softsign scaling factor
+    float del = 50.0f * (std::abs(errordif) < 1e-06 ? 0.0f : errordif);
+    float f = del / (1.0f + std::abs(del)); // Maps to (-1, 1)
+    // float adjustment = (f > 0.0f) ? reduction_factor * f : increase_factor * f;
+    float newLr = currentLearning * (1.0f + f);
+    static float prevLr = currentLearning;
+    // Clamp to [LEARNING_MIN, LEARNING_MAX]
+    newLr = std::min<float>(LEARNING_MAX, std::max<float>(LEARNING_MIN, newLr));
+    prevLr = newLr; // Update static previous learning rate for the next call
+
+    return newLr;
+}
 
 /**
  * @brief Calculates an adaptive learning rate based on the prediction error.

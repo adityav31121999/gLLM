@@ -114,7 +114,7 @@ void transformer::clBackward(std::vector<std::vector<float>>& expectedH, int& k)
  *        This will be filled with the error to propagate back to the block.
  */
 void transformer::clUpdateDeEmbeddings(mat& deEmbeddings, std::vector<float> prediction,
-            std::vector<float> oneHotEncode, float learning, float lambda_L1, float lambda_L2,
+            std::vector<float> oneHotEncode, float learning,
             std::vector<float> &gradForEh)
 {
     try {
@@ -283,8 +283,7 @@ void transformer::clBackwardContext(std::vector<std::vector<float>>& expectedH, 
 /**
  * @brief update embedding using propagated gradients from training
  */
-void transformer::clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning,
-    float lambda_L1, float lambda_L2, int rows)
+void transformer::clUpdateEmbeddings(mat tokenEmbedding, std::vector<float>& gradForEh, float learning, int rows)
 {
     try {
         cl_int cl_err;

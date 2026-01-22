@@ -12,18 +12,17 @@
  * @param layers Number of layers
  * @param learning Learning rate
  */
-void mlp::train(float& mse, int in, int layers, float learning) {
+void mlp::train(float& mse, float learning) {
     unsigned int e = 0;
     while (1) {
-        forward(in, layers);
+        forward();
         mse = MSE(expected, output);
         if(mse < 1e-6)
             break;
         std::cout << "Rep. NO.:" << e << " Errors: " << mse << std::endl;
-        backward(in, layers, learning);
+        backward(learning);
         e++;
     }
-    forward(in, layers);
 }
 
 /**
@@ -35,20 +34,20 @@ void mlp::train(float& mse, int in, int layers, float learning) {
  * @param layers Number of layers
  * @param learning Learning rate
  */
-void mlp::train(std::vector<std::vector<float>>& inputs, float& mse, int in, int layers, float learning) {
+void mlp::train(std::vector<std::vector<float>>& inputs, float& mse, float learning) {
     unsigned int e = 0;
     float total_mse = 0.0;
     while (1) {
         for (const auto& single_input : inputs) {
             input = single_input;
-            forward(in, layers);
+            forward();
             float current_mse = 0.0;
             for (size_t i = 0; i < output.size(); ++i) {
                 current_mse += std::pow(expected[i] - output[i], 2);
             }
             current_mse /= output.size();
             total_mse += current_mse;
-            backward(in, layers, learning);
+            backward(learning);
         }
         e++;
         total_mse /= inputs.size();

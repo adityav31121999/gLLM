@@ -467,7 +467,7 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 }
 
                 std::vector<float> gradEH(d * x, 0.0f);
-                clUpdateDeEmbeddings(deEmbeddings, pred, oneHotEncode, learning, lambda_L1, lambda_L2, gradEH);
+                clUpdateDeEmbeddings(deEmbeddings, pred, oneHotEncode, learning, gradEH);
                 // get expected target for backprop
                 std::vector<std::vector<float>> targets_for_heads(x, std::vector<float>(EMBEDDING, 0.0f));
                 for(int head_idx = 0; head_idx < x; ++head_idx) {
@@ -482,8 +482,8 @@ void transformer::clTrainContext(std::vector<std::vector<float>>& sequence1, std
                 // backpropagate within block
                 clBackwardContext(targets_for_heads, current_block_idx);
                 // update embeddings which are in use
-                clUpdateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, 12454);
-                clUpdateEmbeddings(tokenEmbed, blocks[blockCount-1].gradToken, learning, lambda_L1, lambda_L2, effective_context_size);
+                clUpdateEmbeddings(embeddings, blocks[blockCount-1].gradToken, learning, 12454);
+                clUpdateEmbeddings(tokenEmbed, blocks[blockCount-1].gradToken, learning, effective_context_size);
 
                 totalLearning += learning;
                 prev_error = current_error;

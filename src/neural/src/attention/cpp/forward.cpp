@@ -53,8 +53,8 @@ void attention::forprop(int& in, int& layers, int& tokenCount)
     }
     ver.input += v;
 
-    hor.forward(in, layers);
-    ver.forward(in, layers);
+    hor.forward();
+    ver.forward();
 
     // AND gate for the final output
     EH = EH + ReLU(hor.output); // Assumes EH is std::vector<float>
@@ -138,8 +138,8 @@ void attention::forprop(const mat& EVp, int& in, int& layers, int& tokenCount, i
     }
     ver.input += v;
 
-    hor.forward(in, layers);
-    ver.forward(in, layers);
+    hor.forward();
+    ver.forward();
 
     // AND gate for the final output
     EH = EH + ReLU(hor.output); // Assumes EH is std::vector<float>
@@ -192,7 +192,7 @@ void attention::forpropev(int& in, int& layers, int& tokenCount)
         ver.input += getRow(EV, i);
     }
     ver.input += v;
-    ver.forward(in, layers);
+    ver.forward();
 
     // AND gate for the final output
     for(int i = 0; i < CONTEXT_WIN; ++i) {
@@ -266,7 +266,7 @@ void attention::forpropev(const mat& EVp, int& in, int& layers, int& tokenCount,
          throw std::runtime_error("EVp dimension mismatch in attention::forprop. Expected rows: " + std::to_string(tokenCount) + ", got: " + std::to_string(EVp.row));
     }
     ver.input += v;
-    ver.forward(in, layers);
+    ver.forward();
 
     // AND gate for the final output
     // Update this head's EV (EV) for the current block's tokens

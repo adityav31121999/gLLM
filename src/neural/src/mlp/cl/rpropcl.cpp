@@ -15,7 +15,7 @@
  * @param learning Learning rate (Passed to clBackprop, not directly used by Rprop update rule)
  * @param epochs Number of epochs
  */
-void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, float learning, int epochs) {
+void mlp::clRprop(std::vector<std::vector<float>>& dataset, float learning, int epochs) {
     // Rprop parameters
     const float etaPlus = 1.2f;
     const float etaMinus = 0.5f;
@@ -32,17 +32,17 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
     // Assuming 'layers' parameter refers to number of hidden layers.
     // Number of weight matrices = layers + 1.
     // This should match weights.size() which is num_layers - 1.
-    if (weights.empty() || weights.size() != static_cast<size_t>(layers + 1) ||
-        gweights.size() != static_cast<size_t>(layers + 1) ) {
+    if (weights.empty() || weights.size() != static_cast<size_t>(num_layers + 1) ||
+        gweights.size() != static_cast<size_t>(num_layers + 1) ) {
          throw std::runtime_error("MLP clRprop: Weights or gweights vector size mismatch with 'layers' parameter.");
     }
     // gweights will be calculated by clBackprop
 
     // --- Host Initialization for Rprop state ---
-    std::vector<mat> prev_gradients_mats(layers + 1);
-    std::vector<mat> delta_weights_mats(layers + 1);
+    std::vector<mat> prev_gradients_mats(num_layers + 1);
+    std::vector<mat> delta_weights_mats(num_layers + 1);
 
-    for (int l = 0; l <= layers; ++l) {
+    for (int l = 0; l <= num_layers; ++l) {
         // Assuming each mat for Rprop state is in x in
         prev_gradients_mats[l] = mat(in, in); // Creates temp mapped file
         std::fill_n(prev_gradients_mats[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
@@ -62,12 +62,12 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
 
         // --- Device Buffer Allocation (Allocate ONCE outside loops using shared context) ---
         size_t weights_size_bytes = sizeof(float) * in * in;
-        std::vector<cl::Buffer> d_weights(layers + 1);
-        std::vector<cl::Buffer> d_gradients(layers + 1);
-        std::vector<cl::Buffer> d_prev_gradients(layers + 1);
-        std::vector<cl::Buffer> d_delta_weights(layers + 1);
+        std::vector<cl::Buffer> d_weights(num_layers + 1);
+        std::vector<cl::Buffer> d_gradients(num_layers + 1);
+        std::vector<cl::Buffer> d_prev_gradients(num_layers + 1);
+        std::vector<cl::Buffer> d_delta_weights(num_layers + 1);
 
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             d_weights[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, weights_size_bytes, nullptr, &err);
             CL_CHECK(err);
             d_gradients[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, weights_size_bytes, nullptr, &err); // Gradients are input to Rprop kernel
@@ -109,11 +109,11 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
                 // expected = dataset[sample_idx].second;
 
                 // 1. Forward Pass (Uses shared context internally)
-                clForward(in, layers); // Updates output
+                clForward(); // Updates output
 
                 // 2. Backward Pass (Calculate Gradients using clBackprop - uses shared context internally)
                 // This updates host gweights and host weights (using standard GD step, which Rprop overrides)
-                clBackprop(in, layers, learning); // 'learning' is used by clBackprop, not Rprop kernel
+                clBackprop(learning); // 'learning' is used by clBackprop, not Rprop kernel
 
                 // 3. Calculate Sample Error (on host for simplicity)
                 float sample_error = 0.0f;
@@ -127,7 +127,7 @@ void mlp::clRprop(std::vector<std::vector<float>>& dataset, int layers, int in, 
                 totalEpochError += sample_error;
 
                 // 4. Rprop Weight Update (using calculated gradients)
-                for (int l = 0; l <= layers; ++l) {
+                for (int l = 0; l <= num_layers; ++l) {
                     // Copy current weights (potentially modified by clBackprop)
                     // and calculated gradients (gweights) H->D for this layer (using shared queue)
                     const mat& current_weights_mat = weights[l];

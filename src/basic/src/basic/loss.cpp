@@ -1,4 +1,4 @@
-#include "include/basic.hpp"
+#include "include/cppsup.hpp"
 #include <stdexcept>
 #include <string>
 #include <cmath>
@@ -24,36 +24,6 @@ std::vector<float> error(std::vector<float>& x, std::vector<float>& y) {
                 [](const auto& i, const auto& j) { return (i - j); });
     // Return the vector of errors
     return b;
-}
-
-/**
- * @brief Calculate the mean error between two vectors.
- * @details This function computes the mean error by taking the difference between corresponding elements of two vectors
- * and averaging the result. It is commonly used to evaluate the performance of a neural network by comparing the 
- * predicted and actual output vectors.
- * @param[in] v1 The first vector (predicted values).
- * @param[in] v2 The second vector (actual values).
- * @return The mean error between the two vectors.
- */
-float errorofv(std::vector<float>& v1, std::vector<float>& v2) {
-    if (v1.size() != v2.size()) {
-        throw std::runtime_error("errorofv: Vector sizes do not match. v1 size: " + std::to_string(v1.size()) + ", v2 size: " + std::to_string(v2.size()));
-    }
-    if (v1.empty()) {
-        // Depending on desired behavior, could return 0.0f or throw.
-        // Original code would lead to division by zero.
-        // Returning 0.0f for empty vectors as a convention for error metrics.
-        std::cerr << "Warning: errorofv called with empty vectors. Returning 0.0f." << std::endl;
-        throw std::runtime_error("Provide loaded vectors");
-    }
-
-    float error_sum = 0.0f;
-    for(size_t i = 0; i < v1.size(); i++) {
-        // Accumulate the error as the difference between corresponding elements
-        error_sum += v1[i] - v2[i];
-    }
-    // Return the mean error
-    return error_sum / static_cast<float>(v1.size());
 }
 
 /**

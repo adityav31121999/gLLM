@@ -15,22 +15,10 @@
  * @param layers Number of hidden layers (total weight matrices = layers + 1)
  * @param learning Learning rate
  */
-void mlp::clBackprop(int in, int layers, float learning) {
+void mlp::clBackprop(float learning) {
     // --- Basic Sanity Checks ---
-    if (output.size() != static_cast<size_t>(in) || expected.size() != static_cast<size_t>(in)) {
-        throw std::invalid_argument("MLP clBackprop: Output/Expected vector size mismatch.");
-    }
-    if (weights.empty() || weights.size() != static_cast<size_t>(layers + 1)) {
-         throw std::runtime_error("MLP clBackprop: Weights vector size mismatch.");
-    }
-     if (layers > 0 && (activations.empty() || activations.size() != static_cast<size_t>(layers))) {
-        throw std::runtime_error("MLP clBackprop: Activations vector size mismatch.");
-    }
-    if (input.size() != static_cast<size_t>(in)) {
-        throw std::runtime_error("MLP clBackprop: Input vector size mismatch.");
-    }
     // Check weight mat dimensions against 'in' (conceptual size for this function)
-    for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
+    for (size_t l = 0; l <= static_cast<size_t>(num_layers); ++l) {
         if (weights[l].row != in || weights[l].col != in) {
              // This indicates a mismatch between 'in' and actual mat dimensions.
              // Depending on strictness, could throw or log. For now, proceed with 'in'.
@@ -38,18 +26,18 @@ void mlp::clBackprop(int in, int layers, float learning) {
                        << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
         }
     }
-     if (layers > 0) {
-        for (size_t l = 0; l < static_cast<size_t>(layers); ++l) {
+    if (num_layers > 0) {
+        for (size_t l = 0; l < static_cast<size_t>(num_layers); ++l) {
             if (activations[l].empty() || activations[l].size() != static_cast<size_t>(in)) {
                 throw std::runtime_error("MLP clBackprop: Activation dimensions error at layer " + std::to_string(l));
             }
         }
-     }
+    }
 
 
     // --- Initialize Host gweights (mat objects) ---
     // The mlp constructor already sizes gweights. This loop zeros out their mapped_data.
-    for (int l = 0; l <= layers; ++l) {
+    for (int l = 0; l <= num_layers; ++l) {
         // Assuming gweights[l] is conceptually in x in for this function.
         // The actual mat dimensions are set by layer_sizes in constructor.
         if (gweights[l].mapped_data && (gweights[l].row == in && gweights[l].col == in)) {
@@ -85,13 +73,13 @@ void mlp::clBackprop(int in, int layers, float learning) {
         CL_CHECK(err);
         cl::Buffer d_expected(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
         CL_CHECK(err);
-        std::vector<cl::Buffer> d_activations(layers); // Hidden layer activations only
+        std::vector<cl::Buffer> d_activations(num_layers); // Hidden layer activations only
 
         // Buffers for weights, gradients, and deltas (one per layer, including output)
-        std::vector<cl::Buffer> d_weights(layers + 1);
-        std::vector<cl::Buffer> d_gweights(layers + 1); // Gradients
-        std::vector<cl::Buffer> d_layer_deltas(layers + 1);
-        for (int l = 0; l <= layers; ++l) {
+        std::vector<cl::Buffer> d_weights(num_layers + 1);
+        std::vector<cl::Buffer> d_gweights(num_layers + 1); // Gradients
+        std::vector<cl::Buffer> d_layer_deltas(num_layers + 1);
+        for (int l = 0; l <= num_layers; ++l) {
             d_weights[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, weights_size_bytes, nullptr, &err); // Weights are updated
             CL_CHECK(err);
             d_gweights[l] = cl::Buffer(context_obj.context, CL_MEM_WRITE_ONLY, weights_size_bytes, nullptr, &err); // Gradients are calculated
@@ -100,7 +88,7 @@ void mlp::clBackprop(int in, int layers, float learning) {
             CL_CHECK(err);
         }
         // Allocate hidden layer activation buffers
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
              d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
              CL_CHECK(err);
         }
@@ -112,11 +100,11 @@ void mlp::clBackprop(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, layer_size_bytes, expected.data()));
 
         // Copy hidden activations
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data()));
         }
         // Copy initial weights
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             // Use mapped_data directly
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
@@ -135,12 +123,12 @@ void mlp::clBackprop(int in, int layers, float learning) {
         // 1. Calculate Output Layer Deltas (Layer index 'layers')
         CL_CHECK(kernelOutDelta.setArg(0, d_output_activations)); // Activated output
         CL_CHECK(kernelOutDelta.setArg(1, d_expected));
-        CL_CHECK(kernelOutDelta.setArg(2, d_layer_deltas[layers])); // Output delta buffer
+        CL_CHECK(kernelOutDelta.setArg(2, d_layer_deltas[num_layers])); // Output delta buffer
         CL_CHECK(kernelOutDelta.setArg(3, cl_in));
         CL_CHECK(context_obj.queue.enqueueNDRangeKernel(kernelOutDelta, cl::NullRange, global_1d, local_1d));
 
         // 2. Calculate Hidden Layer Deltas (Propagate backwards from layers-1 down to 0)
-        for (int l = layers - 1; l >= 0; --l) {
+        for (int l = num_layers - 1; l >= 0; --l) {
             CL_CHECK(kernelHiddenDelta.setArg(0, d_layer_deltas[l + 1])); // Deltas from the next layer (l+1)
             CL_CHECK(kernelHiddenDelta.setArg(1, d_weights[l + 1]));      // Weights connecting layer l to layer l+1
             CL_CHECK(kernelHiddenDelta.setArg(2, d_activations[l]));      // Activations of the current layer (l)
@@ -151,7 +139,7 @@ void mlp::clBackprop(int in, int layers, float learning) {
         }
 
         // 3. Calculate Gradients and Update Weights (Iterate through layers 0 to layers)
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             // Determine the buffer containing activations from the previous layer
             cl::Buffer& d_prev_activations_buffer = (l == 0) ? d_input : d_activations[l - 1];
 
@@ -170,12 +158,12 @@ void mlp::clBackprop(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.finish()); // Ensure all kernels complete before reading
 
         // Copy updated weights back to the host mlp object
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // Copy calculated gradients back to the host mlp object
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueReadBuffer(d_gweights[l], CL_TRUE, 0, weights_size_bytes, gweights[l].mapped_data));
         }
 
@@ -202,37 +190,10 @@ void mlp::clBackprop(int in, int layers, float learning) {
  * @param layers Number of hidden layers (total weight matrices = layers + 1)
  * @param learning Learning rate
  */
-void mlp::clBackprop2in(int in, int layers, float learning) {
+void mlp::clBackprop2in(float learning) {
     // --- Basic Sanity Checks ---
-    // (Same checks as clBackprop)
-    if (output.size() != static_cast<size_t>(in) || expected.size() != static_cast<size_t>(in)) {
-        throw std::invalid_argument("MLP clBackprop2in: Output/Expected vector size mismatch.");
-    }
-    if (weights.empty() || weights.size() != static_cast<size_t>(layers + 1)) {
-         throw std::runtime_error("MLP clBackprop2in: Weights vector size mismatch.");
-    }
-     if (layers > 0 && (activations.empty() || activations.size() != static_cast<size_t>(layers))) {
-        throw std::runtime_error("MLP clBackprop2in: Activations vector size mismatch.");
-    }
-    if (input.size() != static_cast<size_t>(in)) {
-        throw std::runtime_error("MLP clBackprop2in: Input vector size mismatch.");
-    }
-    for (size_t l = 0; l <= static_cast<size_t>(layers); ++l) {
-        if (weights[l].row != in || weights[l].col != in) {
-             std::cerr << "Warning: MLP clBackprop2in: Weight mat dimensions at layer " << l << " ("
-                       << weights[l].row << "x" << weights[l].col << ") do not match 'in' parameter (" << in << ")." << std::endl;
-        }
-    }
-    if (layers > 0) {
-        for (size_t l = 0; l < static_cast<size_t>(layers); ++l) {
-            if (activations[l].empty() || activations[l].size() != static_cast<size_t>(in)) {
-                throw std::runtime_error("MLP clBackprop2in: Activation dimensions error at layer " + std::to_string(l));
-            }
-        }
-    }
-
     // --- Initialize Host gweights (mat objects) ---
-    for (int l = 0; l <= layers; ++l) {
+    for (int l = 0; l <= num_layers; ++l) {
         if (gweights[l].mapped_data && (gweights[l].row == in && gweights[l].col == in)) {
             std::fill_n(gweights[l].mapped_data, static_cast<size_t>(in) * in, 0.0f);
         } else if (gweights[l].mapped_data) {
@@ -267,13 +228,13 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         CL_CHECK(err);
         cl::Buffer d_expected(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
         CL_CHECK(err);
-        std::vector<cl::Buffer> d_activations(layers); // Hidden layer activations
+        std::vector<cl::Buffer> d_activations(num_layers); // Hidden layer activations
 
         // Buffers for weights, gradients, and deltas
-        std::vector<cl::Buffer> d_weights(layers + 1);
-        std::vector<cl::Buffer> d_gweights(layers + 1); // Gradients
-        std::vector<cl::Buffer> d_layer_deltas(layers + 1);
-        for (int l = 0; l <= layers; ++l) {
+        std::vector<cl::Buffer> d_weights(num_layers + 1);
+        std::vector<cl::Buffer> d_gweights(num_layers + 1); // Gradients
+        std::vector<cl::Buffer> d_layer_deltas(num_layers + 1);
+        for (int l = 0; l <= num_layers; ++l) {
             d_weights[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, weights_size_bytes, nullptr, &err);
             CL_CHECK(err);
             d_gweights[l] = cl::Buffer(context_obj.context, CL_MEM_WRITE_ONLY, weights_size_bytes, nullptr, &err);
@@ -281,7 +242,7 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
             d_layer_deltas[l] = cl::Buffer(context_obj.context, CL_MEM_READ_WRITE, layer_size_bytes, nullptr, &err);
             CL_CHECK(err);
         }
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
              d_activations[l] = cl::Buffer(context_obj.context, CL_MEM_READ_ONLY, layer_size_bytes, nullptr, &err);
              CL_CHECK(err);
         }
@@ -290,10 +251,10 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_input, CL_TRUE, 0, layer_size_bytes, input.data())); // Initial input
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_output_activations, CL_TRUE, 0, layer_size_bytes, output.data()));
         CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_expected, CL_TRUE, 0, layer_size_bytes, expected.data()));
-        for (int l = 0; l < layers; ++l) {
+        for (int l = 0; l < num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_activations[l], CL_TRUE, 0, layer_size_bytes, activations[l].data()));
         }
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueWriteBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
@@ -311,12 +272,12 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         // 1. Calculate Output Layer Deltas (Layer index 'layers')
         CL_CHECK(kernelOutDelta.setArg(0, d_output_activations));
         CL_CHECK(kernelOutDelta.setArg(1, d_expected));
-        CL_CHECK(kernelOutDelta.setArg(2, d_layer_deltas[layers]));
+        CL_CHECK(kernelOutDelta.setArg(2, d_layer_deltas[num_layers]));
         CL_CHECK(kernelOutDelta.setArg(3, cl_in));
         CL_CHECK(context_obj.queue.enqueueNDRangeKernel(kernelOutDelta, cl::NullRange, global_1d, local_1d));
 
         // 2. Calculate Hidden Layer Deltas (Propagate backwards from layers-1 down to 0)
-        for (int l = layers - 1; l >= 0; --l) {
+        for (int l = num_layers - 1; l >= 0; --l) {
             CL_CHECK(kernelHiddenDelta.setArg(0, d_layer_deltas[l + 1]));
             CL_CHECK(kernelHiddenDelta.setArg(1, d_weights[l + 1]));
             CL_CHECK(kernelHiddenDelta.setArg(2, d_activations[l])); // Activations of current layer l
@@ -327,7 +288,7 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         }
 
         // 3. Calculate Gradients and Update Weights (Iterate through layers 0 to layers)
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             cl::Buffer& d_prev_activations_buffer = (l == 0) ? d_input : d_activations[l - 1];
 
             CL_CHECK(kernelUpdateWAndG.setArg(0, d_layer_deltas[l]));
@@ -353,12 +314,12 @@ void mlp::clBackprop2in(int in, int layers, float learning) {
         CL_CHECK(context_obj.queue.finish()); // Ensure all kernels are done before reading
 
         // Copy updated weights back
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueReadBuffer(d_weights[l], CL_TRUE, 0, weights_size_bytes, weights[l].mapped_data));
         }
 
         // Copy calculated gradients back
-        for (int l = 0; l <= layers; ++l) {
+        for (int l = 0; l <= num_layers; ++l) {
             CL_CHECK(context_obj.queue.enqueueReadBuffer(d_gweights[l], CL_TRUE, 0, weights_size_bytes, gweights[l].mapped_data));
         }
 

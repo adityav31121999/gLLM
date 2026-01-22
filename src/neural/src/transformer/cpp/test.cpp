@@ -169,8 +169,8 @@ void transformer::test(std::vector<std::vector<float>> &prompt, std::vector<std:
                 }
                 blocks[0].b[i][j].ver.input += blocks[0].b[i][j].v;
 
-                blocks[0].b[i][j].hor.forward(d, l);
-                blocks[0].b[i][j].ver.forward(d, l);
+                blocks[0].b[i][j].hor.forward();
+                blocks[0].b[i][j].ver.forward();
 
                 blocks[0].b[i][j].EH += ReLU(blocks[0].b[i][j].hor.output);
                 std::vector<float> relu_ver_output = ReLU(blocks[0].b[i][j].ver.output);
