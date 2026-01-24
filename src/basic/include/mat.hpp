@@ -169,6 +169,7 @@ void write2filefrommat(const mat& matrix, const std::string& locationWithFileNam
 mat covariance(const mat& a);
 mat LOTA(const mat& y, int t, bool attentionType);
 mat LOTAder(const mat& y, int t, bool attentionType);
+void layerNorm(mat& input, mat& gamma, mat& beta, mat& normalised);
 
 void unflatten(const std::vector<float>& flat, std::vector<std::vector<float>>& vec2d, size_t rows, size_t cols);
 void flatten2DVector(const std::vector<std::vector<float>>& vec2d, std::vector<float>& output_flat, size_t expected_rows, size_t expected_cols);

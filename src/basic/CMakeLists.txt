@@ -10,6 +10,7 @@ add_library(maths STATIC
     src/basic/vect.cpp
     src/basic/weights.cpp
     src/basic/loss.cpp
+    src/basic/layernorm.cpp
     # cuda
     src/basic/cu/activations.cu
     src/basic/cu/vect.cu

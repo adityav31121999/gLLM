@@ -92,4 +92,10 @@ void jumbledwbs(std::vector<std::vector<float>>);
 void ijbasedwbs(std::vector<std::vector<float>>);
 void Random(std::vector<std::vector<float>>);
 
+// layer normalisation
+
+void layerNorm(std::vector<float> &input, std::vector<float>& gamma, std::vector<float>& beta, std::vector<float>& normalised);
+void layerNorm(std::vector<std::vector<float>>& input, std::vector<std::vector<float>>& gamma, std::vector<std::vector<float>>& beta, 
+                std::vector<std::vector<float>>& normalised);
+
 #endif

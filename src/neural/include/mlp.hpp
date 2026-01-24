@@ -40,14 +40,17 @@ public:
     float lambda_l1;            // lambda for lasso
     float lambda_l2;            // lambda for ridge
 
-    std::vector<mat> weights;      // Weight matrices between layers (using memory-mapped mat)
+    std::vector<mat> weights;       // Weight matrices between layers (using memory-mapped mat)
+    std::vector<std::vector<float>> normGamma;   // gamma for layer normalisation
+    std::vector<std::vector<float>> normBeta;    // beta for layer normalisation
 
 // member containers
     std::vector<float> input;      // input vector
     std::vector<float> output;     // output vector
     std::vector<float> expected;   // expected output vectors
-    std::vector<std::vector<float>> hlayers;       // hidden layers (intermediate, might stay in RAM)
-    std::vector<std::vector<float>> activations;   // activations for each layer
+    std::vector<std::vector<float>> hlayers;        // hidden layers (intermediate, might stay in RAM)
+    std::vector<std::vector<float>> activations;    // activations for each layer
+    std::vector<std::vector<float>> normalised;     // nomrlised (activations) or whatever
     std::vector<mat> gweights;     // Gradient matrices corresponding to weights (using memory-mapped mat)
     int params;                    // parameters in mlp
 

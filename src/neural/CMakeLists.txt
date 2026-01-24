@@ -84,6 +84,7 @@ add_library(neural STATIC
         src/transformer/cpp/compute.cpp
         src/transformer/cpp/feedfor.cpp
         src/transformer/cpp/backward.cpp
+        src/transformer/cpp/trainf.cpp
         src/transformer/cpp/train1.cpp
         src/transformer/cpp/train2.cpp
         src/transformer/cpp/train3.cpp
@@ -93,6 +94,7 @@ add_library(neural STATIC
         src/transformer/cu/compute.cu
         src/transformer/cu/feedfor.cu
         src/transformer/cu/backward.cu
+        src/transformer/cu/trainf.cu
         src/transformer/cu/train1.cu
         src/transformer/cu/train2.cu
         src/transformer/cu/train3.cu
@@ -103,6 +105,7 @@ add_library(neural STATIC
         src/transformer/cl/clcompute.cpp
         src/transformer/cl/feedforcl.cpp
         src/transformer/cl/backwardcl.cpp
+        src/transformer/cl/trainfcl.cpp
         src/transformer/cl/train1cl.cpp
         src/transformer/cl/train2cl.cpp
         src/transformer/cl/train3cl.cpp

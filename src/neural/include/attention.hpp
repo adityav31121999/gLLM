@@ -74,6 +74,13 @@ public:
     float learning_rate;        // learning rate for attention
     unsigned long long params;          // parameters in each attention head
     unsigned long long attOffset;       // attention offset
+    // normalisation
+    std::vector<float> normGammah;      // gamma for layer normalisation
+    std::vector<float> normGammav;      // gamma for layer normalisation
+    std::vector<float> normBetah;       // beta for layer normalisation
+    std::vector<float> normBetav;       // beta for layer normalisation
+    std::vector<float> normh;           // normalised h
+    std::vector<float> normv;           // normalised v
 
 #ifdef USE_CL
     // Default constructor deleted when OpenCL is enabled because reference member clContext needs initialization.

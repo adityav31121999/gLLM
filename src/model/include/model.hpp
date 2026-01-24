@@ -119,9 +119,10 @@ public:
     void setSessionData(TrainingSessionData& sessionData, int k, int linesProcessedIn1Session);
 
     // train seq2seq and sequence with context in consideration
+    void trainFilledUp(const std::string& txtFileLocation, int context_window, bool contextTrain);
     void trainSeq2Seq(const std::string& txtFileLocation, int context_window, bool contextTrain);
     void trainSequence(const std::string& txtFileLocation, int context_window, bool contextTrain);
-    void train(const std::string& path2txtDir, int context_window, bool contextTrain, bool trainType);
+    void train(const std::string& path2txtDir, int context_window, bool contextTrain, int trainType);
     void test(const std::string& path2txtDir, int context_window, bool contextTrain);
 
     // get offsets for layout and components

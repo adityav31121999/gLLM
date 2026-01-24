@@ -24,8 +24,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${FullOutputDir}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${FullOutputDir}")
 
 # turn off both opencl and cuda macro to turn on USE_CPU macro
-set(USE_CL ON)
-set(USE_CU OFF)
+set(USE_CL OFF)
+set(USE_CU ON)
 
 # language settings
 set(LANGUAGES C CXX

@@ -9,6 +9,163 @@
 #include <map>
 #include <algorithm>
 
+/// -------------- Final Token Prediction with Filled Up Context-Window -------------- ///
+
+/**
+ * @brief model training for single final token with filled-up context window
+ * @param txtFileLocation location of txt file (with each line as a sentence, 
+ *          between two lines there is an empty line)
+ * @param context_window context window for training
+ * @param contextTrain static or contextualised training
+ */
+void model::trainFilledUp(const std::string &txtFileLocation, int context_window, bool contextTrain)
+{
+    // basic checks for file
+    if (txtFileLocation.empty()) {
+        throw std::runtime_error("Training data file path cannot be empty!");
+    }
+    if (!std::filesystem::exists(txtFileLocation) || !std::filesystem::is_regular_file(txtFileLocation)) {
+        throw std::runtime_error("Training data file not found or is not a regular file: " + txtFileLocation);
+    }
+    if (std::filesystem::path(txtFileLocation).extension() != ".txt") {
+        throw std::runtime_error("Training data file must be a .txt file: " + txtFileLocation);
+    }
+
+    TrainingSessionData sessionData;
+    bool sessionFileExistsAndIsValid = false;
+    int startLineForCurrentFile = 0;
+    getSessionData(sessionData, sessionFileExistsAndIsValid, startLineForCurrentFile);
+
+    // Initialize model state based on session data or defaults
+    totalTokens = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalTokensProcessed : 0;
+    T.trainCount = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalTrainCount : 0;
+    T.blockCount = 0;
+    T.epochCount = 0;
+    int currentLine = 0;
+
+    if (sessionFileExistsAndIsValid && sessionData.lastTrainingFileName == txtFileLocation) {
+        startLineForCurrentFile = sessionData.linesProcessedInLastFile;
+        std::cout << "Resuming training for " << txtFileLocation << " from line " << startLineForCurrentFile << "." << std::endl;
+    }
+
+    // open file and read line by line
+    std::ifstream file(txtFileLocation);
+    if (!file.is_open()) {
+        throw std::runtime_error("Error opening training data file: " + txtFileLocation);
+    }
+    unsigned long long numberOfLines = countLineInTXT(txtFileLocation);
+    if (numberOfLines <= 0) {
+        throw std::runtime_error("No training data found in the specified file!");
+    }
+    std::cout << "Total training lines: " << numberOfLines << std::endl;
+    std::string line;
+
+    if (startLineForCurrentFile >= numberOfLines && sessionFileExistsAndIsValid && 
+        sessionData.lastTrainingFileName == txtFileLocation) 
+    {
+        std::cout << "All lines in " << txtFileLocation << " were already processed according to session data. Skipping." << std::endl;
+        return;
+    }
+    // Start timing here
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    // get tokens
+    std::vector<std::string> linesOfFile;
+    while (std::getline(file, line)) {
+        if(line.empty() == 1) {
+            continue;
+        }
+        linesOfFile.push_back(line);
+    }
+    std::vector<std::string> tokensOfLine;      // hold tokens of single line for each process
+
+    unsigned long long initialCumulativeLinesTrainedForSession = sessionFileExistsAndIsValid ? sessionData.cumulativeTotalLinesTrained : 0;
+    unsigned long long linesProcessedInThisRun = 0;
+
+    std::cout << "Starting Sequential Training with trainSequence :)" << std::endl;
+    // tokenise each line and povide their respective emebeddings
+    for(unsigned long long k = startLineForCurrentFile; k < numberOfLines; k++)
+    {
+        tokensOfLine.clear();
+        T.currentTokenCount = 0;
+        std::cout << "Current Sentence is:- " << linesOfFile[k] << std::endl;
+        TOK.splitSentence(linesOfFile[k], tokensOfLine);
+        for(const auto& tokens : tokensOfLine) {
+            std::cout << tokens << "  ";
+        }
+        std::cout << std::endl;
+
+        if (tokensOfLine.empty()) continue;
+
+        T.indexVec.resize(tokensOfLine.size(), 0);
+        T.getIndexOfAllTokens(tokensOfLine, T.indexVec);
+
+        // Fill context with all tokens except the last one
+        for(size_t j = 0; j < tokensOfLine.size() - 1; j++) {
+            std::vector<float> embed = T.embeddings(T.indexVec[j]);
+            T.tokenEmbed.addRow(embed, T.currentTokenCount);
+            T.positional.addRow(T.positionalEmbeddings(T.currentTokenCount, T.d), T.currentTokenCount);
+            T.currentTokenCount++;
+        }
+        
+        T.blockCount = (T.currentTokenCount == 0) ? 1 : (T.currentTokenCount / CONTEXT_WIN) + 1;
+
+        // Prepare expected (last token)
+        std::string expString = tokensOfLine.back();
+        std::vector<float> expected = T.embeddings(T.indexVec.back());
+
+        // train the first block
+        if(T.currentTokenCount < context_window)
+        {
+            #ifdef USE_CU
+                std::cout << "Using CUDA Implementation" << std::endl;
+                if(contextTrain == 1)
+                    T.cuTrainContext(expected, expString);
+                else
+                    T.cuTrain(expected, expString);
+            #elif USE_CL
+                std::cout << "Using OpenCL Implementation" << std::endl;
+                if(contextTrain == 1)
+                    T.clTrainContext(expected, expString);
+                else
+                    T.clTrain(expected, expString);
+            #elif USE_CPU
+                std::cout << "Using C++ Implementation" << std::endl;
+                if(contextTrain == 1)
+                    T.trainContext(expected, expString);
+                else
+                    T.train(expected, expString);
+            #endif
+
+            if(contextTrain == 1) {
+                TOK.saveEmbeddings(TOK.path2token + "/_embeddings_only.csv", T.deEmbeddings.mapped_data);
+                TOK.savedeEmbeddings(TOK.path2token + "/_deEmbeddings_only.csv", T.deEmbeddings.mapped_data);
+            }
+        }
+        else {
+            throw std::runtime_error("LOCAL CONTEXT LIMIT REACHED");
+        }
+
+        totalTokens += tokensOfLine.size();
+        linesProcessedInThisRun++;
+        sessionData.lastTrainingFileName = txtFileLocation;
+        sessionData.cumulativeTotalLinesTrained = initialCumulativeLinesTrainedForSession + linesProcessedInThisRun;
+
+        setSessionData(sessionData, k, linesProcessedInThisRun);
+        if (!currentChatLogPath.empty()) {
+            sessionData.save(currentChatLogPath);
+        }
+
+        std::cout << "complete " << k << "th part. Progress saved." << std::endl;
+        int b = T.currentTokenCount / CONTEXT_WIN;
+        T.blocks[b].serialise(T.blocks[b].blockFilePath);
+        std::cout << "              ---------------- To New Line --------------              " << std::endl;
+    }
+    std::cout << "Training complete for file " << txtFileLocation << " for context of " << context_window << "." << std::endl;
+    serialise();
+    std::cout << "-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-:-" << std::endl;
+}
+
 /// -------------- single continuous sequence training -------------- ///
 
 /**
@@ -382,9 +539,9 @@ void model::trainSeq2Seq(const std::string& txtFileLocation, int context_window,
  *  file have been used for training in previous sessions and from where to start.
  * @param path2txtDir path to directory of all text files
  * @param context_window context of window of block (local context)
- * @param trainType trainType = 1 for seq2seq else 0 for sequence.
+ * @param trainType training type: 0 for sequential, 1 for sequence-2-sequence, and 2 for filled-up window.
  */
-void model::train(const std::string &path2txtDir, int context_window, bool contextTrain, bool trainType)
+void model::train(const std::string &path2txtDir, int context_window, bool contextTrain, int trainType)
 {
     if (path2txtDir.empty()) {
         throw std::runtime_error("Training data directory path cannot be empty!");
@@ -436,9 +593,15 @@ void model::train(const std::string &path2txtDir, int context_window, bool conte
         std::cout << "Processing file: " << fileName << std::endl;
 
         if (trainType == 1) {
+            // sequence-2-sequence
             trainSeq2Seq(filePath, context_window, contextTrain);
         }
-        else {
+        else if (trainType == 2) {
+            // filled-up window
+            trainFilledUp(filePath, context_window, contextTrain);
+        }
+        else{
+            // sequential
             trainSequence(filePath, context_window, contextTrain);
         }
 
