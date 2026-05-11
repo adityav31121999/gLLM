@@ -15,6 +15,36 @@ __kernel void kernelTransposeMatrix(
     }
 }
 
+#define TILE_DIM 32
+
+__kernel void tiledTranspose(
+    __global const float *A, 
+    __global float *y, 
+    const int M, const int N) 
+{
+    // Local memory tile + 1 to avoid bank conflicts
+    __local float tile[TILE_DIM][TILE_DIM + 1];
+
+    int x = get_global_id(0);
+    int y_idx = get_global_id(1);
+
+    // 1. Coalesced Read from A into Local Tile
+    if (x < N && y_idx < M) {
+        tile[get_local_id(1)][get_local_id(0)] = A[y_idx * N + x];
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // 2. Transpose indices for Coalesced Write
+    int new_x = get_group_id(1) * TILE_DIM + get_local_id(0);
+    int new_y = get_group_id(0) * TILE_DIM + get_local_id(1);
+
+    // 3. Coalesced Write to y
+    if (new_x < M && new_y < N) {
+        y[new_y * M + new_x] = tile[get_local_id(0)][get_local_id(1)];
+    }
+}
+
 
 __kernel void matrix_multiply( // C = A * B, using float4 for A and B
     __global const float *A_f,
